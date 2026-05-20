@@ -5280,8 +5280,9 @@ function UTMStatsByStaff({ dateRange }) {
   const byStaffUtm = l2o.by_staff_utm || {}
 
   const STAFF = [
-    { key: "DUY",          label: "Nhân sự Duy",        color: { bg: "bg-blue-50",   border: "border-blue-300",   text: "text-blue-700",   chip: "bg-blue-100 text-blue-700",   sub: "border-blue-200 bg-blue-50/50"   } },
-    { key: "PHƯƠNG NAM",   label: "Nhân sự Phương Nam", color: { bg: "bg-purple-50", border: "border-purple-300", text: "text-purple-700", chip: "bg-purple-100 text-purple-700", sub: "border-purple-200 bg-purple-50/50" } },
+    { key: "DUY",          label: "Nhân sự Duy",        color: { bg: "bg-blue-50",     border: "border-blue-300",    text: "text-blue-700",    chip: "bg-blue-100 text-blue-700",    sub: "border-blue-200 bg-blue-50/50"     } },
+    { key: "PHƯƠNG NAM",   label: "Nhân sự Phương Nam", color: { bg: "bg-purple-50",   border: "border-purple-300",  text: "text-purple-700",  chip: "bg-purple-100 text-purple-700",  sub: "border-purple-200 bg-purple-50/50" } },
+    { key: "WEBSITE",      label: "Website (organic)",  color: { bg: "bg-emerald-50",  border: "border-emerald-300", text: "text-emerald-700", chip: "bg-emerald-100 text-emerald-700", sub: "border-emerald-200 bg-emerald-50/50" } },
   ]
 
   const [collapsed, setCollapsed] = React.useState({})  // key: `${staff}::${product}` → bool
@@ -5420,7 +5421,9 @@ function UTMStatsByStaff({ dateRange }) {
           const sTotalRev = rows.reduce((s, r) => s + r.f_revenue, 0)
           const sTotalRevD = rows.reduce((s, r) => s + r.f_rev_delivered, 0)
           const sTotalSpend = rows.reduce((s, r) => s + r.f_spend, 0)
-          const sUnmatched = rows.filter(r => !r.spend_matched).length
+          const sOrganic   = rows.filter(r => r.is_organic).length
+          const sUnmatched = rows.filter(r => !r.spend_matched && !r.is_organic).length
+          const sOrganicRev = rows.filter(r => r.is_organic).reduce((s, r) => s + r.f_revenue, 0)
           const sCostPct = (sTotalRev > 0 && sTotalSpend > 0) ? (sTotalSpend / sTotalRev * 100) : null
           const sConv = sTotalLeads ? (sTotalOrders / sTotalLeads * 100) : 0
 
@@ -5442,6 +5445,9 @@ function UTMStatsByStaff({ dateRange }) {
                   <span className="text-rose-700">Chi phí <b>{fmtMoney(sTotalSpend)}</b>{sUnmatched > 0 && (<span className="text-gray-400 font-normal ml-1">({sUnmatched} UTM chưa khớp)</span>)}</span>
                   {sCostPct != null && (
                     <span>CP/DT <b className={sCostPct <= 50 ? "text-green-700" : sCostPct <= 100 ? "text-amber-700" : "text-red-600"}>{sCostPct.toFixed(1)}%</b></span>
+                  )}
+                  {sOrganic > 0 && (
+                    <span className="text-emerald-700">🌿 Organic <b>{fmtMoney(sOrganicRev)}</b> ({sOrganic} nguồn)</span>
                   )}
                 </div>
               </div>
@@ -5515,13 +5521,18 @@ function UTMStatsByStaff({ dateRange }) {
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                               {(() => {
-                                // Group rows theo matched_campaign_name (UTM share campaign → 1 nhóm)
-                                // Sort: unmatched cuối, trong group sort theo revenue DESC
+                                // Group rows theo (kind, name) — 3 nhóm visual:
+                                //   1. matched   — UTM khớp FB campaign (sky blue)
+                                //   2. organic   — lead không qua FB Ads, UTM ảo (emerald)
+                                //   3. unmatched — UTM bị typo / FB chưa fetch (amber, cần fix)
+                                const groupKey = (r) => r.matched_campaign_name
+                                  ? r.matched_campaign_name
+                                  : (r.is_organic ? "__ORGANIC__" : "__UNMATCHED__")
                                 const groupSize = {}
                                 const groupSpend = {}
                                 const groupAgg = {}
                                 for (const r of productRows) {
-                                  const k = r.matched_campaign_name || "__UNMATCHED__"
+                                  const k = groupKey(r)
                                   groupSize[k] = (groupSize[k] || 0) + 1
                                   groupSpend[k] = (groupSpend[k] || 0) + r.f_spend
                                   const g = groupAgg[k] || (groupAgg[k] = {leads:0, orders:0, ordersBeforeRefund:0, spend:0, revenue:0, rev_delivered:0, revenueEffective:0, delivered:0, profit:0, ctr:null})
@@ -5536,9 +5547,12 @@ function UTMStatsByStaff({ dateRange }) {
                                   if (r.f_profit != null) g.profit += r.f_profit
                                   if (r.f_ctr != null && g.ctr == null) g.ctr = r.f_ctr  // CTR campaign-level
                                 }
+                                // Sort priority: matched (0) → organic (1) → unmatched (2)
+                                const sortRank = (r) => r.matched_campaign_name ? 0 : (r.is_organic ? 1 : 2)
                                 const sorted = [...productRows].sort((a, b) => {
-                                  const ca = a.matched_campaign_name || "￿UNMATCHED"
-                                  const cb = b.matched_campaign_name || "￿UNMATCHED"
+                                  const ra = sortRank(a), rb = sortRank(b)
+                                  if (ra !== rb) return ra - rb
+                                  const ca = groupKey(a), cb = groupKey(b)
                                   if (ca !== cb) return ca.localeCompare(cb)
                                   return b.f_revenue - a.f_revenue
                                 })
@@ -5547,21 +5561,31 @@ function UTMStatsByStaff({ dateRange }) {
                                 let utmIdx = 0
                                 const out = []
                                 sorted.forEach((r, idx) => {
-                                  const k = r.matched_campaign_name || "__UNMATCHED__"
+                                  const k = groupKey(r)
                                   if (k !== lastCamp) {
-                                    // Group header row — hiển thị campaign name + SUBTOTAL của tất cả UTM trong group
+                                    // Group header row — 3 trạng thái: matched (sky) / organic (emerald) / unmatched (amber)
                                     const g = groupAgg[k] || {leads:0, orders:0, spend:0, revenue:0, rev_delivered:0, profit:0, ctr:null}
                                     const gConv = g.leads ? (g.orders / g.leads * 100) : 0
                                     const gCostPct = (g.revenue > 0 && g.spend > 0) ? (g.spend / g.revenue * 100) : null
                                     const gCpl = (g.leads && g.spend) ? (g.spend / g.leads) : null
                                     const gCpo = (g.orders && g.spend) ? (g.spend / g.orders) : null
                                     const gProfitPct = (g.profit && g.revenueEffective > 0) ? (g.profit / g.revenueEffective * 100) : null
+                                    const groupKind = r.matched_campaign_name ? "matched" : (r.is_organic ? "organic" : "unmatched")
+                                    const headerBgCls = groupKind === "matched"
+                                      ? "bg-sky-50 border-t-2 border-sky-200 font-semibold"
+                                      : groupKind === "organic"
+                                        ? "bg-emerald-50 border-t-2 border-emerald-200 font-semibold"
+                                        : "bg-amber-50 border-t-2 border-amber-200 font-semibold"
                                     out.push(
-                                      <tr key={"hdr-" + idx} className={r.matched_campaign_name ? "bg-sky-50 border-t-2 border-sky-200 font-semibold" : "bg-amber-50 border-t-2 border-amber-200 font-semibold"}>
+                                      <tr key={"hdr-" + idx} className={headerBgCls}>
                                         <td colSpan={4} className="px-3 py-1.5 text-[11px]">
-                                          {r.matched_campaign_name ? (
+                                          {groupKind === "matched" && (
                                             <span className="text-sky-900">📦 {r.matched_campaign_name} <span className="text-gray-500 font-normal ml-1">({groupSize[k]} UTM)</span></span>
-                                          ) : (
+                                          )}
+                                          {groupKind === "organic" && (
+                                            <span className="text-emerald-900">🌿 Organic / không qua FB Ads <span className="text-gray-500 font-normal ml-1">({groupSize[k]} nguồn)</span></span>
+                                          )}
+                                          {groupKind === "unmatched" && (
                                             <span className="text-amber-800">⚠ UTM không khớp FB campaign ({groupSize[k]})</span>
                                           )}
                                         </td>
@@ -5571,7 +5595,7 @@ function UTMStatsByStaff({ dateRange }) {
                                           <span className={gConv >= 60 ? "text-green-700" : gConv >= 30 ? "text-amber-700" : "text-gray-500"}>{gConv.toFixed(1)}%</span>
                                         </td>
                                         <td className="px-3 py-1.5 text-right text-[11px] tabular-nums border-l border-gray-200 text-rose-700">
-                                          {r.matched_campaign_name ? fmtMoney(g.spend) : <span className="text-gray-300">—</span>}
+                                          {groupKind === "matched" ? fmtMoney(g.spend) : <span className="text-gray-300">—</span>}
                                         </td>
                                         <td className="px-3 py-1.5 text-right text-[11px] tabular-nums text-gray-900">{fmtMoney(g.revenue)}</td>
                                         <td className="px-3 py-1.5 text-right text-[11px] tabular-nums">
