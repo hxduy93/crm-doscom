@@ -299,7 +299,7 @@
 <script type="text/babel" data-presets="react">
 const { useState, useMemo } = React;
 const {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  LineChart, Line, BarChart, Bar, ComposedChart, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, ReferenceLine
 } = Recharts;
 
@@ -5148,12 +5148,19 @@ function RevenueByStaffDailyChart({ dateRange, staffFilter }) {
       ...Object.keys(ordByDate),
       ...Object.keys(costByDate),
     ])).sort()
-    const data = dates.map(d => ({
-      date: d,
-      revenue: revByDate[d] || 0,
-      orders:  ordByDate[d] || 0,
-      cost:    costByDate[d] || 0,
-    }))
+    const data = dates.map(d => {
+      const rev = revByDate[d] || 0
+      const cst = costByDate[d] || 0
+      // CIR theo ngày — null khi không có doanh thu để tránh vẽ điểm infinity / chia 0
+      const cirDay = rev > 0 ? (cst / rev * 100) : null
+      return {
+        date: d,
+        revenue: rev,
+        orders:  ordByDate[d] || 0,
+        cost:    cst,
+        cir:     cirDay,
+      }
+    })
 
     const tRev  = data.reduce((s, r) => s + r.revenue, 0)
     const tOrd  = data.reduce((s, r) => s + r.orders,  0)
@@ -5179,7 +5186,7 @@ function RevenueByStaffDailyChart({ dateRange, staffFilter }) {
         </div>
       </div>
       <p className="text-xs text-gray-500 mb-4">
-        Doanh số (đã giao + đang xử lý) + <span style={{ color: COST_COLOR }} className="font-semibold">chi phí QC</span> theo từng ngày · Khoảng: <span className="font-semibold text-gray-700">{fmtDate(dateRange.start)} → {fmtDate(dateRange.end)}</span> · Filter: <span className="font-semibold" style={{ color: meta.color }}>{meta.label}</span>
+        Doanh số (đã giao + đang xử lý) + <span style={{ color: COST_COLOR }} className="font-semibold">chi phí QC</span> + <span style={{ color: "#7c3aed" }} className="font-semibold">CIR%</span> (chi phí / doanh số, trục phải) theo từng ngày · Khoảng: <span className="font-semibold text-gray-700">{fmtDate(dateRange.start)} → {fmtDate(dateRange.end)}</span> · Filter: <span className="font-semibold" style={{ color: meta.color }}>{meta.label}</span>
       </p>
 
       {chartData.length === 0 ? (
@@ -5188,16 +5195,20 @@ function RevenueByStaffDailyChart({ dateRange, staffFilter }) {
         </div>
       ) : (
         <>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+          <ResponsiveContainer width="100%" height={320}>
+            <ComposedChart data={chartData} margin={{ top: 10, right: 50, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
               <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={fmtDate} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => fmtVND(v)} />
+              {/* YAxis trái: VND (Doanh số + Chi phí) */}
+              <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickFormatter={(v) => fmtVND(v)} />
+              {/* YAxis phải: CIR % */}
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: "#7c3aed" }} tickFormatter={(v) => v + "%"} domain={[0, dataMax => Math.max(100, Math.ceil(dataMax / 20) * 20)]} />
               <Tooltip
                 labelFormatter={fmtDate}
                 formatter={(v, name) => {
-                  if (name === "Doanh số")  return [fmtVNDFull(v) + "₫", name]
+                  if (name === "Doanh số")   return [fmtVNDFull(v) + "₫", name]
                   if (name === "Chi phí QC") return [fmtVNDFull(v) + "₫", name]
+                  if (name === "CIR")        return [(v == null ? "—" : Number(v).toFixed(1) + "%"), name]
                   if (name === "Đơn")        return [Number(v).toLocaleString("vi-VN") + " đơn", name]
                   return v
                 }}
@@ -5206,15 +5217,17 @@ function RevenueByStaffDailyChart({ dateRange, staffFilter }) {
               <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} iconType="square" />
               {avgRev > 0 && (
                 <ReferenceLine
+                  yAxisId="left"
                   y={avgRev}
                   stroke="#9ca3af"
                   strokeDasharray="4 4"
                   label={{ value: `TB DT ${fmtVND(avgRev)}₫`, fontSize: 10, fill: "#6b7280", position: "right" }}
                 />
               )}
-              <Bar dataKey="revenue" name="Doanh số"   fill={meta.color}  radius={[4, 4, 0, 0]} />
-              <Bar dataKey="cost"    name="Chi phí QC" fill={COST_COLOR}  radius={[4, 4, 0, 0]} />
-            </BarChart>
+              <Bar yAxisId="left" dataKey="revenue" name="Doanh số"   fill={meta.color}  radius={[4, 4, 0, 0]} />
+              <Bar yAxisId="left" dataKey="cost"    name="Chi phí QC" fill={COST_COLOR}  radius={[4, 4, 0, 0]} />
+              <Line yAxisId="right" type="monotone" dataKey="cir" name="CIR" stroke="#7c3aed" strokeWidth={2} dot={{ r: 3, fill: "#7c3aed" }} connectNulls />
+            </ComposedChart>
           </ResponsiveContainer>
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4 text-xs">
