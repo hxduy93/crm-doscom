@@ -109,6 +109,79 @@ def synthesize_organic_utm(c):
     return "(organic) unknown"
 
 
+def detect_canonical_product(text):
+    """Detect 1 trong 13 PROFIT_PRODUCTS label từ text (vd source_name của order Pancake).
+    Trả về canonical label (vd 'Noma 911') để frontend product_costs lookup hoạt động.
+    Copy logic từ update_dashboard.py:detect_profit_product."""
+    if not text:
+        return None
+    import re
+    n = (text or "").lower().replace("_", " ").replace("-", " ")
+    n = " ".join(n.split())
+    if "da8.1 pro" in n or "da 8.1 pro" in n or "da8 1 pro" in n:
+        return "DA8.1 Pro"
+    if "da8.1" in n or "da 8.1" in n or "da8 1" in n:
+        return "DA8.1"
+    if "noma 922" in n or "noma922" in n:
+        return "Noma 922"
+    if "noma 911" in n or "noma911" in n:
+        return "Noma 911"
+    if "dr4 plus" in n or "dr4plus" in n:
+        return "DR4 Plus"
+    if "dr1" in n:
+        return "DR1"
+    if "dv1 pro" in n or "dv1pro" in n:
+        return "DV1 Pro"
+    if "d1 pro" in n or "d1pro" in n:
+        return "D1 Pro"
+    if "d8 pro" in n or "d8pro" in n:
+        return "D8 Pro"
+    for code in ("d1", "d2", "d3", "d4"):
+        if re.search(rf"(?<![a-z0-9]){code}(?![a-z0-9])", n):
+            return code.upper()
+    return None
+
+
+def classify_no_crm_order(o):
+    """For order POS KHÔNG match được lead nào trong CRM, gán staff + UTM ảo
+    dựa vào source_name. Returns (staff, virtual_utm, product_label).
+
+    Rules (user 2026-05-20):
+      - "DUY - <product>"          → DUY,         UTM='(no-CRM) DUY - <product>'
+      - "PHƯƠNG NAM - <product>"   → PHƯƠNG NAM,  UTM='(no-CRM) PN - <product>'
+      - "Zalo OA" / "Hotline" / "Website"  → WEBSITE staff (user gộp vào website)
+      - "Facebook" generic page    → WEBSITE staff (organic FB direct chat)
+      - Khác                        → WEBSITE staff (fallback)
+    """
+    sn = (o.get("source_name") or "").strip()
+    if not sn:
+        return ("WEBSITE", "(no-CRM) Không có nguồn", None)
+
+    sn_upper = sn.upper()
+    prod_canonical = detect_canonical_product(sn)
+
+    if sn_upper.startswith("DUY -") or sn_upper.startswith("DUY-"):
+        rest = sn.split("-", 1)[1].strip() if "-" in sn else ""
+        utm = f"(no-CRM) DUY - {rest}" if rest else "(no-CRM) DUY"
+        return ("DUY", utm, prod_canonical)
+
+    if sn_upper.startswith("PHƯƠNG NAM") or sn_upper.startswith("PHUONG NAM"):
+        rest = sn.split("-", 1)[1].strip() if "-" in sn else ""
+        utm = f"(no-CRM) PN - {rest}" if rest else "(no-CRM) Phương Nam"
+        return ("PHƯƠNG NAM", utm, prod_canonical)
+
+    if "ZALO" in sn_upper:
+        return ("WEBSITE", "(no-CRM) Zalo OA", prod_canonical)
+    if "HOTLINE" in sn_upper:
+        return ("WEBSITE", "(no-CRM) Hotline", prod_canonical)
+    if "WEBSITE" in sn_upper or sn_upper.startswith("WEB"):
+        return ("WEBSITE", "(no-CRM) Website", prod_canonical)
+    if sn_upper.startswith("FACEBOOK") or sn_upper == "FACEBOOK":
+        return ("WEBSITE", "(no-CRM) FB direct", prod_canonical)
+
+    return ("WEBSITE", f"(no-CRM) {sn[:30]}", prod_canonical)
+
+
 def parse_iso_date(s):
     """Parse 'YYYY-MM-DDTHH:MM:SS...Z' hoặc 'YYYY-MM-DD' → date object."""
     if not s:
@@ -289,6 +362,9 @@ def main():
     unmatched_orders_sample = []
     matched_orders = 0
     skipped_no_phone = 0
+    # 2026-05-20: track order_ids đã attribute để vòng sau bucket-hóa đơn no-CRM
+    matched_order_ids = set()
+    unmatched_orders_for_no_crm = []
 
     for o in orders:
         p9 = o.get("phone9")
@@ -305,6 +381,7 @@ def main():
                     "source_name": o.get("source_name"),
                     "cod": o.get("cod"),
                 })
+            unmatched_orders_for_no_crm.append(o)
             continue
 
         # Last-touch attribution: lead gần nhất TRƯỚC order trong cửa sổ 60 ngày
@@ -329,9 +406,11 @@ def main():
                     "note": "phone match nhưng ngoài window 60d",
                     "nearest_lead_created": candidates[0]["created"].isoformat() if candidates else None,
                 })
+            unmatched_orders_for_no_crm.append(o)
             continue
 
         matched_orders += 1
+        matched_order_ids.add(o.get("order_id"))
         cod = float(o.get("cod") or 0)
         status = o.get("status")
         ad_id = attr_lead.get("ad_id")
@@ -402,6 +481,52 @@ def main():
                     sb["orders_canceled_by_date"][order_date_iso] += 1
             else:
                 sb["orders_other"] += 1
+
+    # ── 2026-05-20: Second pass — xử lý đơn KHÔNG match được lead CRM nào.
+    # Bucket-hóa theo source_name để vào by_staff_utm như "no-CRM" group.
+    # User yêu cầu: Zalo OA / Hotline / Website / FB direct → gộp vào nhân sự WEBSITE.
+    print(f"[INFO] {len(unmatched_orders_for_no_crm):,} đơn POS không match CRM → bucket no-CRM")
+    no_crm_revenue = 0.0
+    for o in unmatched_orders_for_no_crm:
+        cod = float(o.get("cod") or 0)
+        status = o.get("status")
+        order_date = parse_iso_date(o.get("vn_date"))
+        order_date_iso = order_date.isoformat() if order_date else None
+        staff, utm_key, prod_canonical = classify_no_crm_order(o)
+
+        sb = by_staff_utm[(staff, utm_key)]
+        sb["leads"] += 0  # no-CRM = không có lead
+        sb["is_organic"] = False
+        sb["is_no_crm"] = True
+        if prod_canonical:
+            sb["products_counter"][prod_canonical] += 1
+        sb["orders_total"] += 1
+        sb["revenue_total"] += cod
+        no_crm_revenue += cod
+        if order_date_iso:
+            sb["orders_total_by_date"][order_date_iso] += 1
+            sb["revenue_total_by_date"][order_date_iso] += cod
+        if status == 3:
+            sb["orders_delivered"] += 1
+            sb["revenue_delivered"] += cod
+            if order_date_iso:
+                sb["orders_delivered_by_date"][order_date_iso] += 1
+                sb["revenue_delivered_by_date"][order_date_iso] += cod
+        elif status == 4:
+            sb["orders_returning"] += 1
+            if order_date_iso:
+                sb["orders_returning_by_date"][order_date_iso] += 1
+        elif status == 5:
+            sb["orders_returned"] += 1
+            if order_date_iso:
+                sb["orders_returned_by_date"][order_date_iso] += 1
+        elif status == 6:
+            sb["orders_canceled"] += 1
+            if order_date_iso:
+                sb["orders_canceled_by_date"][order_date_iso] += 1
+        else:
+            sb["orders_other"] += 1
+    print(f"       no-CRM revenue total: {no_crm_revenue:,.0f}đ")
 
     # ── Finalize ──
     out_by_ad = {}
@@ -480,6 +605,8 @@ def main():
             # 2026-05-20: flag row organic (UTM ảo từ synthesize_organic_utm).
             # Frontend dùng để tô màu khác, ẩn cột chi phí FB, hiện badge "ORGANIC".
             "is_organic": s.get("is_organic", False),
+            # 2026-05-20: flag row no-CRM (đơn POS không match lead CRM nào — bucket theo source_name).
+            "is_no_crm": s.get("is_no_crm", False),
             "leads": leads,
             "leads_with_phone9": len(s["leads_phone9_set"]),
             "leads_with_order": leads_with_order,
