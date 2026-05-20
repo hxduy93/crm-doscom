@@ -5315,9 +5315,11 @@ function UTMStatsByStaff({ dateRange }) {
     const spend = sumInRange(r.spend_by_date)
     // Số lead chính: FB Ads Manager nếu UTM match được campaign FB, fallback Pancake CRM
     const leads = (r.spend_matched && fbLeads > 0) ? fbLeads : pancakeLeads
-    // Lợi nhuận = (đơn chốt − hủy − đang hoàn − đã hoàn) × (giá bán × 0.9 − giá vốn) − CPQC
-    // = "đơn trước hoàn" × margin − chi phí QC
-    // User logic: mỗi đơn lên = đã có LN (chi phí QC đã trừ); chỉ loại đơn hoàn/hủy.
+    // Lợi nhuận (2026-05-20, user clarify):
+    //   LN = Doanh thu (đơn KHÔNG hoàn/hủy) × 0.9 (- 10% VAT) - Giá vốn - Chi phí QC
+    //   Ship: khách đã trả → KHÔNG tính vào cost.
+    //   Doanh thu lấy thẳng từ POS (có upsell/combo), KHÔNG dùng (n × giá_bán) theoretical.
+    //   Giá vốn = số đơn không hoàn × giá nhập (giả định 1 SP chính/đơn).
     const canceled = sumInRange(r.orders_canceled_by_date)
     const returning = sumInRange(r.orders_returning_by_date)
     const returned = sumInRange(r.orders_returned_by_date)
@@ -5327,11 +5329,14 @@ function UTMStatsByStaff({ dateRange }) {
     const c = costs[sp] || {}
     const giaBan = c.gia_ban_vnd
     const giaNhap = c.gia_nhap_vnd
-    const profit = (giaBan && giaNhap && ordersBeforeRefund > 0)
-      ? ordersBeforeRefund * (giaBan * 0.9 - giaNhap) - spend
+    // Prorate revenue về phần đơn không hoàn/hủy (revenue_total tính cả các đơn đã bị hủy)
+    const ratioKept = orders > 0 ? ordersBeforeRefund / orders : 1
+    const revenueKept = revenue * ratioKept
+    const cogs = (giaNhap && ordersBeforeRefund > 0) ? ordersBeforeRefund * giaNhap : null
+    const profit = (cogs != null && revenueKept > 0)
+      ? revenueKept * 0.9 - cogs - spend
       : null
-    const revenueEffective = ordersBeforeRefund * (giaBan || 0)  // DT đơn không hoàn (1 đơn = 1 sp)
-    const profitPct = (profit != null && revenueEffective > 0) ? (profit / revenueEffective * 100) : null
+    const profitPct = (profit != null && revenueKept > 0) ? (profit / revenueKept * 100) : null
     return {
       ...r,
       f_pancake_leads: pancakeLeads,
@@ -5346,7 +5351,8 @@ function UTMStatsByStaff({ dateRange }) {
       f_orders_before_refund: ordersBeforeRefund,
       f_revenue: revenue,
       f_rev_delivered: revDelivered,
-      f_revenue_effective: revenueEffective,
+      f_revenue_kept: revenueKept,   // DT thực của đơn không hoàn/hủy (dùng cho LN)
+      f_cogs: cogs,
       f_spend: spend,
       f_ctr: r.fb_ctr,  // campaign-level, không react theo dateRange
       f_profit: profit,
@@ -5516,7 +5522,7 @@ function UTMStatsByStaff({ dateRange }) {
                                 <th className="px-3 py-2 text-right">CP/DT %</th>
                                 <th className="px-3 py-2 text-right">CPL</th>
                                 <th className="px-3 py-2 text-right">CPO</th>
-                                <th className="px-3 py-2 text-right border-l border-gray-200" title="Lợi nhuận = SP đã giao × (giá bán × 0.9 − giá vốn) − Chi phí QC. Màu theo LN%/Doanh thu">Lợi nhuận</th>
+                                <th className="px-3 py-2 text-right border-l border-gray-200" title="Lợi nhuận = Doanh thu (đơn không hoàn/hủy) × 0.9 (− 10% VAT) − Giá vốn (giá nhập × số đơn) − Chi phí QC. Ship khách trả, không tính vào chi phí.">Lợi nhuận</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -5535,14 +5541,15 @@ function UTMStatsByStaff({ dateRange }) {
                                   const k = groupKey(r)
                                   groupSize[k] = (groupSize[k] || 0) + 1
                                   groupSpend[k] = (groupSpend[k] || 0) + r.f_spend
-                                  const g = groupAgg[k] || (groupAgg[k] = {leads:0, orders:0, ordersBeforeRefund:0, spend:0, revenue:0, rev_delivered:0, revenueEffective:0, delivered:0, profit:0, ctr:null})
+                                  const g = groupAgg[k] || (groupAgg[k] = {leads:0, orders:0, ordersBeforeRefund:0, spend:0, revenue:0, rev_delivered:0, revenueKept:0, cogs:0, delivered:0, profit:0, ctr:null})
                                   g.leads += r.f_leads
                                   g.orders += r.f_orders
                                   g.ordersBeforeRefund += (r.f_orders_before_refund || 0)
                                   g.spend += r.f_spend
                                   g.revenue += r.f_revenue
                                   g.rev_delivered += r.f_rev_delivered
-                                  g.revenueEffective += (r.f_revenue_effective || 0)
+                                  g.revenueKept += (r.f_revenue_kept || 0)
+                                  g.cogs += (r.f_cogs || 0)
                                   g.delivered += r.f_delivered
                                   if (r.f_profit != null) g.profit += r.f_profit
                                   if (r.f_ctr != null && g.ctr == null) g.ctr = r.f_ctr  // CTR campaign-level
@@ -5569,7 +5576,7 @@ function UTMStatsByStaff({ dateRange }) {
                                     const gCostPct = (g.revenue > 0 && g.spend > 0) ? (g.spend / g.revenue * 100) : null
                                     const gCpl = (g.leads && g.spend) ? (g.spend / g.leads) : null
                                     const gCpo = (g.orders && g.spend) ? (g.spend / g.orders) : null
-                                    const gProfitPct = (g.profit && g.revenueEffective > 0) ? (g.profit / g.revenueEffective * 100) : null
+                                    const gProfitPct = (g.profit && g.revenueKept > 0) ? (g.profit / g.revenueKept * 100) : null
                                     const groupKind = r.matched_campaign_name ? "matched" : (r.is_organic ? "organic" : "unmatched")
                                     const headerBgCls = groupKind === "matched"
                                       ? "bg-sky-50 border-t-2 border-sky-200 font-semibold"
