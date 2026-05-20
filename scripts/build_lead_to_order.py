@@ -85,6 +85,30 @@ def product_from_qc(qc):
     return None
 
 
+def synthesize_organic_utm(c):
+    """For leads without utm_campaign (organic traffic: video tự nhiên, page nhắn tin,
+    landing page không gắn UTM…) — tạo UTM ảo dạng '(organic) <product/source>'
+    để vào by_staff_utm như UTM thường, giúp dashboard hiển thị đủ 100% doanh thu.
+
+    Priority:
+      1. product từ nguoi_chay_qc  →  '(organic) NOMA 911'
+      2. source_of_leads có 'website'  →  '(organic) Website'
+      3. source_of_leads khác  →  '(organic) <source rút gọn>'
+      4. fallback  →  '(organic) unknown'
+    """
+    qc = c.get("nguoi_chay_qc") or ""
+    sol = (c.get("source_of_leads") or "").strip()
+    prod = product_from_qc(qc)
+    if prod:
+        return f"(organic) {prod}"
+    if "website" in sol.lower():
+        return "(organic) Website"
+    if sol:
+        # Strip về <= 30 ký tự cho dễ đọc trên UI
+        return f"(organic) {sol[:30]}"
+    return "(organic) unknown"
+
+
 def parse_iso_date(s):
     """Parse 'YYYY-MM-DDTHH:MM:SS...Z' hoặc 'YYYY-MM-DD' → date object."""
     if not s:
@@ -143,6 +167,9 @@ def main():
             "trang_thai": c.get("trang_thai"),
             "owner_name": c.get("owner_name"),
             "nguoi_chay_qc": c.get("nguoi_chay_qc"),
+            # 2026-05-20: thêm source_of_leads để synthesize_organic_utm hoạt động
+            # khi attribute order tới lead organic (không có utm_campaign).
+            "source_of_leads": c.get("source_of_leads"),
         })
     for p9 in leads_by_phone:
         leads_by_phone[p9].sort(key=lambda x: x["created"], reverse=True)
@@ -238,15 +265,21 @@ def main():
             if prod:
                 qb["products_counter"][prod] += 1
 
-        # by_staff_utm — chỉ count lead có cả staff + utm_campaign + ad_id
-        # (UTM table chỉ có ý nghĩa cho lead từ Facebook ad, có utm gắn vào campaign)
+        # by_staff_utm — count lead nếu có staff
+        # Case 1: lead từ FB Ads chuẩn (có utm + ad_id) → row UTM thường
+        # Case 2: lead ORGANIC (không utm hoặc không ad_id) → row UTM ảo (organic)
+        #         Sinh key bằng synthesize_organic_utm() để gom đúng nhóm sản phẩm/nguồn
         utm = c.get("utm_campaign")
-        if staff and utm and ad_id:
-            sb = by_staff_utm[(staff, utm)]
+        if staff:
+            is_organic = not (utm and ad_id)
+            utm_key = utm if not is_organic else synthesize_organic_utm(c)
+            sb = by_staff_utm[(staff, utm_key)]
             sb["leads"] += 1
+            sb["is_organic"] = is_organic  # row-level flag, lần cuối ghi đè (đồng nhất trong nhóm)
             if p9:
                 sb["leads_phone9_set"].add(p9)
-            sb["ad_ids_set"].add(ad_id)
+            if ad_id:
+                sb["ad_ids_set"].add(ad_id)
             if prod:
                 sb["products_counter"][prod] += 1
             lead_created = parse_iso_date(c.get("created_on"))
@@ -334,10 +367,14 @@ def main():
             else:
                 qb["orders_other"] += 1
 
-        # by_staff_utm — chỉ count đơn nếu lead có cả staff + utm + ad_id
+        # by_staff_utm — count đơn cho cả lead FB Ads chuẩn (utm+ad_id) và organic.
+        # Organic lead: sinh UTM ảo bằng cùng hàm synthesize_organic_utm() để khớp key
+        # với row đã tạo ở giai đoạn aggregate leads phía trên.
         utm = attr_lead.get("utm_campaign")
-        if staff and utm and ad_id:
-            sb = by_staff_utm[(staff, utm)]
+        if staff:
+            is_organic = not (utm and ad_id)
+            utm_key = utm if not is_organic else synthesize_organic_utm(attr_lead)
+            sb = by_staff_utm[(staff, utm_key)]
             sb["orders_total"] += 1
             sb["leads_with_order_phone9_set"].add(p9)
             sb["revenue_total"] += cod
@@ -440,6 +477,9 @@ def main():
         out_by_staff_utm[staff].append({
             "utm_campaign": utm,
             "product": top_product,
+            # 2026-05-20: flag row organic (UTM ảo từ synthesize_organic_utm).
+            # Frontend dùng để tô màu khác, ẩn cột chi phí FB, hiện badge "ORGANIC".
+            "is_organic": s.get("is_organic", False),
             "leads": leads,
             "leads_with_phone9": len(s["leads_phone9_set"]),
             "leads_with_order": leads_with_order,
