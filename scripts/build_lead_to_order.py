@@ -327,7 +327,11 @@ def main():
 
         # by_qc count tất cả contact match staff whitelist (bao gồm WEBSITE không có ad_id)
         staff = staff_from_qc(c.get("nguoi_chay_qc"))
-        prod = product_from_qc(c.get("nguoi_chay_qc"))
+        prod_raw = product_from_qc(c.get("nguoi_chay_qc"))
+        # 2026-05-20: normalize sang canonical label ('NOMA 911' -> 'Noma 911') để frontend
+        # product_costs lookup khớp (cost dict keyed canonical). Fallback raw nếu không match
+        # 13 PROFIT_PRODUCTS để tránh mất data.
+        prod = (detect_canonical_product(prod_raw) or prod_raw) if prod_raw else None
         if staff:
             qb = by_qc[staff]
             qb["leads"] += 1
