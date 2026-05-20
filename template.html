@@ -5049,22 +5049,30 @@ function RevenueByStaffDailyChart({ dateRange, staffFilter }) {
   const revenue = (typeof DATA !== "undefined" ? DATA.revenue : null) || {}
   const groups = revenue.source_groups || {}
   const groupsOrder = revenue.source_groups_order || []
+  const adSpendByStaff = (typeof DATA !== "undefined" ? DATA.ad_spend_by_staff : null) || {}
+  const googleAds = (typeof DATA !== "undefined" ? DATA.google_ads : null) || { by_category: {} }
 
   if (!groupsOrder.length || !Object.keys(groups).length) {
     return null
   }
 
+  // Mỗi staff filter map sang: nguồn doanh thu (sourceKeys) + nguồn chi phí (adStaffKeys + googleAds)
+  // - DUY / PHUONG_NAM         → FB Ads từ ad_spend_by_staff[staffKey]
+  // - WEBSITE_STAFF            → Google Ads từ google_ads.by_category
+  // - FB_PAGE                  → organic, không có chi phí QC
+  // - ALL                      → cộng FB Ads (DUY + PHUONG_NAM) + Google Ads
   const STAFF_FILTER_MAP = {
-    ALL:           { label: "Tất cả nhân sự",       sourceKeys: groupsOrder,                       color: "#dc2626" },
-    DUY:           { label: "Nhân sự Duy",          sourceKeys: ["DUY"],                            color: "#3b82f6" },
-    PHUONG_NAM:    { label: "Nhân sự Phương Nam",   sourceKeys: ["PHUONG_NAM"],                     color: "#a855f7" },
-    WEBSITE_STAFF: { label: "Nhân sự WEBSITE",      sourceKeys: ["WEBSITE", "ZALO_OA", "HOTLINE"],  color: "#10b981" },
-    FB_PAGE:       { label: "Page Facebook",        sourceKeys: ["FB_PAGE"],                        color: "#ec4899" },
+    ALL:           { label: "Tất cả nhân sự",       sourceKeys: groupsOrder,                       color: "#dc2626", adStaffKeys: ["DUY", "PHUONG_NAM"], hasGoogle: true  },
+    DUY:           { label: "Nhân sự Duy",          sourceKeys: ["DUY"],                            color: "#3b82f6", adStaffKeys: ["DUY"],                hasGoogle: false },
+    PHUONG_NAM:    { label: "Nhân sự Phương Nam",   sourceKeys: ["PHUONG_NAM"],                     color: "#a855f7", adStaffKeys: ["PHUONG_NAM"],         hasGoogle: false },
+    WEBSITE_STAFF: { label: "Nhân sự WEBSITE",      sourceKeys: ["WEBSITE", "ZALO_OA", "HOTLINE"],  color: "#10b981", adStaffKeys: [],                     hasGoogle: true  },
+    FB_PAGE:       { label: "Page Facebook",        sourceKeys: ["FB_PAGE"],                        color: "#ec4899", adStaffKeys: [],                     hasGoogle: false },
   }
   const STATUSES_KEEP = ["delivered", "other"]
+  const COST_COLOR    = "#f59e0b"  // amber — phân biệt với mọi brand color
   const meta = STAFF_FILTER_MAP[staffFilter] || STAFF_FILTER_MAP.ALL
 
-  const { chartData, totalRev, totalOrders, hasFallback } = React.useMemo(() => {
+  const { chartData, totalRev, totalOrders, totalCost, hasFallback } = React.useMemo(() => {
     const isInRange = (d) => {
       if (!dateRange?.start || !dateRange?.end) return true
       return d >= dateRange.start && d <= dateRange.end
@@ -5072,8 +5080,10 @@ function RevenueByStaffDailyChart({ dateRange, staffFilter }) {
 
     const revByDate = {}
     const ordByDate = {}
+    const costByDate = {}
     let fallback = false
 
+    // ── Doanh thu + đơn theo ngày (Pancake) ──
     meta.sourceKeys.forEach(srcKey => {
       const g = groups[srcKey]
       if (!g) return
@@ -5112,20 +5122,48 @@ function RevenueByStaffDailyChart({ dateRange, staffFilter }) {
       }
     })
 
-    const dates = Array.from(new Set([...Object.keys(revByDate), ...Object.keys(ordByDate)])).sort()
+    // ── Chi phí QC theo ngày — FB Ads (DUY / PHUONG_NAM) ──
+    meta.adStaffKeys.forEach(staffKey => {
+      const buckets = adSpendByStaff[staffKey] || {}
+      Object.values(buckets).forEach(b => {
+        Object.entries(b.by_date || {}).forEach(([d, v]) => {
+          if (!isInRange(d)) return
+          costByDate[d] = (costByDate[d] || 0) + (v || 0)
+        })
+      })
+    })
+
+    // ── Chi phí QC theo ngày — Google Ads (WEBSITE_STAFF hoặc ALL) ──
+    if (meta.hasGoogle) {
+      Object.values(googleAds.by_category || {}).forEach(bucket => {
+        Object.entries(bucket.by_date || {}).forEach(([d, v]) => {
+          if (!isInRange(d)) return
+          costByDate[d] = (costByDate[d] || 0) + (v || 0)
+        })
+      })
+    }
+
+    const dates = Array.from(new Set([
+      ...Object.keys(revByDate),
+      ...Object.keys(ordByDate),
+      ...Object.keys(costByDate),
+    ])).sort()
     const data = dates.map(d => ({
       date: d,
       revenue: revByDate[d] || 0,
-      orders: ordByDate[d] || 0,
+      orders:  ordByDate[d] || 0,
+      cost:    costByDate[d] || 0,
     }))
 
-    const tRev = data.reduce((s, r) => s + r.revenue, 0)
-    const tOrd = data.reduce((s, r) => s + r.orders, 0)
-    return { chartData: data, totalRev: tRev, totalOrders: tOrd, hasFallback: fallback }
+    const tRev  = data.reduce((s, r) => s + r.revenue, 0)
+    const tOrd  = data.reduce((s, r) => s + r.orders,  0)
+    const tCost = data.reduce((s, r) => s + r.cost,    0)
+    return { chartData: data, totalRev: tRev, totalOrders: tOrd, totalCost: tCost, hasFallback: fallback }
   }, [dateRange, staffFilter])
 
   const avgRev = chartData.length ? totalRev / chartData.length : 0
   const peak = chartData.reduce((m, r) => r.revenue > m.revenue ? r : m, { date: "", revenue: 0, orders: 0 })
+  const cir = totalRev > 0 ? (totalCost / totalRev * 100) : null
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm mb-6">
@@ -5141,7 +5179,7 @@ function RevenueByStaffDailyChart({ dateRange, staffFilter }) {
         </div>
       </div>
       <p className="text-xs text-gray-500 mb-4">
-        Doanh số (đã giao + đang xử lý) theo từng ngày · Khoảng: <span className="font-semibold text-gray-700">{fmtDate(dateRange.start)} → {fmtDate(dateRange.end)}</span> · Filter: <span className="font-semibold" style={{ color: meta.color }}>{meta.label}</span>
+        Doanh số (đã giao + đang xử lý) + <span style={{ color: COST_COLOR }} className="font-semibold">chi phí QC</span> theo từng ngày · Khoảng: <span className="font-semibold text-gray-700">{fmtDate(dateRange.start)} → {fmtDate(dateRange.end)}</span> · Filter: <span className="font-semibold" style={{ color: meta.color }}>{meta.label}</span>
       </p>
 
       {chartData.length === 0 ? (
@@ -5158,28 +5196,38 @@ function RevenueByStaffDailyChart({ dateRange, staffFilter }) {
               <Tooltip
                 labelFormatter={fmtDate}
                 formatter={(v, name) => {
-                  if (name === "Doanh số") return [fmtVNDFull(v) + "₫", name]
-                  if (name === "Đơn")      return [Number(v).toLocaleString("vi-VN") + " đơn", name]
+                  if (name === "Doanh số")  return [fmtVNDFull(v) + "₫", name]
+                  if (name === "Chi phí QC") return [fmtVNDFull(v) + "₫", name]
+                  if (name === "Đơn")        return [Number(v).toLocaleString("vi-VN") + " đơn", name]
                   return v
                 }}
                 contentStyle={{ fontSize: 12, borderRadius: 8 }}
               />
+              <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} iconType="square" />
               {avgRev > 0 && (
                 <ReferenceLine
                   y={avgRev}
                   stroke="#9ca3af"
                   strokeDasharray="4 4"
-                  label={{ value: `TB ${fmtVND(avgRev)}₫`, fontSize: 10, fill: "#6b7280", position: "right" }}
+                  label={{ value: `TB DT ${fmtVND(avgRev)}₫`, fontSize: 10, fill: "#6b7280", position: "right" }}
                 />
               )}
-              <Bar dataKey="revenue" name="Doanh số" fill={meta.color} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="revenue" name="Doanh số"   fill={meta.color}  radius={[4, 4, 0, 0]} />
+              <Bar dataKey="cost"    name="Chi phí QC" fill={COST_COLOR}  radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-xs">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4 text-xs">
             <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
               <p className="text-[10px] uppercase font-semibold text-gray-500">Tổng doanh số</p>
               <p className="text-sm font-bold mt-0.5" style={{ color: meta.color }}>{fmtVNDFull(totalRev)}₫</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+              <p className="text-[10px] uppercase font-semibold text-gray-500">Tổng chi phí QC</p>
+              <p className="text-sm font-bold mt-0.5" style={{ color: COST_COLOR }}>{fmtVNDFull(totalCost)}₫</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">
+                CIR: <span className={`font-semibold ${cir == null ? "text-gray-400" : cir < 20 ? "text-emerald-700" : cir < 40 ? "text-amber-700" : "text-red-600"}`}>{cir == null ? "—" : cir.toFixed(1) + "%"}</span>
+              </p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
               <p className="text-[10px] uppercase font-semibold text-gray-500">Tổng đơn</p>
