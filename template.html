@@ -5428,8 +5428,10 @@ function UTMStatsByStaff({ dateRange }) {
           const sTotalRevD = rows.reduce((s, r) => s + r.f_rev_delivered, 0)
           const sTotalSpend = rows.reduce((s, r) => s + r.f_spend, 0)
           const sOrganic   = rows.filter(r => r.is_organic).length
-          const sUnmatched = rows.filter(r => !r.spend_matched && !r.is_organic).length
+          const sNoCrm     = rows.filter(r => r.is_no_crm).length
+          const sUnmatched = rows.filter(r => !r.spend_matched && !r.is_organic && !r.is_no_crm).length
           const sOrganicRev = rows.filter(r => r.is_organic).reduce((s, r) => s + r.f_revenue, 0)
+          const sNoCrmRev   = rows.filter(r => r.is_no_crm).reduce((s, r) => s + r.f_revenue, 0)
           const sCostPct = (sTotalRev > 0 && sTotalSpend > 0) ? (sTotalSpend / sTotalRev * 100) : null
           const sConv = sTotalLeads ? (sTotalOrders / sTotalLeads * 100) : 0
 
@@ -5454,6 +5456,9 @@ function UTMStatsByStaff({ dateRange }) {
                   )}
                   {sOrganic > 0 && (
                     <span className="text-emerald-700">🌿 Organic <b>{fmtMoney(sOrganicRev)}</b> ({sOrganic} nguồn)</span>
+                  )}
+                  {sNoCrm > 0 && (
+                    <span className="text-slate-700">📞 No-CRM <b>{fmtMoney(sNoCrmRev)}</b> ({sNoCrm} nguồn)</span>
                   )}
                 </div>
               </div>
@@ -5527,13 +5532,15 @@ function UTMStatsByStaff({ dateRange }) {
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                               {(() => {
-                                // Group rows theo (kind, name) — 3 nhóm visual:
+                                // Group rows theo (kind, name) — 4 nhóm visual:
                                 //   1. matched   — UTM khớp FB campaign (sky blue)
-                                //   2. organic   — lead không qua FB Ads, UTM ảo (emerald)
-                                //   3. unmatched — UTM bị typo / FB chưa fetch (amber, cần fix)
+                                //   2. organic   — lead có trong CRM nhưng không UTM, UTM ảo (emerald)
+                                //   3. no_crm    — đơn POS KHÔNG match lead CRM nào (slate)
+                                //   4. unmatched — UTM bị typo / FB chưa fetch (amber, cần fix)
                                 const groupKey = (r) => r.matched_campaign_name
                                   ? r.matched_campaign_name
-                                  : (r.is_organic ? "__ORGANIC__" : "__UNMATCHED__")
+                                  : (r.is_organic ? "__ORGANIC__"
+                                    : (r.is_no_crm ? "__NO_CRM__" : "__UNMATCHED__"))
                                 const groupSize = {}
                                 const groupSpend = {}
                                 const groupAgg = {}
@@ -5554,8 +5561,10 @@ function UTMStatsByStaff({ dateRange }) {
                                   if (r.f_profit != null) g.profit += r.f_profit
                                   if (r.f_ctr != null && g.ctr == null) g.ctr = r.f_ctr  // CTR campaign-level
                                 }
-                                // Sort priority: matched (0) → organic (1) → unmatched (2)
-                                const sortRank = (r) => r.matched_campaign_name ? 0 : (r.is_organic ? 1 : 2)
+                                // Sort priority: matched (0) → organic (1) → no_crm (2) → unmatched (3)
+                                const sortRank = (r) => r.matched_campaign_name ? 0
+                                  : (r.is_organic ? 1
+                                    : (r.is_no_crm ? 2 : 3))
                                 const sorted = [...productRows].sort((a, b) => {
                                   const ra = sortRank(a), rb = sortRank(b)
                                   if (ra !== rb) return ra - rb
@@ -5577,12 +5586,16 @@ function UTMStatsByStaff({ dateRange }) {
                                     const gCpl = (g.leads && g.spend) ? (g.spend / g.leads) : null
                                     const gCpo = (g.orders && g.spend) ? (g.spend / g.orders) : null
                                     const gProfitPct = (g.profit && g.revenueKept > 0) ? (g.profit / g.revenueKept * 100) : null
-                                    const groupKind = r.matched_campaign_name ? "matched" : (r.is_organic ? "organic" : "unmatched")
+                                    const groupKind = r.matched_campaign_name ? "matched"
+                                      : (r.is_organic ? "organic"
+                                        : (r.is_no_crm ? "no_crm" : "unmatched"))
                                     const headerBgCls = groupKind === "matched"
                                       ? "bg-sky-50 border-t-2 border-sky-200 font-semibold"
                                       : groupKind === "organic"
                                         ? "bg-emerald-50 border-t-2 border-emerald-200 font-semibold"
-                                        : "bg-amber-50 border-t-2 border-amber-200 font-semibold"
+                                        : groupKind === "no_crm"
+                                          ? "bg-slate-100 border-t-2 border-slate-300 font-semibold"
+                                          : "bg-amber-50 border-t-2 border-amber-200 font-semibold"
                                     out.push(
                                       <tr key={"hdr-" + idx} className={headerBgCls}>
                                         <td colSpan={4} className="px-3 py-1.5 text-[11px]">
@@ -5590,7 +5603,10 @@ function UTMStatsByStaff({ dateRange }) {
                                             <span className="text-sky-900">📦 {r.matched_campaign_name} <span className="text-gray-500 font-normal ml-1">({groupSize[k]} UTM)</span></span>
                                           )}
                                           {groupKind === "organic" && (
-                                            <span className="text-emerald-900">🌿 Organic / không qua FB Ads <span className="text-gray-500 font-normal ml-1">({groupSize[k]} nguồn)</span></span>
+                                            <span className="text-emerald-900">🌿 Organic / có lead CRM, không UTM <span className="text-gray-500 font-normal ml-1">({groupSize[k]} nguồn)</span></span>
+                                          )}
+                                          {groupKind === "no_crm" && (
+                                            <span className="text-slate-800">📞 Đơn KHÔNG qua CRM (web/zalo/hotline/FB direct) <span className="text-gray-500 font-normal ml-1">({groupSize[k]} nguồn)</span></span>
                                           )}
                                           {groupKind === "unmatched" && (
                                             <span className="text-amber-800">⚠ UTM không khớp FB campaign ({groupSize[k]})</span>
