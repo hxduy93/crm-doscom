@@ -4431,14 +4431,14 @@ function RevenueByStaffBreakdown({ dateRange, selectedStaff, onSelectStaff }) {
       ordersPending = sumOrdByStatuses(STATUSES_PENDING)
     }
 
-    // ── Per-product cells — dùng THỰC THU CHỐT (delivered only) để Tổng cột khớp số card chính ──
+    // ── Per-product cells — dùng TẠM TÍNH (delivered + other + returning) để Tổng cột khớp số card chính ──
     const prodTotals = {}
     const prodOrders = {}
     PRODUCTS.forEach(p => {
       let sum = 0
       let ord = 0
       if (g.products_by_status) {
-        STATUSES_FINAL.forEach(st => {
+        STATUSES_PENDING.forEach(st => {
           const pData = g.products_by_status[st]?.[p] || {}
           Object.entries(pData.by_date || {}).forEach(([d, v]) => { if (isInRange(d)) sum += v })
           Object.entries(pData.orders_by_date || {}).forEach(([d, c]) => { if (isInRange(d)) ord += c })
@@ -4462,9 +4462,9 @@ function RevenueByStaffBreakdown({ dateRange, selectedStaff, onSelectStaff }) {
       ordersFinal,
       revPending,
       ordersPending,
-      // Alias backward-compat (tables khác có thể đọc totalRev/totalOrders)
-      totalRev: revFinal,
-      totalOrders: ordersFinal,
+      // Alias: totalRev/totalOrders = TẠM TÍNH (primary metric trên card kể từ 2026-05-20)
+      totalRev: revPending,
+      totalOrders: ordersPending,
       prodTotals,
       prodOrders,
       hasData: true,
@@ -4515,12 +4515,13 @@ function RevenueByStaffBreakdown({ dateRange, selectedStaff, onSelectStaff }) {
     })
     const fallbackOrders = subTotals.some(x => x.fallbackOrders)
     const { spend: adSpend, adKind } = adSpendForStaff(st.key)
-    // CIR dùng THỰC THU CHỐT (delivered) làm mẫu số — phản ánh tỉ lệ chi phí thật.
-    const cir = revFinal > 0 ? (adSpend / revFinal * 100) : null
+    // CIR dùng TẠM TÍNH làm mẫu số (yêu cầu nghiệp vụ 2026-05-20).
+    const cir = revPending > 0 ? (adSpend / revPending * 100) : null
     return {
       ...st,
       revFinal, ordersFinal, revPending, ordersPending,
-      totalRev: revFinal, totalOrders: ordersFinal,
+      // totalRev/totalOrders trỏ về Tạm tính (số to chính trên card)
+      totalRev: revPending, totalOrders: ordersPending,
       prodTotals, prodOrders, subTotals, fallbackOrders, adSpend, adKind, cir,
     }
   })
@@ -4529,9 +4530,9 @@ function RevenueByStaffBreakdown({ dateRange, selectedStaff, onSelectStaff }) {
   const grandOrdersFinal   = staffRows.reduce((s, r) => s + r.ordersFinal,   0)
   const grandRevPending    = staffRows.reduce((s, r) => s + r.revPending,    0)
   const grandOrdersPending = staffRows.reduce((s, r) => s + r.ordersPending, 0)
-  // Backward-compat alias
-  const grandRev    = grandRevFinal
-  const grandOrders = grandOrdersFinal
+  // Backward-compat alias — trỏ về Tạm tính (số to chính)
+  const grandRev    = grandRevPending
+  const grandOrders = grandOrdersPending
   const anyFallback = staffRows.some(r => r.fallbackOrders)
 
   // Max per product column (để scale mini bar)
@@ -4546,21 +4547,21 @@ function RevenueByStaffBreakdown({ dateRange, selectedStaff, onSelectStaff }) {
         <div>
           <h2 className="text-lg font-bold text-red-700 tracking-tight">👥 Doanh thu theo nhân sự — 4 nhóm</h2>
           <p className="text-xs text-gray-500 mt-1">
-            <span className="font-semibold text-emerald-700">Thực thu chốt</span> = chỉ status <em>delivered</em> (đã giao) · <span className="font-semibold text-amber-700">Tạm tính</span> = delivered + đang xử lý + đang hoàn · loại đã hoàn / đã hủy · WEBSITE = Website + Zalo OA + Hotline · Page Facebook = đơn nhắn tin organic qua page (nguồn -1)
+            <span className="font-semibold text-amber-700">Tạm tính</span> (số chính) = delivered + đang xử lý + đang hoàn · <span className="font-semibold text-emerald-700">Thực thu chốt</span> (số phụ) = chỉ status <em>delivered</em> (đã giao) · loại đã hoàn / đã hủy · WEBSITE = Website + Zalo OA + Hotline · Page Facebook = đơn nhắn tin organic qua page (nguồn -1)
           </p>
         </div>
         <div className="text-right">
-          <div className="text-[10px] text-emerald-700 uppercase tracking-wide font-semibold">Tổng thực thu chốt</div>
-          <div className="text-xl font-extrabold text-gray-900 leading-tight">{fmtVNDFull(grandRevFinal)}₫</div>
-          <div className="text-[11px] text-gray-500">{grandOrdersFinal.toLocaleString("vi-VN")} đơn delivered</div>
-          <div className="text-[10px] text-amber-700 mt-1">Tạm tính: <span className="font-semibold">{fmtVNDFull(grandRevPending)}₫</span> ({grandOrdersPending.toLocaleString("vi-VN")} đơn)</div>
+          <div className="text-[10px] text-amber-700 uppercase tracking-wide font-semibold">Tổng tạm tính</div>
+          <div className="text-xl font-extrabold text-gray-900 leading-tight">{fmtVNDFull(grandRevPending)}₫</div>
+          <div className="text-[11px] text-gray-500">{grandOrdersPending.toLocaleString("vi-VN")} đơn</div>
+          <div className="text-[10px] text-emerald-700 mt-1">Thực thu chốt: <span className="font-semibold">{fmtVNDFull(grandRevFinal)}₫</span> ({grandOrdersFinal.toLocaleString("vi-VN")} đơn delivered)</div>
         </div>
       </div>
 
       {/* Cards nhân sự — click để lọc source + status + mở bảng Lợi nhuận */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {staffRows.map(r => {
-          const pct = grandRevFinal > 0 ? (r.revFinal / grandRevFinal * 100) : 0
+          const pct = grandRevPending > 0 ? (r.revPending / grandRevPending * 100) : 0
           const pendingDelta = r.revPending - r.revFinal
           const isSelected = selectedStaff === r.key
           return (
@@ -4575,25 +4576,25 @@ function RevenueByStaffBreakdown({ dateRange, selectedStaff, onSelectStaff }) {
                 <span>{r.label}</span>
                 <span className={`text-[10px] font-medium ${isSelected ? "text-red-600" : "text-gray-400"}`}>{isSelected ? "● ĐÃ CHỌN" : "👆 click xem LN"}</span>
               </div>
-              {/* THỰC THU CHỐT (delivered) — số chính */}
-              <div className="text-[10px] text-emerald-700 uppercase tracking-wide font-semibold">Thực thu chốt</div>
-              <div className="text-2xl font-extrabold text-gray-900 leading-tight">{fmtVNDFull(r.revFinal)}₫</div>
-              <div className="text-xs text-gray-600 mt-1">{r.ordersFinal.toLocaleString("vi-VN")} đơn delivered · <span className="font-semibold">{pct.toFixed(1)}% tổng</span></div>
+              {/* TẠM TÍNH (delivered + other + returning) — số chính */}
+              <div className="text-[10px] text-amber-700 uppercase tracking-wide font-semibold">Doanh thu tạm tính</div>
+              <div className="text-2xl font-extrabold text-gray-900 leading-tight">{fmtVNDFull(r.revPending)}₫</div>
+              <div className="text-xs text-gray-600 mt-1">{r.ordersPending.toLocaleString("vi-VN")} đơn · <span className="font-semibold">{pct.toFixed(1)}% tổng</span></div>
               {/* Share bar */}
               <div className="mt-2 h-2 bg-white/60 rounded-full overflow-hidden">
                 <div className={`h-full ${r.color.bar}`} style={{ width: pct + "%" }}></div>
               </div>
-              {/* TẠM TÍNH (delivered + other + returning) — số phụ */}
+              {/* THỰC THU CHỐT (delivered only) — số phụ */}
               <div className="mt-2 pt-2 border-t border-white/50">
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-amber-700 font-semibold">Tạm tính</span>
+                  <span className="text-emerald-700 font-semibold">Thực thu chốt</span>
                   <span className="text-gray-700">
-                    <span className="font-bold">{fmtVNDFull(r.revPending)}₫</span>
-                    <span className="text-gray-500 ml-1">({r.ordersPending.toLocaleString("vi-VN")} đơn)</span>
+                    <span className="font-bold">{fmtVNDFull(r.revFinal)}₫</span>
+                    <span className="text-gray-500 ml-1">({r.ordersFinal.toLocaleString("vi-VN")} đơn delivered)</span>
                   </span>
                 </div>
                 {pendingDelta > 0 && (
-                  <div className="text-[10px] text-gray-500 mt-0.5">+ {fmtVNDFull(pendingDelta)}₫ đang xử lý / đang hoàn</div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">Còn {fmtVNDFull(pendingDelta)}₫ đang xử lý / đang hoàn</div>
                 )}
               </div>
               {/* Ad spend + CIR per staff */}
@@ -4603,22 +4604,22 @@ function RevenueByStaffBreakdown({ dateRange, selectedStaff, onSelectStaff }) {
                   <span className="font-bold text-gray-800">{fmtVNDFull(r.adSpend)}₫</span>
                 </div>
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-gray-500">📊 CIR (QC / Thực thu)</span>
+                  <span className="text-gray-500">📊 CIR (QC / Tạm tính)</span>
                   <span className={`font-bold ${r.cir == null ? "text-gray-400" : r.cir < 20 ? "text-emerald-700" : r.cir < 40 ? "text-amber-700" : "text-red-600"}`}>
                     {r.cir == null ? "—" : r.cir.toFixed(1) + "%"}
                   </span>
                 </div>
               </div>
-              {/* Sub-source pills (chỉ hiện nếu > 1 sub) — theo Thực thu chốt */}
+              {/* Sub-source pills (chỉ hiện nếu > 1 sub) — theo Tạm tính */}
               {r.subTotals.length > 1 && (
                 <div className="mt-3 space-y-1">
                   {r.subTotals.map(s => {
-                    const subPct = r.revFinal > 0 ? (s.revFinal / r.revFinal * 100) : 0
+                    const subPct = r.revPending > 0 ? (s.revPending / r.revPending * 100) : 0
                     return (
                       <div key={s.key} className="flex items-center justify-between text-[11px]">
                         <span className={`px-1.5 py-0.5 rounded font-semibold ${r.color.sub}`}>{s.label}</span>
                         <span className="text-gray-700">
-                          <span className="font-semibold">{fmtVNDFull(s.revFinal)}₫</span>
+                          <span className="font-semibold">{fmtVNDFull(s.revPending)}₫</span>
                           <span className="text-gray-500 ml-1">· {subPct.toFixed(0)}%</span>
                         </span>
                       </div>
@@ -4727,8 +4728,8 @@ function RevenueByStaffBreakdown({ dateRange, selectedStaff, onSelectStaff }) {
       </div>
 
       <p className="text-[11px] text-gray-500 mt-3">
-        * Bảng + thẻ nhân sự hiển thị <span className="font-semibold text-emerald-700">Thực thu chốt</span> (chỉ status <em>delivered</em>) · cell sản phẩm = doanh thu SKU đó đã giao · cột "Tổng" = tổng các SKU đã giao của nhân sự.
-        Chỉ số <span className="font-semibold text-amber-700">Tạm tính</span> trên thẻ = delivered + đang xử lý + đang hoàn (pipeline có khả năng thành doanh thu). Đơn "Đã hoàn" + "Đã hủy" luôn bị loại.
+        * Bảng + thẻ nhân sự hiển thị <span className="font-semibold text-amber-700">Doanh thu tạm tính</span> = delivered + đang xử lý + đang hoàn · cell sản phẩm = doanh thu SKU thuộc pipeline · cột "Tổng" = tổng các SKU của nhân sự.
+        Chỉ số <span className="font-semibold text-emerald-700">Thực thu chốt</span> trên thẻ = chỉ status <em>delivered</em> (đơn đã giao xong) — phản ánh tiền thật sự thu được. CIR = chi phí QC / Tạm tính. Đơn "Đã hoàn" + "Đã hủy" luôn bị loại.
         {anyFallback && (
           <span className="block text-amber-600 mt-1">
             ⚠ Snapshot JSON cũ chưa có order_revenue_by_status_by_date — đang dùng số xấp xỉ.
