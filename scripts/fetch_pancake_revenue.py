@@ -638,7 +638,16 @@ def aggregate(orders):
         summary[bucket_key]["total"] += order_total
 
         inserted_at = o.get("inserted_at") or o.get("created_at") or ""
-        date = inserted_at[:10] if inserted_at else "unknown"
+        # Bucket theo VN date (UTC+7) — Pancake tra inserted_at o UTC.
+        # Truoc 2026-05-20 buckets theo inserted_at[:10] (UTC date) → lech ±1 ngay
+        # cho don dat sau 17:00 UTC. Fix: parse ISO va shift +7h sang VN.
+        date = "unknown"
+        if inserted_at:
+            try:
+                _dt = datetime.fromisoformat(inserted_at[:26]).replace(tzinfo=timezone.utc)
+                date = (_dt + timedelta(hours=7)).date().isoformat()
+            except Exception:
+                date = inserted_at[:10]
         total_orders_by_date[date] = total_orders_by_date.get(date, 0) + 1
         # Gộp doanh thu + số đơn vào status+date map
         order_revenue_by_status_by_date[bucket_key][date] = \
