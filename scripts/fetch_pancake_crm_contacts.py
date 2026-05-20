@@ -23,7 +23,8 @@ API_KEY = os.environ.get("PANCAKE_CRM_API_KEY", "").strip()
 SHOP_ID = os.environ.get("PANCAKE_SHOP_ID", "").strip()
 BASE_URL = "https://pos.pancake.vn/api/v1"
 TABLE = "Contact"
-LOOKBACK_DAYS = 30  # bắt đầu 30 ngày, sau khi stable sẽ tăng lên 90
+LOOKBACK_DAYS = 90  # 2026-05-20: tăng 30→90 để khớp POS window (POS pull 90 ngày).
+                    # Trước đó: 30 ngày → ~1.0B doanh thu POS T2-T3 không match được lead.
 PAGE_SIZE = 200     # 2026-05-12: bump 100→200. Server Pancake 500 nếu 300/page nhưng 200 OK.
 PAGE_SLEEP_SEC = 0.5  # 2026-05-12: giảm 1.0→0.5. Giúp pagination dài (>100 pages) né GH Actions timeout.
 OUTPUT_FILE = "data/pancake-crm-contacts.json"
