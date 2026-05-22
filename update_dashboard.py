@@ -27,7 +27,8 @@ import requests
 FB_TOKEN = os.environ["FB_ACCESS_TOKEN"]
 
 FB_API_VERSION = "v20.0"
-DAYS_BACK      = 30  # last 30 days of data
+DAYS_BACK      = 90  # last 90 days — phủ ATTRIBUTION_WINDOW_DAYS=60 của build_lead_to_order.py
+                     # + match LOOKBACK_DAYS=90 của scripts/fetch_fb_ads.py để UTM-FB match rate cao
 
 # 6 ad accounts under BM "Yoday Media Retail".
 # `staff`  = nhân sự cầm tài khoản (DUY / PHUONG_NAM) — dùng phân bổ ad spend cho tính LN.
