@@ -233,6 +233,7 @@ export async function onRequestPost(context) {
   const articleId = body.article_id;
   const model = ["haiku", "sonnet"].includes(body.model) ? body.model : "haiku";
   const targetWords = Math.min(Math.max(parseInt(body.target_words) || 2000, 800), 4000);
+  const force = body.force === true;
 
   if (!articleId) return jsonResponse({ error: "Missing article_id" }, 400);
 
@@ -241,6 +242,7 @@ export async function onRequestPost(context) {
     SELECT q.id as article_id, q.brand, q.status, q.title, q.slug,
            q.gap_severity, q.gap_engines, q.gap_summary,
            q.competitor_winners, q.source_citations,
+           q.drafted_at, q.created_at,
            gq.text as query_text, gq.category, gq.brand_target,
            gq.id as query_id
     FROM geo_content_queue q
@@ -249,16 +251,37 @@ export async function onRequestPost(context) {
   `).bind(articleId).first();
 
   if (!article) return jsonResponse({ error: `Article ${articleId} not found` }, 404);
-  if (!["idea", "failed"].includes(article.status)) {
+
+  // Auto-recover stale drafting: nếu status='drafting' và drafted_at quá 5 phút trước
+  // (hoặc drafted_at NULL và created_at quá 5 phút) → coi như Worker bị kill, cho phép regen.
+  const STALE_SEC = 5 * 60;
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (article.status === "drafting" && !force) {
+    const startedAt = article.drafted_at || article.created_at || 0;
+    const age = nowSec - startedAt;
+    if (age > STALE_SEC) {
+      // Stale → recover
+      await env.DB.prepare(
+        `UPDATE geo_content_queue SET status='failed', last_error=? WHERE id=?`
+      ).bind(`Auto-recovered from stale drafting after ${age}s`, articleId).run();
+      article.status = "failed";
+    } else {
+      return jsonResponse({
+        error: `Article đang được sinh content (status='drafting', đã chạy ${age}s). Vui lòng đợi ~${STALE_SEC - age}s rồi thử lại, hoặc gửi {force:true} để bỏ qua.`
+      }, 409);
+    }
+  }
+
+  if (!["idea", "failed"].includes(article.status) && !force) {
     return jsonResponse({
       error: `Article status='${article.status}' — chỉ regen được cho idea/failed. Dùng PATCH /api/geo/queue/:id nếu muốn edit.`
     }, 400);
   }
 
-  // Mark drafting
+  // Mark drafting (set drafted_at = now để tracking stale state)
   await env.DB.prepare(
-    `UPDATE geo_content_queue SET status='drafting' WHERE id = ?`
-  ).bind(articleId).run();
+    `UPDATE geo_content_queue SET status='drafting', drafted_at=? WHERE id = ?`
+  ).bind(nowSec, articleId).run();
 
   try {
     const userPrompt = buildContentPrompt({ article, brand: article.brand, targetWords });
@@ -266,7 +289,7 @@ export async function onRequestPost(context) {
       model,
       systemPrompt: CONTENT_SYSTEM_PROMPT,
       userPrompt,
-      maxTokens: 8000,
+      maxTokens: 16000,
       jsonOutput: true,
     });
 

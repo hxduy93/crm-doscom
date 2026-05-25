@@ -27,7 +27,7 @@ const ALLOWED_PATCH_FIELDS = new Set([
 ]);
 
 const ALLOWED_STATUS_TRANSITIONS = new Set([
-  "edited", "pending_review", "rejected",
+  "edited", "pending_review", "rejected", "failed", "idea",
 ]);
 
 export async function onRequestGet(context) {

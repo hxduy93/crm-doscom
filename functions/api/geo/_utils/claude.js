@@ -83,25 +83,84 @@ export async function callClaude(env, {
 }
 
 function extractJson(text) {
-  // Cố parse JSON nguyên text. Nếu fail, tìm khối JSON đầu tiên trong ```json``` hoặc {...}.
-  try { return JSON.parse(text); } catch {}
+  // Cố parse JSON nguyên text. Nếu fail, thử nhiều chiến lược recovery
+  // (strip ```json fence, balance braces walking, completion of truncated output).
+  let t = String(text || "").trim();
+  try { return JSON.parse(t); } catch {}
 
-  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  // Bóc ```json ... ``` (cả fence đóng và fence mở-không-đóng do output truncate)
+  const fenceMatch = t.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (fenceMatch) {
     try { return JSON.parse(fenceMatch[1]); } catch {}
   }
-
-  const firstBrace = text.indexOf("{");
-  const lastBrace  = text.lastIndexOf("}");
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-    try { return JSON.parse(text.slice(firstBrace, lastBrace + 1)); } catch {}
+  const openFence = t.match(/^```(?:json)?\s*([\s\S]*)$/);
+  if (openFence) {
+    let inner = openFence[1].replace(/```\s*$/, "").trim();
+    try { return JSON.parse(inner); } catch {
+      const r = tryBalanceJson(inner);
+      if (r !== undefined) return r;
+    }
   }
 
-  const firstBracket = text.indexOf("[");
-  const lastBracket  = text.lastIndexOf("]");
+  // Balance braces từ vị trí { đầu tiên (xử lý JSON bị truncate)
+  const firstBrace = t.indexOf("{");
+  if (firstBrace >= 0) {
+    const r = tryBalanceJson(t.slice(firstBrace));
+    if (r !== undefined) return r;
+  }
+
+  // Array fallback
+  const firstBracket = t.indexOf("[");
+  const lastBracket  = t.lastIndexOf("]");
   if (firstBracket >= 0 && lastBracket > firstBracket) {
-    try { return JSON.parse(text.slice(firstBracket, lastBracket + 1)); } catch {}
+    try { return JSON.parse(t.slice(firstBracket, lastBracket + 1)); } catch {}
   }
 
-  throw new Error(`Claude output không parse được JSON. First 200 chars: ${text.slice(0, 200)}`);
+  throw new Error(`Claude output không parse được JSON. First 200 chars: ${t.slice(0, 200)}`);
+}
+
+// Cố gắng parse JSON object có thể bị truncate: walking từ đầu, đếm depth, khi gặp depth=0 thì cắt;
+// nếu chạy hết text mà depth>0, thử đóng các dấu { và " còn thiếu để recover một phần.
+function tryBalanceJson(s) {
+  let depth = 0;
+  let inStr = false;
+  let escape = false;
+  let lastValidEnd = -1;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (escape) { escape = false; continue; }
+    if (inStr) {
+      if (ch === "\\") escape = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') { inStr = true; continue; }
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) lastValidEnd = i;
+    }
+  }
+  if (lastValidEnd > 0) {
+    try { return JSON.parse(s.slice(0, lastValidEnd + 1)); } catch {}
+  }
+  // Truncate: thử đóng string còn dở, cắt đến dấu , hoặc " gần nhất, rồi đóng braces còn thiếu
+  if (depth > 0) {
+    let trimmed = s;
+    if (inStr) {
+      // Cắt về trước dấu " cuối cùng (kết thúc một string value)
+      const lastQuote = trimmed.lastIndexOf('"');
+      if (lastQuote > 0) trimmed = trimmed.slice(0, lastQuote + 1);
+    }
+    // Cắt về trước dấu , hoặc } cuối cùng
+    const lastComma = trimmed.lastIndexOf(",");
+    const lastClose = trimmed.lastIndexOf("}");
+    const cutAt = Math.max(lastComma, lastClose);
+    if (cutAt > 0) trimmed = trimmed.slice(0, cutAt);
+    // Đóng braces
+    trimmed = trimmed.replace(/,\s*$/, "");
+    trimmed += "}".repeat(depth);
+    try { return JSON.parse(trimmed); } catch {}
+  }
+  return undefined;
 }
