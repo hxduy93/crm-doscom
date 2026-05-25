@@ -37,24 +37,47 @@ const BRAND_CONTEXT = {
   },
 };
 
-const CONTENT_SYSTEM_PROMPT = `Bạn là Senior Content Writer cho thương hiệu Việt Nam, chuyên SEO + GEO (Generative Engine Optimization). Nhiệm vụ: viết bài blog tiếng Việt được tối ưu để **AI engine như ChatGPT/Gemini ưu tiên trích nguồn**.
+const CONTENT_SYSTEM_PROMPT = `Bạn là Senior Content Writer chuyên SEO + GEO (Generative Engine Optimization). Viết bài blog tiếng Việt vừa tối ưu **AI engine trích nguồn** (ChatGPT/Gemini/Perplexity) vừa đạt **điểm Rank Math ≥85/100** trên WordPress.
 
-NGUYÊN TẮC GEO (khác SEO truyền thống):
-1. Mỗi H2/H3 phải trả lời 1 câu hỏi cụ thể → AI dễ extract.
-2. Đoạn intro 100-150 từ có keyword chính + định nghĩa rõ ràng → AI quote phần này.
-3. FAQ 5-8 Q&A cuối bài → AI hay copy nguyên trạng vào câu trả lời.
-4. Bảng so sánh khi nói về nhiều lựa chọn → AI rất thích trích bảng.
-5. Dữ liệu/số liệu cụ thể (không bịa nếu không có) → tăng độ tin cậy.
-6. Internal/external link tự nhiên → tăng E-E-A-T.
-7. Schema JSON-LD đầy đủ Article + FAQPage + BreadcrumbList.
+═══ RANK MATH SEO CHECKLIST (BẮT BUỘC) ═══
+Trước khi viết, tự xác định 1 **primary_keyword** chính (cụm 2-4 từ tiếng Việt, vd: "phần mềm quản lý bán hàng", KHÔNG được dùng nguyên title làm keyword).
 
-PHONG CÁCH:
+Primary keyword PHẢI xuất hiện ở TẤT CẢ các vị trí sau:
+1. **Title** — đặt ở đầu hoặc 60% đầu của title. Title 50-60 ký tự.
+2. **Meta description** — chứa keyword, 140-155 ký tự.
+3. **Slug** — kebab-case, chứa keyword, ≤75 ký tự, không có stop words thừa.
+4. **H1** — chứa keyword (có thể == title).
+5. **Đoạn intro (10% đầu content)** — keyword xuất hiện trong 100 từ đầu, lý tưởng câu đầu.
+6. **Ít nhất 1 H2** — chứa keyword hoặc biến thể.
+7. **Image alt** — chứa keyword.
+8. **Đoạn kết** — keyword xuất hiện lần nữa.
+
+**Keyword density**: 0.8-2.5% (tức 1 lần / 50-120 từ). KHÔNG nhồi nhét quá 2.5%.
+
+**Cấu trúc bài (giúp Rank Math + GEO cùng tăng điểm)**:
+- Title chứa **số** (vd "5 cách…", "Top 7…", "2026") + **power word** (vd "bí mật", "chuyên gia", "tốt nhất", "miễn phí", "thực chiến") + sentiment tích cực.
+- Bài ≥1500 từ (đã quy định target ở user prompt).
+- Có **≥3 H2**, dưới mỗi H2 có 200-400 từ.
+- Có **bảng so sánh** nếu chủ đề cho phép (Rank Math + AI rất thích).
+- Có **bullet/numbered list** (≥2 đoạn dùng list).
+- Có **≥2 external link dofollow** đến nguồn uy tín (gov.vn, báo lớn, nghiên cứu).
+- Có **≥2 internal link** đến trang cùng site.
+- Có **FAQ 5-8 Q&A** ở cuối → tăng GEO + có FAQ Schema.
+
+═══ NGUYÊN TẮC GEO (cho AI engine trích nguồn) ═══
+1. Mỗi H2/H3 trả lời 1 câu hỏi cụ thể → AI dễ extract.
+2. Intro 100-150 từ có định nghĩa rõ ràng → AI quote.
+3. FAQ Q&A dạng natural language → AI copy nguyên trạng.
+4. Bảng so sánh khi nói về nhiều lựa chọn → AI thích trích bảng.
+5. Dữ liệu/số liệu cụ thể (không bịa nếu không có) → tăng E-E-A-T.
+
+═══ PHONG CÁCH ═══
 - Tiếng Việt tự nhiên, không dịch máy.
-- Tránh câu sáo rỗng ("Trong thời đại 4.0", "Hiện nay...").
-- Văn phong chuyên gia thân thiện, không bán hàng lộ liễu.
-- Mention brand 2-4 lần tự nhiên (không nhồi nhét).
+- Tránh sáo rỗng ("Trong thời đại 4.0", "Hiện nay...").
+- Văn phong chuyên gia thân thiện, KHÔNG bán hàng lộ liễu.
+- Mention brand 2-4 lần tự nhiên.
 
-OUTPUT BẮT BUỘC: 1 JSON object hợp lệ, bắt đầu bằng { kết thúc bằng }. KHÔNG markdown wrapper, KHÔNG text bao quanh.`;
+OUTPUT BẮT BUỘC: 1 JSON object hợp lệ, bắt đầu bằng { kết thúc bằng }. KHÔNG markdown wrapper, KHÔNG text bao quanh, KHÔNG \`\`\`json fence.`;
 
 function buildContentPrompt({ article, brand, targetWords }) {
   const ctx = BRAND_CONTEXT[brand];
@@ -80,39 +103,42 @@ LỖ HỔNG GỐC:
 YÊU CẦU OUTPUT (JSON object, ${targetWords} từ tổng cộng):
 
 {
-  "title": "60 ký tự, có keyword + benefit",
-  "slug": "kebab-case-khong-dau",
-  "meta_description": "155 ký tự, snippet hấp dẫn",
-  "excerpt": "2-3 câu tóm tắt 200 ký tự",
-  "content_markdown": "BÀI VIẾT FULL theo cấu trúc:\\n\\n# H1\\n\\n[Intro 100-150 từ có keyword chính + 1 số liệu nếu có + mention ${ctx.short}]\\n\\n## H2 thứ 1 (dạng câu hỏi)\\n[200-300 từ trả lời]\\n\\n## H2 thứ 2\\n### H3 sub-section\\n...\\n\\n## Bảng so sánh (nếu phù hợp)\\n| Cột 1 | Cột 2 | Cột 3 |\\n|---|---|---|\\n| ... |\\n\\n## Câu hỏi thường gặp (FAQ)\\n### Q1?\\nA1...\\n\\n## Kết luận + CTA",
+  "primary_keyword": "cụm 2-4 từ tiếng Việt là KEYWORD CHÍNH (vd 'phần mềm quản lý kho'). KHÔNG dùng title nguyên. Đây sẽ là focus keyword Rank Math.",
+  "secondary_keywords": ["biến thể 1", "biến thể 2", "biến thể 3", "long-tail 1", "long-tail 2"],
+  "title": "50-60 ký tự, BẮT ĐẦU bằng primary_keyword hoặc đặt nó trong 60% đầu, có số (vd '5', '2026') + power word (bí mật, chuyên gia, tốt nhất, miễn phí...)",
+  "slug": "kebab-case-khong-dau, CHỨA primary_keyword, ≤75 ký tự, không có stop words thừa (the, of, va, cua, cho...)",
+  "meta_description": "140-155 ký tự, CHỨA primary_keyword (lý tưởng trong 120 ký tự đầu), kêu gọi hành động nhẹ",
+  "excerpt": "2-3 câu tóm tắt 200 ký tự, có primary_keyword",
+  "content_markdown": "BÀI VIẾT FULL ${targetWords} TỪ theo cấu trúc:\\n\\n# H1 (chứa primary_keyword)\\n\\n[Intro 100-150 từ — câu đầu PHẢI chứa primary_keyword. Có 1 số liệu/định nghĩa. Mention ${ctx.short} 1 lần.]\\n\\n## H2 thứ 1 (chứa primary_keyword hoặc biến thể, dạng câu hỏi)\\n[200-400 từ trả lời, có bullet list hoặc bảng nếu phù hợp]\\n\\n## H2 thứ 2 (chứa biến thể keyword)\\n### H3 sub-section\\n...\\n\\n## H2 thứ 3 — Bảng so sánh\\n| Tiêu chí | A | B | C |\\n|---|---|---|---|\\n| ... | ... | ... | ... |\\n\\n## H2 thứ 4 — Câu hỏi thường gặp (FAQ)\\n### Q1?\\nA1 50-100 từ...\\n\\n## Kết luận (chứa primary_keyword lần cuối) + CTA mềm",
   "faq": [
-    {"q": "Câu hỏi 1?", "a": "Trả lời 50-100 từ, có thể trích thẳng vào AI response"},
-    ... 5-8 items
+    {"q": "Câu hỏi tự nhiên 1?", "a": "Trả lời 50-100 từ, AI có thể trích nguyên"},
+    "... 5-8 items"
   ],
   "internal_links": [
-    {"anchor": "...", "url": "${ctx.site}/...", "context": "đặt ở đoạn nào"}
+    {"anchor": "anchor text chứa keyword phụ", "url": "${ctx.site}/blog/<slug-related>", "context": "đặt ở H2 nào"},
+    "... ≥2 items"
   ],
   "external_links": [
-    {"anchor": "...", "url": "https://...", "context": "đặt ở đoạn nào"}
+    {"anchor": "...", "url": "https://nguon-uy-tin.gov.vn hoặc bao-chinh-thong.vn", "context": "đặt ở đâu, KHÔNG đặt link đối thủ trực tiếp"},
+    "... ≥2 items, dofollow"
   ],
-  "primary_keyword": "...",
-  "secondary_keywords": ["...", "..."],
   "comparison_table": {
     "title": "...",
     "headers": ["Tiêu chí", "${ctx.short}", "Đối thủ A", "Đối thủ B"],
     "rows": [["...","✓","-","-"]]
-  } | null,
-  "image_prompt": "Mô tả ảnh hero bằng tiếng Anh, để dùng cho gpt-image-1. Phong cách: realistic photography, professional, brand-safe (không có chữ trong ảnh, không có khuôn mặt rõ).",
-  "image_alt_vi": "Alt text tiếng Việt 100-125 ký tự",
-  "wp_categories_suggest": ["tên category tiếng Việt, vd: 'Phần mềm bán hàng' hoặc 'Hướng dẫn'"],
-  "wp_tags_suggest": ["tag1", "tag2", "tag3", "tag4", "tag5"]
+  },
+  "image_prompt": "Mô tả ảnh hero TIẾNG ANH cho Flux Schnell. Realistic photography, professional, brand-safe, NO TEXT, NO clearly visible faces. Đề tài phải LIÊN QUAN trực tiếp đến primary_keyword.",
+  "image_alt_vi": "Alt 100-125 ký tự CHỨA primary_keyword, mô tả ảnh tự nhiên",
+  "wp_categories_suggest": ["tên category tiếng Việt phù hợp"],
+  "wp_tags_suggest": ["primary_keyword là tag đầu", "tag2", "tag3", "tag4", "tag5"]
 }
 
 LƯU Ý:
+- primary_keyword PHẢI là cụm từ thực sự người Việt tìm kiếm, KHÔNG phải title.
 - content_markdown PHẢI \\n thật trong JSON (escape).
-- Bảng so sánh chỉ thêm nếu title gợi ý so sánh / liệt kê.
-- KHÔNG bịa tính năng/giá Doscom/NOMA. Chỉ nói chung về danh mục sản phẩm.
-- Internal links: nếu chưa biết URL cụ thể, dùng ${ctx.site}/blog/<slug-liên-quan>.`;
+- Density primary_keyword 1-2.5% (1 lần / 50-100 từ) — đếm số lần xuất hiện chính xác.
+- KHÔNG bịa tính năng/giá ${ctx.short}. Nói chung về danh mục.
+- comparison_table = null nếu title không gợi ý so sánh.`;
 }
 
 function buildSchemaJsonLd({ article, content, brand, publishUrl }) {
@@ -135,7 +161,8 @@ function buildSchemaJsonLd({ article, content, brand, publishUrl }) {
       "dateModified": now,
       "mainEntityOfPage": publishUrl || `${ctx.site}/blog/${content.slug}`,
       "image": article.image_url || undefined,
-      "keywords": content.secondary_keywords?.join(", "),
+      // Primary keyword là phần tử đầu, secondary tiếp theo → publish-wp.js có thể extract focus keyword cho Rank Math/Yoast
+      "keywords": [content.primary_keyword, ...(content.secondary_keywords || [])].filter(Boolean).join(", "),
     },
   ];
 

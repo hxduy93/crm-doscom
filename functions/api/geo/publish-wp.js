@@ -202,6 +202,24 @@ function buildContentWithSchema(html, schemaJsonLd) {
   return `${html}\n\n<!-- GEO Schema JSON-LD -->\n${scripts}`;
 }
 
+// Extract primary keyword từ schema_jsonld (do generate-content.js lưu keywords array với primary
+// làm phần tử đầu). Fallback: dùng wp_tags[0] hoặc title.
+function extractFocusKeyword(article) {
+  try {
+    const schemas = JSON.parse(article.schema_jsonld || "[]");
+    const articleSchema = (Array.isArray(schemas) ? schemas : [schemas]).find(s => s?.["@type"] === "Article");
+    if (articleSchema?.keywords) {
+      const first = String(articleSchema.keywords).split(",")[0].trim();
+      if (first) return first;
+    }
+  } catch {}
+  try {
+    const tags = JSON.parse(article.wp_tags || "[]");
+    if (tags[0]) return String(tags[0]).trim();
+  } catch {}
+  return article.title || "";
+}
+
 async function createPost(siteConfig, payload) {
   const res = await fetch(`${siteConfig.url}/wp-json/wp/v2/posts`, {
     method: "POST",
@@ -292,6 +310,7 @@ export async function onRequestPost(context) {
     const contentWithSchema = buildContentWithSchema(finalContent, article.schema_jsonld);
 
     // 4. Create post
+    const focusKw = extractFocusKeyword(article);
     const postPayload = {
       title: finalTitle,
       content: contentWithSchema,
@@ -301,11 +320,14 @@ export async function onRequestPost(context) {
       categories: categoryIds,
       tags: tagIds,
       meta: {
-        // Yoast SEO compatible (nếu site dùng Yoast)
+        // Yoast SEO compatible
         _yoast_wpseo_metadesc: finalMetaDesc,
-        _yoast_wpseo_focuskw: article.title,
-        // RankMath compatible
+        _yoast_wpseo_focuskw: focusKw,
+        _yoast_wpseo_title: finalTitle,
+        // Rank Math compatible (đúng key cho Rank Math)
         rank_math_description: finalMetaDesc,
+        rank_math_focus_keyword: focusKw,
+        rank_math_title: finalTitle,
       },
     };
     if (featuredMediaId) postPayload.featured_media = featuredMediaId;
