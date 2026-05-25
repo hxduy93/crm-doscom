@@ -82,6 +82,9 @@
         <option value="30">30 ngày</option>
         <option value="90">90 ngày</option>
       </select>
+      <button onclick="window.resetStaleDrafting()" class="px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-sm font-medium transition" title="Reset các article kẹt ở status drafting (do Worker bị kill giữa chừng) về failed để regen lại">
+        🔧 Reset stale
+      </button>
       <button id="refresh-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
         Refresh
@@ -833,12 +836,16 @@ async function generateContent(id) {
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ article_id: id, model: "haiku", target_words: 2000 }),
+      signal: AbortSignal.timeout(95000), // 95s — Worker timeout là 90s, cho buffer 5s
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || "Failed");
     setTimeout(loadQueue, 400);
   } catch (err) {
-    alert("Lỗi sinh content: " + err.message);
+    const msg = err.name === "TimeoutError"
+      ? "Quá 95s không có phản hồi (Cloudflare Worker đã kill). Article có thể đang ở status='drafting' tạm thời — đợi 5 phút rồi click lại, hoặc dùng nút Reset Stale ở góc phải."
+      : err.message;
+    alert("Lỗi sinh content: " + msg);
     loadQueue();
   }
 }
@@ -851,14 +858,38 @@ async function quickGenImage(id) {
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ article_id: id, steps: 4, width: 1280, height: 720 }),
+      signal: AbortSignal.timeout(60000),
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || "Failed");
     setTimeout(loadQueue, 400);
   } catch (err) {
-    alert("Lỗi sinh ảnh: " + err.message);
+    const msg = err.name === "TimeoutError" ? "Quá 60s, Flux Schnell có thể đang slow. Thử lại." : err.message;
+    alert("Lỗi sinh ảnh: " + msg);
   }
 }
+
+// Bulk reset tất cả article đang stuck ở status='drafting' về 'failed'.
+// Gọi qua nút "🔧 Reset stale" hoặc DevTools console: window.resetStaleDrafting()
+window.resetStaleDrafting = async function () {
+  const r = await fetch("/api/geo/queue?status=drafting", { credentials: "include" }).then(r => r.json());
+  if (!r.items?.length) { alert("Không có article nào kẹt ở drafting."); return; }
+  if (!confirm(`Tìm thấy ${r.items.length} article kẹt ở 'drafting'. Reset hết về 'failed' để regen lại?`)) return;
+  let ok = 0;
+  for (const it of r.items) {
+    try {
+      const u = await fetch("/api/geo/queue/" + it.id, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "failed" }),
+      }).then(r => r.json());
+      if (u.updated) ok++;
+    } catch {}
+  }
+  alert(`Đã reset ${ok}/${r.items.length} article. Refresh để thấy.`);
+  loadQueue();
+};
 
 // ============================================================
 // MODAL: Edit article
