@@ -149,6 +149,10 @@ YÊU CẦU OUTPUT (JSON object, ${targetWords} từ tổng cộng):
   },
   "image_prompt": "Mô tả ảnh hero TIẾNG ANH cho Flux Schnell. Realistic photography, professional, brand-safe, NO TEXT, NO clearly visible faces. Đề tài phải LIÊN QUAN trực tiếp đến primary_keyword.",
   "image_alt_vi": "Alt 100-125 ký tự CHỨA primary_keyword, mô tả ảnh tự nhiên",
+  "inline_images_meta": [
+    {"position": 0, "after_heading": "Tiêu đề H2 thứ 1 chính xác như trong content_markdown", "prompt_en": "English prompt riêng cho ảnh inline 1 — minh hoạ cho H2 thứ 1, realistic photography, no text, brand-safe", "alt_vi": "Alt tiếng Việt 80-120 ký tự chứa biến thể keyword"},
+    {"position": 1, "after_heading": "Tiêu đề H2 thứ 2 hoặc 3 chính xác", "prompt_en": "English prompt cho ảnh inline 2", "alt_vi": "Alt tiếng Việt"}
+  ],
   "wp_categories_suggest": ["tên category tiếng Việt phù hợp"],
   "wp_tags_suggest": ["primary_keyword là tag đầu", "tag2", "tag3", "tag4", "tag5"]
 }
@@ -417,6 +421,7 @@ export async function onRequestPost(context) {
         reading_time_min = ?,
         image_prompt = ?,
         image_alt = ?,
+        inline_images_meta = ?,
         wp_categories = ?,
         wp_tags = ?,
         drafted_at = ?,
@@ -441,6 +446,7 @@ export async function onRequestPost(context) {
       readingTime,
       (c.image_prompt || "").slice(0, 1000),
       (c.image_alt_vi || "").slice(0, 250),
+      JSON.stringify(Array.isArray(c.inline_images_meta) ? c.inline_images_meta.slice(0, 4) : []),
       JSON.stringify(c.wp_categories_suggest || []),
       JSON.stringify(c.wp_tags_suggest || []),
       now,

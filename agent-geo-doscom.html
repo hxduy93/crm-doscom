@@ -93,9 +93,26 @@
   </div>
 
   <!-- ═══════════════ TAB NAV ═══════════════ -->
-  <div class="flex gap-1 border-b border-gray-200 mb-6">
+  <div class="flex gap-1 border-b border-gray-200 mb-3">
     <button class="tab-btn active" data-tab="monitor">📊 Monitor</button>
     <button class="tab-btn" data-tab="pipeline">📝 Content Pipeline</button>
+  </div>
+
+  <!-- ═══════════════ AI USAGE BANNER (Pipeline only) ═══════════════ -->
+  <div id="ai-usage-banner" class="hidden mb-4 px-4 py-2.5 rounded-lg border text-sm flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3 flex-1 min-w-0">
+      <span id="ai-usage-icon" class="text-lg">🟢</span>
+      <div class="flex-1 min-w-0">
+        <div class="font-semibold text-gray-900 truncate" id="ai-usage-title">Đang tải usage…</div>
+        <div class="text-xs text-gray-600" id="ai-usage-subtitle"></div>
+      </div>
+    </div>
+    <div class="w-48 flex-shrink-0">
+      <div class="h-2 bg-gray-200 rounded overflow-hidden">
+        <div id="ai-usage-bar" class="h-full bg-emerald-500 transition-all" style="width: 0%"></div>
+      </div>
+      <div class="text-xs text-gray-500 text-right mt-0.5" id="ai-usage-pct">0%</div>
+    </div>
   </div>
 
   <!-- ═══════════════ VIEW: MONITOR ═══════════════ -->
@@ -291,13 +308,14 @@
 
       <!-- Tab: image -->
       <div class="mtab-pane hidden" data-mtab-pane="image">
+        <div class="mb-2 text-xs font-bold uppercase text-gray-700">Hero image (featured_media)</div>
         <div id="m-image-preview" class="mb-3 bg-gray-50 border border-gray-200 rounded p-3 text-center text-gray-400 text-sm">Chưa có ảnh</div>
         <label class="block text-xs font-semibold text-gray-700 mb-1">Image prompt (English, no text in image)</label>
         <textarea id="m-img-prompt" rows="4" class="w-full mb-3 px-3 py-2 border border-gray-300 rounded text-sm"></textarea>
         <label class="block text-xs font-semibold text-gray-700 mb-1">Alt text (tiếng Việt)</label>
         <input id="m-img-alt" type="text" class="w-full mb-3 px-3 py-2 border border-gray-300 rounded text-sm" />
 
-        <div class="flex gap-2 items-end flex-wrap">
+        <div class="flex gap-2 items-end flex-wrap mb-4">
           <div>
             <label class="block text-xs font-semibold text-gray-700 mb-1">Dimensions</label>
             <select id="m-img-size" class="px-2 py-2 border border-gray-300 rounded text-sm">
@@ -314,9 +332,20 @@
               <option value="8">Best (8 steps)</option>
             </select>
           </div>
-          <button id="m-gen-image" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold">🎨 Generate image</button>
-          <span class="text-xs text-emerald-600 font-semibold ml-1">FREE (Flux Schnell)</span>
+          <button id="m-gen-image" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold">🎨 Generate hero</button>
         </div>
+
+        <hr class="my-4 border-gray-200" />
+
+        <!-- Inline images section -->
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-xs font-bold uppercase text-gray-700">Inline images <span class="text-gray-400">(2 ảnh minh hoạ trong body bài viết)</span></div>
+          <button id="m-gen-inline" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold">🖼️ Gen 2 inline (768×432)</button>
+        </div>
+        <div id="m-inline-preview" class="grid grid-cols-2 gap-3 mb-3">
+          <div class="text-xs text-gray-400 col-span-2 text-center py-4 bg-gray-50 border border-dashed border-gray-300 rounded">Chưa có inline image — click "Gen 2 inline" để tạo</div>
+        </div>
+        <div class="text-xs text-gray-500">Inline images sẽ tự động chèn sau H2 thứ 1 và 2 khi publish. Position lấy từ <code>inline_images_meta</code> Claude sinh ra.</div>
       </div>
 
       <!-- Tab: FAQ -->
@@ -666,12 +695,75 @@ function switchTab(tab) {
   // Hide monitor controls when on pipeline
   document.getElementById("days-filter").style.display = tab === "monitor" ? "" : "none";
 
+  // AI usage banner — chỉ hiển thị ở tab pipeline
+  document.getElementById("ai-usage-banner").classList.toggle("hidden", tab !== "pipeline");
+
   if (tab === "pipeline") {
     document.getElementById("refresh-btn").textContent = "↻ Reload queue";
     loadQueue();
+    loadAIUsage();
   } else {
     document.getElementById("refresh-btn").innerHTML = '<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Refresh';
     loadAll();
+  }
+}
+
+// ============================================================
+// AI USAGE: Load + render banner cảnh báo neuron consumption
+// ============================================================
+async function loadAIUsage() {
+  try {
+    const r = await fetch("/api/geo/ai-usage", { credentials: "include" });
+    if (!r.ok) return;
+    const data = await r.json();
+    renderAIUsageBanner(data.today);
+  } catch (err) {
+    console.warn("AI usage load failed:", err);
+  }
+}
+
+function renderAIUsageBanner(today) {
+  const banner = document.getElementById("ai-usage-banner");
+  const icon   = document.getElementById("ai-usage-icon");
+  const title  = document.getElementById("ai-usage-title");
+  const sub    = document.getElementById("ai-usage-subtitle");
+  const bar    = document.getElementById("ai-usage-bar");
+  const pct    = document.getElementById("ai-usage-pct");
+
+  const pctVal = today.usage_percent || 0;
+  bar.style.width = Math.min(100, pctVal) + "%";
+  pct.textContent = pctVal + "%";
+
+  const remainingImages = Math.max(0, Math.floor(today.free_tier_remaining / 2500));
+
+  // Style theo status
+  banner.classList.remove("bg-emerald-50", "border-emerald-200", "bg-amber-50", "border-amber-200", "bg-orange-50", "border-orange-200", "bg-red-50", "border-red-200");
+  bar.classList.remove("bg-emerald-500", "bg-amber-500", "bg-orange-500", "bg-red-500");
+
+  if (today.status === "over_free") {
+    banner.classList.add("bg-red-50", "border-red-200");
+    bar.classList.add("bg-red-500");
+    icon.textContent = "🔴";
+    title.textContent = `Đã vượt free tier hôm nay — đang charge $${(today.cost_usd || 0).toFixed(4)}`;
+    sub.textContent = `${today.neurons_used.toLocaleString()} / ${today.free_tier_limit.toLocaleString()} neurons · ${today.images_generated} ảnh · gen tiếp sẽ tốn ~$0.025/ảnh`;
+  } else if (today.status === "critical") {
+    banner.classList.add("bg-orange-50", "border-orange-200");
+    bar.classList.add("bg-orange-500");
+    icon.textContent = "🟠";
+    title.textContent = `Sắp hết free tier — còn ~${remainingImages} ảnh hôm nay`;
+    sub.textContent = `${today.neurons_used.toLocaleString()} / ${today.free_tier_limit.toLocaleString()} neurons · ${today.images_generated} ảnh đã gen hôm nay`;
+  } else if (today.status === "warning") {
+    banner.classList.add("bg-amber-50", "border-amber-200");
+    bar.classList.add("bg-amber-500");
+    icon.textContent = "🟡";
+    title.textContent = `Còn ~${remainingImages} ảnh free hôm nay`;
+    sub.textContent = `${today.neurons_used.toLocaleString()} / ${today.free_tier_limit.toLocaleString()} neurons · ${today.images_generated} ảnh đã gen`;
+  } else {
+    banner.classList.add("bg-emerald-50", "border-emerald-200");
+    bar.classList.add("bg-emerald-500");
+    icon.textContent = "🟢";
+    title.textContent = `Cloudflare Workers AI — free tier ${today.images_generated > 0 ? `(${today.images_generated} ảnh đã gen)` : "chưa dùng"}`;
+    sub.textContent = `${today.neurons_used.toLocaleString()} / ${today.free_tier_limit.toLocaleString()} neurons hôm nay · còn ~${remainingImages} ảnh free`;
   }
 }
 document.querySelectorAll(".tab-btn").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
@@ -863,6 +955,7 @@ async function quickGenImage(id) {
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || "Failed");
     setTimeout(loadQueue, 400);
+    loadAIUsage();
   } catch (err) {
     const msg = err.name === "TimeoutError" ? "Quá 60s, Flux Schnell có thể đang slow. Thử lại." : err.message;
     alert("Lỗi sinh ảnh: " + msg);
@@ -900,6 +993,8 @@ async function openArticle(id) {
     currentArticle = a;
     populateModal(a);
     document.getElementById("article-modal").classList.add("open");
+    // Load inline images preview (parallel với modal open để mượt UX)
+    loadInlineImages().catch(() => {});
   } catch (err) {
     alert("Lỗi load article: " + err.message);
   }
@@ -1083,14 +1178,88 @@ document.getElementById("m-gen-image").addEventListener("click", async () => {
     const updated = await fetchJson(`/api/geo/queue/${currentArticle.id}?include_image=1`);
     currentArticle = updated;
     populateModal(updated);
-    alert(`Đã sinh ảnh. Provider: ${data.provider} · ${data.free_tier ? "FREE" : "$" + data.cost_usd.toFixed(4)}`);
+    alert(`Đã sinh ảnh. ${data.free_tier ? "✅ FREE (còn " + Math.floor(data.usage_today?.free_tier_remaining / 2500) + " ảnh free hôm nay)" : "💰 $" + data.cost_usd.toFixed(4) + " (đã vượt free tier)"}`);
+    loadAIUsage();
   } catch (err) {
     alert("Lỗi gen ảnh: " + err.message);
   } finally {
     btn.disabled = false;
-    btn.innerHTML = "🎨 Generate image";
+    btn.innerHTML = "🎨 Generate hero";
   }
 });
+
+// Generate inline images (2 ảnh sau H2)
+document.getElementById("m-gen-inline").addEventListener("click", async () => {
+  if (!currentArticle) return;
+  const btn = document.getElementById("m-gen-inline");
+
+  // Pre-check: cảnh báo nếu sắp vượt free tier
+  try {
+    const usage = await fetch("/api/geo/ai-usage", { credentials: "include" }).then(r => r.json());
+    const t = usage.today;
+    const willUse = 2 * 1800; // 2 ảnh 768×432, ~1800 neurons mỗi
+    if (t.neurons_used + willUse > t.free_tier_limit && t.status !== "over_free") {
+      const extraCost = ((t.neurons_used + willUse - t.free_tier_limit) / 1000 * 0.011).toFixed(4);
+      if (!confirm(`Gen 2 inline (~3,600 neurons) sẽ vượt free tier hôm nay. Chi phí phần vượt: ~$${extraCost}. Tiếp tục?`)) return;
+    } else if (t.status === "over_free") {
+      if (!confirm(`Đã vượt free tier hôm nay. Gen 2 inline sẽ tốn ~$0.04. Tiếp tục?`)) return;
+    }
+  } catch {}
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin inline-block">⏳</span> Đang sinh 2 ảnh...';
+
+  try {
+    const r = await fetch("/api/geo/generate-inline-images", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ article_id: currentArticle.id, count: 2, force_regen: false }),
+      signal: AbortSignal.timeout(120000),
+    });
+    const data = await r.json();
+    if (!r.ok && !data.generated) throw new Error(data.error || data.errors?.[0]?.error || "Failed");
+
+    const msg = `Đã gen ${data.generated} ảnh inline. ${data.failed ? `(${data.failed} lỗi)` : ""} Total neurons: ${data.total_neurons.toLocaleString()}.`;
+    alert(msg);
+    await loadInlineImages();
+    loadAIUsage();
+  } catch (err) {
+    alert("Lỗi gen inline: " + (err.name === "TimeoutError" ? "Quá 120s, Flux có thể slow." : err.message));
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "🖼️ Gen 2 inline (768×432)";
+  }
+});
+
+// Load + render inline images cho article hiện tại
+async function loadInlineImages() {
+  if (!currentArticle) return;
+  const preview = document.getElementById("m-inline-preview");
+  try {
+    const r = await fetch(`/api/geo/queue/${currentArticle.id}/inline-images`, { credentials: "include" });
+    if (!r.ok) throw new Error("API endpoint chưa deploy");
+    const data = await r.json();
+    const items = data.items || [];
+    if (items.length === 0) {
+      preview.innerHTML = '<div class="text-xs text-gray-400 col-span-2 text-center py-4 bg-gray-50 border border-dashed border-gray-300 rounded">Chưa có inline image — click "Gen 2 inline" để tạo</div>';
+      return;
+    }
+    preview.innerHTML = items.map(im => `
+      <div class="border border-gray-200 rounded p-2">
+        ${im.image_base64
+          ? `<img src="data:image/png;base64,${im.image_base64}" class="w-full h-32 object-cover rounded mb-1" alt="${escapeHtml(im.alt || "")}" />`
+          : im.image_url
+          ? `<img src="${escapeHtml(im.image_url)}" class="w-full h-32 object-cover rounded mb-1" alt="${escapeHtml(im.alt || "")}" />`
+          : '<div class="w-full h-32 bg-gray-100 rounded mb-1 flex items-center justify-center text-gray-400 text-xs">No image</div>'}
+        <div class="text-xs font-semibold text-gray-700 truncate">${escapeHtml(im.after_heading || "Position " + im.position)}</div>
+        <div class="text-xs text-gray-500 truncate">${escapeHtml(im.alt || "")}</div>
+      </div>
+    `).join("");
+  } catch (err) {
+    preview.innerHTML = `<div class="text-xs text-gray-400 col-span-2 text-center py-4 bg-gray-50 border border-dashed border-gray-300 rounded">Chưa có inline image (${escapeHtml(err.message)})</div>`;
+  }
+}
 
 // Publish to WordPress
 document.getElementById("m-publish-btn").addEventListener("click", async () => {

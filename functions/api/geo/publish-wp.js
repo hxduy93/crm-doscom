@@ -188,6 +188,58 @@ function slugify(s) {
     .slice(0, 80);
 }
 
+// Chèn <figure> ảnh inline sau H2 khớp với after_heading (text gần đúng).
+// Nếu không tìm thấy heading match, fallback append ở cuối phần đầu (sau </p> intro).
+function injectInlineImage(html, { after_heading, position, url, alt }) {
+  if (!url) return html;
+  const figure = `\n\n<figure class="wp-block-image size-large geo-inline-image"><img src="${escapeAttr(url)}" alt="${escapeAttr(alt || "")}" loading="lazy" /></figure>\n\n`;
+
+  // Tìm <h2>...heading...</h2> matching (case-insensitive, normalize whitespace)
+  if (after_heading) {
+    const normHeading = String(after_heading).trim().toLowerCase();
+    // Regex bắt h2 với content khớp 1 phần (60% similarity bằng substring)
+    const h2Regex = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
+    let match;
+    while ((match = h2Regex.exec(html)) !== null) {
+      const h2Text = match[1].replace(/<[^>]+>/g, "").trim().toLowerCase();
+      if (h2Text.includes(normHeading.slice(0, 30)) || normHeading.includes(h2Text.slice(0, 30))) {
+        const insertPos = match.index + match[0].length;
+        // Chèn sau </h2>, tìm đến </p> đầu tiên để chèn ảnh sau đoạn paragraph đầu của section
+        const afterH2 = html.slice(insertPos);
+        const pEnd = afterH2.search(/<\/p>/i);
+        if (pEnd > -1) {
+          const finalInsertPos = insertPos + pEnd + 4; // sau </p>
+          return html.slice(0, finalInsertPos) + figure + html.slice(finalInsertPos);
+        }
+        return html.slice(0, insertPos) + figure + html.slice(insertPos);
+      }
+    }
+  }
+
+  // Fallback: chèn sau H2 thứ position-th
+  const h2Indices = [];
+  const h2Regex = /<\/h2>/gi;
+  let m;
+  while ((m = h2Regex.exec(html)) !== null) h2Indices.push(m.index + m[0].length);
+  if (h2Indices[position]) {
+    const idx = h2Indices[position];
+    const afterH2 = html.slice(idx);
+    const pEnd = afterH2.search(/<\/p>/i);
+    if (pEnd > -1) {
+      const finalInsertPos = idx + pEnd + 4;
+      return html.slice(0, finalInsertPos) + figure + html.slice(finalInsertPos);
+    }
+    return html.slice(0, idx) + figure + html.slice(idx);
+  }
+
+  // Cuối cùng: append cuối bài
+  return html + figure;
+}
+
+function escapeAttr(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function buildContentWithSchema(html, schemaJsonLd) {
   // Inject schema vào cuối content dưới dạng <script type="application/ld+json">
   if (!schemaJsonLd) return html;
@@ -306,8 +358,50 @@ export async function onRequestPost(context) {
     const categoryIds = await resolveCategories(siteConfig, wpCats);
     const tagIds = await resolveTags(siteConfig, wpTags);
 
-    // 3. Build content với schema JSON-LD inject
-    const contentWithSchema = buildContentWithSchema(finalContent, article.schema_jsonld);
+    // 3a. Upload inline images lên WP + inject vào HTML
+    const { results: inlineRows } = await env.DB.prepare(
+      `SELECT id, position, after_heading, alt, image_base64, image_url, wp_media_id, width, height
+       FROM geo_inline_images WHERE article_id = ? ORDER BY position ASC`
+    ).bind(articleId).all();
+
+    let contentWithInline = finalContent;
+    const inlineUploaded = [];
+    for (const row of (inlineRows || [])) {
+      try {
+        let mediaUrl = row.image_url;
+        let mediaId  = row.wp_media_id;
+        // Upload nếu chưa upload (image_url null nhưng có base64)
+        if (!mediaUrl && row.image_base64) {
+          const fname = `${slugify(finalTitle)}-inline-${row.position}-${Date.now()}.png`;
+          const media = await uploadMedia(siteConfig, {
+            base64: row.image_base64,
+            filename: fname,
+            alt: row.alt || finalTitle,
+          });
+          mediaUrl = media.source_url;
+          mediaId  = media.id;
+          // Cập nhật DB
+          await env.DB.prepare(
+            `UPDATE geo_inline_images SET image_url = ?, wp_media_id = ?, image_base64 = NULL WHERE id = ?`
+          ).bind(mediaUrl, mediaId, row.id).run();
+        }
+        if (mediaUrl) {
+          contentWithInline = injectInlineImage(contentWithInline, {
+            after_heading: row.after_heading,
+            position: row.position,
+            url: mediaUrl,
+            alt: row.alt || finalTitle,
+          });
+          inlineUploaded.push({ position: row.position, url: mediaUrl, wp_media_id: mediaId });
+        }
+      } catch (err) {
+        // Lỗi 1 ảnh inline không break publish — log nhưng tiếp tục
+        console.error(`[publish-wp] inline image ${row.id} upload failed:`, err?.message);
+      }
+    }
+
+    // 3b. Build content với schema JSON-LD inject
+    const contentWithSchema = buildContentWithSchema(contentWithInline, article.schema_jsonld);
 
     // 4. Create post
     const focusKw = extractFocusKeyword(article);
