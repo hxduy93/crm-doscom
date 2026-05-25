@@ -52,7 +52,7 @@ Primary keyword PHẢI xuất hiện ở TẤT CẢ các vị trí sau:
 7. **Image alt** — chứa keyword.
 8. **Đoạn kết** — keyword xuất hiện lần nữa.
 
-**Keyword density**: 0.8-2.5% (tức 1 lần / 50-120 từ). KHÔNG nhồi nhét quá 2.5%.
+**Keyword density**: 1.2-2.0% (tức 1 lần / 50-80 từ). Với bài 2000 từ → primary_keyword xuất hiện 20-40 lần. KHÔNG nhồi nhét quá 2.5%.
 
 **Cấu trúc bài (giúp Rank Math + GEO cùng tăng điểm)**:
 - Title chứa **số** (vd "5 cách…", "Top 7…", "2026") + **power word** (vd "bí mật", "chuyên gia", "tốt nhất", "miễn phí", "thực chiến") + sentiment tích cực.
@@ -60,8 +60,28 @@ Primary keyword PHẢI xuất hiện ở TẤT CẢ các vị trí sau:
 - Có **≥3 H2**, dưới mỗi H2 có 200-400 từ.
 - Có **bảng so sánh** nếu chủ đề cho phép (Rank Math + AI rất thích).
 - Có **bullet/numbered list** (≥2 đoạn dùng list).
-- Có **≥2 external link dofollow** đến nguồn uy tín (gov.vn, báo lớn, nghiên cứu).
-- Có **≥2 internal link** đến trang cùng site.
+- **⚠️ ĐOẠN VĂN NGẮN**: mỗi paragraph TỐI ĐA 80 từ (≈4 câu). Đoạn dài hơn PHẢI tách ra — đây là quy tắc CỨNG vì Rank Math fail nếu có paragraph >150 từ.
+
+═══ EMBEDDING LINKS — QUY TẮC TUYỆT ĐỐI ═══
+Rank Math KHÔNG đọc field internal_links/external_links của JSON — chỉ scan thẻ \`<a href>\` trong HTML body. Vì vậy:
+
+**EXTERNAL LINKS (≥2, DOFOLLOW)**:
+- PHẢI **embed trực tiếp** trong content_markdown dưới dạng \`[anchor text](https://nguon.com)\`.
+- Anchor text NÊN chứa keyword phụ hoặc liên quan chủ đề (không phải "click here").
+- URL trỏ tới **nguồn uy tín tiếng Việt**:
+  + Cơ quan nhà nước: \`.gov.vn\` (vd Tổng cục Thuế, Bộ TT&TT, Cục An toàn TT)
+  + Báo lớn: vnexpress.net, dantri.com.vn, tuoitre.vn, vietnamnet.vn, vneconomy.vn
+  + Nghiên cứu/Wikipedia: vi.wikipedia.org, các viện nghiên cứu
+- TUYỆT ĐỐI KHÔNG link đến đối thủ trực tiếp.
+- Ví dụ embed đúng: \`Theo [báo cáo của Bộ Thông tin và Truyền thông](https://mic.gov.vn/...), tỷ lệ...\`
+
+**INTERNAL LINKS (≥2)**:
+- PHẢI embed trực tiếp dạng \`[anchor](\${ctx.site}/...)\` trong content_markdown.
+- Nếu chưa biết URL cụ thể, dùng \`${"${ctx.site}/blog/<slug-related>"}\` — anchor text có keyword phụ.
+- Ví dụ: \`Tham khảo thêm [hướng dẫn cài đặt phần mềm](https://doscom.vn/blog/huong-dan-cai-dat)...\`
+
+**Field internal_links / external_links trong JSON output PHẢI MATCH 1:1 với links đã embed trong content_markdown** — không liệt kê link nào không có trong body.
+
 - Có **FAQ 5-8 Q&A** ở cuối → tăng GEO + có FAQ Schema.
 
 ═══ NGUYÊN TẮC GEO (cho AI engine trích nguồn) ═══
@@ -109,7 +129,7 @@ YÊU CẦU OUTPUT (JSON object, ${targetWords} từ tổng cộng):
   "slug": "kebab-case-khong-dau, CHỨA primary_keyword, ≤75 ký tự, không có stop words thừa (the, of, va, cua, cho...)",
   "meta_description": "140-155 ký tự, CHỨA primary_keyword (lý tưởng trong 120 ký tự đầu), kêu gọi hành động nhẹ",
   "excerpt": "2-3 câu tóm tắt 200 ký tự, có primary_keyword",
-  "content_markdown": "BÀI VIẾT FULL ${targetWords} TỪ theo cấu trúc:\\n\\n# H1 (chứa primary_keyword)\\n\\n[Intro 100-150 từ — câu đầu PHẢI chứa primary_keyword. Có 1 số liệu/định nghĩa. Mention ${ctx.short} 1 lần.]\\n\\n## H2 thứ 1 (chứa primary_keyword hoặc biến thể, dạng câu hỏi)\\n[200-400 từ trả lời, có bullet list hoặc bảng nếu phù hợp]\\n\\n## H2 thứ 2 (chứa biến thể keyword)\\n### H3 sub-section\\n...\\n\\n## H2 thứ 3 — Bảng so sánh\\n| Tiêu chí | A | B | C |\\n|---|---|---|---|\\n| ... | ... | ... | ... |\\n\\n## H2 thứ 4 — Câu hỏi thường gặp (FAQ)\\n### Q1?\\nA1 50-100 từ...\\n\\n## Kết luận (chứa primary_keyword lần cuối) + CTA mềm",
+  "content_markdown": "BÀI VIẾT FULL ${targetWords} TỪ theo cấu trúc dưới. CỰC KỲ QUAN TRỌNG: phải embed ≥2 external link DOFOLLOW (gov.vn/báo lớn) + ≥2 internal link (${ctx.site}/blog/...) TRỰC TIẾP dạng [anchor](url) trong body, KHÔNG chỉ liệt kê ở field JSON. Mỗi paragraph TỐI ĐA 80 từ — tách đoạn dài.\\n\\n# H1 (chứa primary_keyword)\\n\\n[Intro 100-150 từ chia 2-3 đoạn ngắn — câu đầu PHẢI chứa primary_keyword. Có 1 số liệu/định nghĩa trích từ [nguồn uy tín](https://vnexpress.net/...). Mention ${ctx.short} 1 lần.]\\n\\n## H2 thứ 1 (chứa primary_keyword, dạng câu hỏi)\\n[200-400 từ chia nhiều paragraph ≤80 từ. Có bullet list. Embed 1 internal link: [anchor liên quan](${ctx.site}/blog/...).]\\n\\n## H2 thứ 2 (chứa biến thể keyword)\\n[Nội dung. Embed 1 external link DOFOLLOW: theo [Bộ TT&TT](https://mic.gov.vn/) / [báo cáo](https://vnexpress.net/...)...]\\n\\n### H3 sub-section\\n...\\n\\n## H2 thứ 3 — Bảng so sánh\\n| Tiêu chí | A | B | C |\\n|---|---|---|---|\\n| ... | ... | ... | ... |\\n\\n## H2 thứ 4 — Câu hỏi thường gặp (FAQ)\\n### Q1?\\nA1 50-100 từ — embed 1 internal link nếu phù hợp: [hướng dẫn chi tiết](${ctx.site}/blog/...).\\n\\n## Kết luận (chứa primary_keyword lần cuối) + CTA mềm",
   "faq": [
     {"q": "Câu hỏi tự nhiên 1?", "a": "Trả lời 50-100 từ, AI có thể trích nguyên"},
     "... 5-8 items"
@@ -250,6 +270,48 @@ function countWords(text) {
   return text.trim().split(/\s+/).length;
 }
 
+// Đảm bảo content_markdown có ≥2 external link + ≥2 internal link embed dưới dạng [anchor](url).
+// Nếu thiếu, lấy từ field internal_links/external_links Claude xuất ra và append vào cuối bài
+// dưới section "Nguồn tham khảo" + "Bài viết liên quan". Rank Math sẽ thấy <a href> và pass check.
+function ensureLinksEmbedded(c, brandSite) {
+  let md = String(c.content_markdown || "");
+  if (!md) return md;
+
+  // Đếm link external (không phải brand site) và internal (brand site) hiện có trong body
+  const linkRegex = /\[[^\]]+\]\((https?:\/\/[^)]+)\)/g;
+  const allLinks = [...md.matchAll(linkRegex)].map(m => m[1]);
+  const brandHost = brandSite ? new URL(brandSite).hostname.replace(/^www\./, "") : "";
+  const isInternal = (u) => brandHost && u.includes(brandHost);
+  const externalCount = allLinks.filter(u => !isInternal(u)).length;
+  const internalCount = allLinks.filter(u => isInternal(u)).length;
+
+  const sections = [];
+
+  // External links: bổ sung nếu thiếu (target ≥2)
+  if (externalCount < 2 && Array.isArray(c.external_links) && c.external_links.length) {
+    const needed = c.external_links
+      .filter(l => l?.anchor && l?.url && !isInternal(l.url))
+      .slice(0, Math.max(2 - externalCount, 0))
+      .map(l => `- [${l.anchor}](${l.url})`);
+    if (needed.length) {
+      sections.push(`\n\n## Nguồn tham khảo\n\n${needed.join("\n")}\n`);
+    }
+  }
+
+  // Internal links: bổ sung nếu thiếu
+  if (internalCount < 2 && Array.isArray(c.internal_links) && c.internal_links.length) {
+    const needed = c.internal_links
+      .filter(l => l?.anchor && l?.url && isInternal(l.url))
+      .slice(0, Math.max(2 - internalCount, 0))
+      .map(l => `- [${l.anchor}](${l.url})`);
+    if (needed.length) {
+      sections.push(`\n\n## Bài viết liên quan\n\n${needed.join("\n")}\n`);
+    }
+  }
+
+  return md + sections.join("");
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
   if (!env.DB) return jsonResponse({ error: "D1 binding 'DB' missing" }, 500);
@@ -322,6 +384,10 @@ export async function onRequestPost(context) {
 
     const c = result.parsed;
     if (!c || !c.content_markdown) throw new Error("Claude trả content_markdown empty");
+
+    // Đảm bảo external + internal links được embed trong body (Rank Math chỉ scan <a> trong HTML,
+    // KHÔNG đọc field JSON). Nếu Claude chỉ liệt kê field mà không embed → auto inject.
+    c.content_markdown = ensureLinksEmbedded(c, BRAND_CONTEXT[article.brand]?.site);
 
     const contentHtml = markdownToHtml(c.content_markdown);
     const wordCount = countWords(c.content_markdown);
