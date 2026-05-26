@@ -916,30 +916,35 @@ async function computeStaffAggregate(env, origin, cookieHeader, staff, fbConfig)
 
   for (const acc of accountsOfStaff) {
     const camps = compactFbCampaigns(fbAdsJson, acc.id, monthRange, { activeOnly: true });
-    const activeOnly = (camps?.campaigns || []).filter(c => c.spend > 0 && c.effective_status === "ACTIVE");
-    const accSpend = activeOnly.reduce((s, c) => s + c.spend, 0);
-    const accConv = activeOnly.reduce((s, c) => s + c.conversions, 0);
-    const accImp = activeOnly.reduce((s, c) => s + c.impressions, 0);
-    const accClicks = activeOnly.reduce((s, c) => s + c.clicks, 0);
+    // Aggregates (spend/conv/...) phải gồm CẢ campaign đã pause trong tháng,
+    // miễn là có spend trong range — nếu không sẽ under-report MTD spend.
+    const campsWithSpend = (camps?.campaigns || []).filter(c => c.spend > 0);
+    const accSpend = campsWithSpend.reduce((s, c) => s + c.spend, 0);
+    const accConv = campsWithSpend.reduce((s, c) => s + c.conversions, 0);
+    const accImp = campsWithSpend.reduce((s, c) => s + c.impressions, 0);
+    const accClicks = campsWithSpend.reduce((s, c) => s + c.clicks, 0);
 
     totalSpend += accSpend;
     totalConversions += accConv;
     totalImpressions += accImp;
     totalClicks += accClicks;
 
+    // Currently-active campaigns only → dùng cho top/weak recommendations
+    // (gợi ý optimize/scale chỉ có nghĩa với campaign còn chạy).
+    const activeCampaigns = campsWithSpend.filter(c => c.effective_status === "ACTIVE");
+
     accountSummaries.push({
       id: acc.id,
       name: camps?.account?.name || "?",
       groups: acc.groups,
       products_note: acc.products_note || "",
-      active_campaigns: activeOnly.length,
+      active_campaigns: activeCampaigns.length,
       spend_mtd: accSpend,
       conversions_mtd: accConv,
       cpa: accConv > 0 ? Math.round(accSpend / accConv) : null,
     });
 
-    // Push top/weak campaigns kèm group ownership
-    activeOnly.forEach(c => allActiveCampaigns.push({
+    activeCampaigns.forEach(c => allActiveCampaigns.push({
       ...c,
       account_id: acc.id,
       account_groups: acc.groups,
