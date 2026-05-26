@@ -8,6 +8,8 @@
 //   3. Resolve category names → category IDs (auto tạo nếu chưa có).
 //   4. POST /wp-json/wp/v2/posts với title/content/excerpt/slug/status/categories/tags/featured_media/meta.
 //   5. Cập nhật geo_content_queue: status='published', wp_post_id, wp_post_url, xóa image_base64.
+//   6. Fire-and-forget: submit URL lên Google Indexing API + IndexNow (Bing/Yandex)
+//      qua ctx.waitUntil — không block response, không break publish nếu fail.
 //
 // Body: {
 //   article_id: "uuid",
@@ -24,11 +26,41 @@
 //   WP_NOMA_USER
 //   WP_NOMA_APP_PWD
 
+import { submitUrlToGoogle } from "./_utils/google-indexing.js";
+import { submitUrlToIndexNow } from "./_utils/indexnow.js";
+
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
     status,
     headers: { "Content-Type": "application/json; charset=utf-8" },
   });
+}
+
+// Fire-and-forget submit URL tới Google + IndexNow. Log kết quả vào geo_index_log.
+async function notifySearchEngines(env, articleId, url) {
+  if (!url || !env.DB) return;
+  const now = Math.floor(Date.now() / 1000);
+
+  const [google, indexnow] = await Promise.all([
+    submitUrlToGoogle(env, url, "URL_UPDATED"),
+    submitUrlToIndexNow(env, url),
+  ]);
+
+  try {
+    await env.DB.prepare(`
+      INSERT INTO geo_index_log (article_id, url, google_ok, google_msg, indexnow_ok, indexnow_msg, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      articleId, url,
+      google.ok ? 1 : 0,
+      (google.ok ? "ok" : (google.error || "")).slice(0, 500),
+      indexnow.ok ? 1 : 0,
+      (indexnow.ok ? `${indexnow.status} ok` : (indexnow.error || "")).slice(0, 500),
+      now
+    ).run();
+  } catch (err) {
+    console.error("[notifySearchEngines] log insert failed:", err?.message);
+  }
 }
 
 function getSiteConfig(site, env) {
@@ -451,6 +483,12 @@ export async function onRequestPost(context) {
       articleId
     ).run();
 
+    // 6. Fire-and-forget: notify search engines (Google Indexing API + IndexNow)
+    // Chỉ trigger khi post thực sự publish public — draft/pending không cần index.
+    if (wpStatus === "publish" && post.link) {
+      context.waitUntil(notifySearchEngines(env, articleId, post.link));
+    }
+
     return jsonResponse({
       article_id: articleId,
       status: "published",
@@ -461,6 +499,7 @@ export async function onRequestPost(context) {
       featured_media_id: featuredMediaId,
       categories_assigned: categoryIds,
       tags_assigned: tagIds,
+      index_submitted: wpStatus === "publish",
     });
 
   } catch (err) {

@@ -151,7 +151,9 @@ YÊU CẦU OUTPUT (JSON object, ${targetWords} từ tổng cộng):
   "image_alt_vi": "Alt 100-125 ký tự CHỨA primary_keyword, mô tả ảnh tự nhiên",
   "inline_images_meta": [
     {"position": 0, "after_heading": "Tiêu đề H2 thứ 1 chính xác như trong content_markdown", "prompt_en": "English prompt riêng cho ảnh inline 1 — minh hoạ cho H2 thứ 1, realistic photography, no text, brand-safe", "alt_vi": "Alt tiếng Việt 80-120 ký tự chứa biến thể keyword"},
-    {"position": 1, "after_heading": "Tiêu đề H2 thứ 2 hoặc 3 chính xác", "prompt_en": "English prompt cho ảnh inline 2", "alt_vi": "Alt tiếng Việt"}
+    {"position": 1, "after_heading": "Tiêu đề H2 thứ 2 chính xác", "prompt_en": "English prompt cho ảnh inline 2 — minh hoạ cho H2 thứ 2", "alt_vi": "Alt tiếng Việt cho ảnh 2"},
+    {"position": 2, "after_heading": "Tiêu đề H2 thứ 3 chính xác", "prompt_en": "English prompt cho ảnh inline 3 — minh hoạ cho H2 thứ 3 (bảng so sánh)", "alt_vi": "Alt tiếng Việt cho ảnh 3"},
+    {"position": 3, "after_heading": "Tiêu đề H2 thứ 4 chính xác", "prompt_en": "English prompt cho ảnh inline 4 — minh hoạ cho H2 thứ 4 (FAQ section hoặc kết luận)", "alt_vi": "Alt tiếng Việt cho ảnh 4"}
   ],
   "wp_categories_suggest": ["tên category tiếng Việt phù hợp"],
   "wp_tags_suggest": ["primary_keyword là tag đầu", "tag2", "tag3", "tag4", "tag5"]

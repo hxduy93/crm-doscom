@@ -340,12 +340,12 @@
         <!-- Inline images section -->
         <div class="flex items-center justify-between mb-2">
           <div class="text-xs font-bold uppercase text-gray-700">Inline images <span class="text-gray-400">(2 ảnh minh hoạ trong body bài viết)</span></div>
-          <button id="m-gen-inline" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold">🖼️ Gen 2 inline (768×432)</button>
+          <button id="m-gen-inline" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold">🖼️ Gen 4 inline (768×432)</button>
         </div>
         <div id="m-inline-preview" class="grid grid-cols-2 gap-3 mb-3">
-          <div class="text-xs text-gray-400 col-span-2 text-center py-4 bg-gray-50 border border-dashed border-gray-300 rounded">Chưa có inline image — click "Gen 2 inline" để tạo</div>
+          <div class="text-xs text-gray-400 col-span-2 text-center py-4 bg-gray-50 border border-dashed border-gray-300 rounded">Chưa có inline image — click "Gen 4 inline" để tạo</div>
         </div>
-        <div class="text-xs text-gray-500">Inline images sẽ tự động chèn sau H2 thứ 1 và 2 khi publish. Position lấy từ <code>inline_images_meta</code> Claude sinh ra.</div>
+        <div class="text-xs text-gray-500">Inline images sẽ tự động chèn sau mỗi H2 (4 ảnh) khi publish. Position lấy từ <code>inline_images_meta</code> Claude sinh ra.</div>
       </div>
 
       <!-- Tab: FAQ -->
@@ -1188,7 +1188,7 @@ document.getElementById("m-gen-image").addEventListener("click", async () => {
   }
 });
 
-// Generate inline images (2 ảnh sau H2)
+// Generate inline images (4 ảnh sau H2)
 document.getElementById("m-gen-inline").addEventListener("click", async () => {
   if (!currentArticle) return;
   const btn = document.getElementById("m-gen-inline");
@@ -1197,25 +1197,25 @@ document.getElementById("m-gen-inline").addEventListener("click", async () => {
   try {
     const usage = await fetch("/api/geo/ai-usage", { credentials: "include" }).then(r => r.json());
     const t = usage.today;
-    const willUse = 2 * 1800; // 2 ảnh 768×432, ~1800 neurons mỗi
+    const willUse = 4 * 1800; // 4 ảnh 768×432, ~1800 neurons mỗi
     if (t.neurons_used + willUse > t.free_tier_limit && t.status !== "over_free") {
       const extraCost = ((t.neurons_used + willUse - t.free_tier_limit) / 1000 * 0.011).toFixed(4);
-      if (!confirm(`Gen 2 inline (~3,600 neurons) sẽ vượt free tier hôm nay. Chi phí phần vượt: ~$${extraCost}. Tiếp tục?`)) return;
+      if (!confirm(`Gen 4 inline (~7,200 neurons) sẽ vượt free tier hôm nay. Chi phí phần vượt: ~$${extraCost}. Tiếp tục?`)) return;
     } else if (t.status === "over_free") {
-      if (!confirm(`Đã vượt free tier hôm nay. Gen 2 inline sẽ tốn ~$0.04. Tiếp tục?`)) return;
+      if (!confirm(`Đã vượt free tier hôm nay. Gen 4 inline sẽ tốn ~$0.08. Tiếp tục?`)) return;
     }
   } catch {}
 
   btn.disabled = true;
-  btn.innerHTML = '<span class="spin inline-block">⏳</span> Đang sinh 2 ảnh...';
+  btn.innerHTML = '<span class="spin inline-block">⏳</span> Đang sinh 4 ảnh...';
 
   try {
     const r = await fetch("/api/geo/generate-inline-images", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ article_id: currentArticle.id, count: 2, force_regen: false }),
-      signal: AbortSignal.timeout(120000),
+      body: JSON.stringify({ article_id: currentArticle.id, count: 4, force_regen: false }),
+      signal: AbortSignal.timeout(180000),
     });
     const data = await r.json();
     if (!r.ok && !data.generated) throw new Error(data.error || data.errors?.[0]?.error || "Failed");
@@ -1225,10 +1225,10 @@ document.getElementById("m-gen-inline").addEventListener("click", async () => {
     await loadInlineImages();
     loadAIUsage();
   } catch (err) {
-    alert("Lỗi gen inline: " + (err.name === "TimeoutError" ? "Quá 120s, Flux có thể slow." : err.message));
+    alert("Lỗi gen inline: " + (err.name === "TimeoutError" ? "Quá 180s, Flux có thể slow." : err.message));
   } finally {
     btn.disabled = false;
-    btn.innerHTML = "🖼️ Gen 2 inline (768×432)";
+    btn.innerHTML = "🖼️ Gen 4 inline (768×432)";
   }
 });
 
@@ -1242,7 +1242,7 @@ async function loadInlineImages() {
     const data = await r.json();
     const items = data.items || [];
     if (items.length === 0) {
-      preview.innerHTML = '<div class="text-xs text-gray-400 col-span-2 text-center py-4 bg-gray-50 border border-dashed border-gray-300 rounded">Chưa có inline image — click "Gen 2 inline" để tạo</div>';
+      preview.innerHTML = '<div class="text-xs text-gray-400 col-span-2 text-center py-4 bg-gray-50 border border-dashed border-gray-300 rounded">Chưa có inline image — click "Gen 4 inline" để tạo</div>';
       return;
     }
     preview.innerHTML = items.map(im => `

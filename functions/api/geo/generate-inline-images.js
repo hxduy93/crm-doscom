@@ -1,12 +1,12 @@
 // Endpoint: POST /api/geo/generate-inline-images
 //
-// Sinh 2 ảnh inline cho 1 article (768x432) — chèn vào body bài viết phía dưới H2.
+// Sinh 4 ảnh inline cho 1 article (768x432) — chèn vào body bài viết phía dưới mỗi H2.
 // Lấy prompt từ field `inline_images_meta` (JSON Claude xuất khi sinh content).
 // Nếu meta chưa có (bài cũ trước Phase 6), tự sinh prompt từ heading + image_prompt gốc.
 //
 // Body: {
 //   article_id: "uuid",
-//   count: 2,                  // default 2, max 4
+//   count: 4,                  // default 4, max 4
 //   width: 768,                // default 768
 //   height: 432,               // default 432 (16:9 ratio)
 //   steps: 4,                  // default 4
@@ -70,7 +70,7 @@ export async function onRequestPost(context) {
   const articleId = body.article_id;
   if (!articleId) return jsonResponse({ error: "Missing article_id" }, 400);
 
-  const count       = Math.min(Math.max(parseInt(body.count) || 2, 1), 4);
+  const count       = Math.min(Math.max(parseInt(body.count) || 4, 1), 4);
   const width       = Math.min(Math.max(parseInt(body.width)  || 768, 256), 2048);
   const height      = Math.min(Math.max(parseInt(body.height) || 432, 256), 2048);
   const steps       = Math.min(Math.max(parseInt(body.steps)  || 4,   1),   8);
