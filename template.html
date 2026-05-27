@@ -799,7 +799,7 @@ function _sumDateMap(byDate, rStart, rEnd) {
 }
 
 function buildWeeklyReportData(rangeStart, rangeEnd) {
-  // Trả về { range, weeks, perStaff, perWeekAccounts, perWeekStaffProduct }
+  // Trả về { range, weeks, perStaff, perWeekStaffProduct }
   const D = (typeof DATA !== "undefined" ? DATA : null) || {}
   const accounts = D.accounts || []
   const campaigns = D.campaigns || []
@@ -886,37 +886,7 @@ function buildWeeklyReportData(rangeStart, rangeEnd) {
     }
   })
 
-  // (2) TUẦN × TÀI KHOẢN QC — chỉ accounts có spend > 0 trong tuần
-  const perWeekAccounts = weeks.map(w => {
-    const accRows = accounts.map(a => {
-      const accFullId = a.id // e.g. "act_927390616363424"
-      // Aggregate từ campaigns của account này
-      let spend = 0, impressions = 0, clicks = 0, registrations = 0, reach = 0
-      campaigns.forEach(c => {
-        if (c.account_id !== accFullId) return
-        ;(c.daily || []).forEach(d => {
-          if (d.date < w.start || d.date > w.end) return
-          spend += Number(d.spend) || 0
-          impressions += Number(d.impressions) || 0
-          clicks += Number(d.clicks) || 0
-          reach += Number(d.reach) || 0
-          registrations += Number(d.registrations) || 0
-        })
-      })
-      const ctr = impressions > 0 ? clicks / impressions * 100 : 0
-      const cpa = registrations > 0 ? spend / registrations : null
-      const cpc = clicks > 0 ? spend / clicks : null
-      return {
-        accountId: accFullId, staff: a.staff, name: a.short || a.name,
-        spend, impressions, clicks, reach, registrations, ctr, cpa, cpc,
-      }
-    }).filter(r => r.spend > 0)
-      .sort((a, b) => b.spend - a.spend)
-    const totalSpend = accRows.reduce((s, r) => s + r.spend, 0)
-    return { ...w, accounts: accRows, totalSpend }
-  })
-
-  // (3) TUẦN × NHÂN SỰ × SẢN PHẨM
+  // (2) TUẦN × NHÂN SỰ × SẢN PHẨM
   const perWeekStaffProduct = weeks.map(w => {
     const staffRows = STAFF_DEFS.filter(st => st.adKey).map(st => {
       const adBuckets = adSpendByStaff[st.adKey] || {}
@@ -949,14 +919,15 @@ function buildWeeklyReportData(rangeStart, rangeEnd) {
 
   return {
     range: { start: rangeStart, end: rangeEnd },
-    weeks, perStaff, perWeekAccounts, perWeekStaffProduct,
+    weeks, perStaff, perWeekStaffProduct,
     generatedAt: new Date().toISOString().slice(0, 19).replace("T", " "),
   }
 }
 
 function renderWeeklyReportHtml(data) {
-  const fmtV = n => Number(n || 0).toLocaleString("vi-VN") + "₫"
-  const fmtN = n => Number(n || 0).toLocaleString("vi-VN")
+  // Round trước format → tránh decimal vi-VN (16.843.618,417₫) bị đọc nhầm thành "16 tỷ"
+  const fmtV = n => Math.round(Number(n || 0)).toLocaleString("vi-VN") + "₫"
+  const fmtN = n => Math.round(Number(n || 0)).toLocaleString("vi-VN")
   const fmtP = n => n == null ? "—" : Number(n).toFixed(1) + "%"
   const esc = s => String(s == null ? "" : s)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
@@ -996,37 +967,8 @@ function renderWeeklyReportHtml(data) {
     </tr>
   `
 
-  // SECTION 2 — Tuần × Account
-  const s2 = data.perWeekAccounts.map(w => {
-    if (!w.accounts.length) return ""
-    const rows = w.accounts.map(a => `
-      <tr>
-        <td class="lbl"><span class="acc-id">${esc(a.accountId)}</span> · ${esc(a.name)}</td>
-        <td class="lbl"><span class="staff-chip staff-${esc(a.staff)}">${esc(a.staff)}</span></td>
-        <td class="num">${fmtV(a.spend)}</td>
-        <td class="num">${fmtN(a.impressions)}</td>
-        <td class="num">${fmtN(a.clicks)}</td>
-        <td class="num">${fmtP(a.ctr)}</td>
-        <td class="num">${a.cpc == null ? "—" : fmtV(a.cpc)}</td>
-        <td class="num">${fmtN(a.registrations)}</td>
-        <td class="num">${a.cpa == null ? "—" : fmtV(a.cpa)}</td>
-      </tr>
-    `).join("")
-    return `
-      <h3>${esc(w.label)} · ${esc(w.start)} → ${esc(w.end)} <span class="muted">(spend tuần: ${fmtV(w.totalSpend)})</span></h3>
-      <table class="rpt">
-        <thead><tr>
-          <th>Tài khoản QC</th><th>Nhân sự</th><th>Spend</th>
-          <th>Impressions</th><th>Clicks</th><th>CTR</th>
-          <th>CPC</th><th>Conv (CR)</th><th>CPA</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    `
-  }).join("")
-
-  // SECTION 3 — Tuần × Staff × Product (chỉ FB Ads staff)
-  const s3 = data.perWeekStaffProduct.map(w => {
+  // SECTION 2 — Tuần × Staff × Product (chỉ FB Ads staff)
+  const s2 = data.perWeekStaffProduct.map(w => {
     const blocks = w.staffRows.map(sr => {
       if (!sr.products.length) return ""
       const rows = sr.products.map(p => `
@@ -1140,11 +1082,8 @@ function renderWeeklyReportHtml(data) {
     <tbody>${s1Rows}${s1Total}</tbody>
   </table>
 
-  <h2>2. Tuần × Tài khoản QC (FB Ads only)</h2>
+  <h2>2. Tuần × Nhân sự × Sản phẩm (profit per SP)</h2>
   ${s2 || '<p class="muted">Không có data trong khoảng này.</p>'}
-
-  <h2>3. Tuần × Nhân sự × Sản phẩm (profit per SP)</h2>
-  ${s3 || '<p class="muted">Không có data trong khoảng này.</p>'}
 
   <p style="text-align:center;color:#9ca3af;font-size:10px;margin-top:30px">
     Doscom ERP · facebookadsallinone.pages.dev · Báo cáo tự sinh từ data ${esc(data.generatedAt)}
