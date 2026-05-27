@@ -1,84 +1,96 @@
 {
-  "_note": "Manual giá nhập overlay cho các SKU ngoài 14 PROFIT_PRODUCTS gốc. Source: user cung cấp 2026-05-27. update_dashboard.py merge dict này vào product_costs khi build dashboard. fetch_pancake_revenue.py dùng để extend PRODUCT_LIST + PRODUCT_MAPPING + NAME_MAPPING.",
-  "_updated": "2026-05-27",
-  "_source": "user provided in chat",
+  "_note": "Mapping Pancake SKU → xlsx Kho tổng + giá nhập fallback. xlsx luôn ưu tiên (build_product_costs.py rebuild khi xlsx update); JSON này dùng làm safety net + cung cấp pancake_names cho name-based matching.",
+  "_source": "User-provided xlsx markdown 2026-05-27",
+  "_pricing_basis": "xlsx Kho tổng (kho-tong.xlsx) authoritative. gia_nhap_vnd ở đây chỉ dùng fallback khi xlsx tạm thời thiếu entry.",
 
   "extended_skus": [
-    { "label": "DT2",            "cost_key": "dt2",            "gia_nhap_vnd": 211457,  "google_cat": "DINHVI",       "pancake_names": ["Doscom Tag DT2"] },
-    { "label": "DT3",            "cost_key": "dt3",            "gia_nhap_vnd": 237496,  "google_cat": "DINHVI",       "pancake_names": ["Doscom Tag DT3"] },
+    { "label": "DT2",            "cost_key": "dt2",            "gia_nhap_vnd": 218881,  "google_cat": "DINHVI",       "pancake_names": ["Doscom Tag DT2"] },
+    { "label": "DT3",            "cost_key": "dt3",            "gia_nhap_vnd": 216212,  "google_cat": "DINHVI",       "pancake_names": ["Doscom Tag DT3"] },
     { "label": "DT4",            "cost_key": "dt4",            "gia_nhap_vnd": 258644,  "google_cat": "DINHVI",       "pancake_names": ["Định vị DT4"] },
     { "label": "DT5",            "cost_key": "dt5",            "gia_nhap_vnd": 266103,  "google_cat": "DINHVI",       "pancake_names": ["Định vị DT5"] },
-    { "label": "DV1 mini",       "cost_key": "dv1 mini",       "gia_nhap_vnd": 335676,  "google_cat": "DINHVI",       "pancake_names": ["Định vị DV1 mini"] },
-    { "label": "DV1",            "cost_key": "dv1",            "gia_nhap_vnd": 608081,  "google_cat": "DINHVI",       "pancake_names": ["Định vị DV1"] },
-    { "label": "DV2",            "cost_key": "dv2",            "gia_nhap_vnd": 310813,  "google_cat": "DINHVI",       "pancake_names": ["Định vị DV2"] },
-    { "label": "DV4",            "cost_key": "dv4",            "gia_nhap_vnd": 636228,  "google_cat": "DINHVI",       "pancake_names": ["Định vị DV4"] },
-    { "label": "Sim ĐV",         "cost_key": "sim dv",         "gia_nhap_vnd": 108171,  "google_cat": "DINHVI",       "pancake_names": ["Sim định vị"] },
+    { "label": "DV1",            "cost_key": "dv1",            "gia_nhap_vnd": 634193,  "google_cat": "DINHVI",       "pancake_names": ["Định vị DV1", "DV-1 - S21L"] },
+    { "label": "DV1 mini",       "cost_key": "dv1 mini",       "gia_nhap_vnd": 350064,  "google_cat": "DINHVI",       "pancake_names": ["Định vị DV1 mini", "DV1 mini - S22L"] },
+    { "label": "DV2",            "cost_key": "dv2",            "gia_nhap_vnd": 310813,  "google_cat": "DINHVI",       "pancake_names": ["Định vị DV2", "DV-2"] },
+    { "label": "DV4",            "cost_key": "dv4",            "gia_nhap_vnd": 635687,  "google_cat": "DINHVI",       "pancake_names": ["Định vị DV4", "DV-4"] },
+    { "label": "Sim ĐV",         "cost_key": "sim đv",         "gia_nhap_vnd": 108171,  "google_cat": "DINHVI",       "pancake_names": ["Sim định vị 1 năm", "Sim định vị"] },
     { "label": "Pin DT2",        "cost_key": "pin dt2",        "gia_nhap_vnd": 3091,    "google_cat": "DINHVI",       "pancake_names": ["Pin DT2"] },
 
-    { "label": "DR4",            "cost_key": "dr4",            "gia_nhap_vnd": 358866,  "google_cat": "GHIAM",        "pancake_names": ["Máy ghi âm DR4"] },
-    { "label": "DR4 Pro",        "cost_key": "dr4 pro",        "gia_nhap_vnd": 457344,  "google_cat": "GHIAM",        "pancake_names": ["Máy ghi âm DR4 pro"] },
-    { "label": "DR7 Pro 16GB",   "cost_key": "dr7 pro 16gb",   "gia_nhap_vnd": 375006,  "google_cat": "GHIAM",        "pancake_names": ["Thiết bị ghi âm DR7 16Gb"] },
-    { "label": "DR8",            "cost_key": "dr8",            "gia_nhap_vnd": 476282,  "google_cat": "GHIAM",        "pancake_names": ["Máy ghi âm DR8"] },
-    { "label": "DR9",            "cost_key": "dr9",            "gia_nhap_vnd": 402796,  "google_cat": "GHIAM",        "pancake_names": ["Máy ghi âm DR9"] },
+    { "label": "DR4",            "cost_key": "dr4",            "gia_nhap_vnd": 385855,  "google_cat": "GHIAM",        "pancake_names": ["Máy ghi âm DR4", "DR4 Thiết Bị Ghi Âm"] },
+    { "label": "DR4 Pro",        "cost_key": "dr4 pro",        "gia_nhap_vnd": 498598,  "google_cat": "GHIAM",        "pancake_names": ["Máy ghi âm DR4 pro", "Dr4 pro - ZD42B"] },
+    { "label": "DR7 16GB",       "cost_key": "dr7 16gb",       "gia_nhap_vnd": 734020,  "google_cat": "GHIAM",        "pancake_names": ["Thiết bị ghi âm DR7 16Gb", "DR7 Máy Ghi Âm"] },
+    { "label": "DR8",            "cost_key": "dr8",            "gia_nhap_vnd": 452589,  "google_cat": "GHIAM",        "pancake_names": ["Máy ghi âm DR8", "Dr8 - ZD43B"] },
+    { "label": "DR9",            "cost_key": "dr9",            "gia_nhap_vnd": 444224,  "google_cat": "GHIAM",        "pancake_names": ["Máy ghi âm DR9", "Dr9 - ZD68"] },
 
-    { "label": "DI1 Pro",        "cost_key": "di1 pro",        "gia_nhap_vnd": 1457739, "google_cat": "CHONG_GHI_AM", "pancake_names": ["Chống ghi âm DI1 Pro"] },
+    { "label": "DI1 Pro",        "cost_key": "di1 pro",        "gia_nhap_vnd": 1483185, "google_cat": "CHONG_GHI_AM", "pancake_names": ["Chống ghi âm DI1 Pro", "DI1 Pro - F30"] },
 
-    { "label": "DA1 Pro 4G",     "cost_key": "da1 pro 4g",     "gia_nhap_vnd": 452503,  "google_cat": "OTHER_CAM",    "pancake_names": ["DA1 Pro 4G"] },
-    { "label": "DA1 Pro ZoomX6", "cost_key": "da1 pro zoomx6", "gia_nhap_vnd": 595911,  "google_cat": "OTHER_CAM",    "pancake_names": ["DA1 Pro ZoomX6"] },
-    { "label": "DA1 Pro Wifi",   "cost_key": "da1 pro wifi",   "gia_nhap_vnd": 398662,  "google_cat": "OTHER_CAM",    "pancake_names": ["DA1 Pro Wifi - CB70W", "Camera giám sát ghi hình ảnh - DA1 pro (CB75)"] },
-    { "label": "DA3.2",          "cost_key": "da3.2",          "gia_nhap_vnd": 286898,  "google_cat": "OTHER_CAM",    "pancake_names": ["Camera DA3.2"] },
-    { "label": "DA3.3",          "cost_key": "da3.3",          "gia_nhap_vnd": 298687,  "google_cat": "OTHER_CAM",    "pancake_names": ["Camera DA3.3"] },
+    { "label": "DA1 PRO",        "cost_key": "da1 pro",        "gia_nhap_vnd": 816234,  "google_cat": "OTHER_CAM",    "pancake_names": ["DA1 PRO - CB75", "Camera giám sát ghi hình ảnh - DA1 pro (CB75)", "DA1 Pro CB75"] },
+    { "label": "DA1 ZoomX6",     "cost_key": "da1 zoomx6",     "gia_nhap_vnd": 803253,  "google_cat": "OTHER_CAM",    "pancake_names": ["DA1 zoomx6 - CB75D", "Camera giám sát ghi hình ảnh dùng trong gia đình DA1 pro zoomX6 ( CB75D)", "DA1 Pro ZoomX6"] },
+    { "label": "DA1 Wifi",       "cost_key": "da1 wifi",       "gia_nhap_vnd": 427230,  "google_cat": "OTHER_CAM",    "pancake_names": ["DA1 Pro Wifi - CB70W"] },
+    { "label": "DA2.4",          "cost_key": "da2.4",          "gia_nhap_vnd": 859914,  "google_cat": "OTHER_CAM",    "pancake_names": ["Camera giám sát ghi hình ảnh (dùng trong gia đình) mã hàng DA2.4 (BG66DR)", "DA 2.4 Camera Năng Lượng Mặt Trời"] },
+    { "label": "DA3.1",          "cost_key": "da3.1",          "gia_nhap_vnd": 335055,  "google_cat": "OTHER_CAM",    "pancake_names": ["DA-3.1 - CS622DR CAMERA", "Camera giám sát ghi hình ảnh dùng trong gia đình (C622DR)"] },
+    { "label": "DA3.2",          "cost_key": "da3.2",          "gia_nhap_vnd": 347266,  "google_cat": "OTHER_CAM",    "pancake_names": ["Camera DA3.2", "DA3.2 CS995DR"] },
+    { "label": "DA3.3",          "cost_key": "da3.3",          "gia_nhap_vnd": 293304,  "google_cat": "OTHER_CAM",    "pancake_names": ["Camera DA3.3", "DA-3.3 - CS995M CAMERA"] },
+    { "label": "DA3 Pro 4G",     "cost_key": "da3 pro 4g",     "gia_nhap_vnd": 766136,  "google_cat": "OTHER_CAM",    "pancake_names": ["DA3 Pro 4G NLMT - BG621SR", "Camera giám sát ghi hình ảnh (dùng trong gia đình) DA3 pro 4G Năng lượng mặt trời (BG621SR)"] },
+    { "label": "DA5",            "cost_key": "da5",            "gia_nhap_vnd": 564449,  "google_cat": "OTHER_CAM",    "pancake_names": ["Camera DA5", "DA5 Camera Mini Doscom"] },
+    { "label": "DA5.1",          "cost_key": "da5.1",          "gia_nhap_vnd": 422646,  "google_cat": "OTHER_CAM",    "pancake_names": ["DA5.1 Camera 4G - CB77", "Camera giám sát ghi hình ảnh dùng trong gia đình DA5.1 ( CB77)"] },
+    { "label": "DA6",            "cost_key": "da6",            "gia_nhap_vnd": 922653,  "google_cat": "OTHER_CAM",    "pancake_names": ["Camera DA6", "DA6 Camera Ngoài Trời Dùng Sim 4G"] },
+    { "label": "DA6 Pro",        "cost_key": "da6 pro",        "gia_nhap_vnd": 1258460, "google_cat": "OTHER_CAM",    "pancake_names": ["Camera DA6 pro", "DA6 Pro Camera Ngoài Trời Dùng Sim 4G"] },
+    { "label": "DA6.1 4G",       "cost_key": "da6.1 4g",       "gia_nhap_vnd": 548278,  "google_cat": "OTHER_CAM",    "pancake_names": ["DA6.1 4G - BG54"] },
+    { "label": "DA6.2",          "cost_key": "da6.2",          "gia_nhap_vnd": 1218634, "google_cat": "OTHER_CAM",    "pancake_names": ["CAMERA DA6.2 - H6", "Camera DA6.2"] },
 
-    { "label": "Winki",          "cost_key": "winki",          "gia_nhap_vnd": 180285,  "google_cat": "OTHER_RAZOR",  "pancake_names": ["Máy cạo râu Winki"] },
-    { "label": "Winki B86",      "cost_key": "winki b86",      "gia_nhap_vnd": 180285,  "google_cat": "OTHER_RAZOR",  "pancake_names": ["Bàn chải điện Winki B86"] },
+    { "label": "Winki A100",     "cost_key": "a100",           "gia_nhap_vnd": 189000,  "google_cat": "OTHER_RAZOR",  "pancake_names": ["Máy cạo râu Winki", "Máy cạo râu A100"] },
+    { "label": "Winki B86",      "cost_key": "b86",            "gia_nhap_vnd": 189000,  "google_cat": "OTHER_RAZOR",  "pancake_names": ["Bàn chải điện Winki B86"] },
 
-    { "label": "Thẻ 128GB",      "cost_key": "the 128gb",      "gia_nhap_vnd": 229735,  "google_cat": "OTHER_SIM",    "pancake_names": ["Thẻ 128GB"] },
-    { "label": "Thẻ 64GB",       "cost_key": "the 64gb",       "gia_nhap_vnd": 195738,  "google_cat": "OTHER_SIM",    "pancake_names": ["Thẻ 64GB"] },
+    { "label": "Thẻ 64GB",       "cost_key": "thẻ nhớ 64g",    "gia_nhap_vnd": 195738,  "google_cat": "OTHER_SIM",    "pancake_names": ["Thẻ 64GB"] },
+    { "label": "Thẻ 128GB",      "cost_key": "thẻ nhớ 128g",   "gia_nhap_vnd": 229735,  "google_cat": "OTHER_SIM",    "pancake_names": ["Thẻ 128GB"] },
     { "label": "Sim Vstarcam",   "cost_key": "sim vstarcam",   "gia_nhap_vnd": 20449,   "google_cat": "OTHER_SIM",    "pancake_names": ["Sim Vstarcam"] },
-    { "label": "Sim trắng",      "cost_key": "sim trang",      "gia_nhap_vnd": 28846,   "google_cat": "OTHER_SIM",    "pancake_names": ["sim trắng"] },
-    { "label": "Sim Viettel",    "cost_key": "sim viettel",    "gia_nhap_vnd": 37087,   "google_cat": "OTHER_SIM",    "pancake_names": ["Sim Viettel trắng"] },
+    { "label": "Sim trắng",      "cost_key": "sim trắng",      "gia_nhap_vnd": 28846,   "google_cat": "OTHER_SIM",    "pancake_names": ["sim trắng", "Sim trắng"] },
+    { "label": "Sim Viettel",    "cost_key": "sim viettel trắng", "gia_nhap_vnd": 37087, "google_cat": "OTHER_SIM",   "pancake_names": ["Sim Viettel trắng"] },
 
-    { "label": "Giá đỡ camera",  "cost_key": "gia do camera",  "gia_nhap_vnd": 38263,   "google_cat": "OTHER",        "pancake_names": ["Giá đỡ camera"] },
+    { "label": "Giá đỡ camera",  "cost_key": "giá đỡ camera",  "gia_nhap_vnd": 38263,   "google_cat": "OTHER",        "pancake_names": ["Giá đỡ camera", "giá đỡ camera"] },
     { "label": "DE-1",           "cost_key": "de1",            "gia_nhap_vnd": 700233,  "google_cat": "OTHER",        "pancake_names": ["DE-1 CHUÔNG CỬA THÔNG MINH KHÔNG DÂY DOSCOM"] },
 
-    { "label": "Noma 310",       "cost_key": "noma 310",       "gia_nhap_vnd": 36197,   "google_cat": "NOMA",         "pancake_names": ["NOMA 310"] },
-    { "label": "A002 300ml",     "cost_key": "a002 300ml",     "gia_nhap_vnd": 21867,   "google_cat": "NOMA",         "pancake_names": ["A002 300ml- APK-8507"] },
-    { "label": "A002 500ml",     "cost_key": "a002 500ml",     "gia_nhap_vnd": 29238,   "google_cat": "NOMA",         "pancake_names": ["A002 500ml - APK-8508"] }
-  ],
-
-  "name_aliases": [
-    { "pancake_name_regex": "camera giám sát ghi hình ảnh \\(dùng trong gia đình\\)", "category_filter": "CAMERA_VIDEO_CALL", "map_to": [["DA8.1", 1]], "note": "Pancake gọi tên dài, user confirm = DA8.1" }
+    { "label": "Noma 310",       "cost_key": "noma 310",       "gia_nhap_vnd": 36197,   "google_cat": "NOMA",         "pancake_names": ["NOMA 310", "Noma 310 - Ogas"] },
+    { "label": "A002 300ml",     "cost_key": "a002 -300ml",    "gia_nhap_vnd": 21867,   "google_cat": "NOMA",         "pancake_names": ["A002 300ml- APK-8507"] },
+    { "label": "A002 500ml",     "cost_key": "a002 -500ml",    "gia_nhap_vnd": 29238,   "google_cat": "NOMA",         "pancake_names": ["A002 500ml - APK-8508"] }
   ],
 
   "combos": [
-    { "pancake_name_contains": "DV1 mini + Sim",        "decompose": [["DV1 mini", 1], ["Sim ĐV", 1]] },
-    { "pancake_name_contains": "DV1 Pro + Sim",         "decompose": [["DV1 Pro", 1], ["Sim ĐV", 1]] },
-    { "pancake_name_contains": "DV1 + Sim",             "decompose": [["DV1", 1], ["Sim ĐV", 1]] },
-    { "pancake_name_contains": "DV2 + Sim",             "decompose": [["DV2", 1], ["Sim ĐV", 1]] },
-    { "pancake_name_contains": "DV4 + Sim",             "decompose": [["DV4", 1], ["Sim ĐV", 1]] },
-    { "pancake_name_contains": "DT2 + Pin",             "decompose": [["DT2", 1], ["Pin DT2", 1]] },
-    { "pancake_name_contains": "DR9 + Thẻ nhớ 64GB",    "decompose": [["DR9", 1], ["Thẻ 64GB", 1]] },
-    { "pancake_name_contains": "DR9 + Thẻ nhớ 128GB",   "decompose": [["DR9", 1], ["Thẻ 128GB", 1]] },
-    { "pancake_name_contains": "DA1 Pro ZoomX6 + Thẻ nhớ 64GB + Sim Vstarcam", "decompose": [["DA1 Pro ZoomX6", 1], ["Thẻ 64GB", 1], ["Sim Vstarcam", 1]] },
-    { "pancake_name_contains": "DA1 Pro ZoomX6 + Sim Vstarcam", "decompose": [["DA1 Pro ZoomX6", 1], ["Sim Vstarcam", 1]] },
-    { "pancake_name_contains": "DA1 Pro + Thẻ nhớ 64GB + Sim Vstarcam", "decompose": [["DA1 Pro 4G", 1], ["Thẻ 64GB", 1], ["Sim Vstarcam", 1]] },
-    { "pancake_name_contains": "DA1 Pro + Sim Vstarcam","decompose": [["DA1 Pro 4G", 1], ["Sim Vstarcam", 1]] }
+    { "pancake_name_contains": "DV1 mini + Sim",            "decompose": [["DV1 mini", 1], ["Sim ĐV", 1]] },
+    { "pancake_name_contains": "DV1 Pro + Sim",             "decompose": [["DV1 Pro", 1], ["Sim ĐV", 1]] },
+    { "pancake_name_contains": "DV1 + Sim",                 "decompose": [["DV1", 1], ["Sim ĐV", 1]] },
+    { "pancake_name_contains": "DV2 + Sim",                 "decompose": [["DV2", 1], ["Sim ĐV", 1]] },
+    { "pancake_name_contains": "DV4 + Sim",                 "decompose": [["DV4", 1], ["Sim ĐV", 1]] },
+    { "pancake_name_contains": "DT2 + Pin",                 "decompose": [["DT2", 1], ["Pin DT2", 1]] },
+    { "pancake_name_contains": "DR9 + Thẻ nhớ 64GB",        "decompose": [["DR9", 1], ["Thẻ 64GB", 1]] },
+    { "pancake_name_contains": "DR9 + Thẻ nhớ 128GB",       "decompose": [["DR9", 1], ["Thẻ 128GB", 1]] },
+    { "pancake_name_contains": "DA1 Pro ZoomX6 + Thẻ nhớ 64GB + Sim Vstarcam", "decompose": [["DA1 ZoomX6", 1], ["Thẻ 64GB", 1], ["Sim Vstarcam", 1]] },
+    { "pancake_name_contains": "DA1 Pro ZoomX6 + Sim Vstarcam", "decompose": [["DA1 ZoomX6", 1], ["Sim Vstarcam", 1]] },
+    { "pancake_name_contains": "DA1 Pro + Thẻ nhớ 64GB + Sim Vstarcam", "decompose": [["DA1 PRO", 1], ["Thẻ 64GB", 1], ["Sim Vstarcam", 1]] },
+    { "pancake_name_contains": "DA1 Pro + Sim Vstarcam",    "decompose": [["DA1 PRO", 1], ["Sim Vstarcam", 1]] },
+    { "pancake_name_contains": "DA5.1 + Sim Vstarcam",      "decompose": [["DA5.1", 1], ["Sim Vstarcam", 1]] },
+    { "pancake_name_contains": "DA5.1 + Thẻ nhớ 128GB + Sim Vstarcam", "decompose": [["DA5.1", 1], ["Thẻ 128GB", 1], ["Sim Vstarcam", 1]] },
+    { "pancake_name_contains": "DA6.2 4G + Sim Vstarcam",   "decompose": [["DA6.2", 1], ["Sim Vstarcam", 1]] },
+    { "pancake_name_contains": "DA3 Pro 4G + Sim Vstarcam", "decompose": [["DA3 Pro 4G", 1], ["Sim Vstarcam", 1]] },
+    { "pancake_name_contains": "DA8.1 + Thẻ nhớ 64GB",      "decompose": [["DA8.1", 1], ["Thẻ 64GB", 1]] },
+    { "pancake_name_contains": "DA8.1 + Thẻ nhớ 128GB",     "decompose": [["DA8.1", 1], ["Thẻ 128GB", 1]] },
+    { "pancake_name_contains": "DA8.1 Pro + Thẻ nhớ 64GB",  "decompose": [["DA8.1 Pro", 1], ["Thẻ 64GB", 1]] },
+    { "pancake_name_contains": "DA8.1 Pro + Thẻ nhớ 128GB", "decompose": [["DA8.1 Pro", 1], ["Thẻ 128GB", 1]] }
+  ],
+
+  "name_aliases": [
+    { "pancake_name_regex": "Camera giám sát ghi hình ảnh \\(dùng trong gia đình\\) - DA8\\.1", "map_to": [["DA8.1", 1]], "note": "Pancake long name → DA8.1" },
+    { "pancake_name_regex": "Camera giám sát ghi hình ảnh - DA1 pro", "map_to": [["DA1 PRO", 1]], "note": "DA1 Pro CB75 alias" }
   ],
 
   "skipped_skus": [
-    "Máy massage mắt FJ-E10",
-    "Sim trắng multi 4G",
-    "Súng massage FJ-M02"
+    "Máy massage mắt FJ-E10 (user 2026-05-27: bỏ — sản phẩm massage, ngoài line ad)",
+    "Sim trắng multi 4G (user: bỏ — không phải SP chính)",
+    "Súng massage FJ-M02 (user: bỏ)"
   ],
 
-  "pending_skus_need_cost": [
-    "Camera DA5 (CAMERA_WIFI, 15.3M doanh thu/90d)",
-    "Camera DA6 (CAMERA_4G)",
-    "Camera DA6 pro (CAMERA_4G)",
-    "Camera DA6.1 4G - BG54",
-    "Camera DA6.2 - H6",
-    "DA5.1 base (only combo in data)",
-    "DA3 Pro 4G base",
-    "Generic 'Camera giám sát ghi hình ảnh (dùng trong gia đình)' variants chưa rõ DA model"
+  "_priced_in_xlsx_only_not_yet_pancake": [
+    "Nhiều SP có trong xlsx Kho tổng nhưng Pancake chưa bán: D5, D9, DR2, DR3, DR5, DR4 16GB, DA2.1, DA4 Cũ, DA9, DA-7/7.1, DA3 Pro x10, DA5.1 PRO, DT1, DT1 Pro, DI2-DI9, Noma 620/890/955/692, A001, các dịch vụ DVD, máy phá sóng PS, sản phẩm FUJI, etc.",
+    "Tự động kéo vào catalog khi user bắt đầu bán & Pancake ghi nhận order."
   ]
 }
