@@ -757,6 +757,517 @@ function FetchDataButton() {
 }
 
 // =============================================================
+// WEEKLY REPORT — Xuất báo cáo HTML/PDF cho khoảng tuỳ chọn
+// 3 section: (1) Tổng theo nhân sự · (2) Tuần × Tài khoản QC ·
+//            (3) Tuần × Nhân sự × Sản phẩm (profit = rev − VAT − ad − COGS)
+// =============================================================
+function splitRangeIntoWeeks(rangeStart, rangeEnd) {
+  // Chia [rangeStart, rangeEnd] thành các tuần ISO T2→CN, clip vào biên.
+  const out = []
+  const start = new Date(rangeStart + "T00:00:00Z")
+  const end = new Date(rangeEnd + "T00:00:00Z")
+  if (end < start) return out
+  // Đi tới Mon của tuần chứa start
+  const dow = start.getUTCDay() // 0=CN
+  const toMon = dow === 0 ? 6 : dow - 1
+  let weekStart = new Date(start); weekStart.setUTCDate(weekStart.getUTCDate() - toMon)
+  let idx = 0
+  while (weekStart <= end) {
+    const weekEnd = new Date(weekStart); weekEnd.setUTCDate(weekEnd.getUTCDate() + 6)
+    const clipStart = weekStart < start ? start : weekStart
+    const clipEnd = weekEnd > end ? end : weekEnd
+    // Tính ISO week-of-year cho label
+    out.push({
+      label: `Tuần ${idx + 1}`,
+      start: clipStart.toISOString().slice(0, 10),
+      end: clipEnd.toISOString().slice(0, 10),
+      monLabel: weekStart.toISOString().slice(0, 10),
+      sunLabel: weekEnd.toISOString().slice(0, 10),
+    })
+    weekStart = new Date(weekStart); weekStart.setUTCDate(weekStart.getUTCDate() + 7)
+    idx++
+  }
+  return out
+}
+
+function _sumDateMap(byDate, rStart, rEnd) {
+  let s = 0
+  for (const [d, v] of Object.entries(byDate || {})) {
+    if (d >= rStart && d <= rEnd) s += Number(v) || 0
+  }
+  return s
+}
+
+function buildWeeklyReportData(rangeStart, rangeEnd) {
+  // Trả về { range, weeks, perStaff, perWeekAccounts, perWeekStaffProduct }
+  const D = (typeof DATA !== "undefined" ? DATA : null) || {}
+  const accounts = D.accounts || []
+  const campaigns = D.campaigns || []
+  const adSpendByStaff = D.ad_spend_by_staff || {}
+  const adSpendUnassigned = D.ad_spend_unassigned || {}
+  const revenueGroups = (D.revenue || {}).source_groups || {}
+  const googleAds = D.google_ads || { by_category: {} }
+  const productCosts = D.product_costs || {}
+  const products = D.profit_products || [
+    "D1","D1 Pro","D2","D3","D4","D8 Pro","DR1","DR4 Plus","DV1 Pro",
+    "DA8.1","DA8.1 Pro","Noma 911","Noma 922","Noma 250",
+  ]
+  const VAT_RATE = 0.10
+  const weeks = splitRangeIntoWeeks(rangeStart, rangeEnd)
+
+  // Mapping staff → revenue source key trong Pancake (FB ads)
+  const STAFF_DEFS = [
+    { key: "DUY", label: "DUY", adKey: "DUY", revKeys: ["DUY"], hasGoogle: false },
+    { key: "PHUONG_NAM", label: "PHƯƠNG NAM", adKey: "PHUONG_NAM", revKeys: ["PHUONG_NAM"], hasGoogle: false },
+    { key: "WEBSITE_STAFF", label: "WEBSITE", adKey: null, revKeys: ["WEBSITE","ZALO_OA","HOTLINE"], hasGoogle: true },
+    { key: "FB_PAGE", label: "Page Facebook", adKey: null, revKeys: ["FB_PAGE"], hasGoogle: false },
+  ]
+
+  // (1) AGGREGATE PER STAFF — cho cả range
+  const perStaff = STAFF_DEFS.map(st => {
+    let spend = 0
+    if (st.adKey) {
+      const buckets = adSpendByStaff[st.adKey] || {}
+      Object.values(buckets).forEach(b => { spend += _sumDateMap(b.by_date, rangeStart, rangeEnd) })
+      // Cộng unassigned spend cho staff này (safety net)
+      // Note: ad_spend_unassigned chỉ là total, không by_date → coi như phân bổ đều theo range
+      const unassignedTotal = Number(adSpendUnassigned[st.adKey] || 0)
+      if (unassignedTotal > 0) {
+        // Hiện tại fb-ads-data.json chưa lưu unassigned by_date.
+        // Báo cáo này chỉ thấy unassigned KHI fix detect_profit_product chưa rebuild.
+        // Tạm cộng 0 (đã được tách riêng), hiển thị note nếu > 0 ở cuối.
+      }
+    }
+    let googleSpend = 0
+    if (st.hasGoogle) {
+      Object.values(googleAds.by_category || {}).forEach(b => {
+        googleSpend += _sumDateMap(b.by_date, rangeStart, rangeEnd)
+      })
+    }
+
+    let revPending = 0, revFinal = 0, ordersFinal = 0, revenueByProd = 0, unitsByProd = 0, cogsByProd = 0
+    st.revKeys.forEach(rk => {
+      const g = revenueGroups[rk]
+      if (!g) return
+      const rev = g.order_revenue_by_status_by_date || {}
+      const ord = g.order_count_by_status_by_date || {}
+      // Tạm tính = delivered + other + returning
+      ;["delivered", "other", "returning"].forEach(s => {
+        revPending += _sumDateMap(rev[s], rangeStart, rangeEnd)
+      })
+      // Thực thu = delivered
+      revFinal += _sumDateMap(rev.delivered, rangeStart, rangeEnd)
+      ordersFinal += _sumDateMap(ord.delivered, rangeStart, rangeEnd)
+
+      // COGS: sum units × giá nhập per product
+      const prods = g.products || {}
+      products.forEach(p => {
+        const pd = prods[p]
+        if (!pd) return
+        const revP = _sumDateMap(pd.by_date, rangeStart, rangeEnd)
+        const unitsP = _sumDateMap(pd.units_by_date, rangeStart, rangeEnd)
+        revenueByProd += revP
+        unitsByProd += unitsP
+        const cost = Number((productCosts[p] || {}).gia_nhap_vnd) || 0
+        cogsByProd += unitsP * cost
+      })
+    })
+
+    const totalSpend = spend + googleSpend
+    const vat = revenueByProd * VAT_RATE
+    const profit = revenueByProd - vat - totalSpend - cogsByProd
+    const cir = revPending > 0 ? totalSpend / revPending * 100 : null
+    const margin = revenueByProd > 0 ? profit / revenueByProd * 100 : null
+    return {
+      key: st.key, label: st.label,
+      fbSpend: spend, googleSpend, totalSpend,
+      revPending, revFinal, ordersFinal,
+      revenueByProd, unitsByProd, cogsByProd, vat, profit, cir, margin,
+    }
+  })
+
+  // (2) TUẦN × TÀI KHOẢN QC — chỉ accounts có spend > 0 trong tuần
+  const perWeekAccounts = weeks.map(w => {
+    const accRows = accounts.map(a => {
+      const accFullId = a.id // e.g. "act_927390616363424"
+      // Aggregate từ campaigns của account này
+      let spend = 0, impressions = 0, clicks = 0, registrations = 0, reach = 0
+      campaigns.forEach(c => {
+        if (c.account_id !== accFullId) return
+        ;(c.daily || []).forEach(d => {
+          if (d.date < w.start || d.date > w.end) return
+          spend += Number(d.spend) || 0
+          impressions += Number(d.impressions) || 0
+          clicks += Number(d.clicks) || 0
+          reach += Number(d.reach) || 0
+          registrations += Number(d.registrations) || 0
+        })
+      })
+      const ctr = impressions > 0 ? clicks / impressions * 100 : 0
+      const cpa = registrations > 0 ? spend / registrations : null
+      const cpc = clicks > 0 ? spend / clicks : null
+      return {
+        accountId: accFullId, staff: a.staff, name: a.short || a.name,
+        spend, impressions, clicks, reach, registrations, ctr, cpa, cpc,
+      }
+    }).filter(r => r.spend > 0)
+      .sort((a, b) => b.spend - a.spend)
+    const totalSpend = accRows.reduce((s, r) => s + r.spend, 0)
+    return { ...w, accounts: accRows, totalSpend }
+  })
+
+  // (3) TUẦN × NHÂN SỰ × SẢN PHẨM
+  const perWeekStaffProduct = weeks.map(w => {
+    const staffRows = STAFF_DEFS.filter(st => st.adKey).map(st => {
+      const adBuckets = adSpendByStaff[st.adKey] || {}
+      const prodRows = products.map(p => {
+        const adSpend = _sumDateMap((adBuckets[p] || {}).by_date, w.start, w.end)
+        let revenue = 0, units = 0, orders = 0
+        st.revKeys.forEach(rk => {
+          const pd = ((revenueGroups[rk] || {}).products || {})[p]
+          if (!pd) return
+          revenue += _sumDateMap(pd.by_date, w.start, w.end)
+          units += _sumDateMap(pd.units_by_date, w.start, w.end)
+          orders += _sumDateMap(pd.orders_by_date, w.start, w.end)
+        })
+        const cost = Number((productCosts[p] || {}).gia_nhap_vnd) || 0
+        const cogs = units * cost
+        const vat = revenue * VAT_RATE
+        const profit = revenue - vat - adSpend - cogs
+        const margin = revenue > 0 ? profit / revenue * 100 : null
+        return { product: p, adSpend, revenue, units, orders, cogs, vat, profit, margin }
+      }).filter(r => r.adSpend > 0 || r.revenue > 0)
+      const tot = prodRows.reduce((a, r) => ({
+        adSpend: a.adSpend + r.adSpend, revenue: a.revenue + r.revenue,
+        units: a.units + r.units, orders: a.orders + r.orders,
+        cogs: a.cogs + r.cogs, vat: a.vat + r.vat, profit: a.profit + r.profit,
+      }), { adSpend: 0, revenue: 0, units: 0, orders: 0, cogs: 0, vat: 0, profit: 0 })
+      return { staff: st.key, staffLabel: st.label, products: prodRows, total: tot }
+    })
+    return { ...w, staffRows }
+  })
+
+  return {
+    range: { start: rangeStart, end: rangeEnd },
+    weeks, perStaff, perWeekAccounts, perWeekStaffProduct,
+    generatedAt: new Date().toISOString().slice(0, 19).replace("T", " "),
+  }
+}
+
+function renderWeeklyReportHtml(data) {
+  const fmtV = n => Number(n || 0).toLocaleString("vi-VN") + "₫"
+  const fmtN = n => Number(n || 0).toLocaleString("vi-VN")
+  const fmtP = n => n == null ? "—" : Number(n).toFixed(1) + "%"
+  const esc = s => String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+  const dateLabel = `${data.range.start} → ${data.range.end} (${data.weeks.length} tuần)`
+
+  // SECTION 1 — Aggregate per staff
+  const s1Rows = data.perStaff.map(s => `
+    <tr>
+      <td class="lbl">${esc(s.label)}</td>
+      <td class="num">${fmtV(s.totalSpend)}</td>
+      <td class="num">${fmtV(s.revPending)}</td>
+      <td class="num">${fmtV(s.revFinal)}</td>
+      <td class="num">${fmtN(s.ordersFinal)}</td>
+      <td class="num">${fmtV(s.cogsByProd)}</td>
+      <td class="num">${fmtV(s.vat)}</td>
+      <td class="num ${s.profit >= 0 ? 'pos' : 'neg'}">${fmtV(s.profit)}</td>
+      <td class="num">${fmtP(s.margin)}</td>
+      <td class="num">${fmtP(s.cir)}</td>
+    </tr>
+  `).join("")
+  const s1Totals = data.perStaff.reduce((a, s) => ({
+    spend: a.spend + s.totalSpend, revP: a.revP + s.revPending, revF: a.revF + s.revFinal,
+    orders: a.orders + s.ordersFinal, cogs: a.cogs + s.cogsByProd, vat: a.vat + s.vat, profit: a.profit + s.profit,
+  }), { spend: 0, revP: 0, revF: 0, orders: 0, cogs: 0, vat: 0, profit: 0 })
+  const s1Total = `
+    <tr class="total">
+      <td class="lbl">TỔNG</td>
+      <td class="num">${fmtV(s1Totals.spend)}</td>
+      <td class="num">${fmtV(s1Totals.revP)}</td>
+      <td class="num">${fmtV(s1Totals.revF)}</td>
+      <td class="num">${fmtN(s1Totals.orders)}</td>
+      <td class="num">${fmtV(s1Totals.cogs)}</td>
+      <td class="num">${fmtV(s1Totals.vat)}</td>
+      <td class="num ${s1Totals.profit >= 0 ? 'pos' : 'neg'}">${fmtV(s1Totals.profit)}</td>
+      <td class="num">${fmtP(s1Totals.revP > 0 ? s1Totals.profit / s1Totals.revP * 100 : null)}</td>
+      <td class="num">${fmtP(s1Totals.revP > 0 ? s1Totals.spend / s1Totals.revP * 100 : null)}</td>
+    </tr>
+  `
+
+  // SECTION 2 — Tuần × Account
+  const s2 = data.perWeekAccounts.map(w => {
+    if (!w.accounts.length) return ""
+    const rows = w.accounts.map(a => `
+      <tr>
+        <td class="lbl"><span class="acc-id">${esc(a.accountId)}</span> · ${esc(a.name)}</td>
+        <td class="lbl"><span class="staff-chip staff-${esc(a.staff)}">${esc(a.staff)}</span></td>
+        <td class="num">${fmtV(a.spend)}</td>
+        <td class="num">${fmtN(a.impressions)}</td>
+        <td class="num">${fmtN(a.clicks)}</td>
+        <td class="num">${fmtP(a.ctr)}</td>
+        <td class="num">${a.cpc == null ? "—" : fmtV(a.cpc)}</td>
+        <td class="num">${fmtN(a.registrations)}</td>
+        <td class="num">${a.cpa == null ? "—" : fmtV(a.cpa)}</td>
+      </tr>
+    `).join("")
+    return `
+      <h3>${esc(w.label)} · ${esc(w.start)} → ${esc(w.end)} <span class="muted">(spend tuần: ${fmtV(w.totalSpend)})</span></h3>
+      <table class="rpt">
+        <thead><tr>
+          <th>Tài khoản QC</th><th>Nhân sự</th><th>Spend</th>
+          <th>Impressions</th><th>Clicks</th><th>CTR</th>
+          <th>CPC</th><th>Conv (CR)</th><th>CPA</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `
+  }).join("")
+
+  // SECTION 3 — Tuần × Staff × Product (chỉ FB Ads staff)
+  const s3 = data.perWeekStaffProduct.map(w => {
+    const blocks = w.staffRows.map(sr => {
+      if (!sr.products.length) return ""
+      const rows = sr.products.map(p => `
+        <tr>
+          <td class="lbl">${esc(p.product)}</td>
+          <td class="num">${fmtV(p.adSpend)}</td>
+          <td class="num">${fmtV(p.revenue)}</td>
+          <td class="num">${fmtN(p.units)}</td>
+          <td class="num">${fmtN(p.orders)}</td>
+          <td class="num">${fmtV(p.cogs)}</td>
+          <td class="num">${fmtV(p.vat)}</td>
+          <td class="num ${p.profit >= 0 ? 'pos' : 'neg'}">${fmtV(p.profit)}</td>
+          <td class="num">${fmtP(p.margin)}</td>
+        </tr>
+      `).join("")
+      const t = sr.total
+      const tMargin = t.revenue > 0 ? t.profit / t.revenue * 100 : null
+      return `
+        <h4>${esc(sr.staffLabel)}</h4>
+        <table class="rpt">
+          <thead><tr>
+            <th>Sản phẩm</th><th>Ad spend</th><th>Doanh thu</th>
+            <th>SL bán</th><th>Đơn</th><th>Giá nhập (Σ)</th>
+            <th>VAT 10%</th><th>Lợi nhuận</th><th>Biên LN</th>
+          </tr></thead>
+          <tbody>${rows}
+            <tr class="total">
+              <td class="lbl">TỔNG ${esc(sr.staffLabel)}</td>
+              <td class="num">${fmtV(t.adSpend)}</td>
+              <td class="num">${fmtV(t.revenue)}</td>
+              <td class="num">${fmtN(t.units)}</td>
+              <td class="num">${fmtN(t.orders)}</td>
+              <td class="num">${fmtV(t.cogs)}</td>
+              <td class="num">${fmtV(t.vat)}</td>
+              <td class="num ${t.profit >= 0 ? 'pos' : 'neg'}">${fmtV(t.profit)}</td>
+              <td class="num">${fmtP(tMargin)}</td>
+            </tr>
+          </tbody>
+        </table>
+      `
+    }).join("")
+    if (!blocks.trim()) return ""
+    return `<h3>${esc(w.label)} · ${esc(w.start)} → ${esc(w.end)}</h3>${blocks}`
+  }).join("")
+
+  return `<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Báo cáo QC ${esc(data.range.start)} → ${esc(data.range.end)}</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;margin:0;padding:20px;background:#f8fafc;color:#111827;font-size:13px}
+  .toolbar{position:sticky;top:0;background:white;border-bottom:2px solid #e5e7eb;padding:10px 16px;margin:-20px -20px 20px;display:flex;gap:10px;align-items:center;z-index:10}
+  .toolbar h1{margin:0;font-size:16px;color:#dc2626;font-weight:700}
+  .toolbar .subtitle{font-size:11px;color:#6b7280;margin-left:8px}
+  .btn{padding:6px 14px;border-radius:6px;font-weight:600;font-size:12px;cursor:pointer;border:none}
+  .btn-primary{background:#dc2626;color:white}
+  .btn-primary:hover{background:#b91c1c}
+  .btn-secondary{background:#e5e7eb;color:#374151}
+  h2{font-size:15px;color:#1e40af;margin:24px 0 10px;padding-bottom:6px;border-bottom:2px solid #1e40af}
+  h3{font-size:13px;color:#7c3aed;margin:16px 0 6px}
+  h4{font-size:12px;color:#6b7280;margin:8px 0 4px;font-weight:600}
+  .meta{background:white;padding:12px 16px;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:16px;font-size:12px}
+  .meta b{color:#dc2626}
+  table.rpt{width:100%;border-collapse:collapse;background:white;font-size:11.5px;margin-bottom:14px;page-break-inside:avoid}
+  table.rpt th{background:#f3f4f6;border:1px solid #d1d5db;padding:6px 8px;text-align:left;font-weight:700;color:#374151}
+  table.rpt td{border:1px solid #e5e7eb;padding:5px 8px}
+  table.rpt .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  table.rpt .lbl{font-weight:500}
+  table.rpt .total{background:#f9fafb;font-weight:700}
+  table.rpt .total td{border-top:2px solid #9ca3af}
+  table.rpt .pos{color:#15803d;font-weight:600}
+  table.rpt .neg{color:#dc2626;font-weight:600}
+  .muted{color:#9ca3af;font-weight:400;font-size:11px}
+  .acc-id{font-family:Consolas,Menlo,monospace;font-size:10.5px;color:#6b7280;background:#f3f4f6;padding:1px 4px;border-radius:3px}
+  .staff-chip{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700}
+  .staff-DUY{background:#dbeafe;color:#1e40af}
+  .staff-PHUONG_NAM{background:#ede9fe;color:#6d28d9}
+  @media print{
+    body{background:white;padding:8mm;font-size:10.5px}
+    .toolbar{display:none}
+    table.rpt{font-size:9.5px;page-break-inside:avoid}
+    h2{page-break-after:avoid}
+    h3,h4{page-break-after:avoid}
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <h1>📊 Báo cáo hiệu suất quảng cáo</h1>
+    <span class="subtitle">${esc(dateLabel)} · Xuất lúc ${esc(data.generatedAt)}</span>
+    <span style="margin-left:auto"></span>
+    <button class="btn btn-primary" onclick="window.print()">🖨 In / Lưu PDF</button>
+    <button class="btn btn-secondary" onclick="window.close()">Đóng</button>
+  </div>
+
+  <div class="meta">
+    <b>Khoảng báo cáo:</b> ${esc(dateLabel)} ·
+    <b>Phương pháp:</b> Ad spend phân bổ per tên SP trong campaign · Doanh thu/Đơn từ Pancake POS ·
+    Lợi nhuận = Doanh thu − VAT 10% − Ad spend − Giá nhập × SL bán.
+  </div>
+
+  <h2>1. Tổng theo nhân sự (cả khoảng)</h2>
+  <table class="rpt">
+    <thead><tr>
+      <th>Nhân sự</th><th>Tổng chi QC</th><th>DT tạm tính</th><th>DT thực thu</th>
+      <th>Đơn delivered</th><th>Giá nhập (Σ)</th><th>VAT 10%</th>
+      <th>Lợi nhuận</th><th>Biên LN</th><th>CIR</th>
+    </tr></thead>
+    <tbody>${s1Rows}${s1Total}</tbody>
+  </table>
+
+  <h2>2. Tuần × Tài khoản QC (FB Ads only)</h2>
+  ${s2 || '<p class="muted">Không có data trong khoảng này.</p>'}
+
+  <h2>3. Tuần × Nhân sự × Sản phẩm (profit per SP)</h2>
+  ${s3 || '<p class="muted">Không có data trong khoảng này.</p>'}
+
+  <p style="text-align:center;color:#9ca3af;font-size:10px;margin-top:30px">
+    Doscom ERP · facebookadsallinone.pages.dev · Báo cáo tự sinh từ data ${esc(data.generatedAt)}
+  </p>
+</body>
+</html>`
+}
+
+function ExportReportButton({ dateRange }) {
+  const [open, setOpen] = useState(false)
+  const [exportRange, setExportRange] = useState(dateRange)
+  // Khi date range global đổi, đồng bộ default cho modal
+  React.useEffect(() => { setExportRange(dateRange) }, [dateRange.start, dateRange.end])
+
+  const handleExport = () => {
+    if (!exportRange.start || !exportRange.end) {
+      alert("Chọn khoảng thời gian báo cáo")
+      return
+    }
+    if (exportRange.start > exportRange.end) {
+      alert("Ngày bắt đầu phải ≤ ngày kết thúc")
+      return
+    }
+    try {
+      const data = buildWeeklyReportData(exportRange.start, exportRange.end)
+      const html = renderWeeklyReportHtml(data)
+      const w = window.open("", "_blank")
+      if (!w) {
+        alert("Popup bị chặn. Cho phép pop-up cho site này để xem báo cáo.")
+        return
+      }
+      w.document.open()
+      w.document.write(html)
+      w.document.close()
+      setOpen(false)
+    } catch (e) {
+      console.error(e)
+      alert("Lỗi khi tạo báo cáo: " + (e.message || e))
+    }
+  }
+
+  const setQuickRange = (key) => {
+    const tod = new Date(TODAY + "T00:00:00Z")
+    if (key === "thisweek") {
+      const dow = tod.getUTCDay()
+      const toMon = dow === 0 ? 6 : dow - 1
+      const mon = new Date(tod); mon.setUTCDate(mon.getUTCDate() - toMon)
+      setExportRange({ start: mon.toISOString().slice(0, 10), end: TODAY })
+    } else if (key === "lastweek") {
+      const dow = tod.getUTCDay()
+      const toMon = dow === 0 ? 6 : dow - 1
+      const monThis = new Date(tod); monThis.setUTCDate(monThis.getUTCDate() - toMon)
+      const monLast = new Date(monThis); monLast.setUTCDate(monLast.getUTCDate() - 7)
+      const sunLast = new Date(monLast); sunLast.setUTCDate(sunLast.getUTCDate() + 6)
+      setExportRange({ start: monLast.toISOString().slice(0, 10), end: sunLast.toISOString().slice(0, 10) })
+    } else if (key === "thismonth") {
+      const first = new Date(Date.UTC(tod.getUTCFullYear(), tod.getUTCMonth(), 1))
+      setExportRange({ start: first.toISOString().slice(0, 10), end: TODAY })
+    } else if (key === "lastmonth") {
+      const first = new Date(Date.UTC(tod.getUTCFullYear(), tod.getUTCMonth() - 1, 1))
+      const last = new Date(Date.UTC(tod.getUTCFullYear(), tod.getUTCMonth(), 0))
+      setExportRange({ start: first.toISOString().slice(0, 10), end: last.toISOString().slice(0, 10) })
+    }
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="px-4 py-2 rounded-lg text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-md transition flex items-center gap-2"
+        title="Xuất báo cáo HTML/PDF cho khoảng thời gian tuỳ chọn"
+      >
+        📑 Xuất báo cáo
+      </button>
+      {open && (
+        <div
+          onClick={() => setOpen(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="bg-white rounded-xl shadow-2xl p-5"
+            style={{ width: "100%", maxWidth: "480px" }}
+          >
+            <h3 className="text-base font-bold text-gray-900 mb-1">📑 Xuất báo cáo hiệu suất QC</h3>
+            <p className="text-xs text-gray-500 mb-4">Chọn khoảng thời gian — báo cáo sẽ chia thành các tuần T2→CN, kèm tổng theo nhân sự + per-account + per-sản phẩm.</p>
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              <button onClick={() => setQuickRange("thisweek")} className="px-2 py-1 text-[11px] bg-gray-100 text-gray-700 rounded hover:bg-gray-200 border border-gray-300">Tuần này</button>
+              <button onClick={() => setQuickRange("lastweek")} className="px-2 py-1 text-[11px] bg-gray-100 text-gray-700 rounded hover:bg-gray-200 border border-gray-300">Tuần trước</button>
+              <button onClick={() => setQuickRange("thismonth")} className="px-2 py-1 text-[11px] bg-gray-100 text-gray-700 rounded hover:bg-gray-200 border border-gray-300">Tháng này</button>
+              <button onClick={() => setQuickRange("lastmonth")} className="px-2 py-1 text-[11px] bg-gray-100 text-gray-700 rounded hover:bg-gray-200 border border-gray-300">Tháng trước</button>
+            </div>
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+              <span className="text-xs font-semibold text-gray-700">Từ</span>
+              <input
+                type="date"
+                value={exportRange.start || ""}
+                onChange={e => setExportRange(r => ({ ...r, start: e.target.value }))}
+                className="px-2 py-1 text-xs border border-gray-300 rounded focus:border-indigo-500 focus:outline-none"
+              />
+              <span className="text-xs font-semibold text-gray-700">đến</span>
+              <input
+                type="date"
+                value={exportRange.end || ""}
+                onChange={e => setExportRange(r => ({ ...r, end: e.target.value }))}
+                className="px-2 py-1 text-xs border border-gray-300 rounded focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+            <div className="text-[11px] text-gray-500 mb-4">
+              Số tuần ước tính: <b className="text-gray-800">{splitRangeIntoWeeks(exportRange.start || TODAY, exportRange.end || TODAY).length}</b>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setOpen(false)} className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Huỷ</button>
+              <button onClick={handleExport} className="px-4 py-2 text-sm bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700">🖨 Tạo báo cáo</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// =============================================================
 // MAIN COMPONENT
 // =============================================================
 function FacebookAdsDashboard() {
@@ -1103,7 +1614,7 @@ function FacebookAdsDashboard() {
           <p className="text-xs font-semibold text-gray-500 uppercase mb-2 flex items-center gap-1">
             <Calendar className="w-3 h-3" /> Bộ lọc thời gian
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             {TIME_FILTERS.map(f => (
               <button
                 key={f.key}
@@ -1119,6 +1630,9 @@ function FacebookAdsDashboard() {
             ))}
             <div className="px-3 py-2 text-xs text-gray-500 italic">
               ({dateRange.start === dateRange.end ? fmtDate(dateRange.start) : `${fmtDate(dateRange.start)} → ${fmtDate(dateRange.end)}`})
+            </div>
+            <div className="ml-auto">
+              <ExportReportButton dateRange={dateRange} />
             </div>
           </div>
           {timeFilter === "custom" && (
