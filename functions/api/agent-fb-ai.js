@@ -29,7 +29,11 @@ import {
 const SESSION_COOKIE = "doscom_session";
 const MODEL_FAST = "@cf/meta/llama-3.1-8b-instruct-fast";       // light, weak, ~30-100 neurons
 const MODEL_BIG  = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";   // structured output reliable, ~500-1500 neurons
-const CLAUDE_MODEL_SONNET = "claude-sonnet-4-6";                 // Anthropic — phân tích sâu hơn nhiều Llama
+// 2026-05-27: switched từ Sonnet 4.6 sang Haiku 4.5 để cắt cost ~3× cho ad-ops Q&A.
+// Sonnet đắt (in $3 / out $15 per 1M tokens) trong khi Haiku 4.5 (in $1 / out $5)
+// đủ chất lượng cho audit/optimize/staff_overview. Doscom Ops Agent của team khác
+// cũng dùng Haiku 4.5 production. Giữ tên biến cũ để giảm churn (1 chỗ duy nhất).
+const CLAUDE_MODEL = "claude-haiku-4-5";
 
 // Tất cả mode dùng Claude Sonnet (chất lượng cao nhất).
 // Để revert về Llama (không cần code change): Cloudflare Pages → Settings →
@@ -1030,7 +1034,7 @@ async function callClaudeViaGateway(env, systemPrompt, userPrompt, jsonOutput) {
 
   const url = `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/doscom-erp/anthropic/v1/messages`;
   const body = {
-    model: CLAUDE_MODEL_SONNET,
+    model: CLAUDE_MODEL,
     max_tokens: jsonOutput ? 6000 : 4000,  // tăng để tránh JSON bị cắt giữa
     system: [
       {
@@ -1065,7 +1069,7 @@ async function callClaudeViaGateway(env, systemPrompt, userPrompt, jsonOutput) {
   return {
     response: textBlock.text,
     usage: data.usage || {},
-    model_id: data.model || CLAUDE_MODEL_SONNET,
+    model_id: data.model || CLAUDE_MODEL,
   };
 }
 

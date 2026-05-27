@@ -5,14 +5,17 @@
 //   Haiku 4.5:   input $1/1M, output $5/1M    → ~$0.03/bài 2500 từ
 //   Sonnet 4.6:  input $3/1M, output $15/1M   → ~$0.09/bài 2500 từ
 
+// 2026-05-27: cả "haiku" và "sonnet" map đều trỏ về Haiku 4.5 để cắt cost.
+// Code cũ gọi model:"sonnet" vẫn chạy, chỉ là không thực sự dùng Sonnet nữa.
+// Đổi lại nếu cần: sonnet: "claude-sonnet-4-6"
 export const CLAUDE_MODELS = {
   haiku:  "claude-haiku-4-5",
-  sonnet: "claude-sonnet-4-6",
+  sonnet: "claude-haiku-4-5",
 };
 
 const PRICING = {
   "claude-haiku-4-5":  { in: 1,  out: 5  },
-  "claude-sonnet-4-6": { in: 3,  out: 15 },
+  "claude-sonnet-4-6": { in: 3,  out: 15 },  // giữ pricing để code legacy không break
 };
 
 export async function callClaude(env, {

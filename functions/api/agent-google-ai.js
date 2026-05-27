@@ -19,9 +19,10 @@ import { getEngagementByGroup, getDeviceBreakdown } from "../lib/googleAnalytics
 const SESSION_COOKIE = "doscom_session";
 const MODEL_FAST = "@cf/meta/llama-3.1-8b-instruct-fast";
 const MODEL_BIG = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
-const CLAUDE_MODEL_SONNET = "claude-sonnet-4-6";  // Anthropic — phân tích sâu hơn nhiều Llama
+// 2026-05-27: switched từ Sonnet 4.6 sang Haiku 4.5 để cắt cost ~3× cho ad-ops Q&A.
+const CLAUDE_MODEL = "claude-haiku-4-5";
 
-// Tất cả mode dùng Claude Sonnet (chất lượng cao nhất). Fallback xuống Llama 70B → 8B nếu fail.
+// Tất cả mode dùng Claude Haiku 4.5. Fallback xuống Llama 70B → 8B nếu fail.
 // Để revert về Llama (không code change): Cloudflare Pages → Settings → Env vars → USE_CLAUDE=false.
 const CLAUDE_MODES = new Set([
   "audit_account",
@@ -1063,7 +1064,7 @@ async function callClaudeViaGateway(env, systemPrompt, userPrompt, jsonOutput) {
 
   const url = `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/doscom-erp/anthropic/v1/messages`;
   const body = {
-    model: CLAUDE_MODEL_SONNET,
+    model: CLAUDE_MODEL,
     max_tokens: jsonOutput ? 6000 : 4000,
     system: [
       {
@@ -1098,7 +1099,7 @@ async function callClaudeViaGateway(env, systemPrompt, userPrompt, jsonOutput) {
   return {
     response: textBlock.text,
     usage: data.usage || {},
-    model_id: data.model || CLAUDE_MODEL_SONNET,
+    model_id: data.model || CLAUDE_MODEL,
   };
 }
 
