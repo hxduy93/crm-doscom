@@ -798,8 +798,14 @@ function _sumDateMap(byDate, rStart, rEnd) {
   return s
 }
 
-// Google Ads category match vào 14 PROFIT_PRODUCTS (vs OTHER_* không khớp)
-const GOOGLE_CATS_MATCH = new Set(["MAYDO", "DINHVI", "GHIAM", "CAMCALL"])
+// Google Ads category match vào PROFIT_PRODUCTS catalog.
+// Sau khi extend skus-extended.json (2026-05-27): OTHER_CAM/OTHER_DI/OTHER_RAZOR/OTHER_SIM
+// đều có SP trong catalog → MATCH. CHONG_GHI_AM cũng có (DI1 Pro).
+// Chỉ "OTHER" generic còn UNMATCH (campaign linh tinh không gắn SP cụ thể).
+const GOOGLE_CATS_MATCH = new Set([
+  "MAYDO", "DINHVI", "GHIAM", "CAMCALL",
+  "OTHER_CAM", "OTHER_DI", "OTHER_RAZOR", "OTHER_SIM", "CHONG_GHI_AM",
+])
 
 function _shiftPeriod(rangeStart, rangeEnd) {
   // Trả về kỳ liền kề trước, cùng độ dài (để so sánh WoW/PoP)

@@ -42,8 +42,9 @@ ACCOUNTS = [
     {"id": "1418124406240173", "staff": "PHUONG_NAM", "short": "DA8.1 mới (PN, chưa chạy)",                                      "name": "DA8.1 mới (PN, chưa chạy)"},
 ]
 
-# 14 SP tính lợi nhuận — khớp PRODUCT_LIST trong fetch_pancake_revenue.py
-PROFIT_PRODUCTS = [
+# 14 SP gốc + extended SKUs từ data/cost-source/skus-extended.json
+# (user 2026-05-27 cung cấp 33 SKU mới + combos để cover OTHER_CAM/OTHER_DI/OTHER_RAZOR/OTHER_SIM)
+PROFIT_PRODUCTS_BASE = [
     "D1", "D1 Pro", "D2", "D3", "D4", "D8 Pro",
     "DR1", "DR4 Plus",
     "DV1 Pro",
@@ -51,8 +52,8 @@ PROFIT_PRODUCTS = [
     "Noma 911", "Noma 922", "Noma 250",
 ]
 
-# Map tên SP (PROFIT_PRODUCTS) → key Mã tên gọi trong xlsx Kho tổng (đã lowercase)
-PRODUCT_TO_COST_KEY = {
+# Map tên SP (PROFIT_PRODUCTS_BASE) → key Mã tên gọi trong xlsx Kho tổng (đã lowercase)
+PRODUCT_TO_COST_KEY_BASE = {
     "D1":         "d1",
     "D1 Pro":     "d1 pro",
     "D2":         "d2",
@@ -68,6 +69,39 @@ PRODUCT_TO_COST_KEY = {
     "Noma 922":   "noma 922",
     "Noma 250":   "noma 250",
 }
+
+def _load_extended_skus():
+    """Đọc data/cost-source/skus-extended.json — manual overlay cho SKU ngoài xlsx Kho tổng.
+    Trả về (extended_labels_list, extended_cost_key_map, extended_costs_overlay)."""
+    path = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), "data", "cost-source", "skus-extended.json"
+    ))
+    if not os.path.exists(path):
+        return [], {}, {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            ext = json.load(f)
+    except Exception as e:
+        print(f"   ⚠ skus-extended.json load failed: {e}", file=sys.stderr)
+        return [], {}, {}
+    labels, cost_keys, costs = [], {}, {}
+    for sku in ext.get("extended_skus", []):
+        label = sku["label"]
+        labels.append(label)
+        cost_keys[label] = sku["cost_key"]
+        costs[label] = {
+            "gia_nhap_vnd": sku.get("gia_nhap_vnd"),
+            "ma_ten_goi": sku["cost_key"],
+            "ten": label,
+            "trang_thai": "Đang KD",
+            "_source": "skus-extended.json",
+        }
+    return labels, cost_keys, costs
+
+# Compose PROFIT_PRODUCTS and PRODUCT_TO_COST_KEY at module load
+_EXT_LABELS, _EXT_COST_KEYS, EXTENDED_COSTS_OVERLAY = _load_extended_skus()
+PROFIT_PRODUCTS = PROFIT_PRODUCTS_BASE + _EXT_LABELS
+PRODUCT_TO_COST_KEY = {**PRODUCT_TO_COST_KEY_BASE, **_EXT_COST_KEYS}
 
 # Competitor data files (scraped via Chrome, not API)
 COMPETITOR_BASELINE_FILE  = "data/competitor_baseline.json"
@@ -485,12 +519,15 @@ def build_data():
         print(f"   ✗ Google Ads load failed: {e}")
         data["google_ads"] = {"by_category": {}, "campaigns_raw": []}
 
-    # --- PRODUCT COSTS (injected from data/product-costs.json) ------
+    # --- PRODUCT COSTS (xlsx Kho tổng → product-costs.json) ------
+    # Merge thứ tự: 1. xlsx (primary) → 2. EXTENDED_COSTS_OVERLAY (fallback cho SKU chưa có
+    # trong xlsx — user cung cấp giá manual qua data/cost-source/skus-extended.json).
     try:
         costs_raw = _load_json("data/product-costs.json") or {}
         products_cost = costs_raw.get("products") or {}
         profit_costs = {}
         missing = []
+        from_overlay = []
         for label in PROFIT_PRODUCTS:
             key = PRODUCT_TO_COST_KEY.get(label)
             entry = products_cost.get(key) if key else None
@@ -502,6 +539,10 @@ def build_data():
                     "ten": entry.get("ten"),
                     "trang_thai": entry.get("trang_thai"),
                 }
+            elif label in EXTENDED_COSTS_OVERLAY and EXTENDED_COSTS_OVERLAY[label].get("gia_nhap_vnd"):
+                # Fallback: dùng giá user cung cấp qua skus-extended.json
+                profit_costs[label] = EXTENDED_COSTS_OVERLAY[label]
+                from_overlay.append(label)
             else:
                 profit_costs[label] = {"gia_nhap_vnd": None, "ma_ten_goi": None}
                 missing.append(f"{label} (key={key!r})")
@@ -509,6 +550,8 @@ def build_data():
         data["profit_products"] = PROFIT_PRODUCTS
         ok_count = sum(1 for v in profit_costs.values() if v.get("gia_nhap_vnd"))
         print(f"   ✓ loaded product costs: {ok_count}/{len(PROFIT_PRODUCTS)} SP có giá nhập")
+        if from_overlay:
+            print(f"   ↪ {len(from_overlay)} SP lấy giá từ skus-extended.json overlay: {', '.join(from_overlay[:8])}{'...' if len(from_overlay)>8 else ''}")
         if missing:
             print(f"   ⚠ missing: {', '.join(missing)}")
     except Exception as e:

@@ -299,14 +299,100 @@ PRODUCT_MAPPING = {
 
 # Thứ tự cột trong dashboard (từ trái → phải).
 # Sắp theo nhóm: Máy dò → Ghi âm → Định vị → Camera → Noma.
-PRODUCT_LIST = [
+PRODUCT_LIST_BASE = [
     "D1", "D1 Pro", "D2", "D3", "D4", "D8 Pro",         # Máy dò (6)
     "DR1", "DR4 Plus",                                    # Ghi âm (2)
     "DV1 Pro",                                            # Định vị (1)
     "DA8.1", "DA8.1 Pro",                                 # Camera (2)
     "Noma 911", "Noma 922", "Noma 250",                   # Noma (3)
 ]
-# = 14 sản phẩm
+# = 14 SP gốc · extended thêm từ data/cost-source/skus-extended.json (~33 SKU OTHER)
+
+# Name-based fallback mapping: Pancake product name → list of (canonical_label, qty_per_unit).
+# Áp dụng khi code lookup PRODUCT_MAPPING fail. Key đã normalize (lowercase, strip whitespace).
+NAME_MAPPING_BASE = {}
+
+def _normalize_pancake_name(name):
+    """Lowercase, strip, collapse internal whitespace → 1 space."""
+    if not name:
+        return ""
+    return " ".join(str(name).lower().strip().split())
+
+def _load_extended_skus():
+    """Đọc skus-extended.json và build extended PRODUCT_LIST + PRODUCT_MAPPING + NAME_MAPPING.
+    Trả về (extended_labels, extended_code_mapping, name_mapping, combo_name_rules)."""
+    path = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), "..", "data", "cost-source", "skus-extended.json"
+    ))
+    if not os.path.exists(path):
+        return [], {}, {}, []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            ext = json.load(f)
+    except Exception as e:
+        print(f"[WARN] skus-extended.json load failed: {e}", file=sys.stderr)
+        return [], {}, {}, []
+
+    labels = []
+    code_map = {}
+    name_map = {}
+    for sku in ext.get("extended_skus", []):
+        label = sku["label"]
+        labels.append(label)
+        # Code-based mapping (xlsx key)
+        code_key = sku.get("cost_key")
+        if code_key:
+            code_map[code_key.lower()] = [(label, 1)]
+        # Name-based mapping (Pancake variation name)
+        for pn in sku.get("pancake_names", []):
+            norm = _normalize_pancake_name(pn)
+            if norm:
+                name_map[norm] = [(label, 1)]
+
+    # Combo decompositions (theo Pancake name contains pattern)
+    combos = ext.get("combos", [])
+
+    # Name aliases — map old Pancake names to existing 14 SP labels
+    for alias in ext.get("name_aliases", []):
+        rule = alias.get("pancake_name_regex")
+        target = alias.get("map_to", [])
+        if rule and target:
+            # Store as combo for runtime matching
+            combos.append({
+                "pancake_name_contains": rule,
+                "decompose": target,
+                "_is_alias": True,
+            })
+
+    return labels, code_map, name_map, combos
+
+_EXT_LABELS, _EXT_CODE_MAP, NAME_MAPPING_FALLBACK, COMBO_NAME_RULES = _load_extended_skus()
+PRODUCT_LIST = PRODUCT_LIST_BASE + _EXT_LABELS
+
+# Merge extended code map vào PRODUCT_MAPPING gốc (đã định nghĩa ở trên)
+for k, v in _EXT_CODE_MAP.items():
+    if k not in PRODUCT_MAPPING:
+        PRODUCT_MAPPING[k] = v
+
+def _resolve_pancake_item(code, name):
+    """Lookup product label cho 1 line item Pancake.
+    Thứ tự ưu tiên: 1) PRODUCT_MAPPING[code], 2) NAME_MAPPING_FALLBACK[name],
+    3) COMBO_NAME_RULES (substring match name) → for combos & aliases."""
+    if code:
+        m = PRODUCT_MAPPING.get(code.lower())
+        if m:
+            return m
+    norm = _normalize_pancake_name(name)
+    if norm:
+        m = NAME_MAPPING_FALLBACK.get(norm)
+        if m:
+            return m
+        # Combo / alias substring matching
+        for rule in COMBO_NAME_RULES:
+            pattern = rule.get("pancake_name_contains", "")
+            if pattern and _normalize_pancake_name(pattern) in norm:
+                return rule.get("decompose")
+    return None
 
 
 def _load_retail_prices():
@@ -658,7 +744,9 @@ def aggregate(orders):
 
         products_in_order = set()
         for code, qty, line_rev, name in extract_items(o):
-            mapping = PRODUCT_MAPPING.get(code.lower())
+            # Fallback chain: PRODUCT_MAPPING (code) → NAME_MAPPING_FALLBACK (name) → COMBO_NAME_RULES.
+            # Giúp cover các SKU ngoài xlsx (user cung cấp giá qua skus-extended.json).
+            mapping = _resolve_pancake_item(code, name)
             if not mapping:
                 # AUDIT: log SP ngoài PRODUCT_MAPPING để sau bổ sung
                 key = code.lower()
