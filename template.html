@@ -798,24 +798,51 @@ function _sumDateMap(byDate, rStart, rEnd) {
   return s
 }
 
+// Google Ads category match vào 14 PROFIT_PRODUCTS (vs OTHER_* không khớp)
+const GOOGLE_CATS_MATCH = new Set(["MAYDO", "DINHVI", "GHIAM", "CAMCALL"])
+
+function _shiftPeriod(rangeStart, rangeEnd) {
+  // Trả về kỳ liền kề trước, cùng độ dài (để so sánh WoW/PoP)
+  const s = new Date(rangeStart + "T00:00:00Z")
+  const e = new Date(rangeEnd + "T00:00:00Z")
+  const days = Math.round((e - s) / 86400000) + 1
+  const prevEnd = new Date(s); prevEnd.setUTCDate(prevEnd.getUTCDate() - 1)
+  const prevStart = new Date(prevEnd); prevStart.setUTCDate(prevStart.getUTCDate() - days + 1)
+  return { start: prevStart.toISOString().slice(0, 10), end: prevEnd.toISOString().slice(0, 10), days }
+}
+function _pctDelta(now, prev) {
+  if (prev == null || prev === 0) return now > 0 ? 100 : null
+  return ((Number(now) - Number(prev)) / Number(prev)) * 100
+}
+
+// Map account_id → staff (mirror update_dashboard.py ACCOUNTS)
+const REPORT_ACCOUNT_STAFF = {
+  "act_927390616363424":  "DUY",
+  "act_1655506672244826": "DUY",
+  "act_1449385949897024": "DUY",
+  "act_764394829882083":  "PHUONG_NAM",
+  "act_906015559004892":  "PHUONG_NAM",
+  "act_1416634670476226": "PHUONG_NAM",
+  "act_1418124406240173": "PHUONG_NAM",
+}
+
 function buildWeeklyReportData(rangeStart, rangeEnd) {
-  // Trả về { range, weeks, perStaff, perWeekStaffProduct }
   const D = (typeof DATA !== "undefined" ? DATA : null) || {}
   const accounts = D.accounts || []
   const campaigns = D.campaigns || []
   const adSpendByStaff = D.ad_spend_by_staff || {}
-  const adSpendUnassigned = D.ad_spend_unassigned || {}
   const revenueGroups = (D.revenue || {}).source_groups || {}
   const googleAds = D.google_ads || { by_category: {} }
   const productCosts = D.product_costs || {}
+  const monthlyKpi = Number(D.monthly_kpi_vnd) || 1000000000 // default 1B/tháng, khớp fb-config.json
   const products = D.profit_products || [
     "D1","D1 Pro","D2","D3","D4","D8 Pro","DR1","DR4 Plus","DV1 Pro",
     "DA8.1","DA8.1 Pro","Noma 911","Noma 922","Noma 250",
   ]
   const VAT_RATE = 0.10
   const weeks = splitRangeIntoWeeks(rangeStart, rangeEnd)
+  const prevPeriod = _shiftPeriod(rangeStart, rangeEnd)
 
-  // Mapping staff → revenue source key trong Pancake (FB ads)
   const STAFF_DEFS = [
     { key: "DUY", label: "DUY", adKey: "DUY", revKeys: ["DUY"], hasGoogle: false },
     { key: "PHUONG_NAM", label: "PHƯƠNG NAM", adKey: "PHUONG_NAM", revKeys: ["PHUONG_NAM"], hasGoogle: false },
@@ -823,202 +850,554 @@ function buildWeeklyReportData(rangeStart, rangeEnd) {
     { key: "FB_PAGE", label: "Page Facebook", adKey: null, revKeys: ["FB_PAGE"], hasGoogle: false },
   ]
 
-  // (1) AGGREGATE PER STAFF — cho cả range
-  const perStaff = STAFF_DEFS.map(st => {
-    let spend = 0
-    if (st.adKey) {
-      const buckets = adSpendByStaff[st.adKey] || {}
-      Object.values(buckets).forEach(b => { spend += _sumDateMap(b.by_date, rangeStart, rangeEnd) })
-      // Cộng unassigned spend cho staff này (safety net)
-      // Note: ad_spend_unassigned chỉ là total, không by_date → coi như phân bổ đều theo range
-      const unassignedTotal = Number(adSpendUnassigned[st.adKey] || 0)
-      if (unassignedTotal > 0) {
-        // Hiện tại fb-ads-data.json chưa lưu unassigned by_date.
-        // Báo cáo này chỉ thấy unassigned KHI fix detect_profit_product chưa rebuild.
-        // Tạm cộng 0 (đã được tách riêng), hiển thị note nếu > 0 ở cuối.
-      }
-    }
-    let googleSpend = 0
-    if (st.hasGoogle) {
-      Object.values(googleAds.by_category || {}).forEach(b => {
-        googleSpend += _sumDateMap(b.by_date, rangeStart, rangeEnd)
+  // ── HELPER: aggregate per-SP cho 1 range ──
+  function aggSku(rStart, rEnd) {
+    const map = {}
+    products.forEach(p => {
+      map[p] = { product: p, adSpend: 0, revenue: 0, units: 0, orders: 0 }
+    })
+    Object.entries(adSpendByStaff).forEach(([_, buckets]) => {
+      Object.entries(buckets || {}).forEach(([prod, b]) => {
+        if (!map[prod]) return
+        map[prod].adSpend += _sumDateMap(b.by_date, rStart, rEnd)
       })
-    }
-
-    let revPending = 0, revFinal = 0, ordersFinal = 0, revenueByProd = 0, unitsByProd = 0, cogsByProd = 0
-    st.revKeys.forEach(rk => {
-      const g = revenueGroups[rk]
-      if (!g) return
-      const rev = g.order_revenue_by_status_by_date || {}
-      const ord = g.order_count_by_status_by_date || {}
-      // Tạm tính = delivered + other + returning
-      ;["delivered", "other", "returning"].forEach(s => {
-        revPending += _sumDateMap(rev[s], rangeStart, rangeEnd)
-      })
-      // Thực thu = delivered
-      revFinal += _sumDateMap(rev.delivered, rangeStart, rangeEnd)
-      ordersFinal += _sumDateMap(ord.delivered, rangeStart, rangeEnd)
-
-      // COGS: sum units × giá nhập per product
+    })
+    Object.values(revenueGroups).forEach(g => {
       const prods = g.products || {}
       products.forEach(p => {
-        const pd = prods[p]
-        if (!pd) return
-        const revP = _sumDateMap(pd.by_date, rangeStart, rangeEnd)
-        const unitsP = _sumDateMap(pd.units_by_date, rangeStart, rangeEnd)
-        revenueByProd += revP
-        unitsByProd += unitsP
-        const cost = Number((productCosts[p] || {}).gia_nhap_vnd) || 0
-        cogsByProd += unitsP * cost
+        const pd = prods[p]; if (!pd) return
+        map[p].revenue += _sumDateMap(pd.by_date, rStart, rEnd)
+        map[p].units += _sumDateMap(pd.units_by_date, rStart, rEnd)
+        map[p].orders += _sumDateMap(pd.orders_by_date, rStart, rEnd)
       })
     })
-
-    const totalSpend = spend + googleSpend
-    const vat = revenueByProd * VAT_RATE
-    const profit = revenueByProd - vat - totalSpend - cogsByProd
-    const cir = revPending > 0 ? totalSpend / revPending * 100 : null
-    const margin = revenueByProd > 0 ? profit / revenueByProd * 100 : null
+    products.forEach(p => {
+      const r = map[p]
+      const cost = Number((productCosts[p] || {}).gia_nhap_vnd) || 0
+      r.cogs = r.units * cost
+      r.vat = r.revenue * VAT_RATE
+      r.profit = r.revenue - r.vat - r.adSpend - r.cogs
+      r.margin = r.revenue > 0 ? r.profit / r.revenue * 100 : null
+      r.cir = r.revenue > 0 ? r.adSpend / r.revenue * 100 : null
+      r.roi = r.adSpend > 0 ? r.profit / r.adSpend : null
+      r.cpa = r.orders > 0 ? r.adSpend / r.orders : null
+    })
+    return map
+  }
+  const skuCur = aggSku(rangeStart, rangeEnd)
+  const skuPrev = aggSku(prevPeriod.start, prevPeriod.end)
+  const skuList = products.map(p => {
+    const c = skuCur[p], pv = skuPrev[p]
     return {
-      key: st.key, label: st.label,
-      fbSpend: spend, googleSpend, totalSpend,
-      revPending, revFinal, ordersFinal,
-      revenueByProd, unitsByProd, cogsByProd, vat, profit, cir, margin,
+      ...c,
+      prev: { revenue: pv.revenue, units: pv.units, adSpend: pv.adSpend, profit: pv.profit, orders: pv.orders },
+      revDelta: _pctDelta(c.revenue, pv.revenue),
+      unitsDelta: _pctDelta(c.units, pv.units),
+      spendDelta: _pctDelta(c.adSpend, pv.adSpend),
+      profitDelta: _pctDelta(c.profit, pv.profit),
     }
   })
 
-  // (2) TUẦN × NHÂN SỰ × SẢN PHẨM
-  const perWeekStaffProduct = weeks.map(w => {
-    const staffRows = STAFF_DEFS.filter(st => st.adKey).map(st => {
-      const adBuckets = adSpendByStaff[st.adKey] || {}
-      const prodRows = products.map(p => {
-        const adSpend = _sumDateMap((adBuckets[p] || {}).by_date, w.start, w.end)
-        let revenue = 0, units = 0, orders = 0
-        st.revKeys.forEach(rk => {
-          const pd = ((revenueGroups[rk] || {}).products || {})[p]
-          if (!pd) return
-          revenue += _sumDateMap(pd.by_date, w.start, w.end)
-          units += _sumDateMap(pd.units_by_date, w.start, w.end)
-          orders += _sumDateMap(pd.orders_by_date, w.start, w.end)
-        })
-        const cost = Number((productCosts[p] || {}).gia_nhap_vnd) || 0
-        const cogs = units * cost
-        const vat = revenue * VAT_RATE
-        const profit = revenue - vat - adSpend - cogs
-        const margin = revenue > 0 ? profit / revenue * 100 : null
-        return { product: p, adSpend, revenue, units, orders, cogs, vat, profit, margin }
-      }).filter(r => r.adSpend > 0 || r.revenue > 0)
-      const tot = prodRows.reduce((a, r) => ({
-        adSpend: a.adSpend + r.adSpend, revenue: a.revenue + r.revenue,
-        units: a.units + r.units, orders: a.orders + r.orders,
-        cogs: a.cogs + r.cogs, vat: a.vat + r.vat, profit: a.profit + r.profit,
-      }), { adSpend: 0, revenue: 0, units: 0, orders: 0, cogs: 0, vat: 0, profit: 0 })
-      return { staff: st.key, staffLabel: st.label, products: prodRows, total: tot }
-    })
-    return { ...w, staffRows }
+  // ── (A) KPI tháng vs MTD revenue ──
+  const refDate = new Date(rangeEnd + "T00:00:00Z")
+  const monthDays = new Date(Date.UTC(refDate.getUTCFullYear(), refDate.getUTCMonth() + 1, 0)).getUTCDate()
+  const mtdStart = `${rangeEnd.slice(0, 7)}-01`
+  let mtdRev = 0, mtdRevFinal = 0
+  Object.values(revenueGroups).forEach(g => {
+    const rev = g.order_revenue_by_status_by_date || {}
+    ;["delivered", "other", "returning"].forEach(s => { mtdRev += _sumDateMap(rev[s], mtdStart, rangeEnd) })
+    mtdRevFinal += _sumDateMap(rev.delivered, mtdStart, rangeEnd)
   })
+  const dayOfMonth = refDate.getUTCDate()
+  const projected = dayOfMonth > 0 ? mtdRev / dayOfMonth * monthDays : 0
+  const kpi = {
+    kpi_vnd: monthlyKpi,
+    month_label: `Tháng ${refDate.getUTCMonth() + 1}/${refDate.getUTCFullYear()}`,
+    mtd_revenue: mtdRev,
+    mtd_revenue_final: mtdRevFinal,
+    mtd_pct: monthlyKpi > 0 ? mtdRev / monthlyKpi * 100 : 0,
+    day_of_month: dayOfMonth,
+    days_in_month: monthDays,
+    projected_revenue: projected,
+    projected_pct: monthlyKpi > 0 ? projected / monthlyKpi * 100 : 0,
+  }
+
+  // ── (B) Top SP performance ──
+  const skuActive = skuList.filter(s => s.adSpend > 0 || s.revenue > 0)
+  const topSpike = [...skuActive]
+    .filter(s => s.revDelta != null && isFinite(s.revDelta) && s.revenue > 0)
+    .sort((a, b) => b.revDelta - a.revDelta).slice(0, 3)
+  const topDrop = [...skuActive]
+    .filter(s => s.revDelta != null && isFinite(s.revDelta) && s.prev.revenue > 0)
+    .sort((a, b) => a.revDelta - b.revDelta).slice(0, 3)
+  const topBySku = [...skuActive].sort((a, b) => b.profit - a.profit).slice(0, 5)
+  const hardToSell = [...skuActive]
+    .filter(s => s.adSpend > 100000 && (s.units === 0 || (s.cir != null && s.cir > 100)))
+    .sort((a, b) => b.adSpend - a.adSpend).slice(0, 5)
+
+  // ── (C) Channel aggregates + comparison ──
+  function aggChannel(rStart, rEnd) {
+    return STAFF_DEFS.map(st => {
+      let fbSpend = 0
+      if (st.adKey) Object.values(adSpendByStaff[st.adKey] || {}).forEach(b => { fbSpend += _sumDateMap(b.by_date, rStart, rEnd) })
+      let googleMatchSpend = 0, googleUnmatchSpend = 0
+      if (st.hasGoogle) {
+        Object.entries(googleAds.by_category || {}).forEach(([cat, b]) => {
+          const s = _sumDateMap(b.by_date, rStart, rEnd)
+          if (GOOGLE_CATS_MATCH.has(cat)) googleMatchSpend += s
+          else googleUnmatchSpend += s
+        })
+      }
+      let revPending = 0, revFinal = 0, ordersFinal = 0
+      let revenueByProd = 0, unitsByProd = 0, cogsByProd = 0
+      st.revKeys.forEach(rk => {
+        const g = revenueGroups[rk]; if (!g) return
+        const rev = g.order_revenue_by_status_by_date || {}
+        const ord = g.order_count_by_status_by_date || {}
+        ;["delivered", "other", "returning"].forEach(s => { revPending += _sumDateMap(rev[s], rStart, rEnd) })
+        revFinal += _sumDateMap(rev.delivered, rStart, rEnd)
+        ordersFinal += _sumDateMap(ord.delivered, rStart, rEnd)
+        const prods = g.products || {}
+        products.forEach(p => {
+          const pd = prods[p]; if (!pd) return
+          revenueByProd += _sumDateMap(pd.by_date, rStart, rEnd)
+          const unitsP = _sumDateMap(pd.units_by_date, rStart, rEnd)
+          unitsByProd += unitsP
+          const cost = Number((productCosts[p] || {}).gia_nhap_vnd) || 0
+          cogsByProd += unitsP * cost
+        })
+      })
+      // Campaign metrics (FB ads channels)
+      let impr = 0, clicks = 0, regs = 0
+      if (st.adKey) {
+        campaigns.forEach(c => {
+          if (REPORT_ACCOUNT_STAFF[c.account_id] !== st.adKey) return
+          ;(c.daily || []).forEach(d => {
+            if (d.date < rStart || d.date > rEnd) return
+            impr += Number(d.impressions) || 0
+            clicks += Number(d.clicks) || 0
+            regs += Number(d.registrations) || 0
+          })
+        })
+      }
+      const totalSpend = fbSpend + googleMatchSpend  // chỉ match cho profit attribution
+      const totalSpendInclUnmatch = totalSpend + googleUnmatchSpend
+      const vat = revenueByProd * VAT_RATE
+      const profit = revenueByProd - vat - totalSpend - cogsByProd
+      const ctr = impr > 0 ? clicks / impr * 100 : null
+      const convRate = clicks > 0 ? regs / clicks * 100 : null
+      const cpa = regs > 0 ? fbSpend / regs : null  // CPA dùng fbSpend (FB only đo conv)
+      const cir = revPending > 0 ? totalSpendInclUnmatch / revPending * 100 : null
+      const margin = revenueByProd > 0 ? profit / revenueByProd * 100 : null
+      return {
+        key: st.key, label: st.label, hasGoogle: st.hasGoogle,
+        fbSpend, googleMatchSpend, googleUnmatchSpend, totalSpend, totalSpendInclUnmatch,
+        revPending, revFinal, ordersFinal,
+        revenueByProd, unitsByProd, cogsByProd, vat, profit, margin, cir,
+        impressions: impr, clicks, regs, ctr, convRate, cpa,
+      }
+    })
+  }
+  const channelsCur = aggChannel(rangeStart, rangeEnd)
+  const channelsPrev = aggChannel(prevPeriod.start, prevPeriod.end)
+  const channels = channelsCur.map((c, i) => ({
+    ...c,
+    prev: channelsPrev[i],
+    cpaDelta: _pctDelta(c.cpa, channelsPrev[i].cpa),
+    convRateDelta: _pctDelta(c.convRate, channelsPrev[i].convRate),
+    spendDelta: _pctDelta(c.totalSpendInclUnmatch, channelsPrev[i].totalSpendInclUnmatch),
+    revDelta: _pctDelta(c.revPending, channelsPrev[i].revPending),
+    profitDelta: _pctDelta(c.profit, channelsPrev[i].profit),
+  }))
+
+  // CPA trung bình tổng FB (DUY+PN)
+  const fbStaff = channelsCur.filter(c => c.fbSpend > 0)
+  const cpaTotalCur = fbStaff.reduce((s, c) => s + c.fbSpend, 0) / Math.max(1, fbStaff.reduce((s, c) => s + c.regs, 0))
+  const fbStaffPrev = channelsPrev.filter(c => c.fbSpend > 0)
+  const cpaTotalPrev = fbStaffPrev.reduce((s, c) => s + c.fbSpend, 0) / Math.max(1, fbStaffPrev.reduce((s, c) => s + c.regs, 0))
+
+  // ── (D) Campaign-level analysis ──
+  function aggCampaigns(rStart, rEnd) {
+    const rows = []
+    campaigns.forEach(c => {
+      let spend = 0, impr = 0, clicks = 0, regs = 0
+      ;(c.daily || []).forEach(d => {
+        if (d.date < rStart || d.date > rEnd) return
+        spend += Number(d.spend) || 0
+        impr += Number(d.impressions) || 0
+        clicks += Number(d.clicks) || 0
+        regs += Number(d.registrations) || 0
+      })
+      if (spend < 10000) return
+      rows.push({
+        id: c.id, name: c.name, account_id: c.account_id,
+        staff: REPORT_ACCOUNT_STAFF[c.account_id] || "?",
+        spend, impressions: impr, clicks, regs,
+        ctr: impr > 0 ? clicks / impr * 100 : 0,
+        convRate: clicks > 0 ? regs / clicks * 100 : 0,
+        cpa: regs > 0 ? spend / regs : null,
+      })
+    })
+    return rows
+  }
+  const campRows = aggCampaigns(rangeStart, rangeEnd)
+  const totalCampSpend = campRows.reduce((s, r) => s + r.spend, 0)
+  // Lỗ / overspend = spend > 1.2× avg AND (no conv OR cpa > 250k)
+  const avgSpend = campRows.length ? totalCampSpend / campRows.length : 0
+  const overspendCampaigns = campRows
+    .filter(r => r.spend > avgSpend * 1.2 && (r.regs === 0 || (r.cpa != null && r.cpa > 250000)))
+    .sort((a, b) => b.spend - a.spend).slice(0, 5)
+  const topCtrCampaigns = [...campRows]
+    .filter(r => r.impressions > 1000)
+    .sort((a, b) => b.ctr - a.ctr).slice(0, 5)
+  const bottomCtrCampaigns = [...campRows]
+    .filter(r => r.impressions > 1000)
+    .sort((a, b) => a.ctr - b.ctr).slice(0, 5)
+  const topCvrCampaigns = [...campRows]
+    .filter(r => r.clicks > 50)
+    .sort((a, b) => b.convRate - a.convRate).slice(0, 5)
+
+  // ── (E) Budget breakdown by SP + Google by category ──
+  const totalAdAcrossSku = skuList.reduce((s, r) => s + r.adSpend, 0)
+  const budgetBySku = skuList
+    .filter(s => s.adSpend > 0)
+    .map(s => ({ product: s.product, spend: s.adSpend, share: totalAdAcrossSku > 0 ? s.adSpend / totalAdAcrossSku * 100 : 0 }))
+    .sort((a, b) => b.spend - a.spend)
+  const googleCategories = Object.entries(googleAds.by_category || {})
+    .map(([cat, b]) => ({
+      category: cat,
+      spend: _sumDateMap(b.by_date, rangeStart, rangeEnd),
+      matched: GOOGLE_CATS_MATCH.has(cat),
+    }))
+    .filter(g => g.spend > 0).sort((a, b) => b.spend - a.spend)
+  const googleMatchTotal = googleCategories.filter(g => g.matched).reduce((s, g) => s + g.spend, 0)
+  const googleUnmatchTotal = googleCategories.filter(g => !g.matched).reduce((s, g) => s + g.spend, 0)
+
+  // Channel CIR ranking — underperforming if CIR > avg × 1.2
+  const validCirs = channels.filter(c => c.cir != null && c.cir > 0)
+  const avgCir = validCirs.length ? validCirs.reduce((s, c) => s + c.cir, 0) / validCirs.length : 0
+  const channelRanking = channels.map(c => ({
+    ...c, underperforming: c.cir != null && avgCir > 0 && c.cir > avgCir * 1.2,
+  }))
 
   return {
-    range: { start: rangeStart, end: rangeEnd },
-    weeks, perStaff, perWeekStaffProduct,
+    range: { start: rangeStart, end: rangeEnd, days: prevPeriod.days },
+    prevRange: prevPeriod,
+    weeks,
+    kpi,
+    skuList,
+    topSpike, topDrop, topBySku, hardToSell,
+    channels: channelRanking,
+    cpaAvg: { cur: isFinite(cpaTotalCur) ? cpaTotalCur : null, prev: isFinite(cpaTotalPrev) ? cpaTotalPrev : null, delta: _pctDelta(cpaTotalCur, cpaTotalPrev) },
+    campaigns: { all: campRows, overspend: overspendCampaigns, topCtr: topCtrCampaigns, bottomCtr: bottomCtrCampaigns, topCvr: topCvrCampaigns },
+    budgetBySku,
+    googleCategories,
+    googleSplit: { match: googleMatchTotal, unmatch: googleUnmatchTotal },
     generatedAt: new Date().toISOString().slice(0, 19).replace("T", " "),
   }
 }
 
 function renderWeeklyReportHtml(data) {
-  // Round trước format → tránh decimal vi-VN (16.843.618,417₫) bị đọc nhầm thành "16 tỷ"
+  // Round trước format → tránh decimal vi-VN (16.843.618,417₫) bị đọc nhầm "tỷ"
   const fmtV = n => Math.round(Number(n || 0)).toLocaleString("vi-VN") + "₫"
   const fmtN = n => Math.round(Number(n || 0)).toLocaleString("vi-VN")
-  const fmtP = n => n == null ? "—" : Number(n).toFixed(1) + "%"
+  const fmtP = n => n == null || !isFinite(n) ? "—" : Number(n).toFixed(1) + "%"
+  const fmtDelta = n => {
+    if (n == null || !isFinite(n)) return "—"
+    const sign = n > 0 ? "▲" : n < 0 ? "▼" : "·"
+    const cls = n > 0 ? "delta-up" : n < 0 ? "delta-down" : "delta-zero"
+    return `<span class="${cls}">${sign} ${Math.abs(n).toFixed(1)}%</span>`
+  }
+  const fmtDeltaNeg = n => {  // cho CPA: tăng=xấu, giảm=tốt
+    if (n == null || !isFinite(n)) return "—"
+    const sign = n > 0 ? "▲" : n < 0 ? "▼" : "·"
+    const cls = n > 0 ? "delta-down" : n < 0 ? "delta-up" : "delta-zero"
+    return `<span class="${cls}">${sign} ${Math.abs(n).toFixed(1)}%</span>`
+  }
   const esc = s => String(s == null ? "" : s)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
-  const dateLabel = `${data.range.start} → ${data.range.end} (${data.weeks.length} tuần)`
+  const dateLabel = `${data.range.start} → ${data.range.end} (${data.weeks.length} tuần · ${data.range.days} ngày)`
+  const prevLabel = `${data.prevRange.start} → ${data.prevRange.end}`
 
-  // SECTION 1 — Aggregate per staff
-  const s1Rows = data.perStaff.map(s => `
-    <tr>
-      <td class="lbl">${esc(s.label)}</td>
-      <td class="num">${fmtV(s.totalSpend)}</td>
-      <td class="num">${fmtV(s.revPending)}</td>
-      <td class="num">${fmtV(s.revFinal)}</td>
-      <td class="num">${fmtN(s.ordersFinal)}</td>
-      <td class="num">${fmtV(s.cogsByProd)}</td>
-      <td class="num">${fmtV(s.vat)}</td>
-      <td class="num ${s.profit >= 0 ? 'pos' : 'neg'}">${fmtV(s.profit)}</td>
-      <td class="num">${fmtP(s.margin)}</td>
-      <td class="num">${fmtP(s.cir)}</td>
-    </tr>
-  `).join("")
-  const s1Totals = data.perStaff.reduce((a, s) => ({
-    spend: a.spend + s.totalSpend, revP: a.revP + s.revPending, revF: a.revF + s.revFinal,
-    orders: a.orders + s.ordersFinal, cogs: a.cogs + s.cogsByProd, vat: a.vat + s.vat, profit: a.profit + s.profit,
-  }), { spend: 0, revP: 0, revF: 0, orders: 0, cogs: 0, vat: 0, profit: 0 })
-  const s1Total = `
-    <tr class="total">
-      <td class="lbl">TỔNG</td>
-      <td class="num">${fmtV(s1Totals.spend)}</td>
-      <td class="num">${fmtV(s1Totals.revP)}</td>
-      <td class="num">${fmtV(s1Totals.revF)}</td>
-      <td class="num">${fmtN(s1Totals.orders)}</td>
-      <td class="num">${fmtV(s1Totals.cogs)}</td>
-      <td class="num">${fmtV(s1Totals.vat)}</td>
-      <td class="num ${s1Totals.profit >= 0 ? 'pos' : 'neg'}">${fmtV(s1Totals.profit)}</td>
-      <td class="num">${fmtP(s1Totals.revP > 0 ? s1Totals.profit / s1Totals.revP * 100 : null)}</td>
-      <td class="num">${fmtP(s1Totals.revP > 0 ? s1Totals.spend / s1Totals.revP * 100 : null)}</td>
-    </tr>
+  // ── EXEC SUMMARY (KPI card) ──
+  const kpi = data.kpi
+  const kpiColor = kpi.mtd_pct >= 100 ? "kpi-good" : kpi.mtd_pct >= 70 ? "kpi-on-track" : "kpi-behind"
+
+  // ── SECTION 1.A — Doanh thu vs KPI ──
+  const s1aKpi = `
+    <div class="kpi-card ${kpiColor}">
+      <div class="kpi-label">${esc(kpi.month_label)} · KPI tháng</div>
+      <div class="kpi-main">${fmtV(kpi.mtd_revenue)} / ${fmtV(kpi.kpi_vnd)}</div>
+      <div class="kpi-bar"><div class="kpi-fill" style="width:${Math.min(100, kpi.mtd_pct).toFixed(1)}%"></div></div>
+      <div class="kpi-sub">
+        Đạt <b>${fmtP(kpi.mtd_pct)}</b> KPI · MTD ${kpi.day_of_month}/${kpi.days_in_month} ngày ·
+        Projected cuối tháng: <b>${fmtV(kpi.projected_revenue)}</b> (${fmtP(kpi.projected_pct)} KPI)
+      </div>
+    </div>
   `
 
-  // SECTION 2 — Tuần × Staff × Product (chỉ FB Ads staff)
-  const s2 = data.perWeekStaffProduct.map(w => {
-    const blocks = w.staffRows.map(sr => {
-      if (!sr.products.length) return ""
-      const rows = sr.products.map(p => `
-        <tr>
-          <td class="lbl">${esc(p.product)}</td>
-          <td class="num">${fmtV(p.adSpend)}</td>
-          <td class="num">${fmtV(p.revenue)}</td>
-          <td class="num">${fmtN(p.units)}</td>
-          <td class="num">${fmtN(p.orders)}</td>
-          <td class="num">${fmtV(p.cogs)}</td>
-          <td class="num">${fmtV(p.vat)}</td>
-          <td class="num ${p.profit >= 0 ? 'pos' : 'neg'}">${fmtV(p.profit)}</td>
-          <td class="num">${fmtP(p.margin)}</td>
-        </tr>
-      `).join("")
-      const t = sr.total
-      const tMargin = t.revenue > 0 ? t.profit / t.revenue * 100 : null
-      return `
-        <h4>${esc(sr.staffLabel)}</h4>
+  // ── SECTION 1.B — SKU tăng / giảm WoW ──
+  const skuTrendRow = s => `
+    <tr>
+      <td class="lbl">${esc(s.product)}</td>
+      <td class="num">${fmtV(s.revenue)}</td>
+      <td class="num muted">${fmtV(s.prev.revenue)}</td>
+      <td class="num">${fmtDelta(s.revDelta)}</td>
+      <td class="num">${fmtN(s.units)}</td>
+      <td class="num">${fmtDelta(s.unitsDelta)}</td>
+      <td class="num">${fmtV(s.adSpend)}</td>
+    </tr>
+  `
+  const s1b = `
+    <div class="grid-2">
+      <div>
+        <h4>📈 SKU TĂNG TRƯỞNG ĐỘT BIẾN (top 3 theo doanh thu vs kỳ trước)</h4>
+        <table class="rpt"><thead><tr><th>SKU</th><th>DT kỳ này</th><th>DT kỳ trước</th><th>Δ</th><th>SL</th><th>ΔSL</th><th>Spend</th></tr></thead>
+        <tbody>${data.topSpike.map(skuTrendRow).join("") || '<tr><td colspan="7" class="muted">Không có SP nào tăng trong kỳ.</td></tr>'}</tbody></table>
+      </div>
+      <div>
+        <h4>📉 SKU GIẢM MẠNH NHẤT (top 3)</h4>
+        <table class="rpt"><thead><tr><th>SKU</th><th>DT kỳ này</th><th>DT kỳ trước</th><th>Δ</th><th>SL</th><th>ΔSL</th><th>Spend</th></tr></thead>
+        <tbody>${data.topDrop.map(skuTrendRow).join("") || '<tr><td colspan="7" class="muted">Không có SP nào giảm trong kỳ.</td></tr>'}</tbody></table>
+      </div>
+    </div>
+  `
+
+  // ── SECTION 1.C — Top SP hiệu quả ──
+  const s1c = `
+    <h4>⭐ TOP 5 SKU HIỆU QUẢ NHẤT (xếp theo lợi nhuận)</h4>
+    <table class="rpt">
+      <thead><tr>
+        <th>SKU</th><th>Doanh thu</th><th>SL bán</th><th>Ad spend</th>
+        <th>Lợi nhuận</th><th>Biên LN</th><th>CIR</th><th>ROI (LN/Spend)</th>
+      </tr></thead>
+      <tbody>
+        ${data.topBySku.map(s => `
+          <tr>
+            <td class="lbl">${esc(s.product)}</td>
+            <td class="num">${fmtV(s.revenue)}</td>
+            <td class="num">${fmtN(s.units)}</td>
+            <td class="num">${fmtV(s.adSpend)}</td>
+            <td class="num ${s.profit >= 0 ? 'pos' : 'neg'}">${fmtV(s.profit)}</td>
+            <td class="num">${fmtP(s.margin)}</td>
+            <td class="num">${fmtP(s.cir)}</td>
+            <td class="num">${s.roi == null ? "—" : s.roi.toFixed(2) + "x"}</td>
+          </tr>
+        `).join("") || '<tr><td colspan="8" class="muted">Không có data.</td></tr>'}
+      </tbody>
+    </table>
+  `
+
+  // ── SECTION 1.D — SP khó bán ──
+  const s1d = `
+    <h4>⚠ SKU KHÓ BÁN (spend > 100k nhưng 0 đơn hoặc CIR > 100%)</h4>
+    <table class="rpt">
+      <thead><tr>
+        <th>SKU</th><th>Ad spend</th><th>Doanh thu</th><th>SL bán</th>
+        <th>Đơn</th><th>CIR</th><th>Lợi nhuận</th>
+      </tr></thead>
+      <tbody>
+        ${data.hardToSell.map(s => `
+          <tr>
+            <td class="lbl">${esc(s.product)}</td>
+            <td class="num">${fmtV(s.adSpend)}</td>
+            <td class="num">${fmtV(s.revenue)}</td>
+            <td class="num">${fmtN(s.units)}</td>
+            <td class="num">${fmtN(s.orders)}</td>
+            <td class="num neg">${fmtP(s.cir)}</td>
+            <td class="num ${s.profit >= 0 ? 'pos' : 'neg'}">${fmtV(s.profit)}</td>
+          </tr>
+        `).join("") || '<tr><td colspan="7" class="muted">Không có SKU khó bán đáng kể.</td></tr>'}
+      </tbody>
+    </table>
+  `
+
+  // ── SECTION 2.A — Channel performance ──
+  const s2a = `
+    <h4>🎯 HIỆU SUẤT THEO KÊNH (so với kỳ trước ${esc(prevLabel)})</h4>
+    <table class="rpt">
+      <thead><tr>
+        <th>Kênh</th><th>Spend (Σ)</th><th>ΔSpend</th>
+        <th>DT tạm tính</th><th>ΔDT</th>
+        <th>Đơn (deliv)</th><th>CIR</th>
+        <th>Conv/Click</th><th>CPA</th><th>ΔCPA</th>
+        <th>Lợi nhuận</th>
+      </tr></thead>
+      <tbody>
+        ${data.channels.map(c => `
+          <tr ${c.underperforming ? 'class="row-warn"' : ''}>
+            <td class="lbl">${esc(c.label)}${c.underperforming ? ' <span class="badge-warn">⚠ CIR cao</span>' : ''}</td>
+            <td class="num">${fmtV(c.totalSpendInclUnmatch)}</td>
+            <td class="num">${fmtDelta(c.spendDelta)}</td>
+            <td class="num">${fmtV(c.revPending)}</td>
+            <td class="num">${fmtDelta(c.revDelta)}</td>
+            <td class="num">${fmtN(c.ordersFinal)}</td>
+            <td class="num">${fmtP(c.cir)}</td>
+            <td class="num">${fmtP(c.convRate)}</td>
+            <td class="num">${c.cpa == null ? "—" : fmtV(c.cpa)}</td>
+            <td class="num">${fmtDeltaNeg(c.cpaDelta)}</td>
+            <td class="num ${c.profit >= 0 ? 'pos' : 'neg'}">${fmtV(c.profit)}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+    <p class="muted" style="margin-top:-8px">
+      Conv/Click = tỉ lệ chuyển đổi của FB Ads (chỉ trên kênh có spend FB) · ΔCPA: ▼ xanh = giảm CPA = tốt ·
+      ⚠ CIR cao = CIR > 1.2× trung bình các kênh.
+    </p>
+  `
+
+  // ── SECTION 2.B — CPA trung bình FB ──
+  const cpaCur = data.cpaAvg.cur, cpaPrev = data.cpaAvg.prev
+  const s2b = `
+    <div class="metric-row">
+      <div class="metric-card">
+        <div class="metric-label">CPA trung bình FB Ads (DUY + PN)</div>
+        <div class="metric-value">${cpaCur == null ? "—" : fmtV(cpaCur)}</div>
+        <div class="metric-sub">Kỳ trước: ${cpaPrev == null ? "—" : fmtV(cpaPrev)} · ${fmtDeltaNeg(data.cpaAvg.delta)}</div>
+      </div>
+    </div>
+  `
+
+  // ── SECTION 2.C — Campaign lỗ / vượt ngân sách ──
+  const campRowFmt = c => `
+    <tr>
+      <td class="lbl" style="max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(c.name)}">
+        <span class="staff-chip staff-${esc(c.staff)}">${esc(c.staff)}</span> ${esc(c.name)}
+      </td>
+      <td class="num">${fmtV(c.spend)}</td>
+      <td class="num">${fmtN(c.impressions)}</td>
+      <td class="num">${fmtN(c.clicks)}</td>
+      <td class="num">${fmtP(c.ctr)}</td>
+      <td class="num">${fmtN(c.regs)}</td>
+      <td class="num">${c.cpa == null ? "—" : fmtV(c.cpa)}</td>
+    </tr>
+  `
+  const s2c = `
+    <h4>🚨 CAMPAIGN LỖ / VƯỢT NGÂN SÁCH (spend &gt; 1.2× trung bình, 0 đơn hoặc CPA &gt; 250k)</h4>
+    <table class="rpt">
+      <thead><tr><th>Campaign</th><th>Spend</th><th>Impr</th><th>Clicks</th><th>CTR</th><th>Conv</th><th>CPA</th></tr></thead>
+      <tbody>${data.campaigns.overspend.map(campRowFmt).join("") || '<tr><td colspan="7" class="muted">Không có campaign vượt ngưỡng.</td></tr>'}</tbody>
+    </table>
+  `
+
+  // ── SECTION 3 — Creative (CTR/CVR proxy) ──
+  const s3 = `
+    <div class="grid-2">
+      <div>
+        <h4>🏆 TOP 5 CAMPAIGN CTR CAO NHẤT (creative tốt)</h4>
         <table class="rpt">
-          <thead><tr>
-            <th>Sản phẩm</th><th>Ad spend</th><th>Doanh thu</th>
-            <th>SL bán</th><th>Đơn</th><th>Giá nhập (Σ)</th>
-            <th>VAT 10%</th><th>Lợi nhuận</th><th>Biên LN</th>
-          </tr></thead>
-          <tbody>${rows}
-            <tr class="total">
-              <td class="lbl">TỔNG ${esc(sr.staffLabel)}</td>
-              <td class="num">${fmtV(t.adSpend)}</td>
-              <td class="num">${fmtV(t.revenue)}</td>
-              <td class="num">${fmtN(t.units)}</td>
-              <td class="num">${fmtN(t.orders)}</td>
-              <td class="num">${fmtV(t.cogs)}</td>
-              <td class="num">${fmtV(t.vat)}</td>
-              <td class="num ${t.profit >= 0 ? 'pos' : 'neg'}">${fmtV(t.profit)}</td>
-              <td class="num">${fmtP(tMargin)}</td>
-            </tr>
-          </tbody>
+          <thead><tr><th>Campaign</th><th>Spend</th><th>Impr</th><th>Clicks</th><th>CTR</th><th>Conv</th><th>CPA</th></tr></thead>
+          <tbody>${data.campaigns.topCtr.map(campRowFmt).join("") || '<tr><td colspan="7" class="muted">Không có data.</td></tr>'}</tbody>
         </table>
-      `
-    }).join("")
-    if (!blocks.trim()) return ""
-    return `<h3>${esc(w.label)} · ${esc(w.start)} → ${esc(w.end)}</h3>${blocks}`
-  }).join("")
+      </div>
+      <div>
+        <h4>📉 BOTTOM 5 CAMPAIGN CTR (creative cần làm mới)</h4>
+        <table class="rpt">
+          <thead><tr><th>Campaign</th><th>Spend</th><th>Impr</th><th>Clicks</th><th>CTR</th><th>Conv</th><th>CPA</th></tr></thead>
+          <tbody>${data.campaigns.bottomCtr.map(campRowFmt).join("") || '<tr><td colspan="7" class="muted">Không có data.</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+    <h4>🎯 TOP 5 CAMPAIGN CVR CAO NHẤT (conversion rate từ click)</h4>
+    <table class="rpt">
+      <thead><tr><th>Campaign</th><th>Spend</th><th>Clicks</th><th>Conv</th><th>CVR (Conv/Click)</th><th>CPA</th></tr></thead>
+      <tbody>${data.campaigns.topCvr.map(c => `
+        <tr>
+          <td class="lbl" style="max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(c.name)}">
+            <span class="staff-chip staff-${esc(c.staff)}">${esc(c.staff)}</span> ${esc(c.name)}
+          </td>
+          <td class="num">${fmtV(c.spend)}</td>
+          <td class="num">${fmtN(c.clicks)}</td>
+          <td class="num">${fmtN(c.regs)}</td>
+          <td class="num pos">${fmtP(c.convRate)}</td>
+          <td class="num">${c.cpa == null ? "—" : fmtV(c.cpa)}</td>
+        </tr>
+      `).join("") || '<tr><td colspan="6" class="muted">Không có data.</td></tr>'}</tbody>
+    </table>
+  `
+
+  // ── SECTION 4.A — Budget by SP ──
+  const totalBudget = data.budgetBySku.reduce((s, x) => s + x.spend, 0)
+  const s4a = `
+    <h4>💰 NGÂN SÁCH FB ADS THEO SẢN PHẨM</h4>
+    <table class="rpt">
+      <thead><tr><th>SKU</th><th>Spend</th><th>% Tổng</th><th>Conv (đơn)</th><th>CPA</th><th>ROI (LN/Spend)</th></tr></thead>
+      <tbody>
+        ${data.budgetBySku.map(b => {
+          const sku = data.skuList.find(s => s.product === b.product) || {}
+          return `
+            <tr>
+              <td class="lbl">${esc(b.product)}</td>
+              <td class="num">${fmtV(b.spend)}</td>
+              <td class="num">${fmtP(b.share)}</td>
+              <td class="num">${fmtN(sku.orders)}</td>
+              <td class="num">${sku.cpa == null ? "—" : fmtV(sku.cpa)}</td>
+              <td class="num">${sku.roi == null ? "—" : sku.roi.toFixed(2) + "x"}</td>
+            </tr>
+          `
+        }).join("")}
+        <tr class="total">
+          <td class="lbl">TỔNG FB ADS</td>
+          <td class="num">${fmtV(totalBudget)}</td>
+          <td class="num">100.0%</td>
+          <td class="num">—</td><td class="num">—</td><td class="num">—</td>
+        </tr>
+      </tbody>
+    </table>
+  `
+
+  // ── SECTION 4.B — Google Ads split match vs unmatch (giải bug -7 tỷ WEBSITE) ──
+  const s4b = data.googleCategories.length ? `
+    <h4>🔍 NGÂN SÁCH GOOGLE ADS THEO CATEGORY (Match vs Unmatch PROFIT_PRODUCTS)</h4>
+    <table class="rpt">
+      <thead><tr><th>Category</th><th>Spend</th><th>% Tổng Google</th><th>Khớp 14 SP?</th></tr></thead>
+      <tbody>
+        ${data.googleCategories.map(g => {
+          const total = data.googleSplit.match + data.googleSplit.unmatch
+          return `
+            <tr>
+              <td class="lbl">${esc(g.category)}</td>
+              <td class="num">${fmtV(g.spend)}</td>
+              <td class="num">${fmtP(total > 0 ? g.spend / total * 100 : 0)}</td>
+              <td class="num">${g.matched ? '<span class="badge-ok">✓ Match</span>' : '<span class="badge-warn">⚠ Unmatch</span>'}</td>
+            </tr>
+          `
+        }).join("")}
+        <tr class="total">
+          <td class="lbl">TỔNG</td>
+          <td class="num">${fmtV(data.googleSplit.match + data.googleSplit.unmatch)}</td>
+          <td class="num">100%</td>
+          <td class="num">Match: ${fmtV(data.googleSplit.match)} · Unmatch: ${fmtV(data.googleSplit.unmatch)}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="muted">
+      <b>Match</b> = MAYDO/DINHVI/GHIAM/CAMCALL → khớp 14 PROFIT_PRODUCTS, được tính vào profit attribution của WEBSITE.<br>
+      <b>Unmatch</b> = OTHER_CAM/OTHER_DI/OTHER_SIM/OTHER_RAZOR/OTHER → bán SP ngoài 14 SKU đăng ký (razor, sim...), Pancake không track riêng → profit attribution chưa chính xác cho phần này.
+    </p>
+  ` : ""
+
+  // ── SECTION 5 — Manual review prompts ──
+  const s5 = `
+    <div class="manual-note">
+      <h4 style="color:#92400e;margin-top:0">📋 Các câu hỏi cho buổi họp (cần thảo luận thủ công)</h4>
+      <ul style="margin:6px 0 0 18px;line-height:1.6;font-size:11.5px">
+        <li><b>Vì sao</b> SKU ${data.topSpike[0] ? `<i>${esc(data.topSpike[0].product)}</i>` : ""} tăng đột biến / SKU ${data.topDrop[0] ? `<i>${esc(data.topDrop[0].product)}</i>` : ""} giảm mạnh?</li>
+        <li><b>Kế hoạch doanh thu tuần này</b> là bao nhiêu? Gap còn lại đến KPI tháng ${kpi.month_label}: <b>${fmtV(Math.max(0, kpi.kpi_vnd - kpi.mtd_revenue))}</b> (${fmtP(100 - kpi.mtd_pct)})</li>
+        <li><b>Yếu tố ảnh hưởng</b> tuần này: content, sản phẩm, ngân sách, nhân sự — đội nào báo cáo?</li>
+        <li><b>Tuần này tập trung ngân sách vào đâu</b> để tối ưu ROAS? SKU profit cao: ${data.topBySku.slice(0,2).map(s => esc(s.product)).join(", ") || "—"}</li>
+        <li><b>Insight khách hàng</b> có đang bám đúng không? Có A/B test creative tuần này không?</li>
+        <li><b>Tracking automation</b> đã đầy đủ chưa? CEO cần quyết định gì ngay?</li>
+      </ul>
+    </div>
+  `
 
   return `<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<title>Báo cáo QC ${esc(data.range.start)} → ${esc(data.range.end)}</title>
+<title>Báo cáo họp giao ban ${esc(data.range.start)} → ${esc(data.range.end)}</title>
 <style>
   *{box-sizing:border-box}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;margin:0;padding:20px;background:#f8fafc;color:#111827;font-size:13px}
@@ -1029,13 +1408,13 @@ function renderWeeklyReportHtml(data) {
   .btn-primary{background:#dc2626;color:white}
   .btn-primary:hover{background:#b91c1c}
   .btn-secondary{background:#e5e7eb;color:#374151}
-  h2{font-size:15px;color:#1e40af;margin:24px 0 10px;padding-bottom:6px;border-bottom:2px solid #1e40af}
-  h3{font-size:13px;color:#7c3aed;margin:16px 0 6px}
-  h4{font-size:12px;color:#6b7280;margin:8px 0 4px;font-weight:600}
-  .meta{background:white;padding:12px 16px;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:16px;font-size:12px}
+  h2{font-size:16px;color:#1e40af;margin:28px 0 12px;padding:8px 12px;background:#dbeafe;border-left:4px solid #1e40af;border-radius:4px}
+  h3{font-size:13.5px;color:#7c3aed;margin:18px 0 6px;font-weight:700}
+  h4{font-size:12.5px;color:#374151;margin:14px 0 4px;font-weight:700}
+  .meta{background:white;padding:12px 16px;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:16px;font-size:11.5px}
   .meta b{color:#dc2626}
-  table.rpt{width:100%;border-collapse:collapse;background:white;font-size:11.5px;margin-bottom:14px;page-break-inside:avoid}
-  table.rpt th{background:#f3f4f6;border:1px solid #d1d5db;padding:6px 8px;text-align:left;font-weight:700;color:#374151}
+  table.rpt{width:100%;border-collapse:collapse;background:white;font-size:11px;margin-bottom:10px;page-break-inside:avoid}
+  table.rpt th{background:#f3f4f6;border:1px solid #d1d5db;padding:6px 8px;text-align:left;font-weight:700;color:#374151;font-size:10.5px}
   table.rpt td{border:1px solid #e5e7eb;padding:5px 8px}
   table.rpt .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   table.rpt .lbl{font-weight:500}
@@ -1043,24 +1422,49 @@ function renderWeeklyReportHtml(data) {
   table.rpt .total td{border-top:2px solid #9ca3af}
   table.rpt .pos{color:#15803d;font-weight:600}
   table.rpt .neg{color:#dc2626;font-weight:600}
-  .muted{color:#9ca3af;font-weight:400;font-size:11px}
-  .acc-id{font-family:Consolas,Menlo,monospace;font-size:10.5px;color:#6b7280;background:#f3f4f6;padding:1px 4px;border-radius:3px}
-  .staff-chip{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700}
+  table.rpt .row-warn{background:#fef3c7}
+  .muted{color:#9ca3af;font-weight:400;font-size:10.5px;line-height:1.5}
+  .badge-warn{display:inline-block;padding:1px 6px;background:#fde68a;color:#92400e;border-radius:3px;font-size:9.5px;font-weight:700}
+  .badge-ok{display:inline-block;padding:1px 6px;background:#bbf7d0;color:#166534;border-radius:3px;font-size:9.5px;font-weight:700}
+  .staff-chip{display:inline-block;padding:1px 6px;border-radius:3px;font-size:9.5px;font-weight:700;margin-right:4px}
   .staff-DUY{background:#dbeafe;color:#1e40af}
   .staff-PHUONG_NAM{background:#ede9fe;color:#6d28d9}
+  .delta-up{color:#15803d;font-weight:600}
+  .delta-down{color:#dc2626;font-weight:600}
+  .delta-zero{color:#9ca3af}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px}
+  .kpi-card{padding:14px 18px;border-radius:10px;margin-bottom:12px;border:2px solid}
+  .kpi-good{background:#dcfce7;border-color:#16a34a}
+  .kpi-on-track{background:#fef9c3;border-color:#ca8a04}
+  .kpi-behind{background:#fee2e2;border-color:#dc2626}
+  .kpi-label{font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.5px}
+  .kpi-main{font-size:22px;font-weight:800;margin:4px 0;color:#111827}
+  .kpi-bar{height:8px;background:white;border-radius:4px;overflow:hidden;margin:6px 0;border:1px solid #d1d5db}
+  .kpi-fill{height:100%;background:linear-gradient(90deg,#16a34a,#22c55e)}
+  .kpi-behind .kpi-fill{background:linear-gradient(90deg,#dc2626,#f87171)}
+  .kpi-sub{font-size:11.5px;color:#374151;margin-top:4px}
+  .metric-row{display:flex;gap:12px;margin-bottom:12px}
+  .metric-card{flex:0 0 280px;background:white;padding:10px 14px;border-radius:8px;border:1px solid #e5e7eb}
+  .metric-label{font-size:10.5px;color:#6b7280;text-transform:uppercase;font-weight:600}
+  .metric-value{font-size:18px;font-weight:800;color:#111827;margin:2px 0}
+  .metric-sub{font-size:11px;color:#374151}
+  .manual-note{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin:18px 0}
   @media print{
-    body{background:white;padding:8mm;font-size:10.5px}
+    body{background:white;padding:8mm;font-size:10px}
     .toolbar{display:none}
-    table.rpt{font-size:9.5px;page-break-inside:avoid}
-    h2{page-break-after:avoid}
+    table.rpt{font-size:9px;page-break-inside:avoid}
+    .kpi-card{page-break-inside:avoid}
+    .grid-2{grid-template-columns:1fr 1fr}
+    h2{page-break-after:avoid;background:white;border-left:3px solid #1e40af}
     h3,h4{page-break-after:avoid}
+    .manual-note{page-break-inside:avoid}
   }
 </style>
 </head>
 <body>
   <div class="toolbar">
-    <h1>📊 Báo cáo hiệu suất quảng cáo</h1>
-    <span class="subtitle">${esc(dateLabel)} · Xuất lúc ${esc(data.generatedAt)}</span>
+    <h1>📊 Báo cáo họp giao ban tuần — Marketing Doscom</h1>
+    <span class="subtitle">${esc(dateLabel)} · so kỳ ${esc(prevLabel)} · Xuất lúc ${esc(data.generatedAt)}</span>
     <span style="margin-left:auto"></span>
     <button class="btn btn-primary" onclick="window.print()">🖨 In / Lưu PDF</button>
     <button class="btn btn-secondary" onclick="window.close()">Đóng</button>
@@ -1068,22 +1472,31 @@ function renderWeeklyReportHtml(data) {
 
   <div class="meta">
     <b>Khoảng báo cáo:</b> ${esc(dateLabel)} ·
-    <b>Phương pháp:</b> Ad spend phân bổ per tên SP trong campaign · Doanh thu/Đơn từ Pancake POS ·
-    Lợi nhuận = Doanh thu − VAT 10% − Ad spend − Giá nhập × SL bán.
+    <b>Kỳ so sánh:</b> ${esc(prevLabel)} ·
+    <b>Nguồn dữ liệu:</b> FB Ads insights + Google Ads (Windsor.ai) + Pancake POS ·
+    <b>Lợi nhuận</b> = Doanh thu − VAT 10% − Ad spend (match) − Giá nhập × SL bán.
   </div>
 
-  <h2>1. Tổng theo nhân sự (cả khoảng)</h2>
-  <table class="rpt">
-    <thead><tr>
-      <th>Nhân sự</th><th>Tổng chi QC</th><th>DT tạm tính</th><th>DT thực thu</th>
-      <th>Đơn delivered</th><th>Giá nhập (Σ)</th><th>VAT 10%</th>
-      <th>Lợi nhuận</th><th>Biên LN</th><th>CIR</th>
-    </tr></thead>
-    <tbody>${s1Rows}${s1Total}</tbody>
-  </table>
+  <h2>1. Hiệu suất Kinh doanh</h2>
+  ${s1aKpi}
+  ${s1b}
+  ${s1c}
+  ${s1d}
 
-  <h2>2. Tuần × Nhân sự × Sản phẩm (profit per SP)</h2>
-  ${s2 || '<p class="muted">Không có data trong khoảng này.</p>'}
+  <h2>2. Dữ liệu – Hiệu suất</h2>
+  ${s2a}
+  ${s2b}
+  ${s2c}
+
+  <h2>3. Nội dung &amp; Sáng tạo (creative proxy: CTR · CVR)</h2>
+  ${s3}
+
+  <h2>4. Quảng cáo &amp; Chiến dịch</h2>
+  ${s4a}
+  ${s4b}
+
+  <h2>5. Tối ưu vận hành Marketing</h2>
+  ${s5}
 
   <p style="text-align:center;color:#9ca3af;font-size:10px;margin-top:30px">
     Doscom ERP · facebookadsallinone.pages.dev · Báo cáo tự sinh từ data ${esc(data.generatedAt)}
