@@ -553,7 +553,7 @@ async function renderKpiProgress(kpiVnd) {
 async function analyzeStaff(staff) {
   const result = document.getElementById('staff-overview-result');
   const startTs = Date.now();
-  result.innerHTML = `<div class="empty-state" style="color:#1877f2;padding:14px">⏳ Đang phân tích nhân sự ${staff}... (~10-20s với Claude Sonnet)</div>`;
+  result.innerHTML = `<div class="empty-state" style="color:#1877f2;padding:14px">⏳ Đang phân tích nhân sự ${staff}... (~5-12s với Claude Haiku 4.5)</div>`;
   // Disable cả 2 buttons trong lúc analyze
   document.querySelectorAll('.btn-staff').forEach(b => b.disabled = true);
 
@@ -647,7 +647,7 @@ function renderStaffOverview(json, elapsed, cacheLabel, claudeUsed) {
   const weeklyActions = Array.isArray(plan.weekly_actions) ? plan.weekly_actions : [];
   const weeklyHtml = weeklyActions.map(a => `<li>${escapeHtml(a)}</li>`).join('');
 
-  const claudeBadge = claudeUsed ? '🤖 Claude Sonnet' : '⚠ Llama';
+  const claudeBadge = claudeUsed ? '🤖 Claude Haiku 4.5' : '⚠ Llama';
 
   // ── UTM analysis block — 30d rolling, AI phân loại theo cvr_thresholds_30d cứng ──
   const utm = json.utm_analysis;
@@ -953,7 +953,7 @@ function renderCampaigns(campaigns) {
   // Render mỗi campaign thành 1 card stacked (không phải table) để có chỗ cho analysis bên dưới
   wrap.innerHTML = `
     <div class="warning-banner" id="batch-progress" style="background:#dbeafe;border-color:#3b82f6;color:#1e40af">
-      ⏳ Đang phân tích ${activeCampaigns.length} campaigns bằng Claude Sonnet 4.6 (fallback Llama nếu lỗi)...
+      ⏳ Đang phân tích ${activeCampaigns.length} campaigns bằng Claude Haiku 4.5 (fallback Llama nếu lỗi)...
       <span id="progress-counter">0/${activeCampaigns.length}</span>
     </div>
     ${activeCampaigns.map((c, i) => `
@@ -989,7 +989,7 @@ async function autoAnalyzeAll(campaigns) {
     const c = campaigns[i];
     const targetEl = document.getElementById('analysis-' + i);
     if (!targetEl) continue;
-    targetEl.innerHTML = `<div class="empty-state" style="padding:14px;color:#1877f2;font-size:12.5px">⏳ AI đang phân tích campaign ${i+1}/${total}... (~3-8s với Claude Sonnet)</div>`;
+    targetEl.innerHTML = `<div class="empty-state" style="padding:14px;color:#1877f2;font-size:12.5px">⏳ AI đang phân tích campaign ${i+1}/${total}... (~2-5s với Claude Haiku 4.5)</div>`;
 
     const ctrl = new AbortController();
     const timeoutId = setTimeout(() => ctrl.abort(), 90000);

@@ -35,7 +35,7 @@ const MODEL_BIG  = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";   // structured o
 // cũng dùng Haiku 4.5 production. Giữ tên biến cũ để giảm churn (1 chỗ duy nhất).
 const CLAUDE_MODEL = "claude-haiku-4-5";
 
-// Tất cả mode dùng Claude Sonnet (chất lượng cao nhất).
+// Tất cả mode dùng Claude Haiku 4.5 (cost rẻ, đủ chất lượng cho ad-ops Q&A).
 // Để revert về Llama (không cần code change): Cloudflare Pages → Settings →
 // Environment variables → Add `USE_CLAUDE` = `false` (Plaintext) → Save.
 const CLAUDE_MODES = new Set([
