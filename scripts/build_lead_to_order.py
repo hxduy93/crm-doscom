@@ -110,7 +110,7 @@ def synthesize_organic_utm(c):
 
 
 def detect_canonical_product(text):
-    """Detect 1 trong 13 PROFIT_PRODUCTS label từ text (vd source_name của order Pancake).
+    """Detect 1 trong 14 PROFIT_PRODUCTS label từ text (vd source_name của order Pancake).
     Trả về canonical label (vd 'Noma 911') để frontend product_costs lookup hoạt động.
     Copy logic từ update_dashboard.py:detect_profit_product."""
     if not text:
@@ -125,6 +125,10 @@ def detect_canonical_product(text):
     if "noma 922" in n or "noma922" in n:
         return "Noma 922"
     if "noma 911" in n or "noma911" in n:
+        return "Noma 911"
+    if "noma 250" in n or "noma250" in n:
+        return "Noma 250"
+    if "nomavietnam" in n or "noma vietnam" in n or " noma " in f" {n} ":
         return "Noma 911"
     if "dr4 plus" in n or "dr4plus" in n:
         return "DR4 Plus"

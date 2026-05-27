@@ -497,6 +497,9 @@ function detectProfitProduct(name) {
   if (n.includes("da8.1") || n.includes("da 8.1") || n.includes("da8 1")) return "DA8.1"
   if (n.includes("noma 922") || n.includes("noma922")) return "Noma 922"
   if (n.includes("noma 911") || n.includes("noma911")) return "Noma 911"
+  if (n.includes("noma 250") || n.includes("noma250")) return "Noma 250"
+  // Generic "NomaVietNam" / "Noma" không kèm model → mặc định Noma 911
+  if (n.includes("nomavietnam") || n.includes("noma vietnam") || ` ${n} `.includes(" noma ")) return "Noma 911"
   if (n.includes("dr4 plus") || n.includes("dr4plus")) return "DR4 Plus"
   if (n.includes("dr1")) return "DR1"
   if (n.includes("dv1 pro") || n.includes("dv1pro")) return "DV1 Pro"
@@ -519,6 +522,7 @@ const ACCOUNT_STAFF = {
   "act_764394829882083":  "PHUONG_NAM",
   "act_906015559004892":  "PHUONG_NAM",
   "act_1416634670476226": "PHUONG_NAM",
+  "act_1418124406240173": "PHUONG_NAM",
 }
 
 function accountShortLabel(accountId) {
@@ -3524,7 +3528,7 @@ function ProfitBreakdown({ staffKey, dateRange, onClose }) {
     "DR1", "DR4 Plus",
     "DV1 Pro",
     "DA8.1", "DA8.1 Pro",
-    "Noma 911", "Noma 922",
+    "Noma 911", "Noma 922", "Noma 250",
   ]
 
   const STAFF_MAP = {
@@ -4316,7 +4320,7 @@ function RevenueByStaffBreakdown({ dateRange, selectedStaff, onSelectStaff }) {
     "DR1", "DR4 Plus",
     "DV1 Pro",
     "DA8.1", "DA8.1 Pro",
-    "Noma 911", "Noma 922",
+    "Noma 911", "Noma 922", "Noma 250",
   ]
 
   // Mapping nhân sự → danh sách source key + màu thương hiệu
@@ -4765,7 +4769,7 @@ function RevenueBySourceBreakdown({ dateRange, staffFilter, setStaffFilter }) {
     "DR1", "DR4 Plus",
     "DV1 Pro",
     "DA8.1", "DA8.1 Pro",
-    "Noma 911", "Noma 922",
+    "Noma 911", "Noma 922", "Noma 250",
   ]
 
   // Mapping staff → source group keys để lọc
@@ -5697,7 +5701,7 @@ function RevenueStatusBreakdown({ dateRange, staffFilter }) {
     "DR1", "DR4 Plus",
     "DV1 Pro",
     "DA8.1", "DA8.1 Pro",
-    "Noma 911", "Noma 922",
+    "Noma 911", "Noma 922", "Noma 250",
   ]
 
   const STATUS_META = [

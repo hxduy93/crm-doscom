@@ -282,6 +282,7 @@ PRODUCT_MAPPING = {
     # ── Noma ──
     "noma 911":   [("Noma 911",   1)],
     "noma 922":   [("Noma 922",   1)],
+    "noma 250":   [("Noma 250",   1)],
     # ── Combo máy + thẻ nhớ ──
     "combo-058":  [("DA8.1",      1)],  # DA8.1 + 64GB
     "combo-059":  [("DA8.1",      1)],  # DA8.1 + 128GB
@@ -303,9 +304,9 @@ PRODUCT_LIST = [
     "DR1", "DR4 Plus",                                    # Ghi âm (2)
     "DV1 Pro",                                            # Định vị (1)
     "DA8.1", "DA8.1 Pro",                                 # Camera (2)
-    "Noma 911", "Noma 922",                               # Noma (2)
+    "Noma 911", "Noma 922", "Noma 250",                   # Noma (3)
 ]
-# = 13 sản phẩm
+# = 14 sản phẩm
 
 
 def _load_retail_prices():

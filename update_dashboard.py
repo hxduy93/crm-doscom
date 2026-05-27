@@ -42,13 +42,13 @@ ACCOUNTS = [
     {"id": "1418124406240173", "staff": "PHUONG_NAM", "short": "DA8.1 mới (PN, chưa chạy)",                                      "name": "DA8.1 mới (PN, chưa chạy)"},
 ]
 
-# 13 SP tính lợi nhuận — khớp PRODUCT_LIST trong fetch_pancake_revenue.py
+# 14 SP tính lợi nhuận — khớp PRODUCT_LIST trong fetch_pancake_revenue.py
 PROFIT_PRODUCTS = [
     "D1", "D1 Pro", "D2", "D3", "D4", "D8 Pro",
     "DR1", "DR4 Plus",
     "DV1 Pro",
     "DA8.1", "DA8.1 Pro",
-    "Noma 911", "Noma 922",
+    "Noma 911", "Noma 922", "Noma 250",
 ]
 
 # Map tên SP (PROFIT_PRODUCTS) → key Mã tên gọi trong xlsx Kho tổng (đã lowercase)
@@ -66,6 +66,7 @@ PRODUCT_TO_COST_KEY = {
     "DA8.1 Pro":  "da8.1 pro",   # xlsx viết "DA8.1 PRO", đã lowercase
     "Noma 911":   "noma 911",
     "Noma 922":   "noma 922",
+    "Noma 250":   "noma 250",
 }
 
 # Competitor data files (scraped via Chrome, not API)
@@ -92,12 +93,12 @@ def detect_product(name: str):
 
 def detect_profit_product(name: str):
     """
-    Extract 1 trong 13 PROFIT_PRODUCTS từ tên campaign — để phân bổ ad spend
+    Extract 1 trong 14 PROFIT_PRODUCTS từ tên campaign — để phân bổ ad spend
     per nhân sự × sản phẩm cho tính lợi nhuận.
 
     Thứ tự check quan trọng (ưu tiên match cụ thể hơn):
       - "DA8.1 Pro" trước "DA8.1"
-      - "Noma 922/911" trước generic
+      - "Noma 922/911/250" trước generic NomaVietNam → Noma 911 default
       - "D1 Pro", "D8 Pro" trước "D1", "D8"
       - "DR4 Plus" trước "DR4"
       - "DV1 Pro" trước "DV1"
@@ -113,10 +114,16 @@ def detect_profit_product(name: str):
     if "da8.1" in n or "da 8.1" in n or "da8 1" in n:
         return "DA8.1"
 
-    # Noma
+    # Noma — model cụ thể trước, fallback NomaVietNam → Noma 911
     if "noma 922" in n or "noma922" in n:
         return "Noma 922"
     if "noma 911" in n or "noma911" in n:
+        return "Noma 911"
+    if "noma 250" in n or "noma250" in n:
+        return "Noma 250"
+    # Generic "NomaVietNam" / "Noma" không kèm model → mặc định Noma 911
+    # (account Phương Nam config: NOMA = Noma 911 default SKU)
+    if "nomavietnam" in n or "noma vietnam" in n or " noma " in f" {n} ":
         return "Noma 911"
 
     # DR
