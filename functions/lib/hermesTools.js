@@ -42,19 +42,34 @@ async function fetchInternal(ctx, path) {
   return await r.json();
 }
 
-// Đọc fb-config với fallback KV → default file → hard-coded
+// Đọc fb-config: default file (source of truth cho account_to_groups) +
+// merge với KV (override KPI nếu user đã edit qua UI).
+// KV thường được save qua /api/fb-config POST khi user update KPI — payload
+// có thể không có account_to_groups → KV bị rỗng map. Phải fallback default
+// file cho account_to_groups, KV chỉ thắng nếu thực sự có data.
 async function loadFbConfig(ctx) {
-  // Cố gắng KV nếu env.INVENTORY có
+  let baseConfig = { account_to_groups: {}, kpi_revenue_monthly_vnd: 0 };
+  try {
+    baseConfig = await fetchData(ctx, "/data/fb-config.json");
+  } catch { /* ignore — KV may still rescue */ }
+
   if (ctx.env?.INVENTORY) {
     try {
       const cached = await ctx.env.INVENTORY.get("fb_config", { type: "json" });
-      if (cached?.account_to_groups) return cached;
+      if (cached) {
+        const kvHasAccounts = cached.account_to_groups
+          && Object.keys(cached.account_to_groups).length > 0;
+        return {
+          ...baseConfig,
+          ...cached,
+          account_to_groups: kvHasAccounts
+            ? cached.account_to_groups
+            : baseConfig.account_to_groups,
+        };
+      }
     } catch { /* ignore */ }
   }
-  // Default file
-  try {
-    return await fetchData(ctx, "/data/fb-config.json");
-  } catch { return { account_to_groups: {} }; }
+  return baseConfig;
 }
 
 // ────────────────────────────────────────────────────────────
