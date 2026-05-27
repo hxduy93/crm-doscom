@@ -18,8 +18,16 @@ import {
 
 async function fetchData(ctx, path) {
   const url = new URL(path, ctx.origin).toString();
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`Fetch ${path} ${r.status}`);
+  // _middleware redirect mọi path (kể cả /data/*) nếu không có session cookie.
+  // Phải forward cookie để middleware pass-through, sau đó Pages serve static file.
+  const r = await fetch(url, {
+    headers: { Cookie: ctx.cookieHeader || "" },
+    redirect: "manual",  // không follow redirect đến /auth/login → fail rõ ràng
+  });
+  if (!r.ok) {
+    if (r.status === 302) throw new Error(`Fetch ${path} bị redirect (cookie không hợp lệ?)`);
+    throw new Error(`Fetch ${path} ${r.status}`);
+  }
   return await r.json();
 }
 

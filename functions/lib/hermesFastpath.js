@@ -187,8 +187,14 @@ export async function tryFastpath(userMessage, ctx) {
         response,
       };
     } catch (e) {
-      console.warn(`Fastpath ${rule.name} fail:`, e.message);
-      return null;  // fall through to LLM
+      // Rule match nhưng exec fail → trả error rõ ràng thay vì fallback LLM
+      // (LLM không có data sẽ bịa số → tệ hơn nói thẳng "lỗi fetch data").
+      console.warn(`Fastpath ${rule.name} exec fail:`, e.message);
+      return {
+        matched: rule.name + "_error",
+        match_input: match,
+        response: `⚠ Lỗi lấy data cho rule \`${rule.name}\`: ${e.message}\n\nThử lại sau 5s hoặc báo admin nếu kéo dài.`,
+      };
     }
   }
   return null;
