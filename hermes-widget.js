@@ -85,6 +85,12 @@
       }
       #hermes-fab { right: 12px; bottom: 12px; }
     }
+
+    /* Ẩn widget khi loading-overlay đang hiện (không có class .hide) */
+    body.hermes-loading-active #hermes-fab,
+    body.hermes-loading-active #hermes-panel {
+      display: none !important;
+    }
   `;
   const styleEl = document.createElement("style");
   styleEl.textContent = css;
@@ -288,4 +294,19 @@
   });
 
   showEmpty();
+
+  // ─── Loading overlay detection ─────────────────────────────────────────
+  // Nếu trang có #loading-overlay (chưa có class .hide) → ẩn widget.
+  // Observe class changes để show widget khi overlay biến mất.
+  function syncLoadingState() {
+    const overlay = document.getElementById("loading-overlay");
+    const isLoading = overlay && !overlay.classList.contains("hide");
+    document.body.classList.toggle("hermes-loading-active", !!isLoading);
+  }
+  syncLoadingState();
+  const overlay = document.getElementById("loading-overlay");
+  if (overlay) {
+    const mo = new MutationObserver(syncLoadingState);
+    mo.observe(overlay, { attributes: true, attributeFilter: ["class"] });
+  }
 })();

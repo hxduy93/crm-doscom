@@ -2,11 +2,29 @@
 // Mỗi tool có { name, description, input_schema, handler }.
 // Handler nhận (input, ctx) với ctx = { env, origin, cookieHeader, userEmail }.
 //
-// Khi add mutation tool sau (vd pause campaign, generate GEO):
-//   - Thêm cờ `mutates: true` để UI hiển thị warning + 2-step confirm
-//   - Handler kiểm tra role user (admin mới được mutate)
+// 2026-05-27 refactor: đọc /data/*.json trực tiếp thay vì gọi /api/* nội bộ.
+// Lý do: chain auth /api/hermes/chat → /api/fb-config → /api/fb/snapshot dễ bị
+// drop Cookie giữa các Pages Function call, gây 401 → tool trả 0 VND.
+// Static /data/*.json không cần auth, đọc trực tiếp ổn định hơn.
+
+import {
+  resolveTimeRange,
+  compactFbCampaigns,
+  compactFbAccounts,
+  compactFbOrdersInRange,
+  computeFbProfitInRange,
+  STAFF_TO_SOURCE_GROUP,
+} from "./fbAdsHelpers.js";
+
+async function fetchData(ctx, path) {
+  const url = new URL(path, ctx.origin).toString();
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Fetch ${path} ${r.status}`);
+  return await r.json();
+}
 
 async function fetchInternal(ctx, path) {
+  // Giữ lại cho tool nào vẫn cần API chain (vd geo queue) — forward Cookie.
   const url = new URL(path, ctx.origin).toString();
   const r = await fetch(url, { headers: { Cookie: ctx.cookieHeader || "" } });
   if (!r.ok) {
@@ -14,6 +32,21 @@ async function fetchInternal(ctx, path) {
     throw new Error(`Fetch ${path} ${r.status}: ${t.slice(0, 200)}`);
   }
   return await r.json();
+}
+
+// Đọc fb-config với fallback KV → default file → hard-coded
+async function loadFbConfig(ctx) {
+  // Cố gắng KV nếu env.INVENTORY có
+  if (ctx.env?.INVENTORY) {
+    try {
+      const cached = await ctx.env.INVENTORY.get("fb_config", { type: "json" });
+      if (cached?.account_to_groups) return cached;
+    } catch { /* ignore */ }
+  }
+  // Default file
+  try {
+    return await fetchData(ctx, "/data/fb-config.json");
+  } catch { return { account_to_groups: {} }; }
 }
 
 // ────────────────────────────────────────────────────────────
@@ -40,15 +73,29 @@ const get_fb_spend = {
   handler: async (input, ctx) => {
     const time = input.time_preset || "this_month";
     const group = input.group || "ALL";
-    const data = await fetchInternal(ctx, `/api/fb/snapshot?time=${time}&group=${group}`);
-    if (!data?.ok) return { error: data?.error || "Snapshot fail" };
+    const timeRange = resolveTimeRange(time);
+    if (!timeRange) return { error: "Invalid time preset" };
+
+    const [fbAds, rev, costs] = await Promise.all([
+      fetchData(ctx, "/data/fb-ads-data.json"),
+      fetchData(ctx, "/data/product-revenue.json").catch(() => null),
+      fetchData(ctx, "/data/product-costs.json").catch(() => null),
+    ]);
+
+    const accountsBlock = compactFbAccounts(fbAds, timeRange);
+    const profit = (rev && costs)
+      ? computeFbProfitInRange(rev, costs, group, timeRange)
+      : null;
+    const orders = rev ? compactFbOrdersInRange(rev, group, timeRange) : null;
+
     return {
-      time_range: data.time_range,
-      group: data.group,
-      profit_total: data.profit?.total || null,
-      orders_total: data.orders?.total || null,
-      accounts_summary: (data.accounts?.accounts || []).map(a => ({
-        id: a.id, name: a.name, spend: a.spend, leads: a.leads, conversions: a.conversions, active_campaigns: a.active_campaigns,
+      time_range: timeRange,
+      group,
+      profit_total: profit?.total || null,
+      orders_total: orders?.total || null,
+      accounts_summary: (accountsBlock?.accounts || []).map(a => ({
+        id: a.id, name: a.name, spend: a.spend, leads: a.leads,
+        conversions: a.conversions, active_campaigns: a.active_campaigns,
       })),
     };
   },
@@ -75,17 +122,32 @@ const get_fb_staff_spend = {
   },
   handler: async (input, ctx) => {
     const time = input.time_preset || "this_month";
-    // Lấy account list cho staff từ /api/fb-config
-    const cfg = await fetchInternal(ctx, "/api/fb-config");
+    const timeRange = resolveTimeRange(time);
+    if (!timeRange) return { error: "Invalid time preset" };
+
+    const [cfg, fbAds] = await Promise.all([
+      loadFbConfig(ctx),
+      fetchData(ctx, "/data/fb-ads-data.json"),
+    ]);
     const accMap = cfg?.account_to_groups || {};
     const accounts = Object.entries(accMap)
       .filter(([_, v]) => v.staff === input.staff)
       .map(([id, v]) => ({ id, groups: v.groups, note: v.products_note }));
 
-    // Gọi snapshot cho từng account
-    const perAcc = await Promise.all(accounts.map(async (a) => {
-      const snap = await fetchInternal(ctx, `/api/fb/snapshot?time=${time}&account_id=${a.id}`);
-      const campsAll = (snap?.campaigns?.campaigns) || [];
+    if (accounts.length === 0) {
+      return {
+        staff: input.staff,
+        time_preset: time,
+        total_spend_vnd: 0,
+        accounts: [],
+        error: `Không có account nào map cho staff "${input.staff}" trong fb-config.json`,
+      };
+    }
+
+    const perAcc = accounts.map(a => {
+      // activeOnly:false → tính cả campaign đã pause nhưng có spend trong range
+      const camps = compactFbCampaigns(fbAds, a.id, timeRange, { activeOnly: false });
+      const campsAll = camps?.campaigns || [];
       const withSpend = campsAll.filter(c => c.spend > 0);
       const spend = withSpend.reduce((s, c) => s + (c.spend || 0), 0);
       const conv  = withSpend.reduce((s, c) => s + (c.conversions || 0), 0);
@@ -96,13 +158,14 @@ const get_fb_staff_spend = {
         active_campaigns: activeCount,
         paused_with_spend: withSpend.length - activeCount,
       };
-    }));
+    });
 
     const totalSpend = perAcc.reduce((s, a) => s + a.spend, 0);
     const totalConv  = perAcc.reduce((s, a) => s + a.conversions, 0);
     return {
       staff: input.staff,
       time_preset: time,
+      time_range: timeRange,
       total_spend_vnd: totalSpend,
       total_conversions: totalConv,
       cpa_avg: totalConv > 0 ? Math.round(totalSpend / totalConv) : null,
@@ -120,21 +183,26 @@ const get_kpi_status = {
   description: "Lấy KPI doanh thu tháng + tiến độ MTD + dự báo cuối tháng. Dùng khi user hỏi 'KPI tháng này thế nào', 'có đạt KPI không'.",
   input_schema: { type: "object", properties: {} },
   handler: async (_input, ctx) => {
-    const [cfg, snap] = await Promise.all([
-      fetchInternal(ctx, "/api/fb-config"),
-      fetchInternal(ctx, "/api/fb/snapshot?time=this_month&group=ALL"),
+    const timeRange = resolveTimeRange("this_month");
+    const [cfg, rev, costs] = await Promise.all([
+      loadFbConfig(ctx),
+      fetchData(ctx, "/data/product-revenue.json").catch(() => null),
+      fetchData(ctx, "/data/product-costs.json").catch(() => null),
     ]);
     const kpi = cfg?.kpi_revenue_monthly_vnd || 0;
-    const rev = snap?.profit?.total?.revenue || 0;
-    const profit = snap?.profit?.total?.profit || 0;
-    const pct = kpi > 0 ? Math.round((rev / kpi) * 1000) / 10 : 0;
+    const profitData = (rev && costs)
+      ? computeFbProfitInRange(rev, costs, "ALL", timeRange)
+      : null;
+    const revenueMtd = profitData?.total?.revenue || 0;
+    const profitMtd = profitData?.total?.profit || 0;
+    const pct = kpi > 0 ? Math.round((revenueMtd / kpi) * 1000) / 10 : 0;
     return {
       kpi_revenue_monthly_vnd: kpi,
-      revenue_mtd_vnd: rev,
-      profit_mtd_vnd: profit,
+      revenue_mtd_vnd: revenueMtd,
+      profit_mtd_vnd: profitMtd,
       progress_pct: pct,
-      gap_vnd: kpi - rev,
-      time_range: snap?.time_range,
+      gap_vnd: kpi - revenueMtd,
+      time_range: timeRange,
     };
   },
 };
