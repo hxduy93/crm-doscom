@@ -888,18 +888,28 @@ function bindRowEvents() {
 
 async function resetStuckArticle(id) {
   if (!confirm("Reset article này về 'failed' để regen lại?")) return;
+  console.log("[reset] PATCH /api/geo/queue/" + id);
   try {
     const r = await fetch("/api/geo/queue/" + id, {
       method: "PATCH",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "failed", last_error: "Reset manually from stuck drafting" }),
+      body: JSON.stringify({ status: "failed" }),
     });
-    const data = await r.json();
-    if (!r.ok || !data.updated) throw new Error(data.error || "Failed");
+    const text = await r.text();
+    console.log("[reset] response", r.status, text.slice(0, 300));
+    let data = null;
+    try { data = JSON.parse(text); } catch {}
+    if (!r.ok) throw new Error(`HTTP ${r.status}: ${text.slice(0, 200)}`);
+    if (!data?.updated) throw new Error(`Server không update: ${text.slice(0, 200)}`);
+    // Cập nhật local item ngay để UI phản ánh ngay, không phụ thuộc loadQueue
+    const item = pipelineItems.find(p => p.id === id);
+    if (item) item.status = "failed";
+    rerenderQueueLocal();
     loadQueue();
   } catch (err) {
-    alert("Lỗi reset: " + err.message);
+    console.error("[reset] error", err);
+    alert("Lỗi reset: " + err.message + "\n\nMở DevTools Console (F12) để xem chi tiết.");
   }
 }
 
