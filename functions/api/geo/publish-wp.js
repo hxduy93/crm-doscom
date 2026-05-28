@@ -95,7 +95,7 @@ function base64ToBlob(b64, mime = "image/png") {
   return new Blob([new Uint8Array(byteNumbers)], { type: mime });
 }
 
-async function uploadMedia(siteConfig, { base64, filename, alt }) {
+async function uploadMedia(siteConfig, { base64, filename, alt, caption, title }) {
   // WP REST API hỗ trợ raw body upload (Approach B) — đơn giản hơn multipart,
   // hoạt động ngon trên Cloudflare Workers fetch.
   const byteChars = atob(base64);
@@ -119,15 +119,20 @@ async function uploadMedia(siteConfig, { base64, filename, alt }) {
 
   const created = await res.json();
 
-  // Set alt_text bằng PATCH riêng (raw upload không support form fields).
-  if (alt) {
+  // Set alt_text + caption + title bằng PATCH riêng (raw upload không support form fields).
+  // Caption hiển thị dưới ảnh trong media library + có thể được theme dùng để render <figcaption>.
+  if (alt || caption || title) {
+    const patchBody = {};
+    if (alt)     patchBody.alt_text = alt;
+    if (caption) patchBody.caption  = caption;
+    if (title)   patchBody.title    = title;
     await fetch(`${siteConfig.url}/wp-json/wp/v2/media/${created.id}`, {
       method: "POST",  // WP REST cho update cũng dùng POST
       headers: {
         "Authorization": authHeader(siteConfig.user, siteConfig.pwd),
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ alt_text: alt }),
+      body: JSON.stringify(patchBody),
     }).catch(() => {});  // best-effort, không break pipeline nếu fail
   }
 
@@ -222,9 +227,16 @@ function slugify(s) {
 
 // Chèn <figure> ảnh inline sau H2 khớp với after_heading (text gần đúng).
 // Nếu không tìm thấy heading match, fallback append ở cuối phần đầu (sau </p> intro).
-function injectInlineImage(html, { after_heading, position, url, alt }) {
+// Figure dùng class aligncenter + inline style để chắc chắn căn giữa bất kể theme WP.
+// Có <figcaption> hiển thị mô tả ảnh (lấy từ caption hoặc alt — chính là H2 heading của section).
+function injectInlineImage(html, { after_heading, position, url, alt, caption }) {
   if (!url) return html;
-  const figure = `\n\n<figure class="wp-block-image size-large geo-inline-image"><img src="${escapeAttr(url)}" alt="${escapeAttr(alt || "")}" loading="lazy" /></figure>\n\n`;
+  const captionText = caption || alt || "";
+  const altText = alt || captionText || "";
+  const captionHtml = captionText
+    ? `<figcaption class="wp-element-caption" style="text-align:center;font-style:italic;color:#555;font-size:0.9em;margin-top:0.5em;">${escapeAttr(captionText)}</figcaption>`
+    : "";
+  const figure = `\n\n<figure class="wp-block-image aligncenter size-large geo-inline-image" style="text-align:center;margin-left:auto;margin-right:auto;display:block;"><img src="${escapeAttr(url)}" alt="${escapeAttr(altText)}" loading="lazy" style="display:block;margin:0 auto;max-width:100%;height:auto;" />${captionHtml}</figure>\n\n`;
 
   // Tìm <h2>...heading...</h2> matching (case-insensitive, normalize whitespace)
   if (after_heading) {
@@ -376,11 +388,16 @@ export async function onRequestPost(context) {
     let imageUrl = article.image_url;
 
     if (article.image_base64) {
-      const filename = `${slugify(finalTitle)}-${Date.now()}.png`;
+      // SEO filename: <title-slug>-<uniq>.png — Date.now() base36 ngắn gọn
+      const uniq = Date.now().toString(36);
+      const filename = `${slugify(finalTitle)}-${uniq}.png`.slice(0, 120);
+      const featuredAlt = article.image_alt || finalTitle;
       const media = await uploadMedia(siteConfig, {
         base64: article.image_base64,
         filename,
-        alt: article.image_alt || finalTitle,
+        alt: featuredAlt,
+        title: finalTitle,
+        caption: featuredAlt,
       });
       featuredMediaId = media.id;
       imageUrl = media.source_url;
@@ -398,17 +415,28 @@ export async function onRequestPost(context) {
 
     let contentWithInline = finalContent;
     const inlineUploaded = [];
+    const titleSlug = slugify(finalTitle);
     for (const row of (inlineRows || [])) {
       try {
+        // Caption = H2 heading của section ảnh thuộc về (hoặc alt nếu không có)
+        const captionText = row.after_heading || row.alt || finalTitle;
+        const altText = row.alt || row.after_heading || finalTitle;
+
         let mediaUrl = row.image_url;
         let mediaId  = row.wp_media_id;
         // Upload nếu chưa upload (image_url null nhưng có base64)
         if (!mediaUrl && row.image_base64) {
-          const fname = `${slugify(finalTitle)}-inline-${row.position}-${Date.now()}.png`;
+          // SEO filename: <title-slug>-<section-slug>.png — Google đọc tên file để hiểu chủ đề.
+          // Date.now() base36 (8 ký tự) để chống trùng khi re-publish, ngắn hơn nhiều so với ms epoch.
+          const sectionSlug = slugify(captionText).slice(0, 50);
+          const uniq = Date.now().toString(36);
+          const fname = `${titleSlug}-${sectionSlug || `inline-${row.position}`}-${uniq}.png`.slice(0, 120);
           const media = await uploadMedia(siteConfig, {
             base64: row.image_base64,
             filename: fname,
-            alt: row.alt || finalTitle,
+            alt: altText,
+            title: captionText,
+            caption: captionText,
           });
           mediaUrl = media.source_url;
           mediaId  = media.id;
@@ -422,7 +450,8 @@ export async function onRequestPost(context) {
             after_heading: row.after_heading,
             position: row.position,
             url: mediaUrl,
-            alt: row.alt || finalTitle,
+            alt: altText,
+            caption: captionText,
           });
           inlineUploaded.push({ position: row.position, url: mediaUrl, wp_media_id: mediaId });
         }

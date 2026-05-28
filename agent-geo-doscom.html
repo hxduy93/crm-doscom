@@ -834,7 +834,15 @@ function renderArticleRow(a) {
   if (a.status === "idea") {
     actions = `<button class="btn-gen-content px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold" data-id="${a.id}">✍️ Generate content</button>`;
   } else if (a.status === "drafting" || a.status === "publishing") {
-    actions = `<span class="text-xs text-amber-600 font-semibold"><span class="spin inline-block">⏳</span> ${STATUS_LABELS[a.status]}</span>`;
+    // Nếu drafted_at > 5 phút trước → coi như stuck (Worker đã chết) → cho phép reset inline.
+    const nowSec = Math.floor(Date.now() / 1000);
+    const draftedAt = Number(a.drafted_at || 0);
+    const ageSec = draftedAt > 0 ? (nowSec - draftedAt) : 0;
+    const isStuck = draftedAt > 0 && ageSec > 300;
+    actions = `<span class="text-xs text-amber-600 font-semibold"><span class="spin inline-block">⏳</span> ${STATUS_LABELS[a.status]}${draftedAt ? ` (${Math.floor(ageSec / 60)}m)` : ""}</span>`;
+    if (isStuck) {
+      actions += ` <button class="btn-reset-stuck px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded text-xs font-semibold" data-id="${a.id}" title="Article kẹt >${Math.floor(ageSec/60)} phút — reset về failed để regen lại">🔧 Reset</button>`;
+    }
   } else if (a.status === "pending_review" || a.status === "edited") {
     actions = `
       <button class="btn-open-article px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold" data-id="${a.id}">👁 Preview & Edit</button>
@@ -875,6 +883,24 @@ function bindRowEvents() {
   document.querySelectorAll(".btn-gen-image").forEach(b => b.addEventListener("click", () => quickGenImage(b.dataset.id)));
   document.querySelectorAll(".btn-open-article").forEach(b => b.addEventListener("click", () => openArticle(b.dataset.id)));
   document.querySelectorAll(".btn-retry").forEach(b => b.addEventListener("click", () => generateContent(b.dataset.id)));
+  document.querySelectorAll(".btn-reset-stuck").forEach(b => b.addEventListener("click", () => resetStuckArticle(b.dataset.id)));
+}
+
+async function resetStuckArticle(id) {
+  if (!confirm("Reset article này về 'failed' để regen lại?")) return;
+  try {
+    const r = await fetch("/api/geo/queue/" + id, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "failed", last_error: "Reset manually from stuck drafting" }),
+    });
+    const data = await r.json();
+    if (!r.ok || !data.updated) throw new Error(data.error || "Failed");
+    loadQueue();
+  } catch (err) {
+    alert("Lỗi reset: " + err.message);
+  }
 }
 
 // ============================================================
@@ -916,11 +942,22 @@ async function analyzeGaps() {
 // ============================================================
 // PIPELINE: Generate content for 1 article
 // ============================================================
+function rerenderQueueLocal() {
+  const container = document.getElementById("pipeline-list");
+  if (!container || !pipelineItems.length) return;
+  container.innerHTML = pipelineItems.map(renderArticleRow).join("");
+  bindRowEvents();
+}
+
 async function generateContent(id) {
-  // Optimistic UI
+  // Optimistic UI: cập nhật local + re-render NGAY, KHÔNG refetch server
+  // (loadQueue refetch sẽ race với POST: GET có thể về trước server kịp update status=drafting,
+  //  khiến UI nháy về 'idea' và user tưởng nút không hoạt động.)
   const item = pipelineItems.find(p => p.id === id);
-  if (item) item.status = "drafting";
-  loadQueue();
+  if (item) {
+    item.status = "drafting";
+    rerenderQueueLocal();
+  }
 
   try {
     const r = await fetch("/api/geo/generate-content", {
@@ -932,7 +969,8 @@ async function generateContent(id) {
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || "Failed");
-    setTimeout(loadQueue, 400);
+    // POST xong (status đã là pending_review/failed trên server) — giờ refetch an toàn
+    loadQueue();
   } catch (err) {
     const msg = err.name === "TimeoutError"
       ? "Quá 95s không có phản hồi (Cloudflare Worker đã kill). Article có thể đang ở status='drafting' tạm thời — đợi 5 phút rồi click lại, hoặc dùng nút Reset Stale ở góc phải."
