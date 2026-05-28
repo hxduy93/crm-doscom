@@ -72,18 +72,19 @@ PRODUCT_TO_COST_KEY_BASE = {
 
 def _load_extended_skus():
     """Đọc data/cost-source/skus-extended.json — manual overlay cho SKU ngoài xlsx Kho tổng.
-    Trả về (extended_labels_list, extended_cost_key_map, extended_costs_overlay)."""
+    Trả về (extended_labels, cost_keys, costs_overlay, price_overrides_vnd).
+    price_overrides_vnd: label → giá nhập VND (áp dụng AFTER xlsx merge, ưu tiên cao nhất)."""
     path = os.path.abspath(os.path.join(
         os.path.dirname(__file__), "data", "cost-source", "skus-extended.json"
     ))
     if not os.path.exists(path):
-        return [], {}, {}
+        return [], {}, {}, {}
     try:
         with open(path, "r", encoding="utf-8") as f:
             ext = json.load(f)
     except Exception as e:
         print(f"   ⚠ skus-extended.json load failed: {e}", file=sys.stderr)
-        return [], {}, {}
+        return [], {}, {}, {}
     labels, cost_keys, costs = [], {}, {}
     for sku in ext.get("extended_skus", []):
         label = sku["label"]
@@ -96,10 +97,13 @@ def _load_extended_skus():
             "trang_thai": "Đang KD",
             "_source": "skus-extended.json",
         }
-    return labels, cost_keys, costs
+    # Price overrides: label → giá nhập VND. Skip _note key.
+    raw_overrides = ext.get("price_overrides_vnd", {})
+    price_overrides = {k: v for k, v in raw_overrides.items() if not k.startswith("_") and isinstance(v, (int, float))}
+    return labels, cost_keys, costs, price_overrides
 
 # Compose PROFIT_PRODUCTS and PRODUCT_TO_COST_KEY at module load
-_EXT_LABELS, _EXT_COST_KEYS, EXTENDED_COSTS_OVERLAY = _load_extended_skus()
+_EXT_LABELS, _EXT_COST_KEYS, EXTENDED_COSTS_OVERLAY, PRICE_OVERRIDES_VND = _load_extended_skus()
 PROFIT_PRODUCTS = PROFIT_PRODUCTS_BASE + _EXT_LABELS
 PRODUCT_TO_COST_KEY = {**PRODUCT_TO_COST_KEY_BASE, **_EXT_COST_KEYS}
 
@@ -520,14 +524,17 @@ def build_data():
         data["google_ads"] = {"by_category": {}, "campaigns_raw": []}
 
     # --- PRODUCT COSTS (xlsx Kho tổng → product-costs.json) ------
-    # Merge thứ tự: 1. xlsx (primary) → 2. EXTENDED_COSTS_OVERLAY (fallback cho SKU chưa có
-    # trong xlsx — user cung cấp giá manual qua data/cost-source/skus-extended.json).
+    # Merge thứ tự (ưu tiên cao → thấp):
+    #   1. PRICE_OVERRIDES_VND (user markdown 2026-05-27 trong skus-extended.json) — WIN giá nhập
+    #   2. xlsx Kho tổng (product-costs.json) — primary cho các field khác (gia_ban, mã_tên_gọi)
+    #   3. EXTENDED_COSTS_OVERLAY — fallback nếu xlsx miss entry
     try:
         costs_raw = _load_json("data/product-costs.json") or {}
         products_cost = costs_raw.get("products") or {}
         profit_costs = {}
         missing = []
         from_overlay = []
+        from_override = []
         for label in PROFIT_PRODUCTS:
             key = PRODUCT_TO_COST_KEY.get(label)
             entry = products_cost.get(key) if key else None
@@ -540,18 +547,32 @@ def build_data():
                     "trang_thai": entry.get("trang_thai"),
                 }
             elif label in EXTENDED_COSTS_OVERLAY and EXTENDED_COSTS_OVERLAY[label].get("gia_nhap_vnd"):
-                # Fallback: dùng giá user cung cấp qua skus-extended.json
-                profit_costs[label] = EXTENDED_COSTS_OVERLAY[label]
+                # Fallback: dùng giá user cung cấp qua skus-extended.json overlay
+                profit_costs[label] = dict(EXTENDED_COSTS_OVERLAY[label])
                 from_overlay.append(label)
             else:
                 profit_costs[label] = {"gia_nhap_vnd": None, "ma_ten_goi": None}
                 missing.append(f"{label} (key={key!r})")
+            # APPLY PRICE OVERRIDE — user markdown wins over both xlsx & overlay
+            if label in PRICE_OVERRIDES_VND:
+                old_price = profit_costs[label].get("gia_nhap_vnd")
+                new_price = PRICE_OVERRIDES_VND[label]
+                if old_price != new_price:
+                    profit_costs[label]["gia_nhap_vnd"] = new_price
+                    profit_costs[label]["_price_source"] = "markdown_override_2026-05-27"
+                    profit_costs[label]["_price_xlsx_was"] = old_price
+                    from_override.append(label)
+                # Loại label khỏi missing nếu override cung cấp giá
+                if new_price and any(label in m for m in missing):
+                    missing = [m for m in missing if label not in m]
         data["product_costs"] = profit_costs
         data["profit_products"] = PROFIT_PRODUCTS
         ok_count = sum(1 for v in profit_costs.values() if v.get("gia_nhap_vnd"))
         print(f"   ✓ loaded product costs: {ok_count}/{len(PROFIT_PRODUCTS)} SP có giá nhập")
+        if from_override:
+            print(f"   ↪ {len(from_override)} SP áp dụng price_overrides_vnd từ markdown: {', '.join(from_override[:8])}{'...' if len(from_override)>8 else ''}")
         if from_overlay:
-            print(f"   ↪ {len(from_overlay)} SP lấy giá từ skus-extended.json overlay: {', '.join(from_overlay[:8])}{'...' if len(from_overlay)>8 else ''}")
+            print(f"   ↪ {len(from_overlay)} SP lấy giá từ skus-extended.json overlay (xlsx miss): {', '.join(from_overlay[:8])}{'...' if len(from_overlay)>8 else ''}")
         if missing:
             print(f"   ⚠ missing: {', '.join(missing)}")
     except Exception as e:
