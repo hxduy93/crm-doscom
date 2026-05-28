@@ -4382,6 +4382,11 @@ function RadarResultPanel({ data }) {
 //   Nhân sự Phương Nam = nguồn PHUONG_NAM (saved filter 78a874c7…)
 //   WEBSITE            = WEBSITE + ZALO_OA + HOTLINE (gộp)
 // =============================================================
+// SP "tặng kèm" — không tính doanh thu/lợi nhuận riêng (ad spend trên SKU này
+// thường thuộc về SP brand chính, vd Noma 250 là quà kèm trong combo Noma 911).
+// Loại khỏi rows + tổng của bảng LN trước/sau hoàn cho gọn.
+const GIFT_SKUS = new Set(["Noma 250"])
+
 // =============================================================
 // SUB-COMPONENT: Profit Breakdown — hiện khi user click 1 nhân sự (staffFilter != ALL)
 // Công thức: LN = Doanh thu − (DT × 10% VAT) − Ad spend − (Giá nhập × SL bán)
@@ -4431,7 +4436,8 @@ function ProfitBreakdown({ staffKey, dateRange, onClose }) {
   // Helper: compute rows cho 1 tập status.
   // Ad spend dùng CHUNG cho cả 2 bảng (chi phí thật sự đã tiêu, không phân biệt đơn có hoàn hay không).
   const computeRows = (STATUSES_KEEP) => {
-    const rows = PRODUCTS.map(p => {
+    // Loại GIFT_SKUS khỏi tính toán → row + tổng đều không bao gồm SP tặng kèm
+    const rows = PRODUCTS.filter(p => !GIFT_SKUS.has(p)).map(p => {
       let revenueP = 0
       let unitsP = 0
       let ordersP = 0
