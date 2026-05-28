@@ -4540,15 +4540,12 @@ function ProfitBreakdown({ staffKey, dateRange, onClose }) {
         </thead>
         <tbody>
           {data.rows.filter(r => {
-            // Khi xem cá nhân (DUY / PHUONG_NAM) → ẩn SP người đó không chạy QC + không có doanh thu
-            // Khi xem Team Ads (ALL) → vẫn giữ đủ 13 SP để thấy toàn cảnh
-            const isIndividual = staffKey && staffKey !== "ALL"
-            if (!isIndividual) return true
-            return r.revenue > 0 || r.adSpend > 0 || r.units > 0 || r.orders > 0
+            // Chỉ hiển thị SP có phát sinh ad spend HOẶC doanh thu trong range — bỏ row trống cho gọn.
+            // Áp dụng cho cả Team Ads (ALL) và cá nhân (DUY/PHUONG_NAM).
+            return r.adSpend > 0 || r.revenue > 0
           }).map(r => {
-            const hasData = r.revenue > 0 || r.adSpend > 0
             return (
-              <tr key={r.product} className={`border-b border-gray-100 ${hasData ? "" : "opacity-50"} hover:bg-gray-50/60`}>
+              <tr key={r.product} className="border-b border-gray-100 hover:bg-gray-50/60">
                 <td className="py-2 px-3 font-semibold text-gray-900">
                   <span className="inline-flex items-center gap-1.5">
                     {r.product}
@@ -4572,7 +4569,7 @@ function ProfitBreakdown({ staffKey, dateRange, onClose }) {
                 <td className="py-2 px-3 text-right text-gray-600">{r.costPerUnit > 0 ? fmtVNDFull(r.costPerUnit) + "₫" : "—"}</td>
                 <td className="py-2 px-3 text-right text-gray-700">{r.totalCost > 0 ? "-" + fmtVNDFull(r.totalCost) + "₫" : "—"}</td>
                 <td className={`py-2 px-3 text-right font-extrabold border-l border-gray-300 ${r.profit > 0 ? "text-emerald-700" : r.profit < 0 ? "text-red-600" : "text-gray-400"}`}>
-                  {hasData ? fmtVNDFull(r.profit) + "₫" : "—"}
+                  {fmtVNDFull(r.profit) + "₫"}
                 </td>
                 <td className={`py-2 px-3 text-right font-semibold ${r.margin == null ? "text-gray-300" : r.margin > 0 ? "text-emerald-700" : "text-red-600"}`}>
                   {r.margin == null ? "—" : r.margin.toFixed(1) + "%"}
