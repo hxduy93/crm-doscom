@@ -1,11 +1,12 @@
 name: GEO Monitor — batch processor
 
 on:
-  # Cron disabled 2026-05-14 (user request: chỉ chạy khi bấm Run thủ công để tiết kiệm chi phí).
-  # Bật lại bằng cách uncomment khối schedule dưới đây.
-  # schedule:
-  #   - cron: '*/30 * * * *'
-  workflow_dispatch:  # trigger thủ công từ Actions tab
+  # Re-enabled 2026-05-28: cần data nhiều ngày để fill trend chart + đo hiệu quả bài GEO đã publish.
+  # Cost: ~30 queries × 3 engines × 1 run/day × $0.0135/run ≈ $1.22/ngày ≈ $36/tháng.
+  # Cron 30 phút/tick (idempotent jobs creation) — đảm bảo 90 jobs/ngày chạy hết trong ~8h.
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:  # vẫn cho phép trigger thủ công từ Actions tab
 
 concurrency:
   # Chỉ 1 run cùng lúc — tránh 2 cron tick chồng nhau gây duplicate processing
