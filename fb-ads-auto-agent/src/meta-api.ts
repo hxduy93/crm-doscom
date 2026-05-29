@@ -130,7 +130,7 @@ export async function fetchCampaignInsights(
   env: Env,
   daysBack = 7
 ): Promise<CampaignInsight[]> {
-  const token = env.FB_SYSTEM_USER_TOKEN;
+  const token = env.FB_ACCESS_TOKEN;
   const acct = env.AD_ACCOUNT_ID.startsWith("act_")
     ? env.AD_ACCOUNT_ID
     : `act_${env.AD_ACCOUNT_ID}`;
@@ -258,7 +258,7 @@ export async function fetchCampaignInsights(
 }
 
 export async function fetchTodaySpendUsd(env: Env): Promise<number> {
-  const token = env.FB_SYSTEM_USER_TOKEN;
+  const token = env.FB_ACCESS_TOKEN;
   const acct = env.AD_ACCOUNT_ID.startsWith("act_")
     ? env.AD_ACCOUNT_ID
     : `act_${env.AD_ACCOUNT_ID}`;
@@ -278,19 +278,19 @@ export async function fetchTodaySpendUsd(env: Env): Promise<number> {
 }
 
 export async function pauseCampaign(env: Env, campaignId: string) {
-  return graphPost<{ success: boolean }>(`/${campaignId}`, env.FB_SYSTEM_USER_TOKEN, {
+  return graphPost<{ success: boolean }>(`/${campaignId}`, env.FB_ACCESS_TOKEN, {
     status: "PAUSED",
   });
 }
 
 export async function pauseAdset(env: Env, adsetId: string) {
-  return graphPost<{ success: boolean }>(`/${adsetId}`, env.FB_SYSTEM_USER_TOKEN, {
+  return graphPost<{ success: boolean }>(`/${adsetId}`, env.FB_ACCESS_TOKEN, {
     status: "PAUSED",
   });
 }
 
 export async function pauseAd(env: Env, adId: string) {
-  return graphPost<{ success: boolean }>(`/${adId}`, env.FB_SYSTEM_USER_TOKEN, {
+  return graphPost<{ success: boolean }>(`/${adId}`, env.FB_ACCESS_TOKEN, {
     status: "PAUSED",
   });
 }
@@ -302,7 +302,7 @@ export async function updateCampaignBudgetUsd(
 ) {
   const usdVnd = Number(env.USD_VND_RATE) || 25400;
   const newDailyVnd = Math.round(newBudgetUsd * usdVnd);
-  return graphPost<{ success: boolean }>(`/${campaignId}`, env.FB_SYSTEM_USER_TOKEN, {
+  return graphPost<{ success: boolean }>(`/${campaignId}`, env.FB_ACCESS_TOKEN, {
     daily_budget: String(newDailyVnd),
   });
 }
@@ -314,13 +314,64 @@ export async function updateAdsetBudgetUsd(
 ) {
   const usdVnd = Number(env.USD_VND_RATE) || 25400;
   const newDailyVnd = Math.round(newBudgetUsd * usdVnd);
-  return graphPost<{ success: boolean }>(`/${adsetId}`, env.FB_SYSTEM_USER_TOKEN, {
+  return graphPost<{ success: boolean }>(`/${adsetId}`, env.FB_ACCESS_TOKEN, {
     daily_budget: String(newDailyVnd),
   });
 }
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+// Check token expiry via /debug_token endpoint.
+// Returns days until expiry. null = never expires (System User token).
+// Throws if token is invalid or revoked.
+export async function checkTokenExpiry(env: Env): Promise<{
+  days_until_expiry: number | null;
+  expires_at_iso: string | null;
+  is_valid: boolean;
+  scopes: string[];
+}> {
+  const token = env.FB_ACCESS_TOKEN;
+  const url = new URL(`${GRAPH_BASE}/debug_token`);
+  url.searchParams.set("input_token", token);
+  url.searchParams.set("access_token", token);
+
+  const r = await fetch(url.toString());
+  const j = (await r.json()) as {
+    data?: {
+      is_valid: boolean;
+      expires_at: number;
+      data_access_expires_at?: number;
+      scopes: string[];
+      error?: { message: string };
+    };
+    error?: { message: string };
+  };
+  if (!r.ok || j.error || !j.data) {
+    throw new Error(`Token debug failed: ${j.error?.message ?? r.status}`);
+  }
+  const d = j.data;
+  if (!d.is_valid) {
+    throw new Error(`Token invalid: ${d.error?.message ?? "unknown"}`);
+  }
+  const expiresAt = d.expires_at;
+  if (!expiresAt || expiresAt === 0) {
+    return {
+      days_until_expiry: null,
+      expires_at_iso: null,
+      is_valid: true,
+      scopes: d.scopes,
+    };
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const days = Math.floor((expiresAt - now) / 86400);
+  return {
+    days_until_expiry: days,
+    expires_at_iso: new Date(expiresAt * 1000).toISOString(),
+    is_valid: true,
+    scopes: d.scopes,
+  };
 }
 
 export { graphGet, graphPost };

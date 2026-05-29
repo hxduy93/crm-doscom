@@ -40,7 +40,6 @@ binding = "AGENT_KV"
 id = "REPLACE_WITH_KV_NAMESPACE_ID"
 
 # === Secrets (set via: wrangler secret put NAME) ===
-# - FB_SYSTEM_USER_TOKEN  → Meta long-lived System User access token
+# - FB_ACCESS_TOKEN       → Meta access token (System User vĩnh viễn, hoặc User Token 60d)
 # - ANTHROPIC_API_KEY     → Haiku 4.5 API key (sk-ant-…)
-# - GMAIL_APP_PASSWORD    → Gmail SMTP app password cho NOTIFY_EMAIL
 # (KHÔNG đưa secret vào file này. Đặt riêng bằng `wrangler secret put`)

@@ -7,7 +7,7 @@ import {
   isKillswitchOn,
   recordDailySpend,
 } from "./guardrails";
-import { fetchCampaignInsights, fetchTodaySpendUsd } from "./meta-api";
+import { checkTokenExpiry, fetchCampaignInsights, fetchTodaySpendUsd } from "./meta-api";
 import type { Env, RunContext } from "./types";
 
 export default {
@@ -32,6 +32,13 @@ export default {
         "SELECT id, started_at, finished_at, status, campaigns_seen, decisions_made, actions_executed, daily_spend_usd, haiku_cost_usd, error_message FROM runs ORDER BY id DESC LIMIT 30"
       ).all();
       return Response.json(rows.results);
+    }
+
+    if (url.pathname === "/token") {
+      const info = await checkTokenExpiry(env).catch((e) => ({
+        error: e instanceof Error ? e.message : String(e),
+      }));
+      return Response.json(info);
     }
 
     if (url.pathname === "/decisions") {
@@ -74,6 +81,27 @@ async function runAgentLoop(env: Env) {
   const runId = Number(insertRun.meta.last_row_id);
 
   try {
+    const tokenInfo = await checkTokenExpiry(env).catch((e) => {
+      console.error("Token check failed:", e instanceof Error ? e.message : String(e));
+      return null;
+    });
+    if (tokenInfo) {
+      const days = tokenInfo.days_until_expiry;
+      if (days !== null && days < 7) {
+        await env.DB.prepare(
+          "INSERT INTO audit_log (ts, level, event, details) VALUES (?, 'warn', 'token_expiring_soon', ?)"
+        )
+          .bind(
+            new Date().toISOString(),
+            JSON.stringify({ days_until_expiry: days, expires_at: tokenInfo.expires_at_iso })
+          )
+          .run();
+      }
+      if (days !== null && days < 0) {
+        throw new Error(`FB_ACCESS_TOKEN expired ${-days} days ago — refresh required`);
+      }
+    }
+
     const dailySpendUsd = await fetchTodaySpendUsd(env).catch(async () => {
       return await getDailySpendUsd(env);
     });

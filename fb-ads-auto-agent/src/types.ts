@@ -8,7 +8,7 @@ export interface Env {
   NOTIFY_EMAIL: string;
   MIN_SPEND_PER_CAMPAIGN_USD: string;
   SHADOW_MODE: string;
-  FB_SYSTEM_USER_TOKEN: string;
+  FB_ACCESS_TOKEN: string;
   ANTHROPIC_API_KEY: string;
   GMAIL_APP_PASSWORD: string;
 }
