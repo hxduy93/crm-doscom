@@ -24,6 +24,8 @@ import {
   compactFbCampaigns,
   getUtmAnalysisForStaff,
   computeCvrThresholdsPerProduct,
+  getEffectiveStaffForAccount,
+  getAccountsForStaffInRange,
 } from "../lib/fbAdsHelpers.js";
 
 const SESSION_COOKIE = "doscom_session";
@@ -392,9 +394,18 @@ Output PHẢI giống nhau khi gọi lại với cùng input. KHÔNG thêm rando
 
   fb_staff_overview: `# FB ADS STAFF OVERVIEW — DOSCOM
 
-Bạn là Sarah Strategist phụ trách 1 nhân sự FB Ads (DUY hoặc PHƯƠNG NAM).
+Bạn là Sarah Strategist phụ trách 1 nhân sự FB Ads (DUY, PHƯƠNG NAM, hoặc AI_AGENT — entity test đại diện FB Ads Auto Agent).
 Đánh giá toàn bộ performance của nhân sự trong THÁNG HIỆN TẠI và đề xuất
 chiến lược scale để đạt KPI.
+
+═══ TRƯỜNG HỢP staff = "AI_AGENT" ═══
+- Đây là entity test cho FB Ads Auto Agent (Worker tự tối ưu loan từ Phương Nam).
+- staff_aggregate_mtd.revenue_mtd_vnd = 0, profit_mtd_vnd = 0, orders_mtd = 0 — ĐÂY LÀ EXPECTED (conversion thực tế vẫn về owner cũ của account, không loan source group Pancake).
+- Bỏ qua các metric revenue/profit/margin → KHÔNG đánh giá theo KPI revenue.
+- kpi_contribution.status = "leading"/"on_track"/"behind" KHÔNG áp dụng → set "on_track" + assessment giải thích lý do.
+- Chỉ đánh giá CHẤT LƯỢNG SPEND của AI: CPA so với median, CTR, conversion volume, frequency, scaling pattern.
+- top_products / weak_products vẫn return nhưng dùng "rating" + "verdict" theo CPA/conv chứ không theo margin.
+- monthly_action_plan tập trung "AI có đang quyết định đúng không?" thay vì "đẩy SP nào?".
 
 ═══ INPUT DATA ═══
 Bạn sẽ thấy:
@@ -440,7 +451,7 @@ Bạn sẽ thấy:
 ═══ FORMAT OUTPUT (JSON BẮT BUỘC) ═══
 
 {
-  "staff": "DUY" | "PHUONG_NAM",
+  "staff": "DUY" | "PHUONG_NAM" | "AI_AGENT",
   "month_label": "Tháng 5/2026",
   "executive_summary": "[≥40 từ tiếng Việt] Tổng quan 2-3 câu: nhân sự đang ở đâu, key result nổi bật/yếu nhất, định hướng tháng",
 
@@ -904,13 +915,15 @@ async function computeStaffAggregate(env, origin, cookieHeader, staff, fbConfig)
     fetchJson(origin, "/data/product-costs.json", cookieHeader),
   ]);
 
-  // Find accounts của staff từ config
-  const accountsOfStaff = Object.entries(fbConfig.account_to_groups || {})
-    .filter(([_, info]) => info.staff === staff)
-    .map(([id, info]) => ({ id, ...info }));
+  // Find accounts của staff (loan-aware: 1 account có thể thuộc owner cũ
+  // cho phần range trước loan_date, và thuộc loaner cho phần sau loan_date).
+  // getAccountsForStaffInRange trả về effectiveRange đã truncate cho từng account.
+  const accountsOfStaff = getAccountsForStaffInRange(fbConfig, staff, monthRange).map(
+    ({ id, info, effectiveRange }) => ({ id, ...info, effectiveRange })
+  );
 
   if (accountsOfStaff.length === 0) {
-    return { staff, error: `Không có account nào map cho staff ${staff} trong config` };
+    return { staff, error: `Không có account nào map cho staff ${staff} trong config (đã xét loan boundary)` };
   }
 
   // Aggregate per account: spend MTD, conversions, campaign list
@@ -919,7 +932,7 @@ async function computeStaffAggregate(env, origin, cookieHeader, staff, fbConfig)
   const allActiveCampaigns = [];
 
   for (const acc of accountsOfStaff) {
-    const camps = compactFbCampaigns(fbAdsJson, acc.id, monthRange, { activeOnly: true });
+    const camps = compactFbCampaigns(fbAdsJson, acc.id, acc.effectiveRange, { activeOnly: true });
     // Aggregates (spend/conv/...) phải gồm CẢ campaign đã pause trong tháng,
     // miễn là có spend trong range — nếu không sẽ under-report MTD spend.
     const campsWithSpend = (camps?.campaigns || []).filter(c => c.spend > 0);
@@ -1011,7 +1024,9 @@ async function computeStaffAggregate(env, origin, cookieHeader, staff, fbConfig)
     groups_breakdown: groupsBreakdown,
     top_campaigns: topCampaigns,
     weak_campaigns: weakCampaigns,
-    _data_note: `groups_breakdown profit lấy RIÊNG từ source_groups.${staffSourceGroup} (Pancake data thật, chỉ đơn FB Ads của staff này — không gộp staff khác).`,
+    _data_note: staffSourceGroup
+      ? `groups_breakdown profit lấy RIÊNG từ source_groups.${staffSourceGroup} (Pancake data thật, chỉ đơn FB Ads của staff này — không gộp staff khác).`
+      : `Staff "${staff}" không map sang Pancake source group → revenue/profit/orders = 0. Đây là entity chỉ chịu spend (vd AI_AGENT chạy loan account); conversion thực tế vẫn về owner cũ của account đó.`,
   };
 }
 
@@ -1348,7 +1363,13 @@ export async function onRequestPost(context) {
     const fbConfig = await loadFbConfig(env, origin);
     const accountSpend = (dataContext.fb_campaigns?.campaigns || [])
       .reduce((s, c) => s + (Number(c.spend) || 0), 0);
-    const staffOfAccount = fbConfig?.account_to_groups?.[account_id]?.staff;
+    // Loan-aware: dùng staff hiệu lực tại end-date của range đang phân tích,
+    // không lookup raw .staff (account 906 có loan_to AI_AGENT từ 2026-05-29).
+    const accountInfo = fbConfig?.account_to_groups?.[account_id];
+    const focusRangeEnd = dataContext.fb_focus_campaign?.time_range?.end
+      || dataContext.fb_campaigns?.time_range?.end
+      || null;
+    const staffOfAccount = getEffectiveStaffForAccount(accountInfo, focusRangeEnd);
     const staffSourceGroup = STAFF_TO_SOURCE_GROUP[staffOfAccount];
     let profitForAttribution = dataContext.fb_profit;
     if (staffSourceGroup) {
@@ -1374,9 +1395,9 @@ export async function onRequestPost(context) {
 
   // Staff aggregate — chỉ cho mode staff_overview
   if (mode === "staff_overview") {
-    const staff = body.staff;  // "DUY" | "PHUONG_NAM"
-    if (!staff || !["DUY", "PHUONG_NAM"].includes(staff)) {
-      return jsonResponse({ error: "staff_overview cần body.staff = 'DUY' hoặc 'PHUONG_NAM'" }, 400);
+    const staff = body.staff;  // "DUY" | "PHUONG_NAM" | "AI_AGENT"
+    if (!staff || !["DUY", "PHUONG_NAM", "AI_AGENT"].includes(staff)) {
+      return jsonResponse({ error: "staff_overview cần body.staff = 'DUY' | 'PHUONG_NAM' | 'AI_AGENT'" }, 400);
     }
     const fbConfig = await loadFbConfig(env, origin);
     dataContext.staff_overview = await computeStaffAggregate(env, origin, cookieHeader, staff, fbConfig);

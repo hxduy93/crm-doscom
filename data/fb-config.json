@@ -25,7 +25,9 @@
     "906015559004892": {
       "staff": "PHUONG_NAM",
       "groups": ["MAY_DO"],
-      "products_note": "D1 (máy dò)"
+      "products_note": "D1 (máy dò) — LOANED to AI_AGENT từ 2026-05-29",
+      "loaned_to_staff": "AI_AGENT",
+      "loaned_from_date": "2026-05-29"
     },
     "1416634670476226": {
       "staff": "PHUONG_NAM",
@@ -38,6 +40,7 @@
       "products_note": "DA8.1 (camera video call) — account mới chuẩn bị chạy"
     }
   },
-  "updated_at": "2026-05-07",
-  "updated_by": "manhthangvu888@gmail.com"
+  "_note_906": "Account 906015559004892 (DoscomMart) — spend trước 2026-05-29 tính cho PHUONG_NAM (lịch sử giữ nguyên); từ 2026-05-29 trở đi spend tính cho AI_AGENT (xem fb-ads-auto-agent/). Logic backend phải check loaned_from_date: spend.date < loaned_from_date → staff = staff cũ; spend.date >= loaned_from_date → staff = loaned_to_staff. Khôi phục: xóa 2 field loaned_to_staff + loaned_from_date, sửa products_note về 'D1 (máy dò)'.",
+  "updated_at": "2026-05-29",
+  "updated_by": "doscom.vietnam@gmail.com (loan account 906 → AI_AGENT từ 2026-05-29)"
 }

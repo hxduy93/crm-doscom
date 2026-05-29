@@ -122,7 +122,7 @@ github-repo/
 | 927390616363424 | DUY | MAY_DO | D1 |
 | 1655506672244826 | DUY | NOMA | Noma chăm sóc xe |
 | 764394829882083 | PHƯƠNG NAM | NOMA | Noma 911 |
-| 906015559004892 | PHƯƠNG NAM | MAY_DO | D1 |
+| ~~906015559004892~~ | ~~PHƯƠNG NAM~~ | ~~MAY_DO~~ | **LOANED → fb-ads-auto-agent test từ 2026-05-29** |
 | 1416634670476226 | PHƯƠNG NAM | (rỗng) | Chưa chạy |
 | 1418124406240173 | PHƯƠNG NAM | CAMERA_VIDEO_CALL | DA8.1 mới (chưa chạy) |
 

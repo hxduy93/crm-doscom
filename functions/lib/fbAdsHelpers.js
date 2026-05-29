@@ -995,3 +995,84 @@ export async function computeCvrThresholdsPerProduct(env, origin, cookieHeader, 
     thresholds,
   };
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// LOAN-AWARE STAFF ATTRIBUTION
+// Khi 1 account được loan sang staff khác (vd account 906 → AI_AGENT từ
+// 2026-05-29), spend trước loan_date vẫn thuộc owner cũ, spend từ loan_date
+// trở đi thuộc loaned_to_staff. Schema mở rộng trong fb-config.json:
+//   account_to_groups[id] = {
+//     staff: "PHUONG_NAM",          // owner gốc (giữ nguyên cho lịch sử)
+//     groups: [...],
+//     loaned_to_staff: "AI_AGENT",  // optional — ai đang mượn
+//     loaned_from_date: "2026-05-29" // optional — ngày bắt đầu loan (YYYY-MM-DD, inclusive)
+//   }
+
+// Quyết định staff hiệu lực cho 1 account tại 1 ngày cụ thể.
+// date: "YYYY-MM-DD" hoặc null (null = "today VN")
+// Returns: staff string (vd "PHUONG_NAM" hoặc "AI_AGENT")
+export function getEffectiveStaffForAccount(accountInfo, date = null) {
+  if (!accountInfo) return null;
+  const owner = accountInfo.staff || null;
+  if (!accountInfo.loaned_to_staff || !accountInfo.loaned_from_date) return owner;
+  const d = date || new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+  return d >= accountInfo.loaned_from_date ? accountInfo.loaned_to_staff : owner;
+}
+
+// Tính khoảng hiệu lực cho 1 account khi attribute spend cho staff yêu cầu.
+// Returns null nếu account KHÔNG thuộc staff đó trong khoảng timeRange.
+// Returns { start, end, label } đã được truncate theo loan boundary.
+//
+// Cases (loanDate = accountInfo.loaned_from_date, inclusive):
+//   - account không có loan:
+//       owner === staff → effectiveRange = timeRange
+//       owner !== staff → null
+//   - account có loan, staff === owner:
+//       loanDate <= timeRange.start → null (toàn bộ range thuộc loaner)
+//       loanDate > timeRange.end    → effectiveRange = timeRange
+//       else → effectiveRange = [timeRange.start, loanDate - 1 day]
+//   - account có loan, staff === loaned_to_staff:
+//       loanDate > timeRange.end    → null (chưa đến ngày loan)
+//       loanDate <= timeRange.start → effectiveRange = timeRange
+//       else → effectiveRange = [loanDate, timeRange.end]
+//   - account có loan, staff khác cả 2 → null
+export function getEffectiveRangeForStaff(accountInfo, staff, timeRange) {
+  if (!accountInfo || !staff || !timeRange?.start || !timeRange?.end) return null;
+  const owner = accountInfo.staff || null;
+  const loaner = accountInfo.loaned_to_staff || null;
+  const loanDate = accountInfo.loaned_from_date || null;
+  const tStart = timeRange.start;
+  const tEnd = timeRange.end;
+
+  function ymdMinus1(ymd) {
+    const d = new Date(ymd + "T00:00:00Z");
+    return new Date(d.getTime() - 86400000).toISOString().slice(0, 10);
+  }
+
+  if (!loaner || !loanDate) {
+    return owner === staff ? { ...timeRange } : null;
+  }
+  if (staff === owner) {
+    if (loanDate <= tStart) return null;
+    if (loanDate > tEnd) return { ...timeRange };
+    return { start: tStart, end: ymdMinus1(loanDate), label: `${timeRange.label} (trước loan)` };
+  }
+  if (staff === loaner) {
+    if (loanDate > tEnd) return null;
+    if (loanDate <= tStart) return { ...timeRange };
+    return { start: loanDate, end: tEnd, label: `${timeRange.label} (sau loan)` };
+  }
+  return null;
+}
+
+// Helper aggregate: trả về list { id, info, effectiveRange } cho mọi account
+// thuộc về `staff` trong khoảng `timeRange` (đã xét loan).
+export function getAccountsForStaffInRange(fbConfig, staff, timeRange) {
+  const map = fbConfig?.account_to_groups || {};
+  const out = [];
+  for (const [id, info] of Object.entries(map)) {
+    const eff = getEffectiveRangeForStaff(info, staff, timeRange);
+    if (eff) out.push({ id, info, effectiveRange: eff });
+  }
+  return out;
+}

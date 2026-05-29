@@ -339,6 +339,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
       <button class="btn-staff" onclick="analyzeStaff('DUY')">👤 Phân tích DUY</button>
       <button class="btn-staff" onclick="analyzeStaff('PHUONG_NAM')">👤 Phân tích PHƯƠNG NAM</button>
+      <button class="btn-staff" onclick="analyzeStaff('AI_AGENT')" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none">🤖 Phân tích AI AGENT</button>
+    </div>
+    <div style="font-size:11.5px;color:#6b7280;margin:0 0 8px 2px">
+      🤖 <b>AI AGENT</b> = entity test cho FB Ads Auto Agent. Hiện chỉ chạy trên account loan <code>906015559004892 (DoscomMart)</code> từ 2026-05-29. Chỉ track <b>spend</b>; revenue/đơn từ MAY_DO vẫn về Phương Nam (báo cáo sẽ hiện revenue=0 là expected).
     </div>
     <div id="staff-overview-result"></div>
   </div>
@@ -553,7 +557,8 @@ async function renderKpiProgress(kpiVnd) {
 async function analyzeStaff(staff) {
   const result = document.getElementById('staff-overview-result');
   const startTs = Date.now();
-  result.innerHTML = `<div class="empty-state" style="color:#1877f2;padding:14px">⏳ Đang phân tích nhân sự ${staff}... (~5-12s với Claude Haiku 4.5)</div>`;
+  const staffDisplay = staff === 'AI_AGENT' ? '🤖 AI AGENT' : staff.replace('_', ' ');
+  result.innerHTML = `<div class="empty-state" style="color:#1877f2;padding:14px">⏳ Đang phân tích ${staffDisplay}... (~5-12s với Claude Haiku 4.5)</div>`;
   // Disable cả 2 buttons trong lúc analyze
   document.querySelectorAll('.btn-staff').forEach(b => b.disabled = true);
 
@@ -617,6 +622,15 @@ function renderStaffOverview(json, elapsed, cacheLabel, claudeUsed) {
   const top = Array.isArray(json.top_products) ? json.top_products : [];
   const weak = Array.isArray(json.weak_products) ? json.weak_products : [];
   const plan = json.monthly_action_plan || {};
+  const isAiAgent = json.staff === 'AI_AGENT';
+  const aiAgentBanner = isAiAgent ? `
+    <div style="background:linear-gradient(135deg,#ede9fe,#e0e7ff);border:1px solid #c4b5fd;padding:10px 12px;border-radius:8px;margin-bottom:10px;font-size:12.5px;color:#4c1d95;line-height:1.5">
+      🤖 <b>AI AGENT MODE</b> — entity test cho FB Ads Auto Agent.
+      Hiện chỉ chạy trên account loan <code>906015559004892</code> từ 2026-05-29.
+      Revenue/profit/orders sẽ hiện <b>= 0</b> (conversion thực tế của MAY_DO vẫn về Phương Nam — đây là expected).
+      Tập trung đọc <b>spend_mtd</b> và <b>top/weak_campaigns</b> để đánh giá hiệu quả AI tự tối ưu.
+    </div>
+  ` : '';
 
   const statusColor = { leading: '#16a34a', on_track: '#16a34a', behind: '#dc2626' };
   const statusLabel = { leading: '✅ Đang dẫn đầu', on_track: '✅ Đúng tiến độ', behind: '🔴 Chậm tiến độ' };
@@ -765,10 +779,13 @@ function renderStaffOverview(json, elapsed, cacheLabel, claudeUsed) {
     `;
   }
 
+  const staffIcon = isAiAgent ? '🤖' : '👤';
+  const staffNameDisplay = isAiAgent ? 'AI AGENT (test)' : (json.staff || '?').replace('_', ' ');
   return `
     <div class="staff-card">
       <div style="font-size:11px;color:#9ca3af;margin-bottom:6px">${elapsed}s · ${cacheLabel} · ${claudeBadge}</div>
-      <h3>👤 ${escapeHtml(json.staff || '?')} — ${escapeHtml(json.month_label || '')}</h3>
+      ${aiAgentBanner}
+      <h3>${staffIcon} ${escapeHtml(staffNameDisplay)} — ${escapeHtml(json.month_label || '')}</h3>
       <div class="exec-summary">${escapeHtml(json.executive_summary || '—')}</div>
 
       <div class="perf-grid">
