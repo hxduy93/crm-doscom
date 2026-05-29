@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>AI FB Agent Full Auto — Doscom</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --brand: #7c3aed;
+    --brand-dark: #5b21b6;
+    --brand-light: #ede9fe;
+    --ok: #16a34a;
+    --warn: #d97706;
+    --err: #dc2626;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    padding: 14px;
+    background: linear-gradient(180deg, #faf5ff 0%, #f9fafb 200px);
+    color: var(--gray-900);
+    font-size: 13.5px;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  .header {
+    background: linear-gradient(135deg, var(--brand) 0%, #4f46e5 100%);
+    color: #fff;
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.2);
+  }
+  .header h1 { margin: 0 0 4px; font-size: 18px; }
+  .header p { margin: 0; opacity: 0.92; font-size: 12.5px; }
+  .section {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .section h2 {
+    margin: 0 0 10px;
+    font-size: 14.5px;
+    color: var(--brand-dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section h2 .right { margin-left: auto; font-size: 11.5px; color: var(--gray-500); font-weight: normal; }
+  .grid-status {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .stat-card {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 7px;
+    padding: 10px 12px;
+  }
+  .stat-card .label {
+    font-size: 11px;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+  }
+  .stat-card .value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--gray-900);
+  }
+  .stat-card.ok .value { color: var(--ok); }
+  .stat-card.warn .value { color: var(--warn); }
+  .stat-card.err .value { color: var(--err); }
+  .stat-card .sub { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+
+  table.runs, table.decisions {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  table.runs th, table.decisions th {
+    text-align: left;
+    padding: 8px 10px;
+    background: var(--brand-light);
+    color: var(--brand-dark);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom: 1px solid var(--gray-200);
+    font-weight: 600;
+  }
+  table.runs td, table.decisions td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--gray-100);
+    vertical-align: top;
+  }
+  table.runs tr:hover, table.decisions tr:hover { background: var(--gray-50); }
+  .badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge.success { background: #dcfce7; color: #166534; }
+  .badge.shadow  { background: #fef3c7; color: #92400e; }
+  .badge.error   { background: #fee2e2; color: #991b1b; }
+  .badge.killswitch { background: #e5e7eb; color: #374151; }
+  .badge.running { background: #dbeafe; color: #1d4ed8; }
+  .badge.pause   { background: #fee2e2; color: #991b1b; }
+  .badge.scale_budget { background: #dcfce7; color: #166534; }
+  .badge.reallocate   { background: #e0e7ff; color: #3730a3; }
+  .badge.rotate_creative { background: #fef3c7; color: #92400e; }
+  .badge.noop    { background: #f3f4f6; color: #6b7280; }
+
+  .empty-state {
+    padding: 30px 14px;
+    text-align: center;
+    color: var(--gray-500);
+    background: var(--gray-50);
+    border-radius: 7px;
+    font-size: 13px;
+  }
+  .empty-state.warn { background: #fef3c7; color: #92400e; }
+  .empty-state.err  { background: #fee2e2; color: #991b1b; }
+
+  button {
+    background: var(--brand);
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { background: var(--brand-dark); }
+  button:disabled { opacity: 0.55; cursor: not-allowed; }
+  button.secondary { background: #fff; color: var(--brand); border: 1px solid var(--brand); }
+  button.danger { background: var(--err); }
+  button.danger:hover { background: #991b1b; }
+
+  .reasoning {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--gray-700);
+    line-height: 1.5;
+    background: #fafafa;
+    border-left: 2px solid var(--brand);
+    padding: 6px 10px;
+    border-radius: 0 5px 5px 0;
+  }
+  code {
+    background: var(--gray-100);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11.5px;
+  }
+  .setup-banner {
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    color: #78350f;
+    padding: 12px 14px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+  .setup-banner code { background: #fff; }
+  details summary { cursor: pointer; color: var(--brand); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>🤖 AI FB Agent Full Auto</h1>
+    <p>Cloudflare Worker tự tối ưu Meta Ads — pause / scale budget / reallocate / rotate creative. Cron 4 lần/ngày trên loan account <code style="background:rgba(255,255,255,0.2);color:#fff">906015559004892 (DoscomMart)</code>. Tất cả guardrail cứng: $10/day cap, ±30% budget delta, killswitch KV.</p>
+  </div>
+
+  <div id="setup-banner-host"></div>
+
+  <!-- AGENT STATUS -->
+  <div class="section">
+    <h2>📊 Agent Status
+      <span class="right" id="last-refresh">—</span>
+    </h2>
+    <div class="grid-status" id="status-grid">
+      <div class="empty-state">Đang tải...</div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="refreshAll()">🔄 Refresh</button>
+      <button class="secondary" onclick="triggerRun()" id="trigger-btn">▶ Run agent thủ công</button>
+      <button class="danger" onclick="toggleKillswitch()" id="ks-btn">🔌 Toggle killswitch</button>
+    </div>
+    <div id="action-result" style="margin-top:8px;font-size:12px;color:var(--gray-700)"></div>
+  </div>
+
+  <!-- RUN HISTORY -->
+  <div class="section">
+    <h2>📜 Run History
+      <span class="right">30 runs gần nhất</span>
+    </h2>
+    <div id="runs-table">
+      <div class="empty-state">Đang tải...</div>
+    </div>
+  </div>
+
+  <!-- DECISIONS LOG -->
+  <div class="section">
+    <h2>🎯 Decisions Log
+      <span class="right">
+        <select id="run-filter" onchange="loadDecisions(this.value)" style="font-size:12px;padding:3px 7px;border-radius:5px;border:1px solid var(--gray-200)">
+          <option value="">50 decisions gần nhất</option>
+        </select>
+      </span>
+    </h2>
+    <div id="decisions-table">
+      <div class="empty-state">Đang tải...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = '/api/ai-fb-agent';
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function fmtTs(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    const z = (n) => String(n).padStart(2, '0');
+    // VN time = UTC + 7
+    const vn = new Date(d.getTime() + 7 * 3600 * 1000);
+    return `${z(vn.getUTCDate())}/${z(vn.getUTCMonth() + 1)} ${z(vn.getUTCHours())}:${z(vn.getUTCMinutes())}`;
+  } catch { return iso; }
+}
+
+function statusBadge(s) {
+  const cls = ['success', 'shadow', 'error', 'killswitch', 'running'].includes(s) ? s : 'noop';
+  return `<span class="badge ${cls}">${escapeHtml(s)}</span>`;
+}
+
+function actionBadge(t) {
+  const valid = ['pause', 'scale_budget', 'reallocate', 'rotate_creative', 'noop'];
+  const cls = valid.includes(t) ? t : 'noop';
+  return `<span class="badge ${cls}">${escapeHtml(t)}</span>`;
+}
+
+async function fetchJson(path) {
+  const r = await fetch(API_BASE + path, { credentials: 'same-origin' });
+  const ct = r.headers.get('Content-Type') || '';
+  const isJson = ct.includes('application/json');
+  const data = isJson ? await r.json() : { error: await r.text() };
+  return { status: r.status, ok: r.ok, data };
+}
+
+async function refreshAll() {
+  document.getElementById('last-refresh').textContent = 'Refreshing...';
+  await Promise.all([loadStatus(), loadRuns()]);
+  await loadDecisions('');
+  document.getElementById('last-refresh').textContent = 'Last refresh: ' + fmtTs(new Date().toISOString());
+}
+
+async function loadStatus() {
+  const grid = document.getElementById('status-grid');
+  const banner = document.getElementById('setup-banner-host');
+  const { status, ok, data } = await fetchJson('/runs');
+
+  if (status === 503 && data.configured === false) {
+    banner.innerHTML = `
+      <div class="setup-banner">
+        ⚠ <b>Worker chưa được cấu hình.</b> Sau khi deploy FB Ads Auto Agent worker, set 2 biến môi trường trên Cloudflare Pages:
+        <ul style="margin:6px 0 0;padding-left:22px">
+          <li><code>AI_FB_AGENT_WORKER_URL</code> — vd <code>https://fb-ads-auto-agent.YOUR_SUBDOMAIN.workers.dev</code></li>
+          <li><code>AI_FB_AGENT_API_KEY</code> — 8 ký tự cuối của <code>ANTHROPIC_API_KEY</code> dùng cho worker (auth gate <code>/run</code>)</li>
+        </ul>
+        Xem hướng dẫn deploy chi tiết: <code>fb-ads-auto-agent/docs/SETUP.md</code>
+      </div>
+    `;
+    grid.innerHTML = '<div class="empty-state warn">Worker chưa cấu hình — xem banner ở trên.</div>';
+    return;
+  }
+
+  banner.innerHTML = '';
+
+  if (!ok) {
+    grid.innerHTML = `<div class="empty-state err">⚠ ${escapeHtml(data.error || 'HTTP ' + status)}</div>`;
+    return;
+  }
+
+  const runs = Array.isArray(data) ? data : [];
+  const lastRun = runs[0];
+  const todayYmd = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+  const todaySpend = lastRun && lastRun.started_at && lastRun.started_at.slice(0, 10) === todayYmd
+    ? (lastRun.daily_spend_usd || 0) : 0;
+  const todayDecisions = runs
+    .filter(r => r.started_at && r.started_at.slice(0, 10) === todayYmd)
+    .reduce((s, r) => s + (r.decisions_made || 0), 0);
+  const todayExecuted = runs
+    .filter(r => r.started_at && r.started_at.slice(0, 10) === todayYmd)
+    .reduce((s, r) => s + (r.actions_executed || 0), 0);
+  const monthCost = runs.reduce((s, r) => s + (r.haiku_cost_usd || 0), 0);
+
+  const spendClass = todaySpend > 8 ? 'err' : (todaySpend > 5 ? 'warn' : 'ok');
+  const lastStatusClass = lastRun
+    ? (lastRun.status === 'success' ? 'ok' : (lastRun.status === 'error' ? 'err' : 'warn'))
+    : '';
+
+  grid.innerHTML = `
+    <div class="stat-card ${lastStatusClass}">
+      <div class="label">Last run</div>
+      <div class="value" style="font-size:14px">${lastRun ? statusBadge(lastRun.status) : '—'}</div>
+      <div class="sub">${lastRun ? fmtTs(lastRun.started_at) : 'No data'}</div>
+    </div>
+    <div class="stat-card ${spendClass}">
+      <div class="label">Daily spend (today)</div>
+      <div class="value">$${todaySpend.toFixed(2)}</div>
+      <div class="sub">cap $10 · usage ${(todaySpend / 10 * 100).toFixed(0)}%</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Decisions today</div>
+      <div class="value">${todayDecisions}</div>
+      <div class="sub">${todayExecuted} executed</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Haiku cost (last 30 runs)</div>
+      <div class="value">$${monthCost.toFixed(3)}</div>
+      <div class="sub">${runs.length} runs</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Next cron (ICT)</div>
+      <div class="value" style="font-size:14px">${nextCronVn()}</div>
+      <div class="sub">9h · 12h · 15h · 18h</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Ad account</div>
+      <div class="value" style="font-size:13.5px">906015559004892</div>
+      <div class="sub">DoscomMart (loan)</div>
+    </div>
+  `;
+}
+
+function nextCronVn() {
+  const now = new Date(Date.now() + 7 * 3600 * 1000);
+  const h = now.getUTCHours();
+  const m = now.getUTCMinutes();
+  const slots = [9, 12, 15, 18];
+  const nextSlot = slots.find(s => s > h || (s === h && m === 0));
+  return nextSlot ? `${nextSlot}h hôm nay` : '9h ngày mai';
+}
+
+async function loadRuns() {
+  const wrap = document.getElementById('runs-table');
+  const sel = document.getElementById('run-filter');
+  const { status, ok, data } = await fetchJson('/runs');
+  if (status === 503) { wrap.innerHTML = ''; return; }
+  if (!ok) {
+    wrap.innerHTML = `<div class="empty-state err">⚠ ${escapeHtml(data.error || 'HTTP ' + status)}</div>`;
+    return;
+  }
+  const runs = Array.isArray(data) ? data : [];
+  if (!runs.length) {
+    wrap.innerHTML = '<div class="empty-state">Chưa có run nào. Agent sẽ chạy lúc 9h / 12h / 15h / 18h ICT.</div>';
+    sel.innerHTML = '<option value="">50 decisions gần nhất</option>';
+    return;
+  }
+
+  sel.innerHTML = '<option value="">50 decisions gần nhất</option>' +
+    runs.slice(0, 30).map(r => `<option value="${r.id}">Run #${r.id} · ${fmtTs(r.started_at)}</option>`).join('');
+
+  wrap.innerHTML = `
+    <div style="overflow-x:auto">
+    <table class="runs">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Started</th>
+          <th>Status</th>
+          <th style="text-align:right">Campaigns</th>
+          <th style="text-align:right">Decisions</th>
+          <th style="text-align:right">Executed</th>
+          <th style="text-align:right">Spend</th>
+          <th style="text-align:right">Cost</th>
+          <th>Error</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${runs.map(r => `
+          <tr>
+            <td><b>${r.id}</b></td>
+            <td>${fmtTs(r.started_at)}</td>
+            <td>${statusBadge(r.status)}</td>
+            <td style="text-align:right">${r.campaigns_seen ?? '—'}</td>
+            <td style="text-align:right">${r.decisions_made ?? '—'}</td>
+            <td style="text-align:right">${r.actions_executed ?? '—'}</td>
+            <td style="text-align:right">$${(r.daily_spend_usd || 0).toFixed(2)}</td>
+            <td style="text-align:right">$${(r.haiku_cost_usd || 0).toFixed(4)}</td>
+            <td style="font-size:11px;color:var(--err)">${escapeHtml(r.error_message || '')}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    </div>
+  `;
+}
+
+async function loadDecisions(runId) {
+  const wrap = document.getElementById('decisions-table');
+  const path = runId ? `/decisions?run_id=${encodeURIComponent(runId)}` : '/decisions';
+  const { status, ok, data } = await fetchJson(path);
+  if (status === 503) { wrap.innerHTML = ''; return; }
+  if (!ok) {
+    wrap.innerHTML = `<div class="empty-state err">⚠ ${escapeHtml(data.error || 'HTTP ' + status)}</div>`;
+    return;
+  }
+  const decisions = Array.isArray(data) ? data : [];
+  if (!decisions.length) {
+    wrap.innerHTML = '<div class="empty-state">Chưa có decision nào.</div>';
+    return;
+  }
+  wrap.innerHTML = `
+    <div style="overflow-x:auto">
+    <table class="decisions">
+      <thead>
+        <tr>
+          <th>Run</th>
+          <th>Time</th>
+          <th>Action</th>
+          <th>Campaign / Adset / Ad</th>
+          <th>Executed?</th>
+          <th>Reasoning + payload</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${decisions.map(d => {
+          const payload = (() => { try { return JSON.parse(d.action_payload || '{}'); } catch { return {}; } })();
+          const payloadStr = Object.keys(payload).length
+            ? `<details><summary>payload</summary><pre style="margin:4px 0 0;font-size:11px;background:#fafafa;padding:6px;border-radius:4px;overflow-x:auto">${escapeHtml(JSON.stringify(payload, null, 2))}</pre></details>` : '';
+          const blocked = d.blocked_reason
+            ? `<div style="font-size:11px;color:var(--err);margin-top:3px">⛔ ${escapeHtml(d.blocked_reason)}</div>` : '';
+          const executedBadge = d.executed
+            ? '<span class="badge success">YES</span>'
+            : '<span class="badge killswitch">NO</span>';
+          return `
+            <tr>
+              <td>#${d.run_id}</td>
+              <td>${fmtTs(d.created_at)}</td>
+              <td>${actionBadge(d.action_type)}</td>
+              <td style="max-width:280px">
+                <div style="font-weight:600">${escapeHtml(d.campaign_name || d.campaign_id || '—')}</div>
+                ${d.adset_id ? `<div style="font-size:11px;color:var(--gray-500)">adset: ${escapeHtml(d.adset_id)}</div>` : ''}
+                ${d.ad_id ? `<div style="font-size:11px;color:var(--gray-500)">ad: ${escapeHtml(d.ad_id)}</div>` : ''}
+              </td>
+              <td>${executedBadge}${blocked}</td>
+              <td style="max-width:420px">
+                <div class="reasoning">${escapeHtml(d.reasoning || '')}</div>
+                ${payloadStr}
+              </td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+    </div>
+  `;
+}
+
+async function triggerRun() {
+  const btn = document.getElementById('trigger-btn');
+  const out = document.getElementById('action-result');
+  btn.disabled = true;
+  out.textContent = '⏳ Đang trigger run...';
+  try {
+    const { ok, data } = await fetchJson('/run');
+    if (ok) {
+      out.innerHTML = `✅ Done. Run #${data.run_id || '?'} · ${data.decisions_made || 0} decisions · ${data.actions_executed || 0} executed`;
+      await refreshAll();
+    } else {
+      out.innerHTML = `❌ ${escapeHtml(data.error || 'Failed')}`;
+    }
+  } catch (e) {
+    out.innerHTML = `❌ ${escapeHtml(e.message)}`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function toggleKillswitch() {
+  const out = document.getElementById('action-result');
+  out.innerHTML = '⚠ Killswitch chỉ toggle được qua CLI để tránh tai nạn:<br><code>npx wrangler kv key put --binding=AGENT_KV AGENT_KILLSWITCH 1 --remote</code><br>(xóa: thay <code>put ... 1</code> bằng <code>delete</code>)';
+}
+
+refreshAll();
+setInterval(refreshAll, 60000);
+</script>
+</body>
+</html>

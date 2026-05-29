@@ -84,6 +84,8 @@ github-repo/
 
 | Tên | Loại | Dùng cho |
 |---|---|---|
+| `AI_FB_AGENT_WORKER_URL` | Plaintext | URL Worker fb-ads-auto-agent (proxy cho tab "AI FB AGENT FULL AUTO") |
+| `AI_FB_AGENT_API_KEY` | Secret | 8 ký tự cuối ANTHROPIC_API_KEY của Worker (gate cho /run endpoint) |
 | `ANTHROPIC_API_KEY` | Secret | Claude Sonnet 4.6 |
 | `CF_ACCOUNT_ID` | Plaintext | URL AI Gateway |
 | `FB_ACCESS_TOKEN` | Secret | Meta Marketing API (60 ngày hết hạn) |
