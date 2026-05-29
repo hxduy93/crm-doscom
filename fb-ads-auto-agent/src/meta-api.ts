@@ -1,0 +1,326 @@
+import type { AdInsight, AdsetInsight, CampaignInsight, Env } from "./types";
+
+const GRAPH_BASE = "https://graph.facebook.com/v21.0";
+
+async function graphGet<T>(
+  path: string,
+  token: string,
+  params: Record<string, string> = {}
+): Promise<T> {
+  const url = new URL(`${GRAPH_BASE}${path}`);
+  url.searchParams.set("access_token", token);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  const r = await fetch(url.toString());
+  const j = (await r.json()) as { error?: { message: string } } & T;
+  if (!r.ok || (j as { error?: { message: string } }).error) {
+    throw new Error(
+      `Meta GET ${path}: ${
+        (j as { error?: { message: string } }).error?.message ?? r.status
+      }`
+    );
+  }
+  return j;
+}
+
+async function graphPost<T>(
+  path: string,
+  token: string,
+  body: Record<string, string>
+): Promise<T> {
+  const r = await fetch(`${GRAPH_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ ...body, access_token: token }).toString(),
+  });
+  const j = (await r.json()) as { error?: { message: string } } & T;
+  if (!r.ok || (j as { error?: { message: string } }).error) {
+    throw new Error(
+      `Meta POST ${path}: ${
+        (j as { error?: { message: string } }).error?.message ?? r.status
+      }`
+    );
+  }
+  return j;
+}
+
+interface MetaPaged<T> {
+  data: T[];
+  paging?: { next?: string };
+}
+
+async function graphGetAll<T>(
+  path: string,
+  token: string,
+  params: Record<string, string> = {}
+): Promise<T[]> {
+  const out: T[] = [];
+  let url: string | null = `${GRAPH_BASE}${path}`;
+  let p: Record<string, string> | null = { ...params, access_token: token };
+  while (url) {
+    const reqUrl = p
+      ? `${url}?${new URLSearchParams(p).toString()}`
+      : url;
+    const r = await fetch(reqUrl);
+    const j = (await r.json()) as MetaPaged<T> & { error?: { message: string } };
+    if (!r.ok || j.error) {
+      throw new Error(`Meta paged ${path}: ${j.error?.message ?? r.status}`);
+    }
+    out.push(...j.data);
+    url = j.paging?.next ?? null;
+    p = null;
+  }
+  return out;
+}
+
+interface MetaCampaign {
+  id: string;
+  name: string;
+  status: string;
+  objective: string;
+  daily_budget?: string;
+  lifetime_budget?: string;
+}
+
+interface MetaAdset {
+  id: string;
+  name: string;
+  status: string;
+  daily_budget?: string;
+  campaign_id: string;
+}
+
+interface MetaAd {
+  id: string;
+  name: string;
+  status: string;
+  adset_id: string;
+  creative?: { id: string };
+}
+
+interface MetaInsight {
+  spend?: string;
+  impressions?: string;
+  clicks?: string;
+  ctr?: string;
+  cpc?: string;
+  cpm?: string;
+  frequency?: string;
+  actions?: { action_type: string; value: string }[];
+  action_values?: { action_type: string; value: string }[];
+  date_start?: string;
+  date_stop?: string;
+}
+
+function pickConversions(actions?: { action_type: string; value: string }[]): number {
+  if (!actions) return 0;
+  const types = ["purchase", "offsite_conversion.fb_pixel_purchase", "onsite_conversion.purchase", "lead", "offsite_conversion.fb_pixel_lead"];
+  let n = 0;
+  for (const a of actions) if (types.includes(a.action_type)) n += Number(a.value) || 0;
+  return n;
+}
+
+function pickRevenue(values?: { action_type: string; value: string }[]): number {
+  if (!values) return 0;
+  let v = 0;
+  for (const a of values) if (a.action_type.includes("purchase")) v += Number(a.value) || 0;
+  return v;
+}
+
+export async function fetchCampaignInsights(
+  env: Env,
+  daysBack = 7
+): Promise<CampaignInsight[]> {
+  const token = env.FB_SYSTEM_USER_TOKEN;
+  const acct = env.AD_ACCOUNT_ID.startsWith("act_")
+    ? env.AD_ACCOUNT_ID
+    : `act_${env.AD_ACCOUNT_ID}`;
+  const usdVnd = Number(env.USD_VND_RATE) || 25400;
+
+  const campaigns = await graphGetAll<MetaCampaign>(
+    `/${acct}/campaigns`,
+    token,
+    {
+      fields: "id,name,status,objective,daily_budget,lifetime_budget",
+      effective_status: '["ACTIVE","PAUSED"]',
+      limit: "100",
+    }
+  );
+
+  const out: CampaignInsight[] = [];
+  for (const c of campaigns) {
+    if (c.status !== "ACTIVE") continue;
+
+    const cInsightArr = await graphGetAll<MetaInsight>(
+      `/${c.id}/insights`,
+      token,
+      {
+        fields:
+          "spend,impressions,clicks,ctr,cpc,cpm,actions,action_values",
+        date_preset: daysBack <= 7 ? "last_7d" : "last_14d",
+        level: "campaign",
+      }
+    );
+    const cIns = cInsightArr[0] ?? {};
+
+    const adsets = await graphGetAll<MetaAdset>(
+      `/${c.id}/adsets`,
+      token,
+      {
+        fields: "id,name,status,daily_budget,campaign_id",
+        limit: "50",
+      }
+    );
+
+    const adsetOut: AdsetInsight[] = [];
+    for (const s of adsets) {
+      if (s.status !== "ACTIVE") continue;
+      const sIns =
+        (await graphGetAll<MetaInsight>(`/${s.id}/insights`, token, {
+          fields: "spend,impressions,clicks,ctr,actions",
+          date_preset: daysBack <= 7 ? "last_7d" : "last_14d",
+          level: "adset",
+        }))[0] ?? {};
+
+      const ads = await graphGetAll<MetaAd>(`/${s.id}/ads`, token, {
+        fields: "id,name,status,adset_id,creative{id}",
+        limit: "30",
+      });
+
+      const adOut: AdInsight[] = [];
+      for (const a of ads) {
+        if (a.status !== "ACTIVE") continue;
+        const aIns =
+          (await graphGetAll<MetaInsight>(`/${a.id}/insights`, token, {
+            fields: "spend,impressions,ctr,frequency,actions",
+            date_preset: daysBack <= 7 ? "last_7d" : "last_14d",
+            level: "ad",
+          }))[0] ?? {};
+        const spendVnd = Number(aIns.spend) || 0;
+        const spendUsd = spendVnd / usdVnd;
+        const conv = pickConversions(aIns.actions);
+        adOut.push({
+          ad_id: a.id,
+          ad_name: a.name,
+          status: a.status,
+          creative_id: a.creative?.id ?? "",
+          spend_usd: round2(spendUsd),
+          impressions: Number(aIns.impressions) || 0,
+          ctr: Number(aIns.ctr) || 0,
+          conversions: conv,
+          cpa_usd: conv > 0 ? round2(spendUsd / conv) : 0,
+          frequency: Number(aIns.frequency) || 0,
+        });
+      }
+
+      const sSpendVnd = Number(sIns.spend) || 0;
+      const sSpendUsd = sSpendVnd / usdVnd;
+      const sConv = pickConversions(sIns.actions);
+      adsetOut.push({
+        adset_id: s.id,
+        adset_name: s.name,
+        status: s.status,
+        daily_budget_cents: Number(s.daily_budget) || 0,
+        spend_usd: round2(sSpendUsd),
+        impressions: Number(sIns.impressions) || 0,
+        clicks: Number(sIns.clicks) || 0,
+        ctr: Number(sIns.ctr) || 0,
+        conversions: sConv,
+        cpa_usd: sConv > 0 ? round2(sSpendUsd / sConv) : 0,
+        ads: adOut,
+      });
+    }
+
+    const cSpendVnd = Number(cIns.spend) || 0;
+    const cSpendUsd = cSpendVnd / usdVnd;
+    const cConv = pickConversions(cIns.actions);
+    const cRev = pickRevenue(cIns.action_values) / usdVnd;
+    out.push({
+      campaign_id: c.id,
+      campaign_name: c.name,
+      objective: c.objective,
+      status: c.status,
+      daily_budget_cents: Number(c.daily_budget) || 0,
+      lifetime_budget_cents: Number(c.lifetime_budget) || 0,
+      spend_usd: round2(cSpendUsd),
+      impressions: Number(cIns.impressions) || 0,
+      clicks: Number(cIns.clicks) || 0,
+      ctr: Number(cIns.ctr) || 0,
+      cpc_usd: Number(cIns.cpc) ? round2(Number(cIns.cpc) / usdVnd) : 0,
+      cpm_usd: Number(cIns.cpm) ? round2(Number(cIns.cpm) / usdVnd) : 0,
+      conversions: cConv,
+      cpa_usd: cConv > 0 ? round2(cSpendUsd / cConv) : 0,
+      roas: cSpendUsd > 0 ? round2(cRev / cSpendUsd) : 0,
+      days: daysBack,
+      adsets: adsetOut,
+    });
+  }
+  return out;
+}
+
+export async function fetchTodaySpendUsd(env: Env): Promise<number> {
+  const token = env.FB_SYSTEM_USER_TOKEN;
+  const acct = env.AD_ACCOUNT_ID.startsWith("act_")
+    ? env.AD_ACCOUNT_ID
+    : `act_${env.AD_ACCOUNT_ID}`;
+  const usdVnd = Number(env.USD_VND_RATE) || 25400;
+
+  const ins = await graphGetAll<MetaInsight>(
+    `/${acct}/insights`,
+    token,
+    {
+      fields: "spend",
+      date_preset: "today",
+      level: "account",
+    }
+  );
+  const vnd = Number(ins[0]?.spend) || 0;
+  return round2(vnd / usdVnd);
+}
+
+export async function pauseCampaign(env: Env, campaignId: string) {
+  return graphPost<{ success: boolean }>(`/${campaignId}`, env.FB_SYSTEM_USER_TOKEN, {
+    status: "PAUSED",
+  });
+}
+
+export async function pauseAdset(env: Env, adsetId: string) {
+  return graphPost<{ success: boolean }>(`/${adsetId}`, env.FB_SYSTEM_USER_TOKEN, {
+    status: "PAUSED",
+  });
+}
+
+export async function pauseAd(env: Env, adId: string) {
+  return graphPost<{ success: boolean }>(`/${adId}`, env.FB_SYSTEM_USER_TOKEN, {
+    status: "PAUSED",
+  });
+}
+
+export async function updateCampaignBudgetUsd(
+  env: Env,
+  campaignId: string,
+  newBudgetUsd: number
+) {
+  const usdVnd = Number(env.USD_VND_RATE) || 25400;
+  const newDailyVnd = Math.round(newBudgetUsd * usdVnd);
+  return graphPost<{ success: boolean }>(`/${campaignId}`, env.FB_SYSTEM_USER_TOKEN, {
+    daily_budget: String(newDailyVnd),
+  });
+}
+
+export async function updateAdsetBudgetUsd(
+  env: Env,
+  adsetId: string,
+  newBudgetUsd: number
+) {
+  const usdVnd = Number(env.USD_VND_RATE) || 25400;
+  const newDailyVnd = Math.round(newBudgetUsd * usdVnd);
+  return graphPost<{ success: boolean }>(`/${adsetId}`, env.FB_SYSTEM_USER_TOKEN, {
+    daily_budget: String(newDailyVnd),
+  });
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+export { graphGet, graphPost };

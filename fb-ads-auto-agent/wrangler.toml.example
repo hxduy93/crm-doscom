@@ -1,0 +1,46 @@
+# COPY THIS FILE → wrangler.toml AND FILL IN ACTUAL IDS
+# wrangler.toml is gitignored (per Cloudflare Pages constraint, see top-level memory)
+
+name = "fb-ads-auto-agent"
+main = "src/index.ts"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Cron: 9h, 12h, 15h, 18h ICT (UTC+7) = 2,5,8,11 UTC
+[triggers]
+crons = ["0 2,5,8,11 * * *"]
+
+[vars]
+# === HARD GUARDRAILS — agent KHÔNG được override ===
+# Whitelist: chỉ 1 ad account duy nhất
+# Account 906015559004892 (DoscomMart) — loaned from PHUONG_NAM / MAY_DO group cho AI test từ 2026-05-29
+AD_ACCOUNT_ID = "act_906015559004892"
+# Daily spend cap (USD). Vượt → block mọi action tăng budget
+DAILY_SPEND_CAP_USD = "10"
+# Max % thay đổi budget mỗi campaign mỗi run (e.g. 0.30 = 30%)
+MAX_BUDGET_DELTA_PCT = "0.30"
+# Tỷ giá USD→VND để compute spend cap (FB trả VND, cap tính USD)
+USD_VND_RATE = "25400"
+# Email nhận notification (Gmail MCP service account)
+NOTIFY_EMAIL = "doscom.vietnam@gmail.com"
+# Min spend trước khi agent được phép quyết định (tránh decision trên data quá ít)
+MIN_SPEND_PER_CAMPAIGN_USD = "2"
+# Set "true" để chạy SHADOW mode (log decisions, KHÔNG execute) — toggle nóng qua CF dashboard
+SHADOW_MODE = "false"
+
+# === D1 binding ===
+[[d1_databases]]
+binding = "DB"
+database_name = "fb_agent_decisions"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+# === KV binding (killswitch + state) ===
+[[kv_namespaces]]
+binding = "AGENT_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# === Secrets (set via: wrangler secret put NAME) ===
+# - FB_SYSTEM_USER_TOKEN  → Meta long-lived System User access token
+# - ANTHROPIC_API_KEY     → Haiku 4.5 API key (sk-ant-…)
+# - GMAIL_APP_PASSWORD    → Gmail SMTP app password cho NOTIFY_EMAIL
+# (KHÔNG đưa secret vào file này. Đặt riêng bằng `wrangler secret put`)
