@@ -1724,6 +1724,25 @@ function NomaOrdersTable() {
           </tbody>
         </table>
 
+        {(() => {
+          const single = (data.by_combo.find(c => c.combo === 'le-911') || {}).orders || 0;
+          const comboN = data.by_combo.filter(c => c.combo === 'combo-911-922' || c.combo === 'combo-2x911').reduce((s, c) => s + (c.orders || 0), 0);
+          const tot = data.summary.orders || (single + comboN) || 1;
+          const ps = Math.round(single / tot * 100), pc = Math.round(comboN / tot * 100);
+          return (
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="bg-sky-50 rounded-xl p-3 border border-sky-100">
+                <div className="text-xs text-gray-500">Đơn lẻ (1 chai NOMA 911)</div>
+                <div className="text-xl font-bold text-sky-700">{num(single)} <span className="text-sm font-normal text-gray-500">đơn · {ps}%</span></div>
+              </div>
+              <div className="bg-violet-50 rounded-xl p-3 border border-violet-100">
+                <div className="text-xs text-gray-500">Đơn combo (911+922 &amp; 2 chai 911)</div>
+                <div className="text-xl font-bold text-violet-700">{num(comboN)} <span className="text-sm font-normal text-gray-500">đơn · {pc}%</span></div>
+              </div>
+            </div>
+          );
+        })()}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Theo nhân sự</p>
