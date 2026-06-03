@@ -1649,20 +1649,29 @@ function ExportReportButton({ dateRange }) {
 // Tự chứa: fetch /api/noma911/stats (gate session sẵn), render summary + combo + nhân sự + nguồn.
 // =============================================================
 function NomaOrdersTable() {
+  const NOMA_FILTERS = [
+    { key: "today", label: "Hôm nay" },
+    { key: "yesterday", label: "Hôm qua" },
+    { key: "thisweek", label: "Tuần này" },
+    { key: "lastweek", label: "Tuần trước" },
+    { key: "thismonth", label: "Tháng này" },
+    { key: "lastmonth", label: "Tháng trước" },
+  ]
   const [data, setData] = useState(null)
-  const [days, setDays] = useState(30)
+  const [tf, setTf] = useState("thismonth")
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState("")
 
   React.useEffect(() => {
     let cancelled = false
     setLoading(true); setErr("")
-    fetch("/api/noma911/stats?days=" + days, { credentials: "same-origin" })
+    const rg = getDateRange(tf)
+    fetch("/api/noma911/stats?from=" + rg.start + "&to=" + rg.end, { credentials: "same-origin" })
       .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
       .then(d => { if (cancelled) return; if (d.error) throw new Error(d.error); setData(d); setLoading(false) })
       .catch(e => { if (!cancelled) { setErr(e.message); setLoading(false) } })
     return () => { cancelled = true }
-  }, [days])
+  }, [tf])
 
   const vnd = n => (n || 0).toLocaleString("vi-VN") + "₫"
   const num = n => (n || 0).toLocaleString("vi-VN")
@@ -1674,12 +1683,19 @@ function NomaOrdersTable() {
           <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">📊 Đơn đăng ký NOMA 911 (landing)</h3>
           <p className="text-xs text-gray-400">Đơn submit form thành công — khách điền đủ thông tin → trang cảm ơn</p>
         </div>
-        <select value={days} onChange={e => setDays(Number(e.target.value))} className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white">
-          <option value={7}>7 ngày qua</option>
-          <option value={30}>30 ngày qua</option>
-          <option value={90}>90 ngày qua</option>
-          <option value={365}>365 ngày qua</option>
-        </select>
+        <div className="flex flex-wrap gap-1.5">
+          {NOMA_FILTERS.map(f => (
+            <button
+              key={f.key}
+              onClick={() => setTf(f.key)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                tf === f.key ? "bg-blue-600 text-white shadow-sm" : "bg-white text-gray-600 border border-gray-200 hover:bg-blue-50"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading && <div className="text-center text-gray-400 py-6 text-sm">Đang tải…</div>}
