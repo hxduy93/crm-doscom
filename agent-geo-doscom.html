@@ -145,7 +145,13 @@
   <!-- ═══════════════ TREND CHART ═══════════════ -->
   <div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
     <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-semibold text-gray-900">Trend Share-of-Voice theo engine</h2>
+      <div class="flex items-center gap-3">
+        <h2 class="text-lg font-semibold text-gray-900">Trend Share-of-Voice theo engine</h2>
+        <div class="inline-flex rounded-lg overflow-hidden border border-gray-300">
+          <button class="trend-brand-tab px-3 py-1 text-xs font-semibold bg-blue-600 text-white" data-brand="doscom">🏪 Doscom</button>
+          <button class="trend-brand-tab px-3 py-1 text-xs font-semibold bg-gray-100 text-gray-700" data-brand="noma">🚗 NOMA</button>
+        </div>
+      </div>
       <div class="flex gap-3 text-xs">
         <label class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded" style="background:#10b981"></span>ChatGPT</label>
         <label class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded" style="background:#3b82f6"></span>Gemini</label>
@@ -409,6 +415,8 @@ let currentDays = 7;
 let currentEngine = "";
 let currentMentionFilter = "";
 let currentWorstBrand = "doscom";
+let currentTrendBrand = "doscom";
+let lastDailySov = [];
 let trendChart = null;
 
 const fmtPct = (n) => (n === null || n === undefined) ? "—" : (n * 100).toFixed(1) + "%";
@@ -446,8 +454,12 @@ function renderKpis(summary) {
 // ============================================================
 // Render: Trend chart
 // ============================================================
-function renderTrendChart(dailySov) {
+function renderTrendChart(dailySov, brand = currentTrendBrand) {
+  lastDailySov = dailySov;
   const ctx = document.getElementById("trend-chart").getContext("2d");
+
+  const sovKey = brand === "noma" ? "noma_sov" : "doscom_sov";
+  const brandLabel = brand === "noma" ? "NOMA" : "Doscom";
 
   // Group by day, then by engine
   const days = [...new Set(dailySov.map(d => d.day))].sort();
@@ -458,7 +470,7 @@ function renderTrendChart(dailySov) {
     label: eng,
     data: days.map(day => {
       const row = dailySov.find(d => d.day === day && d.engine === eng);
-      return row ? (row.doscom_sov || 0) * 100 : 0;
+      return row ? (row[sovKey] || 0) * 100 : 0;
     }),
     borderColor: colors[eng],
     backgroundColor: colors[eng] + "20",
@@ -477,11 +489,11 @@ function renderTrendChart(dailySov) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          callbacks: { label: ctx => ctx.dataset.label + ": " + ctx.parsed.y.toFixed(1) + "% Doscom SoV" }
+          callbacks: { label: ctx => ctx.dataset.label + ": " + ctx.parsed.y.toFixed(1) + "% " + brandLabel + " SoV" }
         }
       },
       scales: {
-        y: { beginAtZero: true, ticks: { callback: v => v + "%" }, title: { display: true, text: "Doscom Share-of-Voice" } },
+        y: { beginAtZero: true, ticks: { callback: v => v + "%" }, title: { display: true, text: brandLabel + " Share-of-Voice" } },
         x: { title: { display: false } }
       }
     }
@@ -665,6 +677,21 @@ document.getElementById("filter-engine").addEventListener("change", e => {
 document.getElementById("filter-mention").addEventListener("change", e => {
   currentMentionFilter = e.target.value;
   loadAll();
+});
+
+document.querySelectorAll(".trend-brand-tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    currentTrendBrand = btn.dataset.brand;
+    document.querySelectorAll(".trend-brand-tab").forEach(b => {
+      const active = b.dataset.brand === currentTrendBrand;
+      b.classList.toggle("bg-blue-600", active);
+      b.classList.toggle("text-white", active);
+      b.classList.toggle("bg-gray-100", !active);
+      b.classList.toggle("text-gray-700", !active);
+    });
+    // Re-render từ data đã load, không fetch lại
+    if (lastDailySov.length) renderTrendChart(lastDailySov, currentTrendBrand);
+  });
 });
 
 document.querySelectorAll(".worst-tab").forEach(btn => {

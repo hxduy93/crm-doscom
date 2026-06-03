@@ -22,49 +22,61 @@ export async function onRequestGet(context) {
   const days = Math.min(Math.max(parseInt(url.searchParams.get("days") || "30", 10), 1), 90);
   const from = Math.floor(Date.now() / 1000) - days * 86400;
 
-  // Daily per-engine breakdown
+  // Daily per-engine breakdown.
+  // SoV mỗi brand tính trên MẪU SỐ RIÊNG: chỉ đếm run của query target đúng brand đó
+  // (brand_target = brand hoặc 'both'). Nếu gộp chung tất cả run → SoV bị pha loãng
+  // (vd run noma về chăm sóc xe gần như không bao giờ nhắc Doscom, kéo doscom_sov xuống).
   const { results: daily } = await env.DB.prepare(`
     SELECT
-      date(timestamp, 'unixepoch') as day,
-      engine,
+      date(r.timestamp, 'unixepoch') as day,
+      r.engine,
       COUNT(*) as total_runs,
-      SUM(doscom_mentioned) as doscom_mentions,
-      SUM(noma_mentioned)   as noma_mentions,
-      SUM(brand_url_cited)  as url_cited,
-      ROUND(AVG(CASE WHEN doscom_mentioned = 1 THEN doscom_position END), 2) as avg_doscom_pos,
-      ROUND(AVG(CASE WHEN noma_mentioned   = 1 THEN noma_position   END), 2) as avg_noma_pos,
-      ROUND(SUM(cost_usd), 4) as total_cost
-    FROM geo_runs
-    WHERE timestamp >= ?
-    GROUP BY day, engine
-    ORDER BY day DESC, engine
+      SUM(CASE WHEN q.brand_target IN ('doscom','both') THEN 1 ELSE 0 END) as doscom_runs,
+      SUM(CASE WHEN q.brand_target IN ('doscom','both') THEN r.doscom_mentioned ELSE 0 END) as doscom_mentions,
+      SUM(CASE WHEN q.brand_target IN ('noma','both')   THEN 1 ELSE 0 END) as noma_runs,
+      SUM(CASE WHEN q.brand_target IN ('noma','both')   THEN r.noma_mentioned ELSE 0 END) as noma_mentions,
+      SUM(r.brand_url_cited)  as url_cited,
+      ROUND(AVG(CASE WHEN r.doscom_mentioned = 1 THEN r.doscom_position END), 2) as avg_doscom_pos,
+      ROUND(AVG(CASE WHEN r.noma_mentioned   = 1 THEN r.noma_position   END), 2) as avg_noma_pos,
+      ROUND(SUM(r.cost_usd), 4) as total_cost
+    FROM geo_runs r
+    LEFT JOIN geo_queries q ON q.id = r.query_id
+    WHERE r.timestamp >= ?
+    GROUP BY day, r.engine
+    ORDER BY day DESC, r.engine
   `).bind(from).all();
 
   const daily_sov = daily.map(r => ({
     day: r.day,
     engine: r.engine,
     total_runs: r.total_runs,
+    doscom_runs: r.doscom_runs || 0,
+    noma_runs:   r.noma_runs   || 0,
     doscom_mentions: r.doscom_mentions || 0,
     noma_mentions:   r.noma_mentions   || 0,
-    doscom_sov: r.total_runs ? Number((r.doscom_mentions / r.total_runs).toFixed(4)) : 0,
-    noma_sov:   r.total_runs ? Number((r.noma_mentions   / r.total_runs).toFixed(4)) : 0,
+    doscom_sov: r.doscom_runs ? Number((r.doscom_mentions / r.doscom_runs).toFixed(4)) : 0,
+    noma_sov:   r.noma_runs   ? Number((r.noma_mentions   / r.noma_runs).toFixed(4))   : 0,
     url_citation_rate: r.total_runs ? Number((r.url_cited / r.total_runs).toFixed(4)) : 0,
     avg_doscom_position: r.avg_doscom_pos,
     avg_noma_position:   r.avg_noma_pos,
     cost_usd: r.total_cost || 0,
   }));
 
-  // Overall summary
+  // Overall summary — SoV mỗi brand cũng tính trên mẫu số riêng (run của query target brand đó).
   const summary = await env.DB.prepare(`
     SELECT
       COUNT(*) as total_runs,
-      SUM(doscom_mentioned) as doscom_mentions,
-      SUM(noma_mentioned)   as noma_mentions,
-      SUM(brand_url_cited)  as url_cited,
-      ROUND(SUM(cost_usd), 4) as total_cost,
-      MIN(timestamp) as first_run,
-      MAX(timestamp) as last_run
-    FROM geo_runs WHERE timestamp >= ?
+      SUM(CASE WHEN q.brand_target IN ('doscom','both') THEN 1 ELSE 0 END) as doscom_runs,
+      SUM(CASE WHEN q.brand_target IN ('doscom','both') THEN r.doscom_mentioned ELSE 0 END) as doscom_mentions,
+      SUM(CASE WHEN q.brand_target IN ('noma','both')   THEN 1 ELSE 0 END) as noma_runs,
+      SUM(CASE WHEN q.brand_target IN ('noma','both')   THEN r.noma_mentioned ELSE 0 END) as noma_mentions,
+      SUM(r.brand_url_cited)  as url_cited,
+      ROUND(SUM(r.cost_usd), 4) as total_cost,
+      MIN(r.timestamp) as first_run,
+      MAX(r.timestamp) as last_run
+    FROM geo_runs r
+    LEFT JOIN geo_queries q ON q.id = r.query_id
+    WHERE r.timestamp >= ?
   `).bind(from).first();
 
   // Top 10 competitors
@@ -125,8 +137,10 @@ export async function onRequestGet(context) {
     to: Math.floor(Date.now() / 1000),
     summary: {
       total_runs: summary.total_runs || 0,
-      doscom_sov: summary.total_runs ? Number((summary.doscom_mentions / summary.total_runs).toFixed(4)) : 0,
-      noma_sov:   summary.total_runs ? Number((summary.noma_mentions   / summary.total_runs).toFixed(4)) : 0,
+      doscom_runs: summary.doscom_runs || 0,
+      noma_runs:   summary.noma_runs   || 0,
+      doscom_sov: summary.doscom_runs ? Number((summary.doscom_mentions / summary.doscom_runs).toFixed(4)) : 0,
+      noma_sov:   summary.noma_runs   ? Number((summary.noma_mentions   / summary.noma_runs).toFixed(4))   : 0,
       url_citation_rate: summary.total_runs ? Number((summary.url_cited / summary.total_runs).toFixed(4)) : 0,
       total_cost_usd: summary.total_cost || 0,
       first_run: summary.first_run,
