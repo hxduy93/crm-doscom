@@ -1644,30 +1644,42 @@ function ExportReportButton({ dateRange }) {
 // MAIN COMPONENT
 // =============================================================
 // =============================================================
-// TAB: Landing Builder — tạo/sửa/xem trước landing page (Phase 1: CRUD + preview, chưa publish)
+// TAB: Landing Builder — 1 master prompt -> Gemini sinh khung + gen ảnh Flux (6 ô) -> render landing
 // API: /api/landings (list/create), /api/landings/:id (get/update/delete), /api/landings/preview
 // =============================================================
 function LandingBuilder() {
+  // 6 ô ảnh CỐ ĐỊNH cho mọi landing. type 'gen' = AI gen (có prompt), 'upload' = bạn gửi ảnh thật.
+  const SLOTS = [
+    { key: "hero", label: "Ảnh bìa (hero)", type: "gen" },
+    { key: "product", label: "Ảnh sản phẩm thật", type: "upload" },
+    { key: "usage", label: "Ảnh công dụng / hiệu quả", type: "gen" },
+    { key: "benefit1", label: "Ảnh lợi ích 1", type: "gen" },
+    { key: "benefit2", label: "Ảnh lợi ích 2", type: "gen" },
+    { key: "benefit3", label: "Ảnh lợi ích 3", type: "gen" },
+  ]
   const BLANK = {
     brand: "", title: "", description: "", pixelId: "",
     theme: { primary: "#e11d48", accent: "#f59e0b" },
-    hero: { headline: "", sub: "", image: "", imageMobile: "", badges: [] },
-    benefits: [],
-    products: [{ label: "", value: "sp1", price: 0, oldPrice: 0, default: true }],
-    staff: "", source: "",
-    contact: { hotline: "" },
-    footer: { company: "", address: "" },
+    hero: { headline: "", sub: "", badges: [] },
+    usageTitle: "", usageDesc: "",
+    benefits: [{ icon: "✔", title: "", desc: "" }, { icon: "✔", title: "", desc: "" }, { icon: "✔", title: "", desc: "" }],
+    products: [{ label: "", value: "goi-1", price: 0, oldPrice: 0, default: true }],
     offer: { priceNote: "", countdownMinutes: 0 },
-    thankUrl: "",
+    staff: "", source: "", contact: { hotline: "" }, footer: { company: "", address: "" }, thankUrl: "",
+    imagePrompts: { hero: "", usage: "", benefit1: "", benefit2: "", benefit3: "" },
+    images: {},
   }
 
   const [list, setList] = useState([])
   const [loadingList, setLoadingList] = useState(true)
-  const [editingId, setEditingId] = useState(null)   // null = chưa chọn, 0 = tạo mới
+  const [step, setStep] = useState("list")        // "list" | "input" | "edit"
+  const [masterPrompt, setMasterPrompt] = useState("")
+  const [generating, setGenerating] = useState(false)
+  const [editingId, setEditingId] = useState(null)
   const [slug, setSlug] = useState("")
   const [title, setTitle] = useState("")
-  const [status, setStatus] = useState("draft")
   const [cfg, setCfg] = useState(BLANK)
+  const [busy, setBusy] = useState({})            // {slot: true} khi đang gen/upload
   const [preview, setPreview] = useState("")
   const [msg, setMsg] = useState("")
   const [saving, setSaving] = useState(false)
@@ -1675,217 +1687,317 @@ function LandingBuilder() {
   function loadList() {
     setLoadingList(true)
     fetch("/api/landings", { credentials: "same-origin" })
-      .then(r => r.json())
-      .then(d => { setList(d.landings || []); setLoadingList(false) })
+      .then(r => r.json()).then(d => { setList(d.landings || []); setLoadingList(false) })
       .catch(() => setLoadingList(false))
   }
   React.useEffect(loadList, [])
 
-  // Cập nhật field lồng nhau theo "dot path" (vd "hero.headline").
+  function slugify(s) {
+    return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d")
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 36) || "lp"
+  }
   function setPath(path, val) {
     setCfg(prev => {
       const next = JSON.parse(JSON.stringify(prev))
-      const keys = path.split(".")
-      let o = next
-      for (let i = 0; i < keys.length - 1; i++) o = o[keys[i]]
-      o[keys[keys.length - 1]] = val
+      const ks = path.split("."); let o = next
+      for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]]
+      o[ks[ks.length - 1]] = val
       return next
     })
   }
 
-  // Debounce preview: mỗi khi cfg đổi -> POST /api/landings/preview -> iframe srcDoc
+  // Debounce preview mỗi khi cfg/title đổi (ảnh tham chiếu URL công khai nên preview vẫn nhẹ).
   React.useEffect(() => {
-    const id = setTimeout(() => {
+    if (step !== "edit") return
+    const t = setTimeout(() => {
       fetch("/api/landings/preview", {
-        method: "POST", credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ config: { ...cfg, title: title || cfg.brand } }),
-      })
-        .then(r => r.text())
-        .then(setPreview)
-        .catch(() => {})
-    }, 400)
-    return () => clearTimeout(id)
-  }, [cfg, title])
+      }).then(r => r.text()).then(setPreview).catch(() => {})
+    }, 500)
+    return () => clearTimeout(t)
+  }, [cfg, title, step])
 
-  function openNew() {
-    setEditingId(0); setSlug(""); setTitle(""); setStatus("draft"); setCfg(BLANK); setMsg("")
+  // ---- Bước 1: sinh khung từ master prompt ----
+  function generate() {
+    if (!masterPrompt.trim()) { setMsg("Hãy mô tả sản phẩm trước"); return }
+    setGenerating(true); setMsg("⏳ Đang sinh nội dung bằng Gemini…")
+    fetch("/api/landings/generate", {
+      method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: masterPrompt }),
+    }).then(r => r.json()).then(async d => {
+      if (!d.ok) { setGenerating(false); setMsg("⚠️ " + (d.error || "Sinh khung lỗi")); return }
+      const c = { ...BLANK, ...d.config,
+        theme: { ...BLANK.theme, ...(d.config.theme || {}) }, hero: { ...BLANK.hero, ...(d.config.hero || {}) },
+        offer: { ...BLANK.offer, ...(d.config.offer || {}) }, contact: { ...BLANK.contact, ...(d.config.contact || {}) },
+        footer: { ...BLANK.footer, ...(d.config.footer || {}) },
+        imagePrompts: { ...BLANK.imagePrompts, ...(d.config.imagePrompts || {}) }, images: {} }
+      const t = c.title || c.brand || "Landing"
+      const baseSlug = slugify(c.brand || c.title)
+      setCfg(c); setTitle(t); setSlug(baseSlug)
+      // tạo nháp để lấy id (gen ảnh cần id)
+      try {
+        const L = await createDraft(baseSlug, t, c)
+        setEditingId(L.id); setSlug(L.slug); setStep("edit"); setMsg("✅ Đã sinh khung — chỉnh nội dung & gen ảnh bên dưới")
+      } catch (e) { setMsg("⚠️ " + e.message) }
+      setGenerating(false)
+    }).catch(() => { setGenerating(false); setMsg("⚠️ Lỗi kết nối khi sinh khung") })
   }
+
+  async function createDraft(baseSlug, t, config) {
+    let s = baseSlug
+    for (let i = 0; i < 3; i++) {
+      const r = await fetch("/api/landings", {
+        method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: s, title: t, config }),
+      })
+      const d = await r.json()
+      if (d.ok) return d.landing
+      if ((d.error || "").includes("tồn tại")) { s = baseSlug + "-" + String(Date.now()).slice(-4); continue }
+      throw new Error(d.error || "tạo nháp lỗi")
+    }
+    throw new Error("slug trùng nhiều lần, đổi tên thương hiệu")
+  }
+
+  // Lưu config hiện tại (PUT) — gọi sau mỗi lần gen/upload và khi bấm lưu.
+  function persist(nextCfg) {
+    if (!editingId) return Promise.resolve()
+    return fetch("/api/landings/" + editingId, {
+      method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug: slug.trim().toLowerCase(), title: title.trim() || cfg.brand, config: nextCfg || cfg }),
+    }).then(r => r.json())
+  }
+
+  function genImage(slot) {
+    if (!editingId) { setMsg("Lưu nháp trước khi gen ảnh"); return }
+    const prompt = (cfg.imagePrompts && cfg.imagePrompts[slot]) || ""
+    if (!prompt.trim()) { setMsg("Ô " + slot + " chưa có prompt ảnh"); return }
+    setBusy(b => ({ ...b, [slot]: true })); setMsg("🎨 Đang gen ảnh " + slot + "…")
+    fetch("/api/landings/" + editingId + "/genimage", {
+      method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slot, prompt }),
+    }).then(r => r.json()).then(d => {
+      setBusy(b => ({ ...b, [slot]: false }))
+      if (!d.ok) { setMsg("⚠️ " + (d.error || "gen lỗi")); return }
+      const next = { ...cfg, images: { ...cfg.images, [slot]: d.url } }
+      setCfg(next); persist(next)
+      setMsg(d.free_tier ? "✅ Gen xong (miễn phí)" : ("✅ Gen xong (phí ~$" + d.cost_usd + ")"))
+    }).catch(() => { setBusy(b => ({ ...b, [slot]: false })); setMsg("⚠️ Lỗi gen ảnh") })
+  }
+
+  function uploadImage(slot, file) {
+    if (!editingId) { setMsg("Lưu nháp trước khi upload"); return }
+    if (!file) return
+    setBusy(b => ({ ...b, [slot]: true })); setMsg("⬆️ Đang upload " + slot + "…")
+    const reader = new FileReader()
+    reader.onload = () => {
+      fetch("/api/landings/" + editingId + "/upload", {
+        method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slot, dataUrl: reader.result }),
+      }).then(r => r.json()).then(d => {
+        setBusy(b => ({ ...b, [slot]: false }))
+        if (!d.ok) { setMsg("⚠️ " + (d.error || "upload lỗi")); return }
+        const next = { ...cfg, images: { ...cfg.images, [slot]: d.url } }
+        setCfg(next); persist(next); setMsg("✅ Đã tải ảnh " + slot)
+      }).catch(() => { setBusy(b => ({ ...b, [slot]: false })); setMsg("⚠️ Lỗi upload") })
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function saveAll() {
+    if (!slug.trim()) { setMsg("Cần slug"); return }
+    setSaving(true); setMsg("")
+    persist(cfg).then(d => {
+      setSaving(false)
+      if (d && !d.ok) { setMsg("⚠️ " + (d.error || "lưu lỗi")); return }
+      setMsg("✅ Đã lưu toàn bộ"); loadList()
+    }).catch(() => { setSaving(false); setMsg("⚠️ Lỗi lưu") })
+  }
+
   function openEdit(id) {
     setMsg("")
     fetch("/api/landings/" + id, { credentials: "same-origin" })
-      .then(r => r.json())
-      .then(d => {
+      .then(r => r.json()).then(d => {
         if (!d.ok) { setMsg(d.error || "Lỗi tải"); return }
         const L = d.landing
-        setEditingId(L.id); setSlug(L.slug); setTitle(L.title); setStatus(L.status)
-        setCfg({ ...BLANK, ...L.config, theme: { ...BLANK.theme, ...(L.config.theme || {}) },
-          hero: { ...BLANK.hero, ...(L.config.hero || {}) }, contact: { ...BLANK.contact, ...(L.config.contact || {}) },
-          footer: { ...BLANK.footer, ...(L.config.footer || {}) }, offer: { ...BLANK.offer, ...(L.config.offer || {}) },
-          benefits: L.config.benefits || [], products: (L.config.products && L.config.products.length) ? L.config.products : BLANK.products })
-      })
-      .catch(() => setMsg("Lỗi tải landing"))
+        const c = { ...BLANK, ...L.config,
+          theme: { ...BLANK.theme, ...(L.config.theme || {}) }, hero: { ...BLANK.hero, ...(L.config.hero || {}) },
+          offer: { ...BLANK.offer, ...(L.config.offer || {}) }, contact: { ...BLANK.contact, ...(L.config.contact || {}) },
+          footer: { ...BLANK.footer, ...(L.config.footer || {}) },
+          imagePrompts: { ...BLANK.imagePrompts, ...(L.config.imagePrompts || {}) }, images: L.config.images || {},
+          benefits: (L.config.benefits && L.config.benefits.length) ? L.config.benefits : BLANK.benefits,
+          products: (L.config.products && L.config.products.length) ? L.config.products : BLANK.products }
+        setEditingId(L.id); setSlug(L.slug); setTitle(L.title); setCfg(c); setStep("edit")
+      }).catch(() => setMsg("Lỗi tải landing"))
   }
-
-  function save() {
-    if (!slug.trim()) { setMsg("Cần nhập slug (đường dẫn)"); return }
-    if (!title.trim()) { setMsg("Cần nhập tiêu đề"); return }
-    setSaving(true); setMsg("")
-    const body = JSON.stringify({ slug: slug.trim().toLowerCase(), title: title.trim(), config: cfg })
-    const isNew = !editingId
-    const url = isNew ? "/api/landings" : "/api/landings/" + editingId
-    const method = isNew ? "POST" : "PUT"
-    fetch(url, { method, credentials: "same-origin", headers: { "Content-Type": "application/json" }, body })
-      .then(r => r.json())
-      .then(d => {
-        setSaving(false)
-        if (!d.ok) { setMsg("⚠️ " + (d.error || "Lưu thất bại")); return }
-        setMsg("✅ Đã lưu")
-        if (isNew && d.landing) setEditingId(d.landing.id)
-        loadList()
-      })
-      .catch(() => { setSaving(false); setMsg("⚠️ Lỗi kết nối") })
-  }
-
   function del(id) {
     if (!window.confirm("Xoá landing này?")) return
     fetch("/api/landings/" + id, { method: "DELETE", credentials: "same-origin" })
-      .then(r => r.json())
-      .then(() => { if (editingId === id) setEditingId(null); loadList() })
+      .then(r => r.json()).then(() => { if (editingId === id) { setEditingId(null); setStep("list") } loadList() })
   }
 
-  // Helpers cho mảng products / benefits
-  function addProduct() { setCfg(p => ({ ...p, products: [...p.products, { label: "", value: "sp" + (p.products.length + 1), price: 0, oldPrice: 0, default: false }] })) }
-  function setProduct(i, key, val) { setCfg(p => { const a = p.products.map((x, j) => j === i ? { ...x, [key]: val } : (key === "default" && val ? { ...x, default: false } : x)); return { ...p, products: a } }) }
-  function rmProduct(i) { setCfg(p => ({ ...p, products: p.products.filter((_, j) => j !== i) })) }
-  function addBenefit() { setCfg(p => ({ ...p, benefits: [...p.benefits, { icon: "✔", title: "", desc: "" }] })) }
-  function setBenefit(i, key, val) { setCfg(p => ({ ...p, benefits: p.benefits.map((x, j) => j === i ? { ...x, [key]: val } : x) })) }
-  function rmBenefit(i) { setCfg(p => ({ ...p, benefits: p.benefits.filter((_, j) => j !== i) })) }
-
-  const inputCls = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
-  const labelCls = "block text-xs font-semibold text-gray-600 mb-1"
-  const Field = ({ label, children }) => (<div className="mb-3"><label className={labelCls}>{label}</label>{children}</div>)
+  const inp = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
+  const lbl = "block text-xs font-semibold text-gray-600 mb-1"
+  const F = ({ label, children }) => (<div className="mb-3"><label className={lbl}>{label}</label>{children}</div>)
+  const sec = "text-xs font-bold text-gray-400 uppercase mt-3 mb-2 border-t pt-2"
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-bold text-gray-900">🛠️ Landing Builder</h2>
-          <p className="text-xs text-gray-400">Tạo & xem trước landing page. (Phase 1 — publish/deploy ở phase sau)</p>
+          <p className="text-xs text-gray-400">Điền 1 prompt → AI sinh khung + gợi ý ảnh → chỉnh & gen ảnh → render landing.</p>
         </div>
-        <button onClick={openNew} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700">+ Tạo landing mới</button>
+        <div className="flex gap-2">
+          <button onClick={() => { setStep("input"); setMasterPrompt(""); setEditingId(null); setMsg("") }} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700">✨ Tạo bằng prompt</button>
+          {step !== "list" && <button onClick={() => { setStep("list"); loadList() }} className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-semibold">Danh sách</button>}
+        </div>
       </div>
 
-      {/* DANH SÁCH */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-5">
-        <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Danh sách landing</div>
-        {loadingList ? <div className="text-gray-400 text-sm py-2">Đang tải…</div> : (
-          list.length === 0 ? <div className="text-gray-400 text-sm py-2">Chưa có landing nào. Bấm "Tạo landing mới".</div> : (
-            <div className="divide-y divide-gray-100">
-              {list.map(L => (
-                <div key={L.id} className="flex items-center justify-between py-2">
-                  <div className="min-w-0">
-                    <span className="font-medium text-gray-800">{L.title}</span>
-                    <span className="text-gray-400 text-xs ml-2">/{L.slug}</span>
-                    <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${L.status === "published" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>{L.status === "published" ? "đã publish" : "nháp"}</span>
+      {msg && <div className="mb-3 text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">{msg}</div>}
+
+      {step === "list" && (
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Danh sách landing</div>
+          {loadingList ? <div className="text-gray-400 text-sm py-2">Đang tải…</div> : (
+            list.length === 0 ? <div className="text-gray-400 text-sm py-2">Chưa có landing nào. Bấm "Tạo bằng prompt".</div> : (
+              <div className="divide-y divide-gray-100">
+                {list.map(L => (
+                  <div key={L.id} className="flex items-center justify-between py-2">
+                    <div className="min-w-0">
+                      <span className="font-medium text-gray-800">{L.title}</span>
+                      <span className="text-gray-400 text-xs ml-2">/{L.slug}</span>
+                      <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${L.status === "published" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>{L.status === "published" ? "đã publish" : "nháp"}</span>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button onClick={() => openEdit(L.id)} className="text-blue-600 text-sm hover:underline">Mở</button>
+                      <button onClick={() => del(L.id)} className="text-red-500 text-sm hover:underline">Xoá</button>
+                    </div>
                   </div>
-                  <div className="flex gap-2 flex-shrink-0">
-                    <button onClick={() => openEdit(L.id)} className="text-blue-600 text-sm hover:underline">Sửa</button>
-                    <button onClick={() => del(L.id)} className="text-red-500 text-sm hover:underline">Xoá</button>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+      )}
+
+      {step === "input" && (
+        <div className="bg-white rounded-lg border border-gray-200 p-5 max-w-2xl">
+          <label className={lbl}>Mô tả sản phẩm / ưu đãi (càng rõ càng tốt)</label>
+          <textarea className={inp + " h-40"} value={masterPrompt} onChange={e => setMasterPrompt(e.target.value)}
+            placeholder="VD: Dung dịch tẩy ố kính ô tô NOMA 911. Giá 199k/chai, combo 2 chai 398k. Tẩy sạch ố nước, cặn canxi trên kính lái trong 30 giây, giúp nhìn rõ khi trời mưa. Khách hàng là tài xế ô tô. Giọng điệu tin cậy, nhấn mạnh an toàn khi lái xe." />
+          <button onClick={generate} disabled={generating} className="mt-3 px-5 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50">
+            {generating ? "⏳ Đang sinh khung…" : "✨ Sinh khung landing"}
+          </button>
+          <p className="text-xs text-gray-400 mt-2">AI sẽ tự viết tiêu đề, lợi ích, gói bán + prompt gen ảnh cho 5 ô (trừ ảnh sản phẩm — bạn tự upload).</p>
+        </div>
+      )}
+
+      {step === "edit" && editingId !== null && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* CỘT TRÁI: nội dung + ảnh */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4 max-h-[78vh] overflow-y-auto">
+            <div className="grid grid-cols-2 gap-3">
+              <F label="Slug (đường dẫn)"><input className={inp} value={slug} onChange={e => setSlug(e.target.value)} /></F>
+              <F label="Tiêu đề / SEO"><input className={inp} value={title} onChange={e => setTitle(e.target.value)} /></F>
+            </div>
+
+            <div className={sec}>Ảnh (6 ô cố định)</div>
+            <div className="grid grid-cols-2 gap-3">
+              {SLOTS.map(s => (
+                <div key={s.key} className="border border-gray-200 rounded-lg p-2">
+                  <div className="text-xs font-semibold text-gray-700 mb-1">{s.label} {s.type === "upload" ? "📷" : "🎨"}</div>
+                  <div className="aspect-square bg-gray-50 rounded mb-2 overflow-hidden flex items-center justify-center">
+                    {cfg.images[s.key]
+                      ? <img src={cfg.images[s.key]} alt="" className="w-full h-full object-cover" />
+                      : <span className="text-gray-300 text-xs">{busy[s.key] ? "…" : "chưa có"}</span>}
                   </div>
+                  {s.type === "gen" ? (
+                    <>
+                      <textarea className="w-full border border-gray-200 rounded px-2 py-1 text-xs h-16 mb-1" value={(cfg.imagePrompts && cfg.imagePrompts[s.key]) || ""} onChange={e => setPath("imagePrompts." + s.key, e.target.value)} placeholder="image prompt (English)" />
+                      <button onClick={() => genImage(s.key)} disabled={busy[s.key]} className="w-full text-xs py-1.5 bg-indigo-600 text-white rounded font-semibold disabled:opacity-50">{busy[s.key] ? "…" : (cfg.images[s.key] ? "Gen lại" : "🎨 Gen ảnh")}</button>
+                    </>
+                  ) : (
+                    <label className="block w-full text-xs py-1.5 bg-gray-700 text-white rounded font-semibold text-center cursor-pointer">
+                      {busy[s.key] ? "…" : "📷 Tải ảnh PNG"}
+                      <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={e => uploadImage(s.key, e.target.files[0])} />
+                    </label>
+                  )}
                 </div>
               ))}
             </div>
-          )
-        )}
-      </div>
 
-      {/* EDITOR + PREVIEW */}
-      {editingId !== null && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* FORM */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4 max-h-[75vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-gray-800">{editingId ? "Sửa landing" : "Landing mới"}</h3>
-              {msg && <span className="text-sm">{msg}</span>}
-            </div>
-
+            <div className={sec}>Thương hiệu & Pixel</div>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Slug (đường dẫn) *"><input className={inputCls} value={slug} onChange={e => setSlug(e.target.value)} placeholder="vd: nm911d" /></Field>
-              <Field label="Tiêu đề nội bộ / SEO *"><input className={inputCls} value={title} onChange={e => setTitle(e.target.value)} placeholder="Landing NOMA 911 - Duy" /></Field>
-            </div>
-
-            <div className="text-xs font-bold text-gray-400 uppercase mt-2 mb-2 border-t pt-2">Thương hiệu & Pixel</div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Tên thương hiệu"><input className={inputCls} value={cfg.brand} onChange={e => setPath("brand", e.target.value)} placeholder="NOMA" /></Field>
-              <Field label="Meta Pixel ID"><input className={inputCls} value={cfg.pixelId} onChange={e => setPath("pixelId", e.target.value)} placeholder="2439..." /></Field>
+              <F label="Thương hiệu"><input className={inp} value={cfg.brand} onChange={e => setPath("brand", e.target.value)} /></F>
+              <F label="Meta Pixel ID"><input className={inp} value={cfg.pixelId} onChange={e => setPath("pixelId", e.target.value)} /></F>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Màu chính"><input type="color" className="w-full h-9 border rounded" value={cfg.theme.primary} onChange={e => setPath("theme.primary", e.target.value)} /></Field>
-              <Field label="Màu nhấn"><input type="color" className="w-full h-9 border rounded" value={cfg.theme.accent} onChange={e => setPath("theme.accent", e.target.value)} /></Field>
+              <F label="Màu chính"><input type="color" className="w-full h-9 border rounded" value={cfg.theme.primary} onChange={e => setPath("theme.primary", e.target.value)} /></F>
+              <F label="Màu nhấn"><input type="color" className="w-full h-9 border rounded" value={cfg.theme.accent} onChange={e => setPath("theme.accent", e.target.value)} /></F>
             </div>
 
-            <div className="text-xs font-bold text-gray-400 uppercase mt-2 mb-2 border-t pt-2">Hero</div>
-            <Field label="Tiêu đề lớn (headline)"><input className={inputCls} value={cfg.hero.headline} onChange={e => setPath("hero.headline", e.target.value)} /></Field>
-            <Field label="Mô tả phụ"><input className={inputCls} value={cfg.hero.sub} onChange={e => setPath("hero.sub", e.target.value)} /></Field>
-            <Field label="Ảnh hero (URL)"><input className={inputCls} value={cfg.hero.image} onChange={e => setPath("hero.image", e.target.value)} placeholder="https://…" /></Field>
-            <Field label="Ảnh hero mobile (URL, tuỳ chọn)"><input className={inputCls} value={cfg.hero.imageMobile} onChange={e => setPath("hero.imageMobile", e.target.value)} /></Field>
-            <Field label="Badge (cách nhau dấu phẩy)"><input className={inputCls} value={(cfg.hero.badges || []).join(", ")} onChange={e => setPath("hero.badges", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} placeholder="Chính hãng, Giao nhanh, COD" /></Field>
+            <div className={sec}>Hero</div>
+            <F label="Headline"><input className={inp} value={cfg.hero.headline} onChange={e => setPath("hero.headline", e.target.value)} /></F>
+            <F label="Mô tả phụ"><input className={inp} value={cfg.hero.sub} onChange={e => setPath("hero.sub", e.target.value)} /></F>
+            <F label="Badge (cách nhau dấu phẩy)"><input className={inp} value={(cfg.hero.badges || []).join(", ")} onChange={e => setPath("hero.badges", e.target.value.split(",").map(x => x.trim()).filter(Boolean))} /></F>
 
-            <div className="text-xs font-bold text-gray-400 uppercase mt-2 mb-2 border-t pt-2 flex justify-between items-center">Sản phẩm / Combo <button onClick={addProduct} className="text-blue-600 normal-case font-semibold">+ thêm</button></div>
+            <div className={sec}>Công dụng</div>
+            <F label="Tiêu đề công dụng"><input className={inp} value={cfg.usageTitle} onChange={e => setPath("usageTitle", e.target.value)} /></F>
+            <F label="Mô tả công dụng"><input className={inp} value={cfg.usageDesc} onChange={e => setPath("usageDesc", e.target.value)} /></F>
+
+            <div className={sec}>Lợi ích (3 — khớp ảnh lợi ích 1/2/3)</div>
+            {cfg.benefits.map((b, i) => (
+              <div key={i} className="flex gap-2 mb-2">
+                <input className="w-12 border border-gray-300 rounded px-2 py-2 text-sm text-center" value={b.icon} onChange={e => setPath("benefits." + i + ".icon", e.target.value)} />
+                <div className="flex-1 grid gap-1">
+                  <input className={inp} value={b.title} onChange={e => setPath("benefits." + i + ".title", e.target.value)} placeholder="Tiêu đề" />
+                  <input className={inp} value={b.desc} onChange={e => setPath("benefits." + i + ".desc", e.target.value)} placeholder="Mô tả" />
+                </div>
+              </div>
+            ))}
+
+            <div className={sec + " flex justify-between items-center"}>Gói / Combo
+              <button onClick={() => setCfg(p => ({ ...p, products: [...p.products, { label: "", value: "goi-" + (p.products.length + 1), price: 0, oldPrice: 0, default: false }] }))} className="text-blue-600 normal-case font-semibold">+ thêm</button>
+            </div>
             {cfg.products.map((p, i) => (
               <div key={i} className="border border-gray-200 rounded-lg p-2 mb-2">
                 <div className="flex gap-2 mb-1">
-                  <input className={inputCls} value={p.label} onChange={e => setProduct(i, "label", e.target.value)} placeholder="Tên combo" />
-                  <button onClick={() => rmProduct(i)} className="text-red-500 text-sm px-2">✕</button>
+                  <input className={inp} value={p.label} onChange={e => setPath("products." + i + ".label", e.target.value)} placeholder="Tên gói" />
+                  <button onClick={() => setCfg(pp => ({ ...pp, products: pp.products.filter((_, j) => j !== i) }))} className="text-red-500 text-sm px-2">✕</button>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  <input className={inputCls} value={p.value} onChange={e => setProduct(i, "value", e.target.value)} placeholder="mã (value)" />
-                  <input className={inputCls} type="number" value={p.price} onChange={e => setProduct(i, "price", Number(e.target.value))} placeholder="Giá" />
-                  <input className={inputCls} type="number" value={p.oldPrice} onChange={e => setProduct(i, "oldPrice", Number(e.target.value))} placeholder="Giá gốc" />
+                  <input className={inp} value={p.value} onChange={e => setPath("products." + i + ".value", e.target.value)} placeholder="mã" />
+                  <input className={inp} type="number" value={p.price} onChange={e => setPath("products." + i + ".price", Number(e.target.value))} placeholder="Giá" />
+                  <input className={inp} type="number" value={p.oldPrice} onChange={e => setPath("products." + i + ".oldPrice", Number(e.target.value))} placeholder="Giá gốc" />
                 </div>
-                <label className="flex items-center gap-2 mt-1 text-xs text-gray-600"><input type="radio" name="defaultProduct" checked={!!p.default} onChange={() => setProduct(i, "default", true)} /> Chọn sẵn (mặc định)</label>
+                <label className="flex items-center gap-2 mt-1 text-xs text-gray-600"><input type="radio" name="defP" checked={!!p.default} onChange={() => setCfg(pp => ({ ...pp, products: pp.products.map((x, j) => ({ ...x, default: j === i })) }))} /> Chọn sẵn</label>
               </div>
             ))}
 
-            <div className="text-xs font-bold text-gray-400 uppercase mt-2 mb-2 border-t pt-2 flex justify-between items-center">Lợi ích <button onClick={addBenefit} className="text-blue-600 normal-case font-semibold">+ thêm</button></div>
-            {cfg.benefits.map((b, i) => (
-              <div key={i} className="flex gap-2 mb-2">
-                <input className="w-12 border border-gray-300 rounded-lg px-2 py-2 text-sm text-center" value={b.icon} onChange={e => setBenefit(i, "icon", e.target.value)} />
-                <div className="flex-1 grid grid-cols-1 gap-1">
-                  <input className={inputCls} value={b.title} onChange={e => setBenefit(i, "title", e.target.value)} placeholder="Tiêu đề lợi ích" />
-                  <input className={inputCls} value={b.desc} onChange={e => setBenefit(i, "desc", e.target.value)} placeholder="Mô tả" />
-                </div>
-                <button onClick={() => rmBenefit(i)} className="text-red-500 text-sm px-1">✕</button>
-              </div>
-            ))}
-
-            <div className="text-xs font-bold text-gray-400 uppercase mt-2 mb-2 border-t pt-2">Định tuyến đơn & liên hệ</div>
+            <div className={sec}>Định tuyến đơn & liên hệ</div>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="staff (định tuyến đơn)"><input className={inputCls} value={cfg.staff} onChange={e => setPath("staff", e.target.value)} placeholder="duy / pn" /></Field>
-              <Field label="source (gắn nhãn nguồn)"><input className={inputCls} value={cfg.source} onChange={e => setPath("source", e.target.value)} placeholder="noma911_lp_duy" /></Field>
+              <F label="staff (định tuyến)"><input className={inp} value={cfg.staff} onChange={e => setPath("staff", e.target.value)} placeholder="duy / pn" /></F>
+              <F label="source"><input className={inp} value={cfg.source} onChange={e => setPath("source", e.target.value)} /></F>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Hotline"><input className={inputCls} value={cfg.contact.hotline} onChange={e => setPath("contact.hotline", e.target.value)} /></Field>
-              <Field label="URL trang cảm ơn"><input className={inputCls} value={cfg.thankUrl} onChange={e => setPath("thankUrl", e.target.value)} placeholder="/cam-on" /></Field>
+              <F label="Hotline"><input className={inp} value={cfg.contact.hotline} onChange={e => setPath("contact.hotline", e.target.value)} /></F>
+              <F label="Ghi chú giá (dưới nút)"><input className={inp} value={cfg.offer.priceNote} onChange={e => setPath("offer.priceNote", e.target.value)} /></F>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Ghi chú giá (dưới nút)"><input className={inputCls} value={cfg.offer.priceNote} onChange={e => setPath("offer.priceNote", e.target.value)} /></Field>
-              <Field label="Đếm ngược (phút, 0 = tắt)"><input className={inputCls} type="number" value={cfg.offer.countdownMinutes} onChange={e => setPath("offer.countdownMinutes", Number(e.target.value))} /></Field>
+              <F label="Công ty (footer)"><input className={inp} value={cfg.footer.company} onChange={e => setPath("footer.company", e.target.value)} /></F>
+              <F label="Đếm ngược (phút, 0=tắt)"><input className={inp} type="number" value={cfg.offer.countdownMinutes} onChange={e => setPath("offer.countdownMinutes", Number(e.target.value))} /></F>
             </div>
-            <Field label="Công ty (footer)"><input className={inputCls} value={cfg.footer.company} onChange={e => setPath("footer.company", e.target.value)} /></Field>
-            <Field label="Địa chỉ (footer)"><input className={inputCls} value={cfg.footer.address} onChange={e => setPath("footer.address", e.target.value)} /></Field>
 
             <div className="flex gap-2 mt-4 sticky bottom-0 bg-white pt-2 border-t">
-              <button onClick={save} disabled={saving} className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50">{saving ? "Đang lưu…" : "💾 Lưu landing"}</button>
-              <button onClick={() => setEditingId(null)} className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-lg font-semibold hover:bg-gray-200">Đóng</button>
+              <button onClick={saveAll} disabled={saving} className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50">{saving ? "Đang lưu…" : "💾 Lưu toàn bộ"}</button>
             </div>
           </div>
 
-          {/* PREVIEW */}
+          {/* CỘT PHẢI: preview */}
           <div className="bg-gray-100 rounded-lg border border-gray-200 p-3">
-            <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Xem trước (cập nhật trực tiếp)</div>
-            <iframe title="preview" srcDoc={preview} style={{ width: "100%", height: "72vh", border: "none", borderRadius: "8px", background: "#fff" }} />
+            <div className="text-xs font-semibold text-gray-500 uppercase mb-2">🎨 Render landing (xem trực tiếp)</div>
+            <iframe title="preview" srcDoc={preview} style={{ width: "100%", height: "76vh", border: "none", borderRadius: "8px", background: "#fff" }} />
           </div>
         </div>
       )}

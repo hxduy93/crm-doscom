@@ -58,6 +58,12 @@ export async function onRequest(context) {
     return next();
   }
 
+  // Landing Builder — ảnh landing CÔNG KHAI (read-only GET). Cho qua không cần session
+  // để landing đã publish (khác origin) + preview trong dashboard đều load được.
+  if (request.method === "GET" && url.pathname.startsWith("/api/landings/img/")) {
+    return next();
+  }
+
   // NOMA 911 landing ingest — server-to-server (landing _worker.js fan-out),
   // không có session cookie. Gate bằng token riêng X-Noma-Token = env.NOMA911_INGEST_TOKEN.
   if (url.pathname === "/api/noma911/order" && request.method === "POST") {

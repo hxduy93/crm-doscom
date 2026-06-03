@@ -28,6 +28,11 @@ function withDefaults(c) {
       headline: "", sub: "", image: "", imageMobile: "", badges: [],
       ...(c.hero || {}),
     },
+    // 6 ô ảnh cố định: hero, product (upload), usage, benefit1..3. URL trỏ /api/landings/img/:id/:slot.
+    images: { hero: "", product: "", usage: "", benefit1: "", benefit2: "", benefit3: "", ...(c.images || {}) },
+    assetBase: c.assetBase || "",   // prefix origin khi publish ra domain khác (preview để rỗng = relative)
+    usageTitle: c.usageTitle || "",
+    usageDesc: c.usageDesc || "",
     benefits: Array.isArray(c.benefits) ? c.benefits : [],
     gallery: Array.isArray(c.gallery) ? c.gallery : [],
     products: Array.isArray(c.products) && c.products.length ? c.products : [
@@ -49,17 +54,49 @@ function fmtVnd(n) {
   return v.toLocaleString("vi-VN") + "₫";
 }
 
-function renderBenefits(benefits, theme) {
+// img(slot) -> URL đầy đủ (assetBase + url) hoặc "" nếu thiếu.
+function makeImg(images, assetBase) {
+  return (slot) => {
+    const u = images[slot];
+    if (!u) return "";
+    if (/^https?:|^data:/.test(u)) return u;
+    return (assetBase || "") + u;
+  };
+}
+
+function renderBenefits(benefits, img) {
   if (!benefits.length) return "";
-  const items = benefits.map((b) => `
+  const items = benefits.map((b, i) => {
+    const src = img("benefit" + (i + 1));
+    const media = src
+      ? `<img class="benefit-img" loading="lazy" src="${esc(src)}" alt="${esc(b.title || "")}">`
+      : `<div class="benefit-icon">${esc(b.icon || "✔")}</div>`;
+    return `
     <div class="benefit">
-      <div class="benefit-icon">${esc(b.icon || "✔")}</div>
+      ${media}
       <div>
         <div class="benefit-title">${esc(b.title || "")}</div>
         <div class="benefit-desc">${esc(b.desc || "")}</div>
       </div>
-    </div>`).join("");
-  return `<section class="section"><h2 class="sec-title">Vì sao chọn ${esc("sản phẩm này")}?</h2><div class="benefits">${items}</div></section>`;
+    </div>`;
+  }).join("");
+  return `<section class="section"><h2 class="sec-title">Lý do nên chọn</h2><div class="benefits">${items}</div></section>`;
+}
+
+function renderUsage(c, img) {
+  const src = img("usage");
+  if (!c.usageTitle && !c.usageDesc && !src) return "";
+  return `<section class="section usage">
+    ${c.usageTitle ? `<h2 class="sec-title">${esc(c.usageTitle)}</h2>` : ""}
+    ${src ? `<img class="usage-img" loading="lazy" src="${esc(src)}" alt="${esc(c.usageTitle)}">` : ""}
+    ${c.usageDesc ? `<p class="usage-desc">${esc(c.usageDesc)}</p>` : ""}
+  </section>`;
+}
+
+function renderProductShot(img) {
+  const src = img("product");
+  if (!src) return "";
+  return `<section class="section product-shot"><img loading="lazy" src="${esc(src)}" alt="Sản phẩm"></section>`;
 }
 
 function renderGallery(gallery) {
@@ -108,10 +145,12 @@ export function renderLanding(rawConfig) {
   <noscript><img height="1" width="1" style="display:none"
     src="https://www.facebook.com/tr?id=${esc(c.pixelId)}&ev=PageView&noscript=1"/></noscript>` : "";
 
-  const heroPicture = c.hero.image ? `
+  const img = makeImg(c.images, c.assetBase);
+  const heroSrc = img("hero") || c.hero.image;
+  const heroPicture = heroSrc ? `
     <picture>
       ${c.hero.imageMobile ? `<source media="(max-width:640px)" srcset="${esc(c.hero.imageMobile)}">` : ""}
-      <img class="hero-img" src="${esc(c.hero.image)}" alt="${esc(c.hero.headline)}">
+      <img class="hero-img" src="${esc(heroSrc)}" alt="${esc(c.hero.headline)}">
     </picture>` : "";
 
   const badges = c.hero.badges.length
@@ -161,6 +200,12 @@ ${pixel}
   .benefit-desc{color:#64748b;font-size:14px}
   .gallery{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .gallery img{border-radius:12px;aspect-ratio:1;object-fit:cover}
+  .benefit-img{width:64px;height:64px;border-radius:12px;object-fit:cover;flex:0 0 auto}
+  .usage{text-align:center}
+  .usage-img{border-radius:16px;margin:8px 0}
+  .usage-desc{color:#475569;font-size:15px}
+  .product-shot{display:flex;justify-content:center;background:#fff}
+  .product-shot img{max-width:88%;border-radius:16px}
   .order{padding:20px 16px;background:linear-gradient(180deg,#fff,#fff5f6)}
   .order h2{font-size:24px;color:var(--primary);text-align:center;margin-bottom:14px}
   .product{display:flex;align-items:center;gap:12px;border:2px solid #e2e8f0;border-radius:14px;padding:12px 14px;margin-bottom:10px;cursor:pointer;transition:.15s}
@@ -198,7 +243,9 @@ ${pixel}
     ${heroPicture}
   </header>
 
-  ${renderBenefits(c.benefits, t)}
+  ${renderProductShot(img)}
+  ${renderUsage(c, img)}
+  ${renderBenefits(c.benefits, img)}
   ${renderGallery(c.gallery)}
 
   <section class="order" id="order">
