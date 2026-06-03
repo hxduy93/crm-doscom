@@ -1,0 +1,40 @@
+name: NOMA911 — sync doanh thu thực (POS)
+
+# Đối chiếu lead landing ↔ đơn POS Pancake (theo SĐT) để cập nhật trạng thái giao + COD thật.
+# Đơn được giao sau vài ngày → chạy định kỳ để doanh thu thực cập nhật dần.
+on:
+  schedule:
+    - cron: '0 */2 * * *'   # mỗi 2 giờ
+  workflow_dispatch:        # cho phép chạy thủ công từ Actions tab
+
+concurrency:
+  group: noma911-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Sync revenue (match SĐT → đơn POS)
+        run: |
+          echo "::group::sync-revenue"
+          HTTP_CODE=$(curl -s -o /tmp/sync.json -w "%{http_code}" \
+            -X POST 'https://facebookadsallinone.pages.dev/api/noma911/sync-revenue' \
+            -H "X-Test-Token: ${{ secrets.TEST_BYPASS_TOKEN }}" \
+            -H "Content-Type: application/json" -d '{}')
+          echo "HTTP $HTTP_CODE"
+          cat /tmp/sync.json; echo ""
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            echo "::error::sync-revenue failed (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+          echo "::endgroup::"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## NOMA911 sync doanh thu thực" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat /tmp/sync.json 2>/dev/null || echo "no output" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
