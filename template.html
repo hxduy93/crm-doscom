@@ -1644,6 +1644,256 @@ function ExportReportButton({ dateRange }) {
 // MAIN COMPONENT
 // =============================================================
 // =============================================================
+// TAB: Landing Builder — tạo/sửa/xem trước landing page (Phase 1: CRUD + preview, chưa publish)
+// API: /api/landings (list/create), /api/landings/:id (get/update/delete), /api/landings/preview
+// =============================================================
+function LandingBuilder() {
+  const BLANK = {
+    brand: "", title: "", description: "", pixelId: "",
+    theme: { primary: "#e11d48", accent: "#f59e0b" },
+    hero: { headline: "", sub: "", image: "", imageMobile: "", badges: [] },
+    benefits: [],
+    products: [{ label: "", value: "sp1", price: 0, oldPrice: 0, default: true }],
+    staff: "", source: "",
+    contact: { hotline: "" },
+    footer: { company: "", address: "" },
+    offer: { priceNote: "", countdownMinutes: 0 },
+    thankUrl: "",
+  }
+
+  const [list, setList] = useState([])
+  const [loadingList, setLoadingList] = useState(true)
+  const [editingId, setEditingId] = useState(null)   // null = chưa chọn, 0 = tạo mới
+  const [slug, setSlug] = useState("")
+  const [title, setTitle] = useState("")
+  const [status, setStatus] = useState("draft")
+  const [cfg, setCfg] = useState(BLANK)
+  const [preview, setPreview] = useState("")
+  const [msg, setMsg] = useState("")
+  const [saving, setSaving] = useState(false)
+
+  function loadList() {
+    setLoadingList(true)
+    fetch("/api/landings", { credentials: "same-origin" })
+      .then(r => r.json())
+      .then(d => { setList(d.landings || []); setLoadingList(false) })
+      .catch(() => setLoadingList(false))
+  }
+  React.useEffect(loadList, [])
+
+  // Cập nhật field lồng nhau theo "dot path" (vd "hero.headline").
+  function setPath(path, val) {
+    setCfg(prev => {
+      const next = JSON.parse(JSON.stringify(prev))
+      const keys = path.split(".")
+      let o = next
+      for (let i = 0; i < keys.length - 1; i++) o = o[keys[i]]
+      o[keys[keys.length - 1]] = val
+      return next
+    })
+  }
+
+  // Debounce preview: mỗi khi cfg đổi -> POST /api/landings/preview -> iframe srcDoc
+  React.useEffect(() => {
+    const id = setTimeout(() => {
+      fetch("/api/landings/preview", {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ config: { ...cfg, title: title || cfg.brand } }),
+      })
+        .then(r => r.text())
+        .then(setPreview)
+        .catch(() => {})
+    }, 400)
+    return () => clearTimeout(id)
+  }, [cfg, title])
+
+  function openNew() {
+    setEditingId(0); setSlug(""); setTitle(""); setStatus("draft"); setCfg(BLANK); setMsg("")
+  }
+  function openEdit(id) {
+    setMsg("")
+    fetch("/api/landings/" + id, { credentials: "same-origin" })
+      .then(r => r.json())
+      .then(d => {
+        if (!d.ok) { setMsg(d.error || "Lỗi tải"); return }
+        const L = d.landing
+        setEditingId(L.id); setSlug(L.slug); setTitle(L.title); setStatus(L.status)
+        setCfg({ ...BLANK, ...L.config, theme: { ...BLANK.theme, ...(L.config.theme || {}) },
+          hero: { ...BLANK.hero, ...(L.config.hero || {}) }, contact: { ...BLANK.contact, ...(L.config.contact || {}) },
+          footer: { ...BLANK.footer, ...(L.config.footer || {}) }, offer: { ...BLANK.offer, ...(L.config.offer || {}) },
+          benefits: L.config.benefits || [], products: (L.config.products && L.config.products.length) ? L.config.products : BLANK.products })
+      })
+      .catch(() => setMsg("Lỗi tải landing"))
+  }
+
+  function save() {
+    if (!slug.trim()) { setMsg("Cần nhập slug (đường dẫn)"); return }
+    if (!title.trim()) { setMsg("Cần nhập tiêu đề"); return }
+    setSaving(true); setMsg("")
+    const body = JSON.stringify({ slug: slug.trim().toLowerCase(), title: title.trim(), config: cfg })
+    const isNew = !editingId
+    const url = isNew ? "/api/landings" : "/api/landings/" + editingId
+    const method = isNew ? "POST" : "PUT"
+    fetch(url, { method, credentials: "same-origin", headers: { "Content-Type": "application/json" }, body })
+      .then(r => r.json())
+      .then(d => {
+        setSaving(false)
+        if (!d.ok) { setMsg("⚠️ " + (d.error || "Lưu thất bại")); return }
+        setMsg("✅ Đã lưu")
+        if (isNew && d.landing) setEditingId(d.landing.id)
+        loadList()
+      })
+      .catch(() => { setSaving(false); setMsg("⚠️ Lỗi kết nối") })
+  }
+
+  function del(id) {
+    if (!window.confirm("Xoá landing này?")) return
+    fetch("/api/landings/" + id, { method: "DELETE", credentials: "same-origin" })
+      .then(r => r.json())
+      .then(() => { if (editingId === id) setEditingId(null); loadList() })
+  }
+
+  // Helpers cho mảng products / benefits
+  function addProduct() { setCfg(p => ({ ...p, products: [...p.products, { label: "", value: "sp" + (p.products.length + 1), price: 0, oldPrice: 0, default: false }] })) }
+  function setProduct(i, key, val) { setCfg(p => { const a = p.products.map((x, j) => j === i ? { ...x, [key]: val } : (key === "default" && val ? { ...x, default: false } : x)); return { ...p, products: a } }) }
+  function rmProduct(i) { setCfg(p => ({ ...p, products: p.products.filter((_, j) => j !== i) })) }
+  function addBenefit() { setCfg(p => ({ ...p, benefits: [...p.benefits, { icon: "✔", title: "", desc: "" }] })) }
+  function setBenefit(i, key, val) { setCfg(p => ({ ...p, benefits: p.benefits.map((x, j) => j === i ? { ...x, [key]: val } : x) })) }
+  function rmBenefit(i) { setCfg(p => ({ ...p, benefits: p.benefits.filter((_, j) => j !== i) })) }
+
+  const inputCls = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
+  const labelCls = "block text-xs font-semibold text-gray-600 mb-1"
+  const Field = ({ label, children }) => (<div className="mb-3"><label className={labelCls}>{label}</label>{children}</div>)
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">🛠️ Landing Builder</h2>
+          <p className="text-xs text-gray-400">Tạo & xem trước landing page. (Phase 1 — publish/deploy ở phase sau)</p>
+        </div>
+        <button onClick={openNew} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700">+ Tạo landing mới</button>
+      </div>
+
+      {/* DANH SÁCH */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-5">
+        <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Danh sách landing</div>
+        {loadingList ? <div className="text-gray-400 text-sm py-2">Đang tải…</div> : (
+          list.length === 0 ? <div className="text-gray-400 text-sm py-2">Chưa có landing nào. Bấm "Tạo landing mới".</div> : (
+            <div className="divide-y divide-gray-100">
+              {list.map(L => (
+                <div key={L.id} className="flex items-center justify-between py-2">
+                  <div className="min-w-0">
+                    <span className="font-medium text-gray-800">{L.title}</span>
+                    <span className="text-gray-400 text-xs ml-2">/{L.slug}</span>
+                    <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${L.status === "published" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>{L.status === "published" ? "đã publish" : "nháp"}</span>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button onClick={() => openEdit(L.id)} className="text-blue-600 text-sm hover:underline">Sửa</button>
+                    <button onClick={() => del(L.id)} className="text-red-500 text-sm hover:underline">Xoá</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+      </div>
+
+      {/* EDITOR + PREVIEW */}
+      {editingId !== null && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* FORM */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4 max-h-[75vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-gray-800">{editingId ? "Sửa landing" : "Landing mới"}</h3>
+              {msg && <span className="text-sm">{msg}</span>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Slug (đường dẫn) *"><input className={inputCls} value={slug} onChange={e => setSlug(e.target.value)} placeholder="vd: nm911d" /></Field>
+              <Field label="Tiêu đề nội bộ / SEO *"><input className={inputCls} value={title} onChange={e => setTitle(e.target.value)} placeholder="Landing NOMA 911 - Duy" /></Field>
+            </div>
+
+            <div className="text-xs font-bold text-gray-400 uppercase mt-2 mb-2 border-t pt-2">Thương hiệu & Pixel</div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Tên thương hiệu"><input className={inputCls} value={cfg.brand} onChange={e => setPath("brand", e.target.value)} placeholder="NOMA" /></Field>
+              <Field label="Meta Pixel ID"><input className={inputCls} value={cfg.pixelId} onChange={e => setPath("pixelId", e.target.value)} placeholder="2439..." /></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Màu chính"><input type="color" className="w-full h-9 border rounded" value={cfg.theme.primary} onChange={e => setPath("theme.primary", e.target.value)} /></Field>
+              <Field label="Màu nhấn"><input type="color" className="w-full h-9 border rounded" value={cfg.theme.accent} onChange={e => setPath("theme.accent", e.target.value)} /></Field>
+            </div>
+
+            <div className="text-xs font-bold text-gray-400 uppercase mt-2 mb-2 border-t pt-2">Hero</div>
+            <Field label="Tiêu đề lớn (headline)"><input className={inputCls} value={cfg.hero.headline} onChange={e => setPath("hero.headline", e.target.value)} /></Field>
+            <Field label="Mô tả phụ"><input className={inputCls} value={cfg.hero.sub} onChange={e => setPath("hero.sub", e.target.value)} /></Field>
+            <Field label="Ảnh hero (URL)"><input className={inputCls} value={cfg.hero.image} onChange={e => setPath("hero.image", e.target.value)} placeholder="https://…" /></Field>
+            <Field label="Ảnh hero mobile (URL, tuỳ chọn)"><input className={inputCls} value={cfg.hero.imageMobile} onChange={e => setPath("hero.imageMobile", e.target.value)} /></Field>
+            <Field label="Badge (cách nhau dấu phẩy)"><input className={inputCls} value={(cfg.hero.badges || []).join(", ")} onChange={e => setPath("hero.badges", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} placeholder="Chính hãng, Giao nhanh, COD" /></Field>
+
+            <div className="text-xs font-bold text-gray-400 uppercase mt-2 mb-2 border-t pt-2 flex justify-between items-center">Sản phẩm / Combo <button onClick={addProduct} className="text-blue-600 normal-case font-semibold">+ thêm</button></div>
+            {cfg.products.map((p, i) => (
+              <div key={i} className="border border-gray-200 rounded-lg p-2 mb-2">
+                <div className="flex gap-2 mb-1">
+                  <input className={inputCls} value={p.label} onChange={e => setProduct(i, "label", e.target.value)} placeholder="Tên combo" />
+                  <button onClick={() => rmProduct(i)} className="text-red-500 text-sm px-2">✕</button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <input className={inputCls} value={p.value} onChange={e => setProduct(i, "value", e.target.value)} placeholder="mã (value)" />
+                  <input className={inputCls} type="number" value={p.price} onChange={e => setProduct(i, "price", Number(e.target.value))} placeholder="Giá" />
+                  <input className={inputCls} type="number" value={p.oldPrice} onChange={e => setProduct(i, "oldPrice", Number(e.target.value))} placeholder="Giá gốc" />
+                </div>
+                <label className="flex items-center gap-2 mt-1 text-xs text-gray-600"><input type="radio" name="defaultProduct" checked={!!p.default} onChange={() => setProduct(i, "default", true)} /> Chọn sẵn (mặc định)</label>
+              </div>
+            ))}
+
+            <div className="text-xs font-bold text-gray-400 uppercase mt-2 mb-2 border-t pt-2 flex justify-between items-center">Lợi ích <button onClick={addBenefit} className="text-blue-600 normal-case font-semibold">+ thêm</button></div>
+            {cfg.benefits.map((b, i) => (
+              <div key={i} className="flex gap-2 mb-2">
+                <input className="w-12 border border-gray-300 rounded-lg px-2 py-2 text-sm text-center" value={b.icon} onChange={e => setBenefit(i, "icon", e.target.value)} />
+                <div className="flex-1 grid grid-cols-1 gap-1">
+                  <input className={inputCls} value={b.title} onChange={e => setBenefit(i, "title", e.target.value)} placeholder="Tiêu đề lợi ích" />
+                  <input className={inputCls} value={b.desc} onChange={e => setBenefit(i, "desc", e.target.value)} placeholder="Mô tả" />
+                </div>
+                <button onClick={() => rmBenefit(i)} className="text-red-500 text-sm px-1">✕</button>
+              </div>
+            ))}
+
+            <div className="text-xs font-bold text-gray-400 uppercase mt-2 mb-2 border-t pt-2">Định tuyến đơn & liên hệ</div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="staff (định tuyến đơn)"><input className={inputCls} value={cfg.staff} onChange={e => setPath("staff", e.target.value)} placeholder="duy / pn" /></Field>
+              <Field label="source (gắn nhãn nguồn)"><input className={inputCls} value={cfg.source} onChange={e => setPath("source", e.target.value)} placeholder="noma911_lp_duy" /></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Hotline"><input className={inputCls} value={cfg.contact.hotline} onChange={e => setPath("contact.hotline", e.target.value)} /></Field>
+              <Field label="URL trang cảm ơn"><input className={inputCls} value={cfg.thankUrl} onChange={e => setPath("thankUrl", e.target.value)} placeholder="/cam-on" /></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Ghi chú giá (dưới nút)"><input className={inputCls} value={cfg.offer.priceNote} onChange={e => setPath("offer.priceNote", e.target.value)} /></Field>
+              <Field label="Đếm ngược (phút, 0 = tắt)"><input className={inputCls} type="number" value={cfg.offer.countdownMinutes} onChange={e => setPath("offer.countdownMinutes", Number(e.target.value))} /></Field>
+            </div>
+            <Field label="Công ty (footer)"><input className={inputCls} value={cfg.footer.company} onChange={e => setPath("footer.company", e.target.value)} /></Field>
+            <Field label="Địa chỉ (footer)"><input className={inputCls} value={cfg.footer.address} onChange={e => setPath("footer.address", e.target.value)} /></Field>
+
+            <div className="flex gap-2 mt-4 sticky bottom-0 bg-white pt-2 border-t">
+              <button onClick={save} disabled={saving} className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50">{saving ? "Đang lưu…" : "💾 Lưu landing"}</button>
+              <button onClick={() => setEditingId(null)} className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-lg font-semibold hover:bg-gray-200">Đóng</button>
+            </div>
+          </div>
+
+          {/* PREVIEW */}
+          <div className="bg-gray-100 rounded-lg border border-gray-200 p-3">
+            <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Xem trước (cập nhật trực tiếp)</div>
+            <iframe title="preview" srcDoc={preview} style={{ width: "100%", height: "72vh", border: "none", borderRadius: "8px", background: "#fff" }} />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// =============================================================
 // SUB-COMPONENT: Bảng thống kê đơn NOMA 911 từ landing (đặt trong tab Hiệu suất quảng cáo)
 // Tự chứa: fetch /api/noma911/stats (gate session sẵn), render summary + combo + nhân sự + nguồn.
 // =============================================================
@@ -1828,7 +2078,7 @@ function NomaOrdersTable() {
 }
 
 function FacebookAdsDashboard() {
-  const [currentView, setCurrentView] = useState("main")  // "main" | "ads-creator" | "fb-agent" | "gg-agent" | "geo-monitor"
+  const [currentView, setCurrentView] = useState("main")  // "main" | "ads-creator" | "fb-agent" | "gg-agent" | "geo-monitor" | "landing-builder"
   const [selectedAccount, setSelectedAccount] = useState("all")
   const [timeFilter, setTimeFilter] = useState("30d")
   // customRange — chỉ active khi timeFilter === "custom". Default 7 ngày gần nhất.
@@ -2077,6 +2327,16 @@ function FacebookAdsDashboard() {
             >
               🤖 GEO Monitor
             </button>
+            <button
+              onClick={() => setCurrentView("landing-builder")}
+              className={`px-5 py-3 text-sm font-semibold border-b-2 transition flex items-center gap-2 ${
+                currentView === "landing-builder"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300"
+              }`}
+            >
+              🛠️ Landing Builder
+            </button>
             <a
               href="/inventory.html"
               className="px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300 transition flex items-center gap-2"
@@ -2123,6 +2383,10 @@ function FacebookAdsDashboard() {
               loading="lazy"
             />
           </div>
+        )}
+
+        {currentView === "landing-builder" && (
+          <LandingBuilder />
         )}
 
         {currentView === "main" && (<>
