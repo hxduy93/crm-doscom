@@ -40,7 +40,7 @@ export async function onRequestGet(context) {
   const args = [from, to];
 
   try {
-    const [summary, byCombo, byStaff, bySource, byDate] = await Promise.all([
+    const [summary, byCombo, byStaff, byGift, bySource, byDate] = await Promise.all([
       env.DB.prepare(`
         SELECT COUNT(*) AS orders,
                COUNT(DISTINCT NULLIF(phone, '')) AS unique_customers,
@@ -58,6 +58,14 @@ export async function onRequestGet(context) {
         SELECT staff, COUNT(*) AS orders, COALESCE(SUM(amount), 0) AS revenue
         FROM noma911_orders WHERE ${where}
         GROUP BY staff ORDER BY orders DESC
+      `).bind(...args).all(),
+
+      env.DB.prepare(`
+        SELECT
+          CASE WHEN gift IS NULL OR gift = '' THEN '(không quà)' ELSE gift END AS gift_key,
+          COUNT(*) AS orders
+        FROM noma911_orders WHERE ${where}
+        GROUP BY gift_key ORDER BY orders DESC
       `).bind(...args).all(),
 
       env.DB.prepare(`
@@ -79,6 +87,14 @@ export async function onRequestGet(context) {
       ...r, staff_label: STAFF_LABEL[r.staff] || r.staff,
     }));
 
+    // Map gift slug → tên hiển thị
+    const GIFT_LABEL = { noma250: "NOMA 250", noma692: "NOMA 692" };
+    const byGiftLabeled = (byGift.results || []).map(r => ({
+      gift: r.gift_key,
+      gift_label: GIFT_LABEL[r.gift_key] || r.gift_key,
+      orders: r.orders,
+    }));
+
     return json({
       range: { from, to, days },
       summary: {
@@ -88,6 +104,7 @@ export async function onRequestGet(context) {
       },
       by_combo: byCombo.results || [],
       by_staff: byStaffLabeled,
+      by_gift: byGiftLabeled,
       by_source: bySource.results || [],
       by_date: byDate.results || [],
     });
