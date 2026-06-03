@@ -53,18 +53,23 @@ export async function onRequestGet(context) {
 
   const { results } = await env.DB.prepare(sql).bind(...params).all();
 
-  // Also fetch citations for these run IDs (1 query, batched)
+  // Also fetch citations for these run IDs. Chia lô ≤90 ID/query vì D1 giới hạn
+  // 100 bound parameter/query — limit=200 sẽ vượt nếu nhồi hết vào 1 IN clause (gây 500).
   let citationsByRun = {};
   if (results.length > 0) {
     const runIds = results.map(r => r.id);
-    const placeholders = runIds.map(() => "?").join(",");
-    const { results: cits } = await env.DB.prepare(
-      `SELECT run_id, url, title, domain, is_brand_url, position
-       FROM geo_citations WHERE run_id IN (${placeholders}) ORDER BY position`
-    ).bind(...runIds).all();
-    for (const c of cits) {
-      if (!citationsByRun[c.run_id]) citationsByRun[c.run_id] = [];
-      citationsByRun[c.run_id].push(c);
+    const CHUNK = 90;
+    for (let i = 0; i < runIds.length; i += CHUNK) {
+      const batch = runIds.slice(i, i + CHUNK);
+      const placeholders = batch.map(() => "?").join(",");
+      const { results: cits } = await env.DB.prepare(
+        `SELECT run_id, url, title, domain, is_brand_url, position
+         FROM geo_citations WHERE run_id IN (${placeholders}) ORDER BY position`
+      ).bind(...batch).all();
+      for (const c of cits) {
+        if (!citationsByRun[c.run_id]) citationsByRun[c.run_id] = [];
+        citationsByRun[c.run_id].push(c);
+      }
     }
   }
 
