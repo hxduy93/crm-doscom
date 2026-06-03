@@ -161,16 +161,8 @@
     <div class="relative" style="height:300px"><canvas id="trend-chart"></canvas></div>
   </div>
 
-  <!-- ═══════════════ 2-COL: COMPETITORS + WORST QUERIES ═══════════════ -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-      <h2 class="text-lg font-semibold text-gray-900 mb-3">Top 10 Competitors</h2>
-      <p class="text-xs text-gray-500 mb-3">Brand đối thủ được AI nhắc nhiều nhất trong period</p>
-      <table class="geo w-full" id="competitors-table">
-        <thead><tr><th>Rank</th><th>Brand</th><th class="text-right">Mentions</th><th class="text-right">Trong N runs</th></tr></thead>
-        <tbody><tr><td colspan="4" class="text-center text-gray-400 py-4">Đang tải…</td></tr></tbody>
-      </table>
-    </div>
+  <!-- ═══════════════ WORST QUERIES ═══════════════ -->
+  <div class="mb-6">
     <div class="bg-white rounded-xl border border-gray-200 p-5">
       <div class="flex gap-2 mb-3">
         <button class="worst-tab active px-3 py-1 rounded text-xs font-semibold bg-blue-600 text-white" data-brand="doscom">Doscom queries</button>
@@ -521,25 +513,6 @@ function renderTrendChart(dailySov, brand = currentTrendBrand) {
 }
 
 // ============================================================
-// Render: Competitors leaderboard
-// ============================================================
-function renderCompetitors(competitors) {
-  const tbody = document.querySelector("#competitors-table tbody");
-  if (!competitors || competitors.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-gray-400 py-4">Chưa có competitor nào trong period này</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = competitors.map((c, i) => `
-    <tr>
-      <td class="tabular-nums text-gray-500">#${i + 1}</td>
-      <td class="font-semibold uppercase">${escapeHtml(c.competitor_name)}</td>
-      <td class="text-right tabular-nums font-semibold">${fmtNum(c.total_mentions)}</td>
-      <td class="text-right tabular-nums text-gray-500">${fmtNum(c.runs_appeared)}</td>
-    </tr>
-  `).join("");
-}
-
-// ============================================================
 // Render: Worst queries
 // ============================================================
 function renderWorstQueries(sov, brand) {
@@ -667,7 +640,6 @@ async function loadAll() {
 
     renderKpis(sov.summary);
     renderTrendChart(sov.daily_sov);
-    renderCompetitors(sov.top_competitors);
     renderWorstQueries(sov, currentWorstBrand);
     renderRuns(runs.runs);
 
