@@ -82,6 +82,7 @@ export async function onRequest(context) {
     "/api/agent-google-ai",
     "/api/geo/run-batch",
     "/api/geo/jobs",
+    "/api/noma911/sync-revenue",
   ]);
   if (BYPASS_PATHS.has(url.pathname) && hasTestBypass(request, env)) {
     return next();

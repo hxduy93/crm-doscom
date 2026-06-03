@@ -40,7 +40,7 @@ export async function onRequestGet(context) {
   const args = [from, to];
 
   try {
-    const [summary, byCombo, byStaff, byGift, bySource, byDate] = await Promise.all([
+    const [summary, byCombo, byStaff, byGift, bySource, byDate, actual] = await Promise.all([
       env.DB.prepare(`
         SELECT COUNT(*) AS orders,
                COUNT(DISTINCT NULLIF(phone, '')) AS unique_customers,
@@ -79,6 +79,23 @@ export async function onRequestGet(context) {
         FROM noma911_orders WHERE ${where}
         GROUP BY created_date ORDER BY created_date ASC
       `).bind(...args).all(),
+
+      // Doanh thu THỰC từ đơn POS đã match (dedup theo pos_order_id để khỏi đếm 2 lần
+      // khi nhiều lead cùng SĐT → 1 đơn). "Đã giao" = status 3; "Đã lên đơn" = mọi status trừ hoàn/huỷ (4,5,6).
+      env.DB.prepare(`
+        SELECT
+          COALESCE(SUM(CASE WHEN pos_status = 3 THEN pos_cod ELSE 0 END), 0) AS rev_delivered,
+          COALESCE(SUM(CASE WHEN pos_status NOT IN (4,5,6) THEN pos_cod ELSE 0 END), 0) AS rev_booked,
+          SUM(CASE WHEN pos_status = 3 THEN 1 ELSE 0 END) AS cnt_delivered,
+          SUM(CASE WHEN pos_status NOT IN (4,5,6) THEN 1 ELSE 0 END) AS cnt_booked,
+          COUNT(*) AS cnt_matched
+        FROM (
+          SELECT pos_order_id, pos_status, pos_cod
+          FROM noma911_orders
+          WHERE ${where} AND pos_matched = 1 AND pos_order_id IS NOT NULL
+          GROUP BY pos_order_id
+        )
+      `).bind(...args).first(),
     ]);
 
     // Map staff slug → tên hiển thị
@@ -107,6 +124,15 @@ export async function onRequestGet(context) {
       by_gift: byGiftLabeled,
       by_source: bySource.results || [],
       by_date: byDate.results || [],
+      // Doanh thu thực (đối chiếu đơn POS). conversion = đơn đã giao / tổng lead.
+      actual: {
+        revenue_delivered: actual?.rev_delivered || 0,
+        revenue_booked: actual?.rev_booked || 0,
+        orders_delivered: actual?.cnt_delivered || 0,
+        orders_booked: actual?.cnt_booked || 0,
+        orders_matched: actual?.cnt_matched || 0,
+        conversion_rate: (summary?.orders ? Math.round((actual?.cnt_delivered || 0) / summary.orders * 1000) / 10 : 0),
+      },
     });
   } catch (err) {
     return json({ error: String(err?.message || err).slice(0, 300) }, 500);
