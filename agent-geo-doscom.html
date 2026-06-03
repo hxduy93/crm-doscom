@@ -458,26 +458,40 @@ function renderTrendChart(dailySov, brand = currentTrendBrand) {
   lastDailySov = dailySov;
   const ctx = document.getElementById("trend-chart").getContext("2d");
 
-  const sovKey = brand === "noma" ? "noma_sov" : "doscom_sov";
-  const brandLabel = brand === "noma" ? "NOMA" : "Doscom";
+  const sovKey      = brand === "noma" ? "noma_sov"      : "doscom_sov";
+  const runsKey     = brand === "noma" ? "noma_runs"     : "doscom_runs";
+  const mentionsKey = brand === "noma" ? "noma_mentions" : "doscom_mentions";
+  const brandLabel  = brand === "noma" ? "NOMA" : "Doscom";
+  const MIN_SAMPLE  = 5;  // dưới ngưỡng này → mẫu quá nhỏ, % không đáng tin → làm mờ điểm
 
   // Group by day, then by engine
   const days = [...new Set(dailySov.map(d => d.day))].sort();
   const engines = ["chatgpt", "gemini", "meta_ai"];
   const colors = { chatgpt: "#10b981", gemini: "#3b82f6", meta_ai: "#8b5cf6" };
 
-  const datasets = engines.map(eng => ({
-    label: eng,
-    data: days.map(day => {
+  const datasets = engines.map(eng => {
+    // Lưu run/mention từng điểm để tooltip hiện "X% (hits/runs)" + tô mờ điểm mẫu nhỏ
+    const meta = days.map(day => {
       const row = dailySov.find(d => d.day === day && d.engine === eng);
-      return row ? (row[sovKey] || 0) * 100 : 0;
-    }),
-    borderColor: colors[eng],
-    backgroundColor: colors[eng] + "20",
-    tension: 0.3,
-    pointRadius: 4,
-    pointHoverRadius: 6,
-  }));
+      return { runs: row ? (row[runsKey] || 0) : 0, mentions: row ? (row[mentionsKey] || 0) : 0 };
+    });
+    const isLow = m => m.runs > 0 && m.runs < MIN_SAMPLE;
+    return {
+      label: eng,
+      data: days.map(day => {
+        const row = dailySov.find(d => d.day === day && d.engine === eng);
+        return row ? (row[sovKey] || 0) * 100 : 0;
+      }),
+      _meta: meta,
+      borderColor: colors[eng],
+      backgroundColor: colors[eng] + "20",
+      tension: 0.3,
+      pointRadius:          meta.map(m => isLow(m) ? 2 : 4),
+      pointHoverRadius:     6,
+      pointBackgroundColor: meta.map(m => isLow(m) ? colors[eng] + "55" : colors[eng]),
+      pointBorderColor:     meta.map(m => isLow(m) ? colors[eng] + "55" : colors[eng]),
+    };
+  });
 
   if (trendChart) trendChart.destroy();
   trendChart = new Chart(ctx, {
@@ -489,7 +503,13 @@ function renderTrendChart(dailySov, brand = currentTrendBrand) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          callbacks: { label: ctx => ctx.dataset.label + ": " + ctx.parsed.y.toFixed(1) + "% " + brandLabel + " SoV" }
+          callbacks: {
+            label: ctx => {
+              const m = ctx.dataset._meta?.[ctx.dataIndex] || { runs: 0, mentions: 0 };
+              const base = `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}% ${brandLabel} SoV (${m.mentions}/${m.runs} run)`;
+              return (m.runs > 0 && m.runs < MIN_SAMPLE) ? base + " ⚠️ mẫu nhỏ" : base;
+            }
+          }
         }
       },
       scales: {
