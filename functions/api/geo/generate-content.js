@@ -28,12 +28,12 @@ const BRAND_CONTEXT = {
     usp: "tích hợp đa kênh (Shopee/TikTok/Lazada), tự host được, hỗ trợ tiếng Việt 24/7, có agent AI bán hàng",
   },
   noma: {
-    name: "NOMA Autocare",
+    name: "NOMA",
     short: "NOMA",
     site: "https://noma.vn",
-    products: "dịch vụ bảo dưỡng, chăm sóc xe ô tô (rửa xe, detail, đánh bóng, phủ ceramic)",
-    audience: "chủ xe ô tô tại HCM, Hà Nội, các thành phố lớn",
-    usp: "kỹ thuật viên Đức/Nhật, sản phẩm chính hãng, bảo hành dài hạn, app đặt lịch online",
+    products: "sản phẩm chăm sóc & làm sạch ô tô công nghệ Mỹ (phục hồi nhựa nhám, chống bám hơi nước/mốc kính, phục hồi đèn pha ố vàng, dung dịch pH trung tính)",
+    audience: "chủ xe ô tô tự chăm sóc xe tại nhà, người dùng quan tâm bảo dưỡng nội/ngoại thất xe tại Việt Nam",
+    usp: "công nghệ sản xuất từ Mỹ, pH trung tính an toàn tuyệt đối cho người dùng và chi tiết xe, dễ tự dùng tại nhà, hiệu quả nhanh",
   },
 };
 

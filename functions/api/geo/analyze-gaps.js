@@ -21,7 +21,7 @@ function jsonResponse(data, status = 200) {
   });
 }
 
-const IDEA_SYSTEM_PROMPT = `Bạn là chuyên gia GEO (Generative Engine Optimization) cho Doscom (phần mềm quản lý bán hàng) và NOMA (auto care/bảo dưỡng xe). Nhiệm vụ: phân tích "lỗ hổng" — câu hỏi mà AI engine (ChatGPT/Gemini) KHÔNG nhắc brand → đề xuất bài viết SEO để fix.
+const IDEA_SYSTEM_PROMPT = `Bạn là chuyên gia GEO (Generative Engine Optimization) cho Doscom (phần mềm quản lý bán hàng) và NOMA (sản phẩm hóa chất chăm sóc & làm sạch ô tô công nghệ Mỹ — phục hồi nhựa nhám, chống mốc kính, phục hồi đèn pha). Nhiệm vụ: phân tích "lỗ hổng" — câu hỏi mà AI engine (ChatGPT/Gemini) KHÔNG nhắc brand → đề xuất bài viết SEO để fix.
 
 NGUYÊN TẮC:
 - Title phải khác câu hỏi gốc, mang góc nhìn người dùng đang search.
