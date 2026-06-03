@@ -13,7 +13,8 @@
 const COMBO_META = {
   "le-911":        { label: "1 chai NOMA 911",         amount: 199000 },
   "combo-2x911":   { label: "2 chai NOMA 911",         amount: 398000 },
-  "combo-911-922": { label: "Combo NOMA 911 + 922",    amount: 398000 },
+  "combo-911-310": { label: "Combo NOMA 911 + 310",    amount: 398000 },
+  "combo-911-922": { label: "Combo NOMA 911 + 922",    amount: 398000 }, // off khỏi landing, giữ cho đơn lịch sử
 };
 
 function json(obj, status = 200) {
