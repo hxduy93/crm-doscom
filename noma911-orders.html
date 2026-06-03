@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thống kê đơn NOMA 911 — Doscom Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Manrope', system-ui, -apple-system, sans-serif; }
+    .card { transition: transform .15s ease; }
+    .card:hover { transform: translateY(-2px); }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+  <div class="max-w-6xl mx-auto px-4 py-6">
+
+    <!-- Header -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">📊 Thống kê đơn NOMA 911</h1>
+        <p class="text-sm text-slate-500">Đơn đăng ký hoàn tất (khách điền đủ thông tin → trang cảm ơn) từ landing pages</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <select id="rangeSel" class="text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white">
+          <option value="7">7 ngày qua</option>
+          <option value="30" selected>30 ngày qua</option>
+          <option value="90">90 ngày qua</option>
+          <option value="365">365 ngày qua</option>
+        </select>
+        <button id="refreshBtn" class="text-sm bg-slate-900 text-white rounded-lg px-4 py-2 hover:bg-slate-700">↻ Làm mới</button>
+      </div>
+    </div>
+
+    <div id="loading" class="text-center text-slate-400 py-12">Đang tải dữ liệu…</div>
+    <div id="error" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-4"></div>
+
+    <div id="content" class="hidden space-y-6">
+
+      <!-- Summary cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="card bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+          <div class="text-sm text-slate-500">Tổng lượt đặt đơn</div>
+          <div id="sumOrders" class="text-3xl font-bold text-slate-900 mt-1">—</div>
+        </div>
+        <div class="card bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+          <div class="text-sm text-slate-500">Khách hàng (SĐT khác nhau)</div>
+          <div id="sumCustomers" class="text-3xl font-bold text-indigo-600 mt-1">—</div>
+        </div>
+        <div class="card bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+          <div class="text-sm text-slate-500">Doanh thu dự kiến</div>
+          <div id="sumRevenue" class="text-3xl font-bold text-emerald-600 mt-1">—</div>
+        </div>
+      </div>
+
+      <!-- By combo -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+        <h2 class="font-semibold text-slate-900 mb-4">🧴 Theo combo sản phẩm</h2>
+        <div id="byCombo" class="grid grid-cols-1 sm:grid-cols-3 gap-3"></div>
+      </div>
+
+      <!-- By staff + source -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+          <h2 class="font-semibold text-slate-900 mb-4">👥 Theo nhân sự</h2>
+          <table class="w-full text-sm">
+            <thead><tr class="text-left text-slate-400 border-b">
+              <th class="py-2">Nhân sự</th><th class="py-2 text-right">Đơn</th><th class="py-2 text-right">Doanh thu</th>
+            </tr></thead>
+            <tbody id="byStaff"></tbody>
+          </table>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+          <h2 class="font-semibold text-slate-900 mb-4">🔗 Theo nguồn (source)</h2>
+          <table class="w-full text-sm">
+            <thead><tr class="text-left text-slate-400 border-b">
+              <th class="py-2">Source</th><th class="py-2 text-right">Đơn</th>
+            </tr></thead>
+            <tbody id="bySource"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- By date -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+        <h2 class="font-semibold text-slate-900 mb-4">📅 Theo ngày</h2>
+        <table class="w-full text-sm">
+          <thead><tr class="text-left text-slate-400 border-b">
+            <th class="py-2">Ngày</th><th class="py-2 text-right">Đơn</th><th class="py-2 text-right">Doanh thu</th>
+          </tr></thead>
+          <tbody id="byDate"></tbody>
+        </table>
+      </div>
+
+      <p id="rangeInfo" class="text-xs text-slate-400 text-center"></p>
+    </div>
+  </div>
+
+  <script>
+    const fmtVND = n => (n || 0).toLocaleString('vi-VN') + 'đ';
+    const fmtNum = n => (n || 0).toLocaleString('vi-VN');
+
+    async function load() {
+      const days = document.getElementById('rangeSel').value;
+      const loading = document.getElementById('loading');
+      const content = document.getElementById('content');
+      const errBox = document.getElementById('error');
+      loading.classList.remove('hidden');
+      content.classList.add('hidden');
+      errBox.classList.add('hidden');
+
+      try {
+        const r = await fetch('/api/noma911/stats?days=' + days, { credentials: 'same-origin' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        render(d);
+        loading.classList.add('hidden');
+        content.classList.remove('hidden');
+      } catch (e) {
+        loading.classList.add('hidden');
+        errBox.textContent = 'Lỗi tải dữ liệu: ' + e.message;
+        errBox.classList.remove('hidden');
+      }
+    }
+
+    function render(d) {
+      document.getElementById('sumOrders').textContent = fmtNum(d.summary.orders);
+      document.getElementById('sumCustomers').textContent = fmtNum(d.summary.unique_customers);
+      document.getElementById('sumRevenue').textContent = fmtVND(d.summary.revenue);
+
+      const total = d.summary.orders || 1;
+      const comboColors = { 'le-911': 'bg-sky-50 text-sky-700', 'combo-2x911': 'bg-amber-50 text-amber-700', 'combo-911-922': 'bg-violet-50 text-violet-700' };
+      document.getElementById('byCombo').innerHTML = (d.by_combo.length ? d.by_combo : [{combo:'',combo_label:'(chưa có đơn)',orders:0,revenue:0}]).map(c => {
+        const pct = Math.round((c.orders / total) * 100);
+        const color = comboColors[c.combo] || 'bg-slate-50 text-slate-700';
+        return `<div class="rounded-xl ${color} p-4">
+          <div class="text-sm font-medium">${c.combo_label || c.combo}</div>
+          <div class="text-2xl font-bold mt-1">${fmtNum(c.orders)} <span class="text-sm font-normal opacity-70">đơn (${pct}%)</span></div>
+          <div class="text-xs mt-1 opacity-80">${fmtVND(c.revenue)}</div>
+        </div>`;
+      }).join('');
+
+      document.getElementById('byStaff').innerHTML = d.by_staff.map(s =>
+        `<tr class="border-b border-slate-50"><td class="py-2">${s.staff_label}</td><td class="py-2 text-right font-medium">${fmtNum(s.orders)}</td><td class="py-2 text-right text-emerald-600">${fmtVND(s.revenue)}</td></tr>`
+      ).join('') || '<tr><td colspan="3" class="py-3 text-slate-400">Chưa có dữ liệu</td></tr>';
+
+      document.getElementById('bySource').innerHTML = d.by_source.map(s =>
+        `<tr class="border-b border-slate-50"><td class="py-2 font-mono text-xs">${s.source || '(trống)'}</td><td class="py-2 text-right font-medium">${fmtNum(s.orders)}</td></tr>`
+      ).join('') || '<tr><td colspan="2" class="py-3 text-slate-400">Chưa có dữ liệu</td></tr>';
+
+      document.getElementById('byDate').innerHTML = [...d.by_date].reverse().map(r =>
+        `<tr class="border-b border-slate-50"><td class="py-2">${r.created_date}</td><td class="py-2 text-right font-medium">${fmtNum(r.orders)}</td><td class="py-2 text-right text-emerald-600">${fmtVND(r.revenue)}</td></tr>`
+      ).join('') || '<tr><td colspan="3" class="py-3 text-slate-400">Chưa có dữ liệu</td></tr>';
+
+      document.getElementById('rangeInfo').textContent = `Khoảng: ${d.range.from} → ${d.range.to} (${d.range.days} ngày) · giờ VN`;
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', load);
+    document.getElementById('rangeSel').addEventListener('change', load);
+    load();
+  </script>
+</body>
+</html>

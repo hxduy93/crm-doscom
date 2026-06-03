@@ -58,6 +58,18 @@ export async function onRequest(context) {
     return next();
   }
 
+  // NOMA 911 landing ingest — server-to-server (landing _worker.js fan-out),
+  // không có session cookie. Gate bằng token riêng X-Noma-Token = env.NOMA911_INGEST_TOKEN.
+  if (url.pathname === "/api/noma911/order" && request.method === "POST") {
+    const t = request.headers.get("X-Noma-Token");
+    if (t && env.NOMA911_INGEST_TOKEN && t === env.NOMA911_INGEST_TOKEN) {
+      return next();
+    }
+    return new Response(JSON.stringify({ ok: false, error: "unauthorized" }), {
+      status: 401, headers: { "Content-Type": "application/json" },
+    });
+  }
+
   const sessionCookie = getCookie(request, SESSION_COOKIE);
   const session = await verifySession(sessionCookie, env.SESSION_SECRET);
 
