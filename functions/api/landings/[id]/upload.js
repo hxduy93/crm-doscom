@@ -4,7 +4,12 @@
 // Body JSON: { slot: "product", dataUrl: "data:image/png;base64,...." }  (hoặc { b64, mime })
 // Trả: { ok, url }
 
-const ALLOWED_SLOTS = new Set(["product", "hero", "usage", "benefit1", "benefit2", "benefit3"]);
+const ALLOWED_SLOTS = new Set([
+  "logo", "product", "hero", "heroMobile",
+  "cause1", "cause2", "cause3", "cause4",
+  "solution", "design", "apply", "proof",
+  "gift1", "gift2", "comboExtra",
+]);
 const MAX_B64 = 6 * 1024 * 1024; // ~6MB base64 (~4.5MB ảnh)
 
 function json(obj, status = 200) {

@@ -1647,27 +1647,91 @@ function ExportReportButton({ dateRange }) {
 // TAB: Landing Builder — 1 master prompt -> Gemini sinh khung + gen ảnh Flux (6 ô) -> render landing
 // API: /api/landings (list/create), /api/landings/:id (get/update/delete), /api/landings/preview
 // =============================================================
+// Editor mảng object generic (định nghĩa ở module scope để input không mất focus mỗi keystroke).
+function ArrayEditor({ items, onChange, fields, blank, addLabel }) {
+  const list = Array.isArray(items) ? items : []
+  return (
+    <div className="space-y-2">
+      {list.map((it, i) => (
+        <div key={i} className="border border-gray-200 rounded p-2 bg-gray-50">
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-[10px] font-bold text-gray-400">#{i + 1}</span>
+            <button onClick={() => onChange(list.filter((_, j) => j !== i))} className="text-red-500 text-xs">✕ xoá</button>
+          </div>
+          {fields.map(f => (
+            f.type === "area"
+              ? <textarea key={f.key} className="w-full border border-gray-200 rounded px-2 py-1 text-xs mb-1 h-14" value={it[f.key] == null ? "" : it[f.key]} placeholder={f.ph} onChange={e => onChange(list.map((x, j) => j === i ? { ...x, [f.key]: e.target.value } : x))} />
+              : f.type === "check"
+                ? <label key={f.key} className="flex items-center gap-1 text-xs text-gray-600 mb-1"><input type="checkbox" checked={!!it[f.key]} onChange={e => onChange(list.map((x, j) => j === i ? { ...x, [f.key]: e.target.checked } : x))} /> {f.ph}</label>
+                : <input key={f.key} className="w-full border border-gray-200 rounded px-2 py-1 text-xs mb-1" value={it[f.key] == null ? "" : it[f.key]} placeholder={f.ph} onChange={e => onChange(list.map((x, j) => j === i ? { ...x, [f.key]: e.target.value } : x))} />
+          ))}
+        </div>
+      ))}
+      <button onClick={() => onChange([...list, { ...blank }])} className="text-blue-600 text-xs font-semibold">+ {addLabel || "thêm"}</button>
+    </div>
+  )
+}
+
 function LandingBuilder() {
-  // 6 ô ảnh CỐ ĐỊNH cho mọi landing. type 'gen' = AI gen (có prompt), 'upload' = bạn gửi ảnh thật.
-  const SLOTS = [
-    { key: "hero", label: "Ảnh bìa (hero)", type: "gen" },
-    { key: "product", label: "Ảnh sản phẩm thật", type: "upload" },
-    { key: "usage", label: "Ảnh công dụng / hiệu quả", type: "gen" },
-    { key: "benefit1", label: "Ảnh lợi ích 1", type: "gen" },
-    { key: "benefit2", label: "Ảnh lợi ích 2", type: "gen" },
-    { key: "benefit3", label: "Ảnh lợi ích 3", type: "gen" },
+  // Ô upload ảnh GỐC sản phẩm (PNG tách nền) — nguồn để render các cảnh khác.
+  const PRODUCT_SLOT = { key: "product", label: "Ảnh gốc sản phẩm (PNG tách nền)" }
+  // Các ô ảnh section. scene=true → có prompt (copy sang ChatGPT) + upload; scene=false → chỉ upload.
+  const IMG_SLOTS = [
+    { key: "hero", label: "Hero — ảnh nền (ngang)", scene: true },
+    { key: "heroMobile", label: "Hero — mobile (dọc)", scene: true },
+    { key: "cause1", label: "Nguyên nhân #1", scene: true },
+    { key: "cause2", label: "Nguyên nhân #2", scene: true },
+    { key: "cause3", label: "Nguyên nhân #3", scene: true },
+    { key: "cause4", label: "Nguyên nhân #4", scene: true },
+    { key: "solution", label: "Giải pháp (before/after)", scene: true },
+    { key: "design", label: "Thiết kế sản phẩm", scene: true },
+    { key: "apply", label: "Ứng dụng (montage)", scene: true },
+    { key: "proof", label: "Kiểm chứng kết quả", scene: true },
+    { key: "logo", label: "Logo thương hiệu", scene: false },
+    { key: "gift1", label: "Quà tặng 1", scene: false },
+    { key: "gift2", label: "Quà tặng 2", scene: false },
+    { key: "comboExtra", label: "Sản phẩm phụ (combo)", scene: false },
   ]
   const BLANK = {
-    brand: "", title: "", description: "", pixelId: "",
-    theme: { primary: "#e11d48", accent: "#f59e0b" },
-    hero: { headline: "", sub: "", badges: [] },
-    usageTitle: "", usageDesc: "",
-    benefits: [{ icon: "✔", title: "", desc: "" }, { icon: "✔", title: "", desc: "" }, { icon: "✔", title: "", desc: "" }],
-    products: [{ label: "", value: "goi-1", price: 0, oldPrice: 0, default: true }],
-    offer: { priceNote: "", countdownMinutes: 0 },
-    staff: "", source: "", contact: { hotline: "" }, footer: { company: "", address: "" }, thankUrl: "",
-    imagePrompts: { hero: "", usage: "", benefit1: "", benefit2: "", benefit3: "" },
-    images: {},
+    brand: "", title: "", description: "", pixelId: "", announce: "",
+    theme: { primary: "#FF6B1A", orangeDeep: "#E55100", gold: "#D4A017", dark: "#0a0a0a" },
+    hero: { badges: [], titleLines: [{ text: "", accent: false }], sub: "", stats: [], ctaText: "Nhận tư vấn miễn phí →", trust: [] },
+    trust: [], pullQuote: "",
+    problem: { eyebrow: "Vấn đề thường gặp", title: "", sub: "", causes: [] },
+    solution: { eyebrow: "Giải pháp", h2: "", lead: "", intro: "", features: [] },
+    design: { eyebrow: "Thiết kế thông minh", h2: "", features: [] },
+    applications: { eyebrow: "Tính ứng dụng", h2: "", p: "", surfaces: [], handlesTitle: "", handles: [] },
+    proof: { eyebrow: "Chất lượng kiểm chứng", h2: "", p: "", stats: [], certs: [] },
+    compare: { eyebrow: "So sánh", h2: "", p: "", colNormal: "", colNormalNote: "", colNoma: "", colNomaNote: "", rows: [], savings: "", ctaText: "" },
+    steps: { eyebrow: "Hướng dẫn sử dụng", h2: "", items: [] },
+    combo: { eyebrow: "", h2: "", p: "", cards: [], giftHead: "", gifts: [] },
+    products: [{ value: "goi-1", label: "", desc: "", price: "", noGift: true }],
+    specs: { eyebrow: "Thông số sản phẩm", h2: "", rows: [] },
+    showroom: { eyebrow: "Hệ thống showroom", h2: "", p: "", items: [] },
+    faq: { eyebrow: "Câu hỏi thường gặp", h2: "", items: [] },
+    footer: { company: "", desc: "", cols: [], bottom: "" },
+    sticky: { title: "", sub: "", ctaText: "Đặt ngay →" },
+    contact: { hotline: "", messenger: "" },
+    imagePrompts: { hero: "", heroMobile: "", cause1: "", cause2: "", cause3: "", cause4: "", solution: "", design: "", apply: "", proof: "" },
+    images: {}, staff: "", source: "", thankUrl: "",
+  }
+  // Gộp config (từ AI/DB) vào BLANK để mọi nested object/array luôn tồn tại.
+  function mergeCfg(c) {
+    c = c || {}
+    const m = (k) => ({ ...BLANK[k], ...(c[k] || {}) })
+    const hero = { ...BLANK.hero, ...(c.hero || {}) }
+    if (!hero.titleLines || !hero.titleLines.length) hero.titleLines = BLANK.hero.titleLines
+    return {
+      ...BLANK, ...c, theme: m("theme"), hero,
+      problem: m("problem"), solution: m("solution"), design: m("design"),
+      applications: m("applications"), proof: m("proof"), compare: m("compare"),
+      steps: m("steps"), combo: m("combo"), specs: m("specs"),
+      showroom: m("showroom"), faq: m("faq"), footer: m("footer"),
+      sticky: m("sticky"), contact: m("contact"),
+      imagePrompts: { ...BLANK.imagePrompts, ...(c.imagePrompts || {}) },
+      images: c.images || {},
+      products: (c.products && c.products.length) ? c.products : BLANK.products,
+    }
   }
 
   const [list, setList] = useState([])
@@ -1679,10 +1743,12 @@ function LandingBuilder() {
   const [slug, setSlug] = useState("")
   const [title, setTitle] = useState("")
   const [cfg, setCfg] = useState(BLANK)
-  const [busy, setBusy] = useState({})            // {slot: true} khi đang gen/upload
+  const [busy, setBusy] = useState({})            // {slot:true} khi đang upload
   const [preview, setPreview] = useState("")
   const [msg, setMsg] = useState("")
   const [saving, setSaving] = useState(false)
+  const [advText, setAdvText] = useState("")      // editor JSON nâng cao
+  const [showAdv, setShowAdv] = useState(false)
 
   function loadList() {
     setLoadingList(true)
@@ -1706,7 +1772,7 @@ function LandingBuilder() {
     })
   }
 
-  // Debounce preview mỗi khi cfg/title đổi (ảnh tham chiếu URL công khai nên preview vẫn nhẹ).
+  // Debounce preview mỗi khi cfg/title đổi.
   React.useEffect(() => {
     if (step !== "edit") return
     const t = setTimeout(() => {
@@ -1727,18 +1793,13 @@ function LandingBuilder() {
       body: JSON.stringify({ prompt: masterPrompt }),
     }).then(r => r.json()).then(async d => {
       if (!d.ok) { setGenerating(false); setMsg("⚠️ " + (d.error || "Sinh khung lỗi")); return }
-      const c = { ...BLANK, ...d.config,
-        theme: { ...BLANK.theme, ...(d.config.theme || {}) }, hero: { ...BLANK.hero, ...(d.config.hero || {}) },
-        offer: { ...BLANK.offer, ...(d.config.offer || {}) }, contact: { ...BLANK.contact, ...(d.config.contact || {}) },
-        footer: { ...BLANK.footer, ...(d.config.footer || {}) },
-        imagePrompts: { ...BLANK.imagePrompts, ...(d.config.imagePrompts || {}) }, images: {} }
+      const c = mergeCfg(d.config)
       const t = c.title || c.brand || "Landing"
       const baseSlug = slugify(c.brand || c.title)
-      setCfg(c); setTitle(t); setSlug(baseSlug)
-      // tạo nháp để lấy id (gen ảnh cần id)
+      setCfg(c); setTitle(t); setSlug(baseSlug); setAdvText(JSON.stringify(c, null, 2))
       try {
         const L = await createDraft(baseSlug, t, c)
-        setEditingId(L.id); setSlug(L.slug); setStep("edit"); setMsg("✅ Đã sinh khung — chỉnh nội dung & gen ảnh bên dưới")
+        setEditingId(L.id); setSlug(L.slug); setStep("edit"); setMsg("✅ Đã sinh khung — upload ảnh gốc & dán prompt sang ChatGPT, rồi upload ảnh kết quả")
       } catch (e) { setMsg("⚠️ " + e.message) }
       setGenerating(false)
     }).catch(() => { setGenerating(false); setMsg("⚠️ Lỗi kết nối khi sinh khung") })
@@ -1759,7 +1820,6 @@ function LandingBuilder() {
     throw new Error("slug trùng nhiều lần, đổi tên thương hiệu")
   }
 
-  // Lưu config hiện tại (PUT) — gọi sau mỗi lần gen/upload và khi bấm lưu.
   function persist(nextCfg) {
     if (!editingId) return Promise.resolve()
     return fetch("/api/landings/" + editingId, {
@@ -1768,21 +1828,14 @@ function LandingBuilder() {
     }).then(r => r.json())
   }
 
-  function genImage(slot) {
-    if (!editingId) { setMsg("Lưu nháp trước khi gen ảnh"); return }
-    const prompt = (cfg.imagePrompts && cfg.imagePrompts[slot]) || ""
-    if (!prompt.trim()) { setMsg("Ô " + slot + " chưa có prompt ảnh"); return }
-    setBusy(b => ({ ...b, [slot]: true })); setMsg("🎨 Đang gen ảnh " + slot + "…")
-    fetch("/api/landings/" + editingId + "/genimage", {
-      method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slot, prompt }),
-    }).then(r => r.json()).then(d => {
-      setBusy(b => ({ ...b, [slot]: false }))
-      if (!d.ok) { setMsg("⚠️ " + (d.error || "gen lỗi")); return }
-      const next = { ...cfg, images: { ...cfg.images, [slot]: d.url } }
-      setCfg(next); persist(next)
-      setMsg(d.free_tier ? "✅ Gen xong (miễn phí)" : ("✅ Gen xong (phí ~$" + d.cost_usd + ")"))
-    }).catch(() => { setBusy(b => ({ ...b, [slot]: false })); setMsg("⚠️ Lỗi gen ảnh") })
+  // Copy prompt ảnh của 1 slot vào clipboard (để dán sang ChatGPT/DALL·E).
+  function copyPrompt(slot) {
+    const txt = (cfg.imagePrompts && cfg.imagePrompts[slot]) || ""
+    if (!txt.trim()) { setMsg("Ô " + slot + " chưa có prompt"); return }
+    const done = () => setMsg("📋 Đã copy prompt " + slot + " — đính kèm ảnh gốc sản phẩm vào ChatGPT rồi dán")
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(done).catch(() => { window.prompt("Copy prompt:", txt) })
+    } else { window.prompt("Copy prompt:", txt) }
   }
 
   function uploadImage(slot, file) {
@@ -1804,6 +1857,13 @@ function LandingBuilder() {
     reader.readAsDataURL(file)
   }
 
+  function applyAdvJson() {
+    try {
+      const o = JSON.parse(advText)
+      setCfg(mergeCfg(o)); setMsg("✅ Đã áp dụng JSON vào form & preview")
+    } catch (e) { setMsg("⚠️ JSON không hợp lệ: " + e.message) }
+  }
+
   function saveAll() {
     if (!slug.trim()) { setMsg("Cần slug"); return }
     setSaving(true); setMsg("")
@@ -1820,14 +1880,8 @@ function LandingBuilder() {
       .then(r => r.json()).then(d => {
         if (!d.ok) { setMsg(d.error || "Lỗi tải"); return }
         const L = d.landing
-        const c = { ...BLANK, ...L.config,
-          theme: { ...BLANK.theme, ...(L.config.theme || {}) }, hero: { ...BLANK.hero, ...(L.config.hero || {}) },
-          offer: { ...BLANK.offer, ...(L.config.offer || {}) }, contact: { ...BLANK.contact, ...(L.config.contact || {}) },
-          footer: { ...BLANK.footer, ...(L.config.footer || {}) },
-          imagePrompts: { ...BLANK.imagePrompts, ...(L.config.imagePrompts || {}) }, images: L.config.images || {},
-          benefits: (L.config.benefits && L.config.benefits.length) ? L.config.benefits : BLANK.benefits,
-          products: (L.config.products && L.config.products.length) ? L.config.products : BLANK.products }
-        setEditingId(L.id); setSlug(L.slug); setTitle(L.title); setCfg(c); setStep("edit")
+        const c = mergeCfg(L.config)
+        setEditingId(L.id); setSlug(L.slug); setTitle(L.title); setCfg(c); setAdvText(JSON.stringify(c, null, 2)); setStep("edit")
       }).catch(() => setMsg("Lỗi tải landing"))
   }
   function del(id) {
@@ -1839,14 +1893,39 @@ function LandingBuilder() {
   const inp = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
   const lbl = "block text-xs font-semibold text-gray-600 mb-1"
   const F = ({ label, children }) => (<div className="mb-3"><label className={lbl}>{label}</label>{children}</div>)
-  const sec = "text-xs font-bold text-gray-400 uppercase mt-3 mb-2 border-t pt-2"
+  const sec = "text-xs font-bold text-gray-400 uppercase mt-4 mb-2 border-t pt-2"
+  const csv = (a) => (a || []).join(", ")
+  const toCsv = (v) => v.split(",").map(x => x.trim()).filter(Boolean)
+
+  // Một ô ảnh trong lưới
+  function ImgSlot({ s }) {
+    const url = cfg.images[s.key]
+    return (
+      <div className="border border-gray-200 rounded-lg p-2">
+        <div className="text-xs font-semibold text-gray-700 mb-1">{s.label} {s.scene ? "🖼️" : "📷"}</div>
+        <div className="aspect-square bg-gray-50 rounded mb-2 overflow-hidden flex items-center justify-center">
+          {url ? <img src={url} alt="" className="w-full h-full object-contain" /> : <span className="text-gray-300 text-xs">{busy[s.key] ? "…" : "chưa có ảnh"}</span>}
+        </div>
+        {s.scene && (
+          <>
+            <textarea className="w-full border border-gray-200 rounded px-2 py-1 text-[11px] h-20 mb-1" value={(cfg.imagePrompts && cfg.imagePrompts[s.key]) || ""} onChange={e => setPath("imagePrompts." + s.key, e.target.value)} placeholder="prompt ảnh (English) — copy sang ChatGPT" />
+            <button onClick={() => copyPrompt(s.key)} className="w-full text-xs py-1 mb-1 bg-emerald-600 text-white rounded font-semibold">📋 Copy prompt</button>
+          </>
+        )}
+        <label className="block w-full text-xs py-1.5 bg-gray-700 text-white rounded font-semibold text-center cursor-pointer">
+          {busy[s.key] ? "…" : (url ? "📷 Đổi ảnh" : "📷 Upload ảnh")}
+          <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={e => uploadImage(s.key, e.target.files[0])} />
+        </label>
+      </div>
+    )
+  }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-bold text-gray-900">🛠️ Landing Builder</h2>
-          <p className="text-xs text-gray-400">Điền 1 prompt → AI sinh khung + gợi ý ảnh → chỉnh & gen ảnh → render landing.</p>
+          <p className="text-xs text-gray-400">1 prompt → AI sinh nội dung (khuôn noma911) → upload ảnh gốc sản phẩm, copy prompt từng ô sang ChatGPT để render ảnh → upload kết quả.</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => { setStep("input"); setMasterPrompt(""); setEditingId(null); setMsg("") }} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700">✨ Tạo bằng prompt</button>
@@ -1867,7 +1946,7 @@ function LandingBuilder() {
                     <div className="min-w-0">
                       <span className="font-medium text-gray-800">{L.title}</span>
                       <span className="text-gray-400 text-xs ml-2">/{L.slug}</span>
-                      <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${L.status === "published" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>{L.status === "published" ? "đã publish" : "nháp"}</span>
+                      <span className={"ml-2 text-xs px-2 py-0.5 rounded-full " + (L.status === "published" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500")}>{L.status === "published" ? "đã publish" : "nháp"}</span>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
                       <button onClick={() => openEdit(L.id)} className="text-blue-600 text-sm hover:underline">Mở</button>
@@ -1885,46 +1964,44 @@ function LandingBuilder() {
         <div className="bg-white rounded-lg border border-gray-200 p-5 max-w-2xl">
           <label className={lbl}>Mô tả sản phẩm / ưu đãi (càng rõ càng tốt)</label>
           <textarea className={inp + " h-40"} value={masterPrompt} onChange={e => setMasterPrompt(e.target.value)}
-            placeholder="VD: Dung dịch tẩy ố kính ô tô NOMA 911. Giá 199k/chai, combo 2 chai 398k. Tẩy sạch ố nước, cặn canxi trên kính lái trong 30 giây, giúp nhìn rõ khi trời mưa. Khách hàng là tài xế ô tô. Giọng điệu tin cậy, nhấn mạnh an toàn khi lái xe." />
+            placeholder="VD: Dung dịch tẩy ố kính ô tô NOMA 911. Giá 199k/chai, combo 2 chai 398k. Tẩy sạch ố nước, cặn canxi trên kính lái trong 5 phút, giúp nhìn rõ khi trời mưa. Khách hàng là tài xế ô tô. Giọng điệu tin cậy, nhấn mạnh an toàn khi lái." />
           <button onClick={generate} disabled={generating} className="mt-3 px-5 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50">
             {generating ? "⏳ Đang sinh khung…" : "✨ Sinh khung landing"}
           </button>
-          <p className="text-xs text-gray-400 mt-2">AI sẽ tự viết tiêu đề, lợi ích, gói bán + prompt gen ảnh cho 5 ô (trừ ảnh sản phẩm — bạn tự upload).</p>
+          <p className="text-xs text-gray-400 mt-2">AI viết đủ nội dung tất cả section (hero, nguyên nhân, giải pháp, combo, FAQ…) + prompt ảnh tiếng Anh cho từng ô (đã kèm câu dùng ảnh PNG sản phẩm).</p>
         </div>
       )}
 
       {step === "edit" && editingId !== null && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* CỘT TRÁI: nội dung + ảnh */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4 max-h-[78vh] overflow-y-auto">
+          {/* CỘT TRÁI: ảnh + nội dung */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4 max-h-[80vh] overflow-y-auto">
             <div className="grid grid-cols-2 gap-3">
               <F label="Slug (đường dẫn)"><input className={inp} value={slug} onChange={e => setSlug(e.target.value)} /></F>
               <F label="Tiêu đề / SEO"><input className={inp} value={title} onChange={e => setTitle(e.target.value)} /></F>
             </div>
 
-            <div className={sec}>Ảnh (6 ô cố định)</div>
-            <div className="grid grid-cols-2 gap-3">
-              {SLOTS.map(s => (
-                <div key={s.key} className="border border-gray-200 rounded-lg p-2">
-                  <div className="text-xs font-semibold text-gray-700 mb-1">{s.label} {s.type === "upload" ? "📷" : "🎨"}</div>
-                  <div className="aspect-square bg-gray-50 rounded mb-2 overflow-hidden flex items-center justify-center">
-                    {cfg.images[s.key]
-                      ? <img src={cfg.images[s.key]} alt="" className="w-full h-full object-cover" />
-                      : <span className="text-gray-300 text-xs">{busy[s.key] ? "…" : "chưa có"}</span>}
-                  </div>
-                  {s.type === "gen" ? (
-                    <>
-                      <textarea className="w-full border border-gray-200 rounded px-2 py-1 text-xs h-16 mb-1" value={(cfg.imagePrompts && cfg.imagePrompts[s.key]) || ""} onChange={e => setPath("imagePrompts." + s.key, e.target.value)} placeholder="image prompt (English)" />
-                      <button onClick={() => genImage(s.key)} disabled={busy[s.key]} className="w-full text-xs py-1.5 bg-indigo-600 text-white rounded font-semibold disabled:opacity-50">{busy[s.key] ? "…" : (cfg.images[s.key] ? "Gen lại" : "🎨 Gen ảnh")}</button>
-                    </>
-                  ) : (
-                    <label className="block w-full text-xs py-1.5 bg-gray-700 text-white rounded font-semibold text-center cursor-pointer">
-                      {busy[s.key] ? "…" : "📷 Tải ảnh PNG"}
-                      <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={e => uploadImage(s.key, e.target.files[0])} />
-                    </label>
-                  )}
+            {/* Ảnh gốc sản phẩm — nổi bật */}
+            <div className="border-2 border-dashed border-emerald-400 bg-emerald-50 rounded-lg p-3 mb-3">
+              <div className="text-sm font-bold text-emerald-800 mb-1">⭐ {PRODUCT_SLOT.label}</div>
+              <p className="text-[11px] text-emerald-700 mb-2">Upload ảnh sản phẩm tách nền (PNG). Đây là ảnh GỐC để đính kèm vào ChatGPT khi render các ảnh cảnh.</p>
+              <div className="flex gap-3 items-center">
+                <div className="w-24 h-24 bg-white rounded border border-emerald-200 overflow-hidden flex items-center justify-center flex-shrink-0">
+                  {cfg.images.product ? <img src={cfg.images.product} alt="" className="w-full h-full object-contain" /> : <span className="text-gray-300 text-xs">{busy.product ? "…" : "chưa có"}</span>}
                 </div>
-              ))}
+                <div className="flex-1 space-y-2">
+                  <label className="block w-full text-xs py-2 bg-emerald-600 text-white rounded font-semibold text-center cursor-pointer">
+                    {busy.product ? "…" : "📷 Upload ảnh gốc PNG"}
+                    <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={e => uploadImage("product", e.target.files[0])} />
+                  </label>
+                  {cfg.images.product && <a href={cfg.images.product} target="_blank" rel="noopener" className="block text-center text-xs text-emerald-700 underline">⬇ Mở/tải ảnh gốc để đính kèm ChatGPT</a>}
+                </div>
+              </div>
+            </div>
+
+            <div className={sec}>Ảnh các section (copy prompt → ChatGPT đính kèm ảnh gốc → upload kết quả)</div>
+            <div className="grid grid-cols-2 gap-3">
+              {IMG_SLOTS.map(s => <ImgSlot key={s.key} s={s} />)}
             </div>
 
             <div className={sec}>Thương hiệu & Pixel</div>
@@ -1932,48 +2009,25 @@ function LandingBuilder() {
               <F label="Thương hiệu"><input className={inp} value={cfg.brand} onChange={e => setPath("brand", e.target.value)} /></F>
               <F label="Meta Pixel ID"><input className={inp} value={cfg.pixelId} onChange={e => setPath("pixelId", e.target.value)} /></F>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               <F label="Màu chính"><input type="color" className="w-full h-9 border rounded" value={cfg.theme.primary} onChange={e => setPath("theme.primary", e.target.value)} /></F>
-              <F label="Màu nhấn"><input type="color" className="w-full h-9 border rounded" value={cfg.theme.accent} onChange={e => setPath("theme.accent", e.target.value)} /></F>
+              <F label="Màu vàng"><input type="color" className="w-full h-9 border rounded" value={cfg.theme.gold} onChange={e => setPath("theme.gold", e.target.value)} /></F>
+              <F label="Màu nền tối"><input type="color" className="w-full h-9 border rounded" value={cfg.theme.dark} onChange={e => setPath("theme.dark", e.target.value)} /></F>
             </div>
+            <F label="Thông báo (announce bar)"><input className={inp} value={cfg.announce} onChange={e => setPath("announce", e.target.value)} /></F>
 
             <div className={sec}>Hero</div>
-            <F label="Headline"><input className={inp} value={cfg.hero.headline} onChange={e => setPath("hero.headline", e.target.value)} /></F>
-            <F label="Mô tả phụ"><input className={inp} value={cfg.hero.sub} onChange={e => setPath("hero.sub", e.target.value)} /></F>
-            <F label="Badge (cách nhau dấu phẩy)"><input className={inp} value={(cfg.hero.badges || []).join(", ")} onChange={e => setPath("hero.badges", e.target.value.split(",").map(x => x.trim()).filter(Boolean))} /></F>
+            <label className={lbl}>Dòng tiêu đề (mỗi dòng 1 ô; tick = nhấn mạnh)</label>
+            <ArrayEditor items={cfg.hero.titleLines} fields={[{ key: "text", ph: "nội dung dòng" }, { key: "accent", type: "check", ph: "nhấn mạnh (gradient)" }]} blank={{ text: "", accent: false }} addLabel="dòng" onChange={v => setPath("hero.titleLines", v)} />
+            <div className="mt-2"><F label="Mô tả phụ (sub)"><textarea className={inp + " h-16"} value={cfg.hero.sub} onChange={e => setPath("hero.sub", e.target.value)} /></F></div>
+            <F label="Badge (cách nhau dấu phẩy)"><input className={inp} value={csv(cfg.hero.badges)} onChange={e => setPath("hero.badges", toCsv(e.target.value))} /></F>
+            <F label="Nút CTA hero"><input className={inp} value={cfg.hero.ctaText} onChange={e => setPath("hero.ctaText", e.target.value)} /></F>
+            <label className={lbl}>Số liệu hero (3 ô)</label>
+            <ArrayEditor items={cfg.hero.stats} fields={[{ key: "num", ph: "số (5')" }, { key: "label", ph: "nhãn" }]} blank={{ num: "", label: "" }} addLabel="số liệu" onChange={v => setPath("hero.stats", v)} />
+            <div className="mt-2"><F label="Trust bar (3 cụm, cách nhau dấu phẩy)"><input className={inp} value={csv(cfg.trust)} onChange={e => setPath("trust", toCsv(e.target.value))} /></F></div>
 
-            <div className={sec}>Công dụng</div>
-            <F label="Tiêu đề công dụng"><input className={inp} value={cfg.usageTitle} onChange={e => setPath("usageTitle", e.target.value)} /></F>
-            <F label="Mô tả công dụng"><input className={inp} value={cfg.usageDesc} onChange={e => setPath("usageDesc", e.target.value)} /></F>
-
-            <div className={sec}>Lợi ích (3 — khớp ảnh lợi ích 1/2/3)</div>
-            {cfg.benefits.map((b, i) => (
-              <div key={i} className="flex gap-2 mb-2">
-                <input className="w-12 border border-gray-300 rounded px-2 py-2 text-sm text-center" value={b.icon} onChange={e => setPath("benefits." + i + ".icon", e.target.value)} />
-                <div className="flex-1 grid gap-1">
-                  <input className={inp} value={b.title} onChange={e => setPath("benefits." + i + ".title", e.target.value)} placeholder="Tiêu đề" />
-                  <input className={inp} value={b.desc} onChange={e => setPath("benefits." + i + ".desc", e.target.value)} placeholder="Mô tả" />
-                </div>
-              </div>
-            ))}
-
-            <div className={sec + " flex justify-between items-center"}>Gói / Combo
-              <button onClick={() => setCfg(p => ({ ...p, products: [...p.products, { label: "", value: "goi-" + (p.products.length + 1), price: 0, oldPrice: 0, default: false }] }))} className="text-blue-600 normal-case font-semibold">+ thêm</button>
-            </div>
-            {cfg.products.map((p, i) => (
-              <div key={i} className="border border-gray-200 rounded-lg p-2 mb-2">
-                <div className="flex gap-2 mb-1">
-                  <input className={inp} value={p.label} onChange={e => setPath("products." + i + ".label", e.target.value)} placeholder="Tên gói" />
-                  <button onClick={() => setCfg(pp => ({ ...pp, products: pp.products.filter((_, j) => j !== i) }))} className="text-red-500 text-sm px-2">✕</button>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <input className={inp} value={p.value} onChange={e => setPath("products." + i + ".value", e.target.value)} placeholder="mã" />
-                  <input className={inp} type="number" value={p.price} onChange={e => setPath("products." + i + ".price", Number(e.target.value))} placeholder="Giá" />
-                  <input className={inp} type="number" value={p.oldPrice} onChange={e => setPath("products." + i + ".oldPrice", Number(e.target.value))} placeholder="Giá gốc" />
-                </div>
-                <label className="flex items-center gap-2 mt-1 text-xs text-gray-600"><input type="radio" name="defP" checked={!!p.default} onChange={() => setCfg(pp => ({ ...pp, products: pp.products.map((x, j) => ({ ...x, default: j === i })) }))} /> Chọn sẵn</label>
-              </div>
-            ))}
+            <div className={sec}>Gói bán (radio đặt hàng)</div>
+            <ArrayEditor items={cfg.products} fields={[{ key: "label", ph: "Tên gói" }, { key: "value", ph: "mã-goi" }, { key: "price", ph: "Giá (199K)" }, { key: "desc", ph: "Mô tả ngắn" }, { key: "noGift", type: "check", ph: "Gói KHÔNG quà (mua lẻ)" }]} blank={{ value: "goi", label: "", price: "", desc: "", noGift: false }} addLabel="gói" onChange={v => setPath("products", v)} />
 
             <div className={sec}>Định tuyến đơn & liên hệ</div>
             <div className="grid grid-cols-2 gap-3">
@@ -1982,12 +2036,23 @@ function LandingBuilder() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <F label="Hotline"><input className={inp} value={cfg.contact.hotline} onChange={e => setPath("contact.hotline", e.target.value)} /></F>
-              <F label="Ghi chú giá (dưới nút)"><input className={inp} value={cfg.offer.priceNote} onChange={e => setPath("offer.priceNote", e.target.value)} /></F>
+              <F label="Messenger URL"><input className={inp} value={cfg.contact.messenger} onChange={e => setPath("contact.messenger", e.target.value)} /></F>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <F label="Công ty (footer)"><input className={inp} value={cfg.footer.company} onChange={e => setPath("footer.company", e.target.value)} /></F>
-              <F label="Đếm ngược (phút, 0=tắt)"><input className={inp} type="number" value={cfg.offer.countdownMinutes} onChange={e => setPath("offer.countdownMinutes", Number(e.target.value))} /></F>
+            <F label="Công ty (footer)"><input className={inp} value={cfg.footer.company} onChange={e => setPath("footer.company", e.target.value)} /></F>
+
+            <div className={sec + " flex justify-between items-center"}>Nội dung chi tiết (JSON nâng cao)
+              <button onClick={() => { setShowAdv(s => !s); if (!showAdv) setAdvText(JSON.stringify(cfg, null, 2)) }} className="text-blue-600 normal-case font-semibold">{showAdv ? "ẩn" : "mở"}</button>
             </div>
+            {showAdv && (
+              <div>
+                <p className="text-[11px] text-gray-400 mb-1">Chỉnh trực tiếp mọi section (nguyên nhân, giải pháp, combo, FAQ, thông số, showroom…). Bấm "Áp dụng" để cập nhật form & preview.</p>
+                <textarea className="w-full border border-gray-200 rounded px-2 py-1 text-[11px] font-mono h-64" value={advText} onChange={e => setAdvText(e.target.value)} />
+                <div className="flex gap-2 mt-1">
+                  <button onClick={applyAdvJson} className="px-3 py-1.5 bg-indigo-600 text-white rounded text-xs font-semibold">📥 Áp dụng JSON</button>
+                  <button onClick={() => setAdvText(JSON.stringify(cfg, null, 2))} className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded text-xs font-semibold">↻ Lấy lại từ form</button>
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-2 mt-4 sticky bottom-0 bg-white pt-2 border-t">
               <button onClick={saveAll} disabled={saving} className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50">{saving ? "Đang lưu…" : "💾 Lưu toàn bộ"}</button>
@@ -1997,7 +2062,7 @@ function LandingBuilder() {
           {/* CỘT PHẢI: preview */}
           <div className="bg-gray-100 rounded-lg border border-gray-200 p-3">
             <div className="text-xs font-semibold text-gray-500 uppercase mb-2">🎨 Render landing (xem trực tiếp)</div>
-            <iframe title="preview" srcDoc={preview} style={{ width: "100%", height: "76vh", border: "none", borderRadius: "8px", background: "#fff" }} />
+            <iframe title="preview" srcDoc={preview} style={{ width: "100%", height: "80vh", border: "none", borderRadius: "8px", background: "#fff" }} />
           </div>
         </div>
       )}
