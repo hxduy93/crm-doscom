@@ -1707,6 +1707,11 @@ function compressImage(file, slot) {
   })
 }
 
+// Field wrapper ở module scope (định nghĩa trong component sẽ remount → mất focus khi gõ).
+function F({ label, children }) {
+  return (<div className="mb-3"><label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>{children}</div>)
+}
+
 function LandingBuilder() {
   // Ô upload ảnh GỐC sản phẩm (PNG tách nền) — nguồn để render các cảnh khác.
   const PRODUCT_SLOT = { key: "product", label: "Ảnh gốc sản phẩm (PNG tách nền)" }
@@ -1747,6 +1752,7 @@ function LandingBuilder() {
     footer: { company: "", desc: "", cols: [], bottom: "" },
     sticky: { title: "", sub: "", ctaText: "Đặt ngay →" },
     contact: { hotline: "", messenger: "" },
+    routing: { useCustom: false, domain: "", duySuffix: "", pnSuffix: "" },
     imagePrompts: { hero: "", heroMobile: "", cause1: "", cause2: "", cause3: "", cause4: "", solution: "", design: "", apply: "", proof: "" },
     images: {}, staff: "", source: "", thankUrl: "",
   }
@@ -1762,7 +1768,7 @@ function LandingBuilder() {
       applications: m("applications"), proof: m("proof"), compare: m("compare"),
       steps: m("steps"), combo: m("combo"), specs: m("specs"),
       showroom: m("showroom"), faq: m("faq"), footer: m("footer"),
-      sticky: m("sticky"), contact: m("contact"),
+      sticky: m("sticky"), contact: m("contact"), routing: m("routing"),
       imagePrompts: { ...BLANK.imagePrompts, ...(c.imagePrompts || {}) },
       images: c.images || {},
       products: (c.products && c.products.length) ? c.products : BLANK.products,
@@ -1785,6 +1791,7 @@ function LandingBuilder() {
   const [saving, setSaving] = useState(false)
   const [advText, setAdvText] = useState("")      // editor JSON nâng cao
   const [showAdv, setShowAdv] = useState(false)
+  const [previewMode, setPreviewMode] = useState("desktop") // desktop | mobile
 
   function loadList() {
     setLoadingList(true)
@@ -1909,6 +1916,14 @@ function LandingBuilder() {
     }).catch(() => { setBusy(b => ({ ...b, [slot]: false })); setMsg("⚠️ Lỗi nén/upload ảnh") })
   }
 
+  // Base URL cho link landing (tên miền riêng nếu đã trỏ, nếu chưa = CF .pages.dev).
+  function routeBase() {
+    const d = (cfg.routing.useCustom && cfg.routing.domain)
+      ? cfg.routing.domain.replace(/^https?:\/\//, "").replace(/\/+$/, "")
+      : "<project>.pages.dev"
+    return "https://" + d + "/"
+  }
+
   function applyAdvJson() {
     try {
       const o = JSON.parse(advText)
@@ -1944,7 +1959,6 @@ function LandingBuilder() {
 
   const inp = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
   const lbl = "block text-xs font-semibold text-gray-600 mb-1"
-  const F = ({ label, children }) => (<div className="mb-3"><label className={lbl}>{label}</label>{children}</div>)
   const sec = "text-xs font-bold text-gray-400 uppercase mt-4 mb-2 border-t pt-2"
   const csv = (a) => (a || []).join(", ")
   const toCsv = (v) => v.split(",").map(x => x.trim()).filter(Boolean)
@@ -2083,16 +2097,30 @@ function LandingBuilder() {
             <div className={sec}>Gói bán (radio đặt hàng)</div>
             <ArrayEditor items={cfg.products} fields={[{ key: "label", ph: "Tên gói" }, { key: "value", ph: "mã-goi" }, { key: "price", ph: "Giá (199K)" }, { key: "desc", ph: "Mô tả ngắn" }, { key: "noGift", type: "check", ph: "Gói KHÔNG quà (mua lẻ)" }]} blank={{ value: "goi", label: "", price: "", desc: "", noGift: false }} addLabel="gói" onChange={v => setPath("products", v)} />
 
-            <div className={sec}>Định tuyến đơn & liên hệ</div>
-            <div className="grid grid-cols-2 gap-3">
-              <F label="staff (định tuyến)"><input className={inp} value={cfg.staff} onChange={e => setPath("staff", e.target.value)} placeholder="duy / pn" /></F>
-              <F label="source"><input className={inp} value={cfg.source} onChange={e => setPath("source", e.target.value)} /></F>
-            </div>
+            <div className={sec}>Liên hệ</div>
             <div className="grid grid-cols-2 gap-3">
               <F label="Hotline"><input className={inp} value={cfg.contact.hotline} onChange={e => setPath("contact.hotline", e.target.value)} /></F>
               <F label="Messenger URL"><input className={inp} value={cfg.contact.messenger} onChange={e => setPath("contact.messenger", e.target.value)} /></F>
             </div>
             <F label="Công ty (footer)"><input className={inp} value={cfg.footer.company} onChange={e => setPath("footer.company", e.target.value)} /></F>
+
+            <div className={sec}>Đường dẫn & định tuyến nhân sự</div>
+            <F label="Tên miền landing">
+              <select className={inp} value={cfg.routing.useCustom ? "custom" : "cf"} onChange={e => setPath("routing.useCustom", e.target.value === "custom")}>
+                <option value="cf">Tên miền Cloudflare miễn phí (.pages.dev) — mặc định</option>
+                <option value="custom">Tên miền riêng (trỏ từ Mắt Bão)</option>
+              </select>
+            </F>
+            {cfg.routing.useCustom && <F label="Tên miền riêng"><input className={inp} value={cfg.routing.domain} onChange={e => setPath("routing.domain", e.target.value)} placeholder="vd: noma.io.vn" /></F>}
+            <div className="grid grid-cols-2 gap-3">
+              <F label="Hậu tố link — Duy"><input className={inp} value={cfg.routing.duySuffix} onChange={e => setPath("routing.duySuffix", e.target.value)} placeholder="vd: -duy" /></F>
+              <F label="Hậu tố link — Phương Nam"><input className={inp} value={cfg.routing.pnSuffix} onChange={e => setPath("routing.pnSuffix", e.target.value)} placeholder="vd: -pn" /></F>
+            </div>
+            <div className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded p-2 mb-3">
+              <div className="font-semibold mb-1">Link sẽ tạo khi publish (Phase 3):</div>
+              <div>👤 Duy: <span className="text-blue-600 break-all">{routeBase() + slug + (cfg.routing.duySuffix || "")}</span></div>
+              <div>👤 Phương Nam: <span className="text-blue-600 break-all">{routeBase() + slug + (cfg.routing.pnSuffix || "")}</span></div>
+            </div>
 
             <div className={sec + " flex justify-between items-center"}>Nội dung chi tiết (JSON nâng cao)
               <button onClick={() => { setShowAdv(s => !s); if (!showAdv) setAdvText(JSON.stringify(cfg, null, 2)) }} className="text-blue-600 normal-case font-semibold">{showAdv ? "ẩn" : "mở"}</button>
@@ -2115,8 +2143,16 @@ function LandingBuilder() {
 
           {/* CỘT PHẢI: preview */}
           <div className="bg-gray-100 rounded-lg border border-gray-200 p-3">
-            <div className="text-xs font-semibold text-gray-500 uppercase mb-2">🎨 Render landing (xem trực tiếp)</div>
-            <iframe title="preview" srcDoc={preview} style={{ width: "100%", height: "80vh", border: "none", borderRadius: "8px", background: "#fff" }} />
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs font-semibold text-gray-500 uppercase">🎨 Render landing</div>
+              <div className="flex gap-1">
+                <button onClick={() => setPreviewMode("desktop")} className={"px-3 py-1 rounded text-xs font-semibold " + (previewMode === "desktop" ? "bg-blue-600 text-white" : "bg-white text-gray-600 border border-gray-200")}>🖥️ Website</button>
+                <button onClick={() => setPreviewMode("mobile")} className={"px-3 py-1 rounded text-xs font-semibold " + (previewMode === "mobile" ? "bg-blue-600 text-white" : "bg-white text-gray-600 border border-gray-200")}>📱 Mobile</button>
+              </div>
+            </div>
+            <div className="overflow-auto flex justify-center" style={{ height: "80vh" }}>
+              <iframe title="preview" srcDoc={preview} style={{ width: previewMode === "mobile" ? "390px" : "100%", height: "100%", minHeight: previewMode === "mobile" ? "780px" : "100%", border: previewMode === "mobile" ? "10px solid #1f2937" : "none", borderRadius: previewMode === "mobile" ? "32px" : "8px", background: "#fff", flexShrink: 0 }} />
+            </div>
           </div>
         </div>
       )}
