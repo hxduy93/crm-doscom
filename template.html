@@ -1918,10 +1918,11 @@ function LandingBuilder() {
 
   // Base URL cho link landing (tên miền riêng nếu đã trỏ, nếu chưa = CF .pages.dev).
   function routeBase() {
-    const d = (cfg.routing.useCustom && cfg.routing.domain)
-      ? cfg.routing.domain.replace(/^https?:\/\//, "").replace(/\/+$/, "")
-      : "<project>.pages.dev"
-    return "https://" + d + "/"
+    if (cfg.routing.useCustom && cfg.routing.domain) {
+      const d = cfg.routing.domain.replace(/^https?:\/\//, "").replace(/\/+$/, "")
+      return "https://" + d + "/"
+    }
+    return window.location.origin + "/l/"
   }
 
   function applyAdvJson() {
@@ -2117,9 +2118,9 @@ function LandingBuilder() {
               <F label="Hậu tố link — Phương Nam"><input className={inp} value={cfg.routing.pnSuffix} onChange={e => setPath("routing.pnSuffix", e.target.value)} placeholder="vd: -pn" /></F>
             </div>
             <div className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded p-2 mb-3">
-              <div className="font-semibold mb-1">Link sẽ tạo khi publish (Phase 3):</div>
-              <div>👤 Duy: <span className="text-blue-600 break-all">{routeBase() + slug + (cfg.routing.duySuffix || "")}</span></div>
-              <div>👤 Phương Nam: <span className="text-blue-600 break-all">{routeBase() + slug + (cfg.routing.pnSuffix || "")}</span></div>
+              <div className="font-semibold mb-1">Link landing (xem được ngay; định tuyến đơn theo nhân sự hoàn thiện ở Phase 3):</div>
+              <div>👤 Duy: <a href={routeBase() + slug + (cfg.routing.duySuffix || "")} target="_blank" rel="noopener" className="text-blue-600 underline break-all">{routeBase() + slug + (cfg.routing.duySuffix || "")}</a></div>
+              <div>👤 Phương Nam: <a href={routeBase() + slug + (cfg.routing.pnSuffix || "")} target="_blank" rel="noopener" className="text-blue-600 underline break-all">{routeBase() + slug + (cfg.routing.pnSuffix || "")}</a></div>
             </div>
 
             <div className={sec + " flex justify-between items-center"}>Nội dung chi tiết (JSON nâng cao)
