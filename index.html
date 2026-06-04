@@ -1672,6 +1672,41 @@ function ArrayEditor({ items, onChange, fields, blank, addLabel }) {
   )
 }
 
+// Nén/thu nhỏ ảnh ở client trước khi gửi (D1 giới hạn ~2MB/ảnh).
+function compressImage(file, slot) {
+  var keepAlpha = ["product", "logo", "gift1", "gift2", "comboExtra"].indexOf(slot) >= 0
+  var LIMIT = 1300000 // độ dài dataURL mục tiêu (~1.3MB)
+  return new Promise(function (resolve, reject) {
+    var url = URL.createObjectURL(file)
+    var im = new Image()
+    im.onload = function () {
+      URL.revokeObjectURL(url)
+      var maxDim = keepAlpha ? 1200 : 1600
+      var dataUrl = ""
+      for (var tries = 0; tries < 6; tries++) {
+        var w = im.width, h = im.height
+        if (Math.max(w, h) > maxDim) { var r = maxDim / Math.max(w, h); w = Math.round(w * r); h = Math.round(h * r) }
+        var cv = document.createElement("canvas"); cv.width = w; cv.height = h
+        cv.getContext("2d").drawImage(im, 0, 0, w, h)
+        if (keepAlpha) {
+          dataUrl = cv.toDataURL("image/png")
+          if (dataUrl.length <= LIMIT) break
+          if (tries >= 3) { var q = 0.85; do { dataUrl = cv.toDataURL("image/jpeg", q); q -= 0.1 } while (dataUrl.length > LIMIT && q > 0.4); break }
+        } else {
+          var q2 = 0.85; dataUrl = cv.toDataURL("image/jpeg", q2)
+          while (dataUrl.length > LIMIT && q2 > 0.4) { q2 -= 0.1; dataUrl = cv.toDataURL("image/jpeg", q2) }
+          if (dataUrl.length <= LIMIT) break
+        }
+        maxDim = Math.round(maxDim * 0.8)
+      }
+      if (!dataUrl) { reject(new Error("nén ảnh thất bại")); return }
+      resolve(dataUrl)
+    }
+    im.onerror = function () { URL.revokeObjectURL(url); reject(new Error("không đọc được ảnh")) }
+    im.src = url
+  })
+}
+
 function LandingBuilder() {
   // Ô upload ảnh GỐC sản phẩm (PNG tách nền) — nguồn để render các cảnh khác.
   const PRODUCT_SLOT = { key: "product", label: "Ảnh gốc sản phẩm (PNG tách nền)" }
@@ -1841,20 +1876,18 @@ function LandingBuilder() {
   function uploadImage(slot, file) {
     if (!editingId) { setMsg("Lưu nháp trước khi upload"); return }
     if (!file) return
-    setBusy(b => ({ ...b, [slot]: true })); setMsg("⬆️ Đang upload " + slot + "…")
-    const reader = new FileReader()
-    reader.onload = () => {
-      fetch("/api/landings/" + editingId + "/upload", {
+    setBusy(b => ({ ...b, [slot]: true })); setMsg("⬆️ Đang nén & upload " + slot + "…")
+    compressImage(file, slot).then(dataUrl => {
+      return fetch("/api/landings/" + editingId + "/upload", {
         method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slot, dataUrl: reader.result }),
+        body: JSON.stringify({ slot, dataUrl }),
       }).then(r => r.json()).then(d => {
         setBusy(b => ({ ...b, [slot]: false }))
         if (!d.ok) { setMsg("⚠️ " + (d.error || "upload lỗi")); return }
         const next = { ...cfg, images: { ...cfg.images, [slot]: d.url } }
         setCfg(next); persist(next); setMsg("✅ Đã tải ảnh " + slot)
-      }).catch(() => { setBusy(b => ({ ...b, [slot]: false })); setMsg("⚠️ Lỗi upload") })
-    }
-    reader.readAsDataURL(file)
+      })
+    }).catch(() => { setBusy(b => ({ ...b, [slot]: false })); setMsg("⚠️ Lỗi nén/upload ảnh") })
   }
 
   function applyAdvJson() {

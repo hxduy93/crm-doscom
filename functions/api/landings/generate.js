@@ -8,12 +8,31 @@
 const DEFAULT_MODEL = "gemini-3-flash-preview";
 const GATEWAY_ID = "doscom-erp";
 
-// Slot ảnh có dùng lại ảnh PNG sản phẩm → prompt phải kèm câu chuẩn DALL·E.
+// Slot ảnh nên có sản phẩm xuất hiện rõ → dùng câu compose ảnh mẫu mạnh.
 const PRODUCT_SLOTS = new Set(["hero", "heroMobile", "solution", "design", "apply", "proof"]);
-const PRODUCT_CLAUSE =
-  " — Use the exact product from the uploaded reference image; keep its shape, label and colors unchanged. Photorealistic commercial product photography, clean composition, no added text or logos.";
-const SCENE_CLAUSE =
-  " — Photorealistic editorial photography, clean composition, no text, no logos, brand-safe.";
+
+// Câu tham chiếu ảnh mẫu (ChatGPT/DALL·E nhận ảnh đính kèm).
+const REF_STRONG =
+  "Use the attached reference product image as the EXACT product: keep its exact shape, label, text and colors unchanged, do not redesign or relabel it; composite it photorealistically into the scene at a natural scale.";
+const REF_COND =
+  "If the product appears in this image, use the attached reference product image as the exact product (keep its shape, label and colors unchanged).";
+const STYLE =
+  "Photorealistic commercial photography, sharp focus, professional lighting, clean uncluttered composition. Do NOT render any text, letters, captions, watermark or brand logo in the image (a requested colored highlight mark is allowed).";
+
+// Kích thước/tỉ lệ khuyến nghị từng ô (khớp vị trí trên landing).
+const SIZE = {
+  hero: "Wide landscape banner, aspect ratio 16:9 (about 1600x900px); keep the left third relatively empty for text overlay.",
+  heroMobile: "Vertical poster, aspect ratio 9:16 (about 1080x1920px); product centered, works as a mobile background.",
+  cause1: "Square 1:1 (about 1024x1024px).",
+  cause2: "Square 1:1 (about 1024x1024px).",
+  cause3: "Square 1:1 (about 1024x1024px).",
+  cause4: "Square 1:1 (about 1024x1024px).",
+  solution: "Aspect ratio 4:3 (about 1200x900px); clear before/after or hero close-up.",
+  design: "Aspect ratio 1:1 (about 1200x1200px); clean studio close-up of the product details.",
+  apply: "Aspect ratio 4:3 (about 1200x900px); the product being used in a real context.",
+  proof: "Aspect ratio 4:3 (about 1200x900px); convincing result / comparison shot.",
+};
+const SCENE_SLOTS = Object.keys(SIZE);
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
@@ -31,7 +50,7 @@ function baseUrl(env) {
 // Chỉ dẫn cho Gemini: trả JSON đúng khung renderLanding (noma911). Dùng nối chuỗi (không backtick).
 function buildInstruction(userPrompt) {
   return [
-    "Bạn là chuyên gia copywriting landing page bán hàng tiếng Việt (phong cách chuyển đổi cao, COD, ngành gia dụng/ô tô/làm đẹp).",
+    "Bạn là chuyên gia copywriting landing page bán hàng tiếng Việt (phong cách chuyển đổi cao, COD, ngành gia dụng/ô tô/làm đẹp/công nghệ).",
     "Từ mô tả sản phẩm/ưu đãi của người dùng dưới đây, viết nội dung ĐẦY ĐỦ cho 1 landing page nhiều section theo đúng khung JSON.",
     "",
     "MÔ TẢ CỦA NGƯỜI DÙNG:",
@@ -79,19 +98,20 @@ function buildInstruction(userPrompt) {
     '    "cols":[ {"title":"Sản phẩm","links":[{"text":"...","href":"#"}]} ] },',
     '  "sticky": { "title":"199K — Combo từ", "sub":"Thanh toán khi nhận · COD" },',
     '  "imagePrompts": {',
-    '    "hero": "English scene description for a hero background photo featuring the product",',
-    '    "heroMobile": "English scene description, vertical framing, product centered",',
-    '    "cause1": "English scene illustrating problem #1 (NO product)",',
-    '    "cause2": "...", "cause3": "...", "cause4": "...",',
-    '    "solution": "English before/after or product close-up scene",',
-    '    "design": "English close-up showing the product design/parts",',
-    '    "apply": "English montage of the product being used",',
-    '    "proof": "English result/comparison shot"',
+    '    "hero":"...", "heroMobile":"...", "cause1":"...", "cause2":"...", "cause3":"...", "cause4":"...",',
+    '    "solution":"...", "design":"...", "apply":"...", "proof":"..."',
+    "  },  // mỗi ô = 1-2 câu TIẾNG ANH MÔ TẢ CẢNH cụ thể, sống động (bối cảnh, ánh sáng, góc máy). KHÔNG nhắc thương hiệu thật.",
+    '  "imageHighlights": {',
+    '    "hero":"", "solution":"", "design":"", "apply":"", "proof":"", "cause1":"", "cause2":"", "cause3":"", "cause4":"", "heroMobile":""',
     "  }",
     "}",
     "",
-    "QUY TẮC ẢNH (imagePrompts): viết TIẾNG ANH, chỉ MÔ TẢ CẢNH (không nhắc thương hiệu thật, không yêu cầu chữ trong ảnh). Hệ thống sẽ TỰ thêm câu dùng ảnh PNG sản phẩm — bạn KHÔNG cần viết câu đó.",
-    "Nội dung chữ bằng TIẾNG VIỆT có dấu, văn phong bán hàng ngắn gọn, đúng sản phẩm người dùng mô tả. Số phần tử mảng tuân thủ ghi chú (causes 4, solution.features 3, design.features 4, surfaces 4, proof.stats 4, steps 3).",
+    "QUY TẮC ẢNH RẤT QUAN TRỌNG:",
+    "- imagePrompts: chỉ mô tả CẢNH (tiếng Anh). Hệ thống sẽ TỰ thêm: câu dùng ảnh mẫu sản phẩm, kích thước/tỉ lệ, và style. Bạn KHÔNG cần viết các câu đó.",
+    "- imageHighlights: NẾU bức ảnh cần CHỈ RÕ một chi tiết quan trọng/ẩn/nhỏ của sản phẩm để người xem chú ý (vd: mắt camera ẩn trong ổ cắm, nút bấm, cảm biến, vùng vết ố trên kính, điểm trước/sau), hãy ghi TÊN CHÍNH XÁC chi tiết đó bằng tiếng Anh (vd: \"the hidden camera lens inside the socket\"). Hệ thống sẽ tự thêm yêu cầu khoanh tròn đỏ vào đúng chi tiết đó. Nếu ảnh không cần chỉ điểm gì thì để chuỗi rỗng.",
+    "- Đặc biệt với sản phẩm có tính năng ẩn/khó thấy (camera ngụy trang, cảm biến...), các ảnh demo (solution/design/apply/proof) NÊN có imageHighlights chỉ vào tính năng đó.",
+    "",
+    "Nội dung chữ bằng TIẾNG VIỆT có dấu, văn phong bán hàng ngắn gọn, đúng sản phẩm. Số phần tử mảng tuân thủ ghi chú (causes 4, solution.features 3, design.features 4, surfaces 4, proof.stats 4, steps 3).",
   ].join("\n");
 }
 
@@ -100,6 +120,24 @@ function fitArray(a, n, factory) {
   const out = Array.isArray(a) ? a.slice(0, n) : [];
   while (out.length < n) out.push(factory(out.length));
   return out;
+}
+
+// Ghép prompt cuối cho 1 slot: cảnh + highlight (khoanh đỏ) + ảnh mẫu + kích thước + style.
+function composePrompt(slot, scene, highlight) {
+  scene = String(scene || "").trim();
+  if (!scene) return "";
+  const parts = [scene];
+  const hl = String(highlight || "").trim();
+  if (hl) {
+    parts.push(
+      "IMPORTANT — visual callout: draw a clearly visible bright RED circle (and a thin red arrow) around " + hl +
+      " so the viewer immediately notices it. Keep the red mark clean and obvious."
+    );
+  }
+  parts.push(PRODUCT_SLOTS.has(slot) ? REF_STRONG : REF_COND);
+  parts.push(SIZE[slot] || "");
+  parts.push(STYLE);
+  return parts.filter(Boolean).join(" ");
 }
 
 export async function onRequestPost({ request, env }) {
@@ -164,16 +202,13 @@ export async function onRequestPost({ request, env }) {
   cfg.steps.items = fitArray(cfg.steps.items, 3, () => ({ h3: "", p: "" }));
   cfg.products = Array.isArray(cfg.products) && cfg.products.length ? cfg.products : [{ value: "goi-1", label: "", price: "", noGift: true }];
 
-  // imagePrompts: thêm câu dùng ảnh PNG sản phẩm cho slot product, câu scene-safe cho slot còn lại.
+  // imagePrompts: ghép cảnh + highlight + ảnh mẫu + kích thước + style cho từng slot.
   const ip = cfg.imagePrompts && typeof cfg.imagePrompts === "object" ? cfg.imagePrompts : {};
-  const SCENE_SLOTS = ["hero", "heroMobile", "cause1", "cause2", "cause3", "cause4", "solution", "design", "apply", "proof"];
+  const ih = cfg.imageHighlights && typeof cfg.imageHighlights === "object" ? cfg.imageHighlights : {};
   const finalPrompts = {};
-  for (const slot of SCENE_SLOTS) {
-    const base = String(ip[slot] || "").trim();
-    if (!base) { finalPrompts[slot] = ""; continue; }
-    finalPrompts[slot] = base + (PRODUCT_SLOTS.has(slot) ? PRODUCT_CLAUSE : SCENE_CLAUSE);
-  }
+  for (const slot of SCENE_SLOTS) finalPrompts[slot] = composePrompt(slot, ip[slot], ih[slot]);
   cfg.imagePrompts = finalPrompts;
+  delete cfg.imageHighlights;
   cfg.images = {};
 
   return json({ ok: true, config: cfg });

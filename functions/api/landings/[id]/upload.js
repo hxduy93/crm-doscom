@@ -10,7 +10,8 @@ const ALLOWED_SLOTS = new Set([
   "solution", "design", "apply", "proof",
   "gift1", "gift2", "comboExtra",
 ]);
-const MAX_B64 = 6 * 1024 * 1024; // ~6MB base64 (~4.5MB ảnh)
+// D1 giới hạn ~2MB/giá trị (SQLITE_TOOBIG). Giữ b64 < ~1.9MB; UI đã tự nén ảnh trước khi gửi.
+const MAX_B64 = 1900000;
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
@@ -38,7 +39,7 @@ export async function onRequestPost({ request, env, params }) {
   }
   if (!b64) return json({ ok: false, error: "Thiếu dữ liệu ảnh" }, 400);
   if (!/^image\/(png|jpeg|jpg|webp)$/.test(mime)) return json({ ok: false, error: "Chỉ nhận PNG/JPG/WebP" }, 400);
-  if (b64.length > MAX_B64) return json({ ok: false, error: "Ảnh quá lớn (>~4.5MB), hãy nén nhỏ lại" }, 413);
+  if (b64.length > MAX_B64) return json({ ok: false, error: "Ảnh quá lớn cho D1 (giới hạn ~2MB/ảnh). Hãy chọn ảnh nhỏ hơn hoặc giảm độ phân giải." }, 413);
 
   const landing = await env.DB.prepare("SELECT id FROM landings WHERE id = ?").bind(id).first();
   if (!landing) return json({ ok: false, error: "Landing chưa tồn tại — lưu nháp trước" }, 404);
