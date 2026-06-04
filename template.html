@@ -1752,11 +1752,27 @@ function LandingBuilder() {
     footer: { company: "", desc: "", cols: [], bottom: "" },
     sticky: { title: "", sub: "", ctaText: "Đặt ngay →" },
     contact: { hotline: "", messenger: "" },
-    routing: { useCustom: false, domain: "", duySuffix: "", pnSuffix: "" },
+    routing: { useCustom: false, domain: "", staff: [{ name: "Duy", suffix: "-duy" }, { name: "Phương Nam", suffix: "-pn" }] },
     imagePrompts: { hero: "", heroMobile: "", cause1: "", cause2: "", cause3: "", cause4: "", solution: "", design: "", apply: "", proof: "" },
     images: {}, staff: "", source: "", thankUrl: "",
   }
   // Gộp config (từ AI/DB) vào BLANK để mọi nested object/array luôn tồn tại.
+  // Chuẩn hoá routing (hỗ trợ config cũ duySuffix/pnSuffix -> staff array).
+  function normRouting(r) {
+    r = r || {}
+    let staff = (Array.isArray(r.staff) && r.staff.length) ? r.staff : null
+    if (!staff) {
+      if (r.duySuffix != null || r.pnSuffix != null) {
+        staff = []
+        if (r.duySuffix != null) staff.push({ name: "Duy", suffix: r.duySuffix })
+        if (r.pnSuffix != null) staff.push({ name: "Phương Nam", suffix: r.pnSuffix })
+      } else {
+        staff = [{ name: "Duy", suffix: "-duy" }, { name: "Phương Nam", suffix: "-pn" }]
+      }
+    }
+    return { useCustom: !!r.useCustom, domain: r.domain || "", staff }
+  }
+
   function mergeCfg(c) {
     c = c || {}
     const m = (k) => ({ ...BLANK[k], ...(c[k] || {}) })
@@ -1768,7 +1784,7 @@ function LandingBuilder() {
       applications: m("applications"), proof: m("proof"), compare: m("compare"),
       steps: m("steps"), combo: m("combo"), specs: m("specs"),
       showroom: m("showroom"), faq: m("faq"), footer: m("footer"),
-      sticky: m("sticky"), contact: m("contact"), routing: m("routing"),
+      sticky: m("sticky"), contact: m("contact"), routing: normRouting(c.routing),
       imagePrompts: { ...BLANK.imagePrompts, ...(c.imagePrompts || {}) },
       images: c.images || {},
       products: (c.products && c.products.length) ? c.products : BLANK.products,
@@ -2113,14 +2129,13 @@ function LandingBuilder() {
               </select>
             </F>
             {cfg.routing.useCustom && <F label="Tên miền riêng"><input className={inp} value={cfg.routing.domain} onChange={e => setPath("routing.domain", e.target.value)} placeholder="vd: noma.io.vn" /></F>}
-            <div className="grid grid-cols-2 gap-3">
-              <F label="Hậu tố link — Duy"><input className={inp} value={cfg.routing.duySuffix} onChange={e => setPath("routing.duySuffix", e.target.value)} placeholder="vd: -duy" /></F>
-              <F label="Hậu tố link — Phương Nam"><input className={inp} value={cfg.routing.pnSuffix} onChange={e => setPath("routing.pnSuffix", e.target.value)} placeholder="vd: -pn" /></F>
-            </div>
-            <div className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded p-2 mb-3">
+            <label className={lbl}>Nhân sự & hậu tố link (mỗi người 1 link riêng — thêm/xoá tuỳ ý)</label>
+            <ArrayEditor items={cfg.routing.staff} fields={[{ key: "name", ph: "Tên nhân sự (vd: Duy)" }, { key: "suffix", ph: "Hậu tố link (vd: -duy)" }]} blank={{ name: "", suffix: "" }} addLabel="nhân sự" onChange={v => setPath("routing.staff", v)} />
+            <div className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded p-2 mb-3 mt-2">
               <div className="font-semibold mb-1">Link landing (xem được ngay; định tuyến đơn theo nhân sự hoàn thiện ở Phase 3):</div>
-              <div>👤 Duy: <a href={routeBase() + slug + (cfg.routing.duySuffix || "")} target="_blank" rel="noopener" className="text-blue-600 underline break-all">{routeBase() + slug + (cfg.routing.duySuffix || "")}</a></div>
-              <div>👤 Phương Nam: <a href={routeBase() + slug + (cfg.routing.pnSuffix || "")} target="_blank" rel="noopener" className="text-blue-600 underline break-all">{routeBase() + slug + (cfg.routing.pnSuffix || "")}</a></div>
+              {(cfg.routing.staff || []).map((p, i) => (
+                <div key={i}>👤 {p.name || "(chưa đặt tên)"}: <a href={routeBase() + slug + (p.suffix || "")} target="_blank" rel="noopener" className="text-blue-600 underline break-all">{routeBase() + slug + (p.suffix || "")}</a></div>
+              ))}
             </div>
 
             <div className={sec + " flex justify-between items-center"}>Nội dung chi tiết (JSON nâng cao)
