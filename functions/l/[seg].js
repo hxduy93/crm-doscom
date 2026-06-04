@@ -28,19 +28,21 @@ export async function onRequestGet({ env, params }) {
     let cfg;
     try { cfg = JSON.parse(L.config || "{}"); } catch { cfg = {}; }
     const r = (cfg && cfg.routing) || {};
-    if (seg === L.slug) { match = { cfg, staff: cfg.staff || "" }; break; }
+    if (seg === L.slug) { match = { cfg, slug: L.slug, staff: cfg.staff || "" }; break; }
     // Danh sách nhân sự động: routing.staff = [{name, suffix}]
     const staffArr = Array.isArray(r.staff) ? r.staff : [];
     const hit = staffArr.find((p) => p && p.suffix && seg === (L.slug + p.suffix));
-    if (hit) { match = { cfg, staff: hit.key || hit.name || "" }; break; }
+    if (hit) { match = { cfg, slug: L.slug, staff: hit.key || hit.name || "" }; break; }
     // Back-compat config cũ
-    if (r.duySuffix && seg === (L.slug + r.duySuffix)) { match = { cfg, staff: "duy" }; break; }
-    if (r.pnSuffix && seg === (L.slug + r.pnSuffix)) { match = { cfg, staff: "pn" }; break; }
+    if (r.duySuffix && seg === (L.slug + r.duySuffix)) { match = { cfg, slug: L.slug, staff: "duy" }; break; }
+    if (r.pnSuffix && seg === (L.slug + r.pnSuffix)) { match = { cfg, slug: L.slug, staff: "pn" }; break; }
   }
   if (!match) return notFound();
 
-  const cfg = { ...match.cfg };
+  const cfg = { ...match.cfg, slug: match.slug };
   if (match.staff) cfg.staff = match.staff;
+  // KHÔNG để lộ secret tích hợp ra HTML công khai
+  delete cfg.integrations;
 
   let html;
   try { html = renderLanding(cfg); } catch (err) {

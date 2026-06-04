@@ -1753,6 +1753,7 @@ function LandingBuilder() {
     sticky: { title: "", sub: "", ctaText: "Đặt ngay →" },
     contact: { hotline: "", messenger: "" },
     routing: { useCustom: false, domain: "", staff: [{ name: "Duy", suffix: "-duy" }, { name: "Phương Nam", suffix: "-pn" }] },
+    integrations: { pancakeShopId: "", pancakeApiKey: "", sheetUrl: "" },
     imagePrompts: { hero: "", heroMobile: "", cause1: "", cause2: "", cause3: "", cause4: "", solution: "", design: "", apply: "", proof: "" },
     images: {}, staff: "", source: "", thankUrl: "",
   }
@@ -1784,7 +1785,7 @@ function LandingBuilder() {
       applications: m("applications"), proof: m("proof"), compare: m("compare"),
       steps: m("steps"), combo: m("combo"), specs: m("specs"),
       showroom: m("showroom"), faq: m("faq"), footer: m("footer"),
-      sticky: m("sticky"), contact: m("contact"), routing: normRouting(c.routing),
+      sticky: m("sticky"), contact: m("contact"), routing: normRouting(c.routing), integrations: m("integrations"),
       imagePrompts: { ...BLANK.imagePrompts, ...(c.imagePrompts || {}) },
       images: c.images || {},
       products: (c.products && c.products.length) ? c.products : BLANK.products,
@@ -2137,6 +2138,13 @@ function LandingBuilder() {
                 <div key={i}>👤 {p.name || "(chưa đặt tên)"}: <a href={routeBase() + slug + (p.suffix || "")} target="_blank" rel="noopener" className="text-blue-600 underline break-all">{routeBase() + slug + (p.suffix || "")}</a></div>
               ))}
             </div>
+
+            <div className={sec}>Tích hợp nhận đơn (Pancake + Google Sheet)</div>
+            <p className="text-[11px] text-gray-400 mb-2">Đơn khách đặt trên trang /l/... sẽ tự đẩy về Pancake CRM và Google Sheet bên dưới. Để trống nếu chưa dùng.</p>
+            <F label="Pancake — Shop ID"><input className={inp} value={cfg.integrations.pancakeShopId} onChange={e => setPath("integrations.pancakeShopId", e.target.value)} placeholder="vd: 1942196207" /></F>
+            <F label="Pancake — API Key"><input className={inp} value={cfg.integrations.pancakeApiKey} onChange={e => setPath("integrations.pancakeApiKey", e.target.value)} placeholder="api_key của shop Pancake" /></F>
+            <F label="Google Sheet — link nhận data (Apps Script Web App URL)"><input className={inp} value={cfg.integrations.sheetUrl} onChange={e => setPath("integrations.sheetUrl", e.target.value)} placeholder="https://script.google.com/macros/s/.../exec" /></F>
+            <p className="text-[11px] text-gray-400 mb-1">Sheet: tạo Apps Script doPost(e) ghi vào sheet, Deploy → Web app → quyền "Anyone" → dán link /exec vào đây.</p>
 
             <div className={sec + " flex justify-between items-center"}>Nội dung chi tiết (JSON nâng cao)
               <button onClick={() => { setShowAdv(s => !s); if (!showAdv) setAdvText(JSON.stringify(cfg, null, 2)) }} className="text-blue-600 normal-case font-semibold">{showAdv ? "ẩn" : "mở"}</button>

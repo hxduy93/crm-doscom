@@ -70,6 +70,11 @@ export async function onRequest(context) {
     return next();
   }
 
+  // Landing Builder — nhận đơn từ trang landing công khai (khách không có session).
+  if (url.pathname === "/api/landing/order" && (request.method === "POST" || request.method === "OPTIONS")) {
+    return next();
+  }
+
   // NOMA 911 landing ingest — server-to-server (landing _worker.js fan-out),
   // không có session cookie. Gate bằng token riêng X-Noma-Token = env.NOMA911_INGEST_TOKEN.
   if (url.pathname === "/api/noma911/order" && request.method === "POST") {

@@ -158,6 +158,7 @@ function withDefaults(c) {
     staff: c.staff || "",
     source: c.source || "",
     thankUrl: c.thankUrl || "",
+    slug: c.slug || "",
   };
 }
 
@@ -958,8 +959,8 @@ function pageScript(runtimeJson) {
     "      if(!province){showErr('province',true);ok=false;}",
     "      if(!ok){ var fe=form.querySelector('.error'); if(fe) fe.scrollIntoView({behavior:'smooth',block:'center'}); return; }",
     "      var btn=form.querySelector('button[type=submit]'); var old=btn.textContent; btn.disabled=true; btn.textContent='Đang gửi…';",
-    "      var payload={ name:name, phone:phone, province:province, combo:combo, gift:gift, note:note, staff:RT.staff, source:RT.source, url:location.href, referrer:document.referrer, timestamp:new Date().toISOString() };",
-    "      fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})",
+    "      var payload={ slug:RT.slug, name:name, phone:phone, province:province, combo:combo, gift:gift, note:note, staff:RT.staff, source:RT.source, url:location.href, referrer:document.referrer, timestamp:new Date().toISOString() };",
+    "      fetch('/api/landing/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})",
     "        .then(function(r){return r.json().catch(function(){return {ok:r.ok};});})",
     "        .then(function(res){",
     "          if(window.fbq) fbq('track','Lead');",
@@ -993,7 +994,7 @@ export function renderLanding(rawConfig) {
     src="https://www.facebook.com/tr?id=${esc(c.pixelId)}&ev=PageView&noscript=1"/></noscript>` : "";
 
   const ogImage = img("hero") || img("product");
-  const runtime = JSON.stringify({ staff: c.staff, source: c.source, thankUrl: c.thankUrl });
+  const runtime = JSON.stringify({ staff: c.staff, source: c.source, thankUrl: c.thankUrl, slug: c.slug });
 
   return `<!DOCTYPE html>
 <html lang="vi">
