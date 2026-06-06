@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-06 11:33",
+  "generated_at": "2026-06-06 14:42",
   "source_data_date_range": {
     "start_7d": "2026-05-30",
     "end": "2026-06-05",
@@ -60,8 +60,8 @@
     "orders_30d": 91,
     "by_status": {
       "delivered": {
-        "revenue": 137060000.0,
-        "orders": 67
+        "revenue": 138360000.0,
+        "orders": 68
       },
       "returned": {
         "revenue": 12100000.0,
@@ -72,8 +72,8 @@
         "orders": 6
       },
       "other": {
-        "revenue": 55556000.0,
-        "orders": 15
+        "revenue": 54256000.0,
+        "orders": 14
       }
     },
     "by_source": {
@@ -1647,18 +1647,18 @@
   },
   "search_term_insights": {
     "summary": {
-      "total_unique_terms": 4341,
-      "terms_with_conversions": 43,
+      "total_unique_terms": 4269,
+      "terms_with_conversions": 41,
       "conv_rate_terms": 0.01,
-      "total_spend_30d": 21092550.0
+      "total_spend_30d": 20733639.0
     },
     "top_converting_terms": [
       {
         "search_term": "camera",
-        "spend_30d": 2620136.0,
+        "spend_30d": 2637371.0,
         "clicks_30d": 218,
-        "conversions_30d": 12.0,
-        "ctr_30d": 0.0609,
+        "conversions_30d": 13.0,
+        "ctr_30d": 0.0619,
         "match_types": [
           "BROAD"
         ],
@@ -1668,10 +1668,10 @@
       },
       {
         "search_term": "camera ip",
-        "spend_30d": 346002.0,
-        "clicks_30d": 29,
+        "spend_30d": 461456.0,
+        "clicks_30d": 40,
         "conversions_30d": 4.0,
-        "ctr_30d": 0.0489,
+        "ctr_30d": 0.054,
         "match_types": [
           "BROAD"
         ],
@@ -1694,15 +1694,28 @@
       },
       {
         "search_term": "thiết bị định vị",
-        "spend_30d": 442166.0,
-        "clicks_30d": 96,
+        "spend_30d": 431146.0,
+        "clicks_30d": 93,
         "conversions_30d": 2.0,
-        "ctr_30d": 0.1289,
+        "ctr_30d": 0.1317,
         "match_types": [
           "EXACT"
         ],
         "statuses": [
           "ADDED"
+        ]
+      },
+      {
+        "search_term": "doscom",
+        "spend_30d": 94224.0,
+        "clicks_30d": 94,
+        "conversions_30d": 2.0,
+        "ctr_30d": 0.5081,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "NONE"
         ]
       },
       {
@@ -1721,10 +1734,10 @@
       },
       {
         "search_term": "thiết bị định vị xe máy",
-        "spend_30d": 304634.0,
-        "clicks_30d": 93,
+        "spend_30d": 294586.0,
+        "clicks_30d": 90,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.1637,
+        "ctr_30d": 0.1689,
         "match_types": [
           "EXACT"
         ],
@@ -1733,13 +1746,12 @@
         ]
       },
       {
-        "search_term": "thiết bị định vị cúc áo",
-        "spend_30d": 8658.0,
-        "clicks_30d": 3,
+        "search_term": "thiết bị định vị gắn xe máy",
+        "spend_30d": 11088.0,
+        "clicks_30d": 4,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.075,
+        "ctr_30d": 0.2353,
         "match_types": [
-          "NEAR_PHRASE",
           "PHRASE"
         ],
         "statuses": [
@@ -1748,10 +1760,10 @@
       },
       {
         "search_term": "thiết bị định vị xe máy qua điện thoại",
-        "spend_30d": 97623.0,
-        "clicks_30d": 32,
+        "spend_30d": 89388.0,
+        "clicks_30d": 29,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.1818,
+        "ctr_30d": 0.1758,
         "match_types": [
           "PHRASE"
         ],
@@ -1760,24 +1772,11 @@
         ]
       },
       {
-        "search_term": "định vị mini theo dõi",
-        "spend_30d": 19038.0,
-        "clicks_30d": 6,
+        "search_term": "mua định vị ô tô",
+        "spend_30d": 16827.0,
+        "clicks_30d": 4,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.2069,
-        "match_types": [
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "định vị xe máy siêu nhỏ không dây",
-        "spend_30d": 22251.0,
-        "clicks_30d": 7,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0959,
+        "ctr_30d": 0.25,
         "match_types": [
           "NEAR_PHRASE"
         ],
@@ -1789,10 +1788,10 @@
     "top_waste_terms": [
       {
         "search_term": "camera năng lượng mặt trời",
-        "spend_30d": 227221.0,
-        "clicks_30d": 31,
+        "spend_30d": 235611.0,
+        "clicks_30d": 30,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.0822,
+        "ctr_30d": 0.0796,
         "match_types": [
           "BROAD"
         ],
@@ -1806,10 +1805,10 @@
       },
       {
         "search_term": "định vị xe",
-        "spend_30d": 183049.0,
-        "clicks_30d": 48,
+        "spend_30d": 175034.0,
+        "clicks_30d": 45,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.1185,
+        "ctr_30d": 0.1184,
         "match_types": [
           "NEAR_PHRASE"
         ],
@@ -1822,10 +1821,10 @@
       },
       {
         "search_term": "camera mini",
-        "spend_30d": 169262.0,
-        "clicks_30d": 42,
+        "spend_30d": 161534.0,
+        "clicks_30d": 40,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.1382,
+        "ctr_30d": 0.1375,
         "match_types": [
           "BROAD",
           "EXACT"
@@ -1840,11 +1839,30 @@
         ]
       },
       {
+        "search_term": "thiết bị ghi âm",
+        "spend_30d": 132136.0,
+        "clicks_30d": 22,
+        "conversions_30d": 0.0,
+        "ctr_30d": 0.1864,
+        "match_types": [
+          "BROAD",
+          "EXACT"
+        ],
+        "statuses": [
+          "ADDED",
+          "NONE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Chống Ghi Âm",
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
         "search_term": "máy ghi âm cuộc họp",
-        "spend_30d": 129350.0,
+        "spend_30d": 131210.0,
         "clicks_30d": 18,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.2222,
+        "ctr_30d": 0.2022,
         "match_types": [
           "PHRASE"
         ],
@@ -1857,10 +1875,10 @@
       },
       {
         "search_term": "thiết bị định vị mini",
-        "spend_30d": 121949.0,
-        "clicks_30d": 28,
+        "spend_30d": 115140.0,
+        "clicks_30d": 26,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.1892,
+        "ctr_30d": 0.1871,
         "match_types": [
           "EXACT"
         ],
@@ -1872,30 +1890,11 @@
         ]
       },
       {
-        "search_term": "thiết bị ghi âm",
-        "spend_30d": 116486.0,
-        "clicks_30d": 20,
-        "conversions_30d": 0.0,
-        "ctr_30d": 0.1739,
-        "match_types": [
-          "BROAD",
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED",
-          "NONE"
-        ],
-        "campaigns": [
-          "8/5/2025 Search - TB Chống Ghi Âm",
-          "8/5/2025 Search - TB Ghi Âm"
-        ]
-      },
-      {
         "search_term": "thiết bị định vị theo dõi người",
-        "spend_30d": 115540.0,
-        "clicks_30d": 31,
+        "spend_30d": 111751.0,
+        "clicks_30d": 29,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.1527,
+        "ctr_30d": 0.1472,
         "match_types": [
           "NEAR_PHRASE",
           "PHRASE"
@@ -1912,7 +1911,7 @@
         "spend_30d": 110613.0,
         "clicks_30d": 16,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.086,
+        "ctr_30d": 0.0884,
         "match_types": [
           "BROAD",
           "PHRASE"
@@ -1926,27 +1925,11 @@
         ]
       },
       {
-        "search_term": "thiết bị định vị siêu nhỏ gắn vào điện thoại",
-        "spend_30d": 106439.0,
-        "clicks_30d": 30,
-        "conversions_30d": 0.0,
-        "ctr_30d": 0.1807,
-        "match_types": [
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ],
-        "campaigns": [
-          "8/5/2025 Search - TBĐV GPS"
-        ]
-      },
-      {
         "search_term": "mua máy ghi âm",
         "spend_30d": 103539.0,
         "clicks_30d": 14,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.1892,
+        "ctr_30d": 0.2,
         "match_types": [
           "EXACT"
         ],
@@ -1956,31 +1939,13 @@
         "campaigns": [
           "8/5/2025 Search - TB Ghi Âm"
         ]
-      },
-      {
-        "search_term": "máy dò định vị trên xe ô tô",
-        "spend_30d": 101156.0,
-        "clicks_30d": 25,
-        "conversions_30d": 0.0,
-        "ctr_30d": 0.2688,
-        "match_types": [
-          "NEAR_PHRASE",
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ],
-        "campaigns": [
-          "8/5/2025 Search - TB Dò Nghe Lén",
-          "8/5/2025 Search - TBĐV GPS"
-        ]
       }
     ],
     "negative_keyword_gap": [
       {
         "search_term": "camera năng lượng mặt trời",
-        "spend_30d": 227221.0,
-        "clicks_30d": 31,
+        "spend_30d": 235611.0,
+        "clicks_30d": 30,
         "conversions_30d": 0.0,
         "match_types": [
           "BROAD"
@@ -1995,8 +1960,8 @@
       },
       {
         "search_term": "định vị xe",
-        "spend_30d": 183049.0,
-        "clicks_30d": 48,
+        "spend_30d": 175034.0,
+        "clicks_30d": 45,
         "conversions_30d": 0.0,
         "match_types": [
           "NEAR_PHRASE"
@@ -2010,8 +1975,8 @@
       },
       {
         "search_term": "camera mini",
-        "spend_30d": 169262.0,
-        "clicks_30d": 42,
+        "spend_30d": 161534.0,
+        "clicks_30d": 40,
         "conversions_30d": 0.0,
         "match_types": [
           "BROAD",
@@ -2027,24 +1992,9 @@
         ]
       },
       {
-        "search_term": "máy ghi âm cuộc họp",
-        "spend_30d": 129350.0,
-        "clicks_30d": 18,
-        "conversions_30d": 0.0,
-        "match_types": [
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ],
-        "campaigns": [
-          "8/5/2025 Search - TB Ghi Âm"
-        ]
-      },
-      {
         "search_term": "thiết bị ghi âm",
-        "spend_30d": 116486.0,
-        "clicks_30d": 20,
+        "spend_30d": 132136.0,
+        "clicks_30d": 22,
         "conversions_30d": 0.0,
         "match_types": [
           "BROAD",
@@ -2060,9 +2010,24 @@
         ]
       },
       {
+        "search_term": "máy ghi âm cuộc họp",
+        "spend_30d": 131210.0,
+        "clicks_30d": 18,
+        "conversions_30d": 0.0,
+        "match_types": [
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
         "search_term": "thiết bị định vị theo dõi người",
-        "spend_30d": 115540.0,
-        "clicks_30d": 31,
+        "spend_30d": 111751.0,
+        "clicks_30d": 29,
         "conversions_30d": 0.0,
         "match_types": [
           "NEAR_PHRASE",
@@ -2093,24 +2058,9 @@
         ]
       },
       {
-        "search_term": "thiết bị định vị siêu nhỏ gắn vào điện thoại",
-        "spend_30d": 106439.0,
-        "clicks_30d": 30,
-        "conversions_30d": 0.0,
-        "match_types": [
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ],
-        "campaigns": [
-          "8/5/2025 Search - TBĐV GPS"
-        ]
-      },
-      {
         "search_term": "máy dò định vị trên xe ô tô",
-        "spend_30d": 101156.0,
-        "clicks_30d": 25,
+        "spend_30d": 95871.0,
+        "clicks_30d": 24,
         "conversions_30d": 0.0,
         "match_types": [
           "NEAR_PHRASE",
@@ -2126,7 +2076,7 @@
       },
       {
         "search_term": "máy ghi âm mini kết nối điện thoại",
-        "spend_30d": 97010.0,
+        "spend_30d": 95155.0,
         "clicks_30d": 16,
         "conversions_30d": 0.0,
         "match_types": [
@@ -2142,8 +2092,8 @@
       },
       {
         "search_term": "máy nghe lén",
-        "spend_30d": 86769.0,
-        "clicks_30d": 22,
+        "spend_30d": 93534.0,
+        "clicks_30d": 24,
         "conversions_30d": 0.0,
         "match_types": [
           "BROAD",
@@ -2159,9 +2109,24 @@
         ]
       },
       {
+        "search_term": "thiết bị định vị siêu nhỏ gắn vào điện thoại",
+        "spend_30d": 92833.0,
+        "clicks_30d": 27,
+        "conversions_30d": 0.0,
+        "match_types": [
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TBĐV GPS"
+        ]
+      },
+      {
         "search_term": "máy ghi âm fpt",
-        "spend_30d": 86564.0,
-        "clicks_30d": 4,
+        "spend_30d": 81272.0,
+        "clicks_30d": 3,
         "conversions_30d": 0.0,
         "match_types": [
           "PHRASE"
@@ -2175,8 +2140,8 @@
       },
       {
         "search_term": "cách dò camera quay lén",
-        "spend_30d": 83007.0,
-        "clicks_30d": 21,
+        "spend_30d": 79056.0,
+        "clicks_30d": 20,
         "conversions_30d": 0.0,
         "match_types": [
           "NEAR_PHRASE",
@@ -2187,21 +2152,6 @@
         ],
         "campaigns": [
           "8/5/2025 Search - TB Dò Nghe Lén"
-        ]
-      },
-      {
-        "search_term": "định vị xe ô tô",
-        "spend_30d": 76002.0,
-        "clicks_30d": 22,
-        "conversions_30d": 0.0,
-        "match_types": [
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ],
-        "campaigns": [
-          "8/5/2025 Search - TBĐV GPS"
         ]
       },
       {
@@ -2219,32 +2169,47 @@
           "8/5/2025 Search - Cam mini",
           "8/5/2025 Search - Sim 4G"
         ]
+      },
+      {
+        "search_term": "định vị xe ô tô",
+        "spend_30d": 69931.0,
+        "clicks_30d": 19,
+        "conversions_30d": 0.0,
+        "match_types": [
+          "NEAR_PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TBĐV GPS"
+        ]
       }
     ],
     "match_type_breakdown": {
       "EXACT": {
-        "spend_30d": 2442052.0,
-        "clicks_30d": 570,
+        "spend_30d": 2464865.0,
+        "clicks_30d": 567,
         "conversions_30d": 4.4,
         "term_count": 75
       },
-      "NEAR_PHRASE": {
-        "spend_30d": 6792228.0,
-        "clicks_30d": 1826,
-        "conversions_30d": 12.82,
-        "term_count": 1578
-      },
       "PHRASE": {
-        "spend_30d": 5946391.0,
-        "clicks_30d": 1370,
-        "conversions_30d": 9.49,
-        "term_count": 868
+        "spend_30d": 5726927.0,
+        "clicks_30d": 1312,
+        "conversions_30d": 8.49,
+        "term_count": 867
+      },
+      "NEAR_PHRASE": {
+        "spend_30d": 6616352.0,
+        "clicks_30d": 1747,
+        "conversions_30d": 11.82,
+        "term_count": 1541
       },
       "BROAD": {
-        "spend_30d": 9693695.0,
-        "clicks_30d": 1528,
-        "conversions_30d": 36.37,
-        "term_count": 2059
+        "spend_30d": 9543273.0,
+        "clicks_30d": 1491,
+        "conversions_30d": 38.04,
+        "term_count": 2023
       },
       "NEAR_EXACT": {
         "spend_30d": 0.0,
@@ -2256,16 +2221,16 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 24864,
-      "total_spend_30d": 29133780.0
+      "total_unique_placements": 24863,
+      "total_spend_30d": 29113551.0
     },
     "network_breakdown": {
       "CONTENT": {
-        "spend_30d": 29140362.0,
-        "clicks_30d": 17708,
-        "impressions_30d": 1426114,
+        "spend_30d": 29120131.0,
+        "clicks_30d": 17697,
+        "impressions_30d": 1426111,
         "ctr_30d": 0.0124,
-        "cpc_30d": 1646.0,
+        "cpc_30d": 1645.0,
         "campaign_count": 7
       },
       "SEARCH": {
@@ -2279,11 +2244,11 @@
     },
     "placement_type_breakdown": {
       "WEBSITE": {
-        "spend_30d": 29133780.0,
-        "clicks_30d": 17706,
-        "impressions_30d": 1372083,
+        "spend_30d": 29113551.0,
+        "clicks_30d": 17695,
+        "impressions_30d": 1372099,
         "ctr_30d": 0.0129,
-        "placement_count": 24864
+        "placement_count": 24863
       }
     },
     "top_waste_placements": [],
