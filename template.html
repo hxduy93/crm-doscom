@@ -4992,8 +4992,46 @@ function GoogleAdsProfit({ dateRange, onClose }) {
     return ymd >= dateRange.start && ymd <= dateRange.end
   }
   const VAT_RATE = 0.10
-  const SOURCE = "WEBSITE"
-  const g = groups[SOURCE]
+  // Gộp 3 nguồn "WEBSITE" (= Website + Zalo OA + Hotline) — khớp box "Doanh thu
+  // theo nhân sự" (ảnh 1) vốn tính CIR Google Ads trên doanh thu gộp cả 3.
+  const SOURCES = ["WEBSITE", "ZALO_OA", "HOTLINE"]
+
+  // Revenue/units/orders/cogs cho 1 SP, gộp qua tất cả SOURCES + STATUSES_KEEP.
+  const sumProduct = (p, STATUSES_KEEP) => {
+    let rev = 0, units = 0, orders = 0, cost = 0
+    const costEntry = productCosts[p] || {}
+    const costPerUnit = Number(costEntry.gia_nhap_vnd) || 0
+    SOURCES.forEach(src => {
+      const g = groups[src]
+      if (!g) return
+      STATUSES_KEEP.forEach(stKey => {
+        const pData = g.products_by_status?.[stKey]?.[p]
+        if (!pData) return
+        Object.entries(pData.by_date || {}).forEach(([d, v]) => {
+          if (isInRange(d)) rev += (v || 0)
+        })
+        let unitsProd = 0
+        if (pData.units_by_date) {
+          Object.entries(pData.units_by_date).forEach(([d, u]) => {
+            if (isInRange(d)) unitsProd += (u || 0)
+          })
+        } else if (pData.units && pData.total > 0) {
+          const inRangeRev = Object.entries(pData.by_date || {})
+            .filter(([d]) => isInRange(d)).reduce((s, [, v]) => s + (v || 0), 0)
+          const ratio = pData.total > 0 ? inRangeRev / pData.total : 0
+          unitsProd = Math.round((pData.units || 0) * ratio)
+        }
+        units += unitsProd
+        cost += costPerUnit * unitsProd
+        if (pData.orders_by_date) {
+          Object.entries(pData.orders_by_date).forEach(([d, c]) => {
+            if (isInRange(d)) orders += (c || 0)
+          })
+        }
+      })
+    })
+    return { rev, units, orders, cost }
+  }
 
   // Pre-build micro + OTHER_MISC spend buckets từ campaigns_raw.
   // Chỉ re-categorize các campaign thuộc category gốc "OTHER_*" (không đụng MAYDO/DINHVI/GHIAM/CAMCALL).
@@ -5020,36 +5058,13 @@ function GoogleAdsProfit({ dateRange, onClose }) {
   const computeRows = (STATUSES_KEEP) => {
     const rows = GOOGLE_CATEGORIES.map(cat => {
       let revenueC = 0, unitsC = 0, ordersC = 0, costTotal = 0
-      // Micro + Misc category không có product mapping → không tính revenue Pancake
-      if (g && !cat.isMisc && !cat.isMicro) {
+      // Chỉ 4 nhóm chính (MAYDO/DINHVI/GHIAM/CAMCALL) có mapping SP → tính
+      // revenue + giá vốn per-product. Micro = chỉ trừ spend. Dòng "Khác"
+      // (isMisc) = bucket reconcile về order-level (xử lý sau map ở dưới).
+      if (!cat.isMicro && !cat.isMisc) {
         cat.products.forEach(p => {
-          STATUSES_KEEP.forEach(stKey => {
-            const pData = g.products_by_status?.[stKey]?.[p]
-            if (!pData) return
-            Object.entries(pData.by_date || {}).forEach(([d, v]) => {
-              if (isInRange(d)) revenueC += (v || 0)
-            })
-            let unitsProd = 0
-            if (pData.units_by_date) {
-              Object.entries(pData.units_by_date).forEach(([d, u]) => {
-                if (isInRange(d)) unitsProd += (u || 0)
-              })
-            } else if (pData.units && pData.total > 0) {
-              const inRangeRev = Object.entries(pData.by_date || {})
-                .filter(([d]) => isInRange(d)).reduce((s, [, v]) => s + (v || 0), 0)
-              const ratio = pData.total > 0 ? inRangeRev / pData.total : 0
-              unitsProd = Math.round((pData.units || 0) * ratio)
-            }
-            unitsC += unitsProd
-            const costEntry = productCosts[p] || {}
-            const costPerUnit = Number(costEntry.gia_nhap_vnd) || 0
-            costTotal += costPerUnit * unitsProd
-            if (pData.orders_by_date) {
-              Object.entries(pData.orders_by_date).forEach(([d, c]) => {
-                if (isInRange(d)) ordersC += (c || 0)
-              })
-            }
-          })
+          const r = sumProduct(p, STATUSES_KEEP)
+          revenueC += r.rev; unitsC += r.units; ordersC += r.orders; costTotal += r.cost
         })
       }
 
@@ -5090,6 +5105,45 @@ function GoogleAdsProfit({ dateRange, onClose }) {
         margin,
       }
     })
+
+    // ── Reconcile dòng "Khác" về ORDER-LEVEL ──────────────────────────────
+    // products_by_status KHÔNG phủ hết doanh thu order-level (đơn "đang xử lý"
+    // thường chưa gắn SP). Bù phần thiếu vào dòng "Khác" để TỔNG doanh thu =
+    // order-level (mọi đơn) → khớp box "Doanh thu theo nhân sự" (ảnh 1).
+    let olRev = 0, olOrd = 0
+    SOURCES.forEach(src => {
+      const g = groups[src]
+      if (!g) return
+      STATUSES_KEEP.forEach(stKey => {
+        Object.entries(g.order_revenue_by_status_by_date?.[stKey] || {}).forEach(([d, v]) => {
+          if (isInRange(d)) olRev += v || 0
+        })
+        Object.entries(g.order_count_by_status_by_date?.[stKey] || {}).forEach(([d, c]) => {
+          if (isInRange(d)) olOrd += c || 0
+        })
+      })
+    })
+    const misc = rows.find(r => r.cat === "OTHER_MISC")
+    if (misc) {
+      const mainRows = rows.filter(r => !r.isMisc && !r.isMicro)
+      const othersRev = rows.filter(r => r.cat !== "OTHER_MISC").reduce((s, r) => s + r.revenue, 0)
+      const othersOrd = rows.filter(r => r.cat !== "OTHER_MISC").reduce((s, r) => s + r.orders, 0)
+      const mainRev  = mainRows.reduce((s, r) => s + r.revenue, 0)
+      const mainCost = mainRows.reduce((s, r) => s + r.totalCost, 0)
+      const cogsRatio = mainRev > 0 ? mainCost / mainRev : 0
+      const residualRev = Math.max(0, olRev - othersRev)
+      // "Khác" = mọi đơn ngoài 4 nhóm chính (SKU lạ + đơn chưa gắn SP). SKU lạ
+      // không có giá vốn riêng → ƯỚC TÍNH giá vốn theo tỷ lệ TB 4 nhóm chính để
+      // không thổi phồng lợi nhuận (cờ _cogsEstimated).
+      misc.revenue = residualRev
+      misc.orders = Math.max(0, olOrd - othersOrd)
+      misc.totalCost = residualRev * cogsRatio
+      misc._cogsEstimated = true
+      misc.vat = misc.revenue * VAT_RATE
+      misc.profit = misc.revenue - misc.vat - misc.adSpend - misc.totalCost
+      misc.margin = misc.revenue > 0 ? (misc.profit / misc.revenue) * 100 : null
+    }
+
     const tot = rows.reduce((a, r) => ({
       revenue: a.revenue + r.revenue,
       vat: a.vat + r.vat,
@@ -5237,7 +5291,7 @@ function GoogleAdsProfit({ dateRange, onClose }) {
       </div>
 
       <p className="text-[11px] text-gray-600 mt-3 italic">
-        * Doanh thu = Pancake nguồn Website (không kể Zalo OA + Hotline) · Google Ads spend = TK MHDI, category detect từ tên campaign (RMK/Search/Shopping) · 4 dòng đầu (Máy dò/Định vị/Ghi âm/Camera gọi 2 chiều) có mapping SP → tính LN thật. 5 dòng micro (Camera 4G/WiFi/NLMT, Chống ghi âm, Máy cạo râu) + "Khác" = SP không có DT từ nguồn Website → LN = 0 − spend. Data Google Ads sync từ Windsor.ai — cập nhật thủ công qua file <code className="bg-white px-1 rounded border">data/google-ads-spend.json</code>.
+        * Doanh thu = Pancake gộp <span className="font-semibold">Website + Zalo OA + Hotline</span> (khớp box "Doanh thu theo nhân sự" ở trên) · Google Ads spend = TK MHDI, category detect từ tên campaign (RMK/Search/Shopping) · 4 dòng đầu (Máy dò/Định vị/Ghi âm/Camera gọi 2 chiều) có mapping SP → tính LN thật. Dòng <span className="font-semibold">"Khác"</span> reconcile về order-level (= tổng mọi đơn − 4 nhóm trên, gồm cả đơn "đang xử lý" chưa gắn SP) → tổng KHÔNG còn bỏ sót doanh thu; giá vốn dòng Khác là <span className="font-semibold">ước tính</span> theo tỷ lệ TB 4 nhóm chính. 5 dòng micro (Camera 4G/WiFi/NLMT, Chống ghi âm, Máy cạo râu) = spend-only. Data Google Ads sync từ Windsor.ai — cập nhật thủ công qua file <code className="bg-white px-1 rounded border">data/google-ads-spend.json</code>.
       </p>
 
       {campModal && (
@@ -6794,8 +6848,8 @@ function RevenueStatusBreakdown({ dateRange, staffFilter }) {
     statusKeys.forEach(sk => {
       const products = {}       // {product: revenue}
       const productsOrders = {} // {product: orders}
-      let total = 0
-      let totalOrders = 0
+      let prodSum = 0           // tổng doanh thu 14 SP nhận diện
+      let prodOrd = 0           // tổng đơn 14 SP (có thể double-count đơn nhiều SP)
 
       productOrder.forEach(p => {
         let sum = 0
@@ -6822,10 +6876,32 @@ function RevenueStatusBreakdown({ dateRange, staffFilter }) {
         })
         products[p] = sum
         productsOrders[p] = ord
-        total += sum
-        totalOrders += ord
+        prodSum += sum
+        prodOrd += ord
       })
-      result[sk] = { products, productsOrders, total, totalOrders }
+
+      // TỔNG theo ORDER-LEVEL (mọi đơn, mọi SP) — khớp box "Doanh thu theo nhân sự"
+      // ở trên. Dùng order_revenue/count_by_status_by_date để KHÔNG bỏ sót đơn có
+      // SKU ngoài 14 cột (đây là root cause cũ khiến bảng đếm thiếu).
+      let olRev = 0, olOrd = 0
+      sourceKeys.forEach(srcKey => {
+        const g = groups[srcKey]
+        if (!g) return
+        Object.entries(g.order_revenue_by_status_by_date?.[sk] || {}).forEach(([d, v]) => {
+          if (isInRange(d)) olRev += v || 0
+        })
+        Object.entries(g.order_count_by_status_by_date?.[sk] || {}).forEach(([d, c]) => {
+          if (isInRange(d)) olOrd += c || 0
+        })
+      })
+      // "Khác" = phần SKU ngoài 14 cột = order-level − tổng 14 SP (clamp ≥ 0).
+      const otherRev = Math.max(0, olRev - prodSum)
+      const otherOrd = Math.max(0, olOrd - prodOrd)
+      result[sk] = {
+        products, productsOrders,
+        other: otherRev, otherOrders: otherOrd,
+        total: olRev, totalOrders: olOrd,
+      }
     })
 
     return {
@@ -6841,8 +6917,11 @@ function RevenueStatusBreakdown({ dateRange, staffFilter }) {
     totalByProduct[p]       = STATUS_META.reduce((s, st) => s + (revenueByStatus[st.key]?.products?.[p] || 0), 0)
     totalOrdersByProduct[p] = STATUS_META.reduce((s, st) => s + (revenueByStatus[st.key]?.productsOrders?.[p] || 0), 0)
   })
-  const grandTotal  = Object.values(totalByProduct).reduce((s, v) => s + v, 0)
-  const grandOrders = Object.values(totalOrdersByProduct).reduce((s, v) => s + v, 0)
+  // Cột "Khác" tổng + grand total lấy theo ORDER-LEVEL (Σ status.total) → khớp ảnh 1.
+  const otherTotal       = STATUS_META.reduce((s, st) => s + (revenueByStatus[st.key]?.other || 0), 0)
+  const otherOrdersTotal = STATUS_META.reduce((s, st) => s + (revenueByStatus[st.key]?.otherOrders || 0), 0)
+  const grandTotal  = STATUS_META.reduce((s, st) => s + (revenueByStatus[st.key]?.total || 0), 0)
+  const grandOrders = STATUS_META.reduce((s, st) => s + (revenueByStatus[st.key]?.totalOrders || 0), 0)
 
   return (
     <div className="mb-6 bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
@@ -6868,6 +6947,7 @@ function RevenueStatusBreakdown({ dateRange, staffFilter }) {
               {productOrder.map(p => (
                 <th key={p} className="py-2 px-3 text-right font-semibold">{p}</th>
               ))}
+              <th className="py-2 px-3 text-right font-semibold text-gray-500 bg-amber-50" title="SKU ngoài 14 cột trên (DA6, DV1, Sim, thẻ nhớ…)">Khác</th>
               <th className="py-2 px-3 text-right font-bold bg-gray-50">Tổng</th>
             </tr>
           </thead>
@@ -6895,6 +6975,14 @@ function RevenueStatusBreakdown({ dateRange, staffFilter }) {
                       </td>
                     )
                   })}
+                  <td className="py-2 px-3 text-right bg-amber-50/40">
+                    {row.other > 0 || row.otherOrders > 0 ? (
+                      <div className="flex flex-col items-end">
+                        <span className="font-medium text-gray-700">{row.other > 0 ? fmtVNDFull(row.other) + "₫" : "—"}</span>
+                        <span className="text-[10px] text-gray-500">{row.otherOrders.toLocaleString("vi-VN")} đơn</span>
+                      </div>
+                    ) : <span className="text-gray-300">—</span>}
+                  </td>
                   <td className={`py-2 px-3 text-right font-bold ${row.total > 0 ? st.color : "text-gray-300"} bg-gray-50`}>
                     {row.total > 0 ? (
                       <div className="flex flex-col items-end">
@@ -6925,6 +7013,14 @@ function RevenueStatusBreakdown({ dateRange, staffFilter }) {
                   </td>
                 )
               })}
+              <td className="py-3 px-3 text-right font-bold text-gray-700 bg-amber-50">
+                {otherTotal > 0 || otherOrdersTotal > 0 ? (
+                  <div className="flex flex-col items-end">
+                    <span>{otherTotal > 0 ? fmtVNDFull(otherTotal) + "₫" : "—"}</span>
+                    <span className="text-[10px] font-normal text-gray-500">{otherOrdersTotal.toLocaleString("vi-VN")} đơn</span>
+                  </div>
+                ) : "—"}
+              </td>
               <td className="py-3 px-3 text-right font-bold text-red-600 bg-red-50">
                 {grandTotal > 0 ? (
                   <div className="flex flex-col items-end">
@@ -6939,7 +7035,7 @@ function RevenueStatusBreakdown({ dateRange, staffFilter }) {
       </div>
       <p className="text-[11px] text-gray-400 mt-3 italic">
         * Phản ứng theo bộ lọc thời gian + filter nhân sự ở box "Doanh thu theo nguồn" phía trên.
-        "Tổng đã tạo" = cộng cả 5 status — khớp với KPI "Doanh thu (Pancake)" khi filter = Tất cả.
+        Cột "Tổng" + "Tổng đã tạo" tính theo <span className="font-semibold">order-level</span> (mọi đơn, mọi SKU) nên khớp box "Doanh thu theo nhân sự" ở trên. Cột <span className="font-semibold">"Khác"</span> = đơn có SKU ngoài 14 cột sản phẩm (= Tổng − tổng 14 SP).
         {anyFallback && (
           <span className="block text-amber-600 mt-1 not-italic">
             ⚠ Số đơn đang hiển thị tổng 90 ngày (snapshot cũ chưa có orders_by_date) — sẽ tự cập nhật sau khi workflow Pancake chạy lần kế.
