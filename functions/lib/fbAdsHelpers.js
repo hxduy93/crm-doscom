@@ -49,6 +49,58 @@ export function classifyFbProduct(name) {
   return "OTHER";
 }
 
+// ── SPEND THẬT theo nhóm SP (phân loại theo TÊN CAMPAIGN) ────────────────
+// Giải quyết case "1 ad account chạy NHIỀU sản phẩm": split spend ở mức
+// campaign (classifyFbProduct theo campaign_name) thay vì gán cả account vào
+// 1 nhóm. Cộng spend thật từ fb-ads-data.json (campaign.by_date[date].spend).
+//
+// opts.accountIds  : array string — chỉ tính các account này (vd accounts của
+//                    1 staff). Bỏ trống = tính TẤT CẢ account trong fbAdsJson.
+// opts.accountRanges: { [accountId]: {start,end} } — range riêng cho từng
+//                    account (loan-aware truncation). Bỏ trống = dùng timeRange.
+//
+// Trả: { has_data, by_group:{MAY_DO,...}, total, unclassified }
+//   - total GỒM cả spend không phân loại được (unclassified) — đúng cho P&L
+//     tổng (mọi chi tiêu đều là cost). by_group chỉ gồm 4 nhóm active.
+export function computeFbSpendByGroupInRange(fbAdsJson, timeRange, opts = {}) {
+  const byGroup = {};
+  for (const g of FB_ACTIVE_GROUPS) byGroup[g] = 0;
+  const result = { has_data: false, by_group: byGroup, total: 0, unclassified: 0 };
+  if (!fbAdsJson?.accounts || !timeRange?.start || !timeRange?.end) return result;
+
+  const { start, end } = timeRange;
+  const filter = Array.isArray(opts.accountIds) && opts.accountIds.length
+    ? new Set(opts.accountIds.map(String)) : null;
+  const ranges = opts.accountRanges || null;
+
+  let total = 0, unclassified = 0;
+  for (const acc of fbAdsJson.accounts) {
+    const accId = String(acc.account_id);
+    if (filter && !filter.has(accId)) continue;
+    const r = (ranges && ranges[accId]) || { start, end };
+    if (!r.start || !r.end || r.start > r.end) continue;  // ngoài range hiệu lực (loan)
+    for (const c of (acc.campaigns || [])) {
+      const grp = classifyCampaignToGroup(c.campaign_name);
+      let spend = 0;
+      const bd = c.by_date || {};
+      for (const [date, m] of Object.entries(bd)) {
+        if (date < r.start || date > r.end) continue;
+        spend += Number(m && m.spend) || 0;
+      }
+      if (spend <= 0) continue;
+      total += spend;
+      if (FB_ACTIVE_GROUPS.includes(grp)) byGroup[grp] += spend;
+      else unclassified += spend;
+    }
+  }
+
+  for (const g of FB_ACTIVE_GROUPS) byGroup[g] = Math.round(byGroup[g]);
+  result.has_data = total > 0;
+  result.total = Math.round(total);
+  result.unclassified = Math.round(unclassified);
+  return result;
+}
+
 // ── COMPACT FB INSIGHTS ──────────────────────────────────────────────────
 // fb-ads-data.json có 6 accounts. Aggregate insights theo group nếu có data.
 // Trả về { has_data, accounts[], summary }
@@ -456,19 +508,32 @@ export function computeFbProfitInRange(productRevenueJson, productCostsJson, gro
     }
   }
 
+  // SPEND THẬT theo nhóm (opt-in): caller truyền opts.spendByGroup từ
+  // computeFbSpendByGroupInRange (phân loại theo TÊN CAMPAIGN). Nếu không có →
+  // fallback ước lượng cũ revenue × 40%. fb_spend_source ghi rõ nguồn để FE/AI
+  // biết con số là thật hay ước lượng.
+  const spendByGroup = opts.spendByGroup;
+  const useRealSpend = !!(spendByGroup && spendByGroup.has_data);
+
   // Per-group filter cho output `groups` (giữ logic cũ cho top SP breakdown)
   const filterGroups = (group === "ALL") ? FB_ACTIVE_GROUPS : [group];
   const out = {};
   for (const g of filterGroups) {
     const t = groupTotals[g];
     if (!t || t.orders === 0) continue;
-    const fbSpend = t.revenue * 0.40;
+    const realSpend = useRealSpend && spendByGroup.by_group
+      ? spendByGroup.by_group[g] : null;
+    const fbSpend = (realSpend != null) ? realSpend : t.revenue * 0.40;
+    const spendSource = (realSpend != null) ? "real_campaign" : "estimated_40pct";
     const vat = t.revenue * 0.10;
     const profit = t.revenue - t.cogs - fbSpend - vat;
     out[g] = {
       revenue: Math.round(t.revenue),
       orders: t.orders,
       cogs: Math.round(t.cogs),
+      fb_spend: Math.round(fbSpend),
+      fb_spend_source: spendSource,
+      // Giữ field cũ cho backward-compat (FE cũ đọc fb_spend_estimated).
       fb_spend_estimated: Math.round(fbSpend),
       vat: Math.round(vat),
       profit: Math.round(profit),
@@ -479,7 +544,10 @@ export function computeFbProfitInRange(productRevenueJson, productCostsJson, gro
   }
 
   // Total dùng TRUE values từ top-level Pancake aggregation
-  const fbSpendTrue = trueRevenue * 0.40;
+  // fb_spend: ưu tiên spend THẬT (gồm cả unclassified) nếu caller truyền
+  // spendByGroup, fallback ước lượng 40%.
+  const fbSpendTrue = useRealSpend ? spendByGroup.total : trueRevenue * 0.40;
+  const fbSpendSourceTrue = useRealSpend ? "real_campaign" : "estimated_40pct";
   const vatTrue = trueRevenue * 0.10;
   // Scale cogs theo tỷ lệ trueRevenue / mappedRevenue (vì chỉ có cogs cho mapped SP).
   // Nếu mappedRevenue = 0 → fallback cogs = 0.
@@ -499,12 +567,16 @@ export function computeFbProfitInRange(productRevenueJson, productCostsJson, gro
       revenue: Math.round(trueRevenue),
       orders: trueOrders,
       cogs: Math.round(cogsTrue),
+      fb_spend: Math.round(fbSpendTrue),
+      fb_spend_source: fbSpendSourceTrue,
       fb_spend_estimated: Math.round(fbSpendTrue),
       vat: Math.round(vatTrue),
       profit: Math.round(profitTrue),
       profit_per_order: trueOrders > 0 ? Math.round(profitTrue / trueOrders) : 0,
       margin_pct: trueRevenue > 0 ? Math.round((profitTrue / trueRevenue) * 1000) / 10 : 0,
     },
+    fb_spend_source: fbSpendSourceTrue,
+    fb_spend_unclassified: useRealSpend ? spendByGroup.unclassified : null,
     // Audit fields — frontend có thể hiển thị nếu coverage < 95%
     cogs_coverage_pct: cogsCoverage,
     cogs_coverage_note: cogsCoverage < 95
@@ -830,6 +902,29 @@ function detectProductFromCampaign(name) {
     if (rule.regex.test(n)) return rule.product;
   }
   return null;
+}
+
+// Map product (detectProductFromCampaign) → FB group active. Dùng để TÁCH SPEND
+// theo nhóm SP từ TÊN CAMPAIGN — chính xác hơn classifyFbProduct (vốn dành cho
+// tên SP của Pancake, neo ^ nên fail với convention "ngày - SP - mô tả").
+// Khi thêm SP/nhóm mới: thêm rule vào FB_PRODUCT_DETECT + 1 dòng map ở đây.
+export const FB_PRODUCT_TO_GROUP = {
+  "Noma 911": "NOMA",
+  "Noma 922": "NOMA",
+  "DA8.1": "CAMERA_VIDEO_CALL",
+  "DR1": "GHI_AM",
+  "D1": "MAY_DO",
+};
+
+// Phân loại 1 campaign → FB group dựa trên TÊN CAMPAIGN.
+// 1) detectProductFromCampaign (regex \b, khớp "12/4 - D1 - ...") → map group
+// 2) fallback: tên chứa "noma" → NOMA
+// 3) fallback cuối: classifyFbProduct (phòng khi tên SP thuần)
+export function classifyCampaignToGroup(name) {
+  const prod = detectProductFromCampaign(name);
+  if (prod && FB_PRODUCT_TO_GROUP[prod]) return FB_PRODUCT_TO_GROUP[prod];
+  if (/noma/i.test(String(name || ""))) return "NOMA";
+  return classifyFbProduct(name);
 }
 
 // Aggregate spend + complete_registrations per product trong N ngày gần nhất.

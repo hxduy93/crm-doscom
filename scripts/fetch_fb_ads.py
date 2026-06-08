@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 """
-Fetch Facebook Ads insights from Meta Marketing API for all 6 Doscom ad accounts.
+Fetch Facebook Ads insights from Meta Marketing API cho các ad account Doscom.
 Transform thành data/fb-ads-data.json với schema campaign-level 90 ngày.
 
-6 ad accounts (BM "Yoday Media Retail"):
-  - 927390616363424  Doscom - Công nghệ nâng tầm cuộc sống
-  - 764394829882083  Doscom - Noma.vn - Giải Pháp Chăm Sóc Xe Hơi Toàn Diện
-  - 1655506672244826 CÔNG TY TNHH DOSCOM HOLDINGS - Noma Việt Nam
-  - 1449385949897024 CÔNG TY TNHH DOSCOM HOLDINGS - Công nghệ nâng tầm cuộc sống
-  - 906015559004892  Doscom Mart
-  - 1416634670476226 CÔNG TY TNHH DOSCOM HOLDINGS - Doscom Mart
+Danh sách ad account ĐỌC TỪ data/fb-config.json (account_to_groups) — single
+source of truth. Đổi agency / thêm / bớt tkqc: chỉ sửa file đó theo
+docs/SWITCH-AD-ACCOUNTS.md, KHÔNG sửa script này. Account có "active": false
+sẽ được bỏ qua. Nếu fb-config.json lỗi/mất → fallback _FALLBACK_ACCOUNTS.
 
 Cron: mỗi 3 giờ qua GitHub Actions (.github/workflows/fetch-fb-ads.yml).
 """
@@ -29,8 +26,14 @@ ACCESS_TOKEN = os.environ.get("FB_ACCESS_TOKEN", "").strip()
 API_VERSION = "v21.0"
 BASE_URL = f"https://graph.facebook.com/{API_VERSION}"
 
-# 6 ad accounts Doscom
-AD_ACCOUNTS = [
+# ── Ad account registry ─────────────────────────────────────────────────
+# Danh sách ad account được ĐỌC TỪ data/fb-config.json (account_to_groups) —
+# single source of truth. Đổi agency/tkqc → chỉ sửa file đó (xem
+# docs/SWITCH-AD-ACCOUNTS.md), KHÔNG sửa file Python này.
+#
+# _FALLBACK_ACCOUNTS chỉ dùng khi không đọc được fb-config.json (file lỗi/mất)
+# để fetch không bao giờ chết hoàn toàn. Nên giữ đồng bộ với fb-config.json.
+_FALLBACK_ACCOUNTS = [
     {"id": "927390616363424",  "name": "Doscom - Công nghệ nâng tầm cuộc sống"},
     {"id": "764394829882083",  "name": "Doscom - Noma.vn - Giải Pháp Chăm Sóc Xe Hơi Toàn Diện"},
     {"id": "1655506672244826", "name": "CÔNG TY TNHH DOSCOM HOLDINGS - Noma Việt Nam"},
@@ -39,6 +42,45 @@ AD_ACCOUNTS = [
     {"id": "1416634670476226", "name": "CÔNG TY TNHH DOSCOM HOLDINGS - Doscom Mart"},
     {"id": "1418124406240173", "name": "DA8.1 mới (PN, chưa chạy)"},
 ]
+
+
+def _fb_config_path():
+    return os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "data", "fb-config.json")
+    )
+
+
+def load_ad_accounts():
+    """Đọc ad accounts từ data/fb-config.json (account_to_groups).
+
+    - Bỏ qua account có "active": false (ngừng fetch nhưng giữ lịch sử).
+    - name = field "name", fallback products_note, fallback chính ID.
+    - Nếu file lỗi/rỗng → trả _FALLBACK_ACCOUNTS để fetch vẫn chạy.
+    """
+    path = _fb_config_path()
+    try:
+        with open(path, encoding="utf-8") as f:
+            cfg = json.load(f)
+        mapping = cfg.get("account_to_groups", {}) or {}
+        accounts = []
+        for acc_id, info in mapping.items():
+            if not isinstance(info, dict):
+                continue
+            if info.get("active") is False:
+                print(f"  [SKIP] {acc_id} (active=false) — bỏ qua fetch")
+                continue
+            name = info.get("name") or info.get("products_note") or str(acc_id)
+            accounts.append({"id": str(acc_id), "name": name})
+        if accounts:
+            print(f"[INFO] Loaded {len(accounts)} ad accounts từ {os.path.basename(path)}")
+            return accounts
+        print(f"[WARN] account_to_groups rỗng trong {path} — dùng _FALLBACK_ACCOUNTS",
+              file=sys.stderr)
+    except FileNotFoundError:
+        print(f"[WARN] Không thấy {path} — dùng _FALLBACK_ACCOUNTS", file=sys.stderr)
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"[WARN] Lỗi đọc {path}: {e} — dùng _FALLBACK_ACCOUNTS", file=sys.stderr)
+    return list(_FALLBACK_ACCOUNTS)
 
 # Fields to fetch from insights
 INSIGHT_FIELDS = ",".join([
@@ -266,12 +308,14 @@ def main():
     date_until = (now_vn - timedelta(days=1)).strftime("%Y-%m-%d")
     date_since = (now_vn - timedelta(days=LOOKBACK_DAYS)).strftime("%Y-%m-%d")
 
+    ad_accounts = load_ad_accounts()
+
     print(f"[INFO] FB Ads fetch: {date_since} → {date_until} ({LOOKBACK_DAYS} ngày)")
-    print(f"[INFO] Fetching {len(AD_ACCOUNTS)} accounts...")
+    print(f"[INFO] Fetching {len(ad_accounts)} accounts...")
 
     accounts_data = []
 
-    for acc in AD_ACCOUNTS:
+    for acc in ad_accounts:
         acc_id = acc["id"]
         acc_name = acc["name"]
         print(f"\n{'='*60}")

@@ -55,18 +55,27 @@ export async function onRequestGet(context) {
     return json({ error: "Unauthorized" }, 401);
   }
 
-  // Ưu tiên KV (config user đã edit). Fallback default file.
+  // SỔ ĐĂNG KÝ account (account_to_groups) = single source of truth trong
+  // data/fb-config.json (git-controlled). KV chỉ giữ TUNABLES (KPI, close_rate,
+  // vat) do user edit qua UI. Vì vậy account_to_groups LUÔN lấy từ file —
+  // sửa file + push là có hiệu lực ngay, không lo KV giữ bản account cũ.
+  const origin = new URL(request.url).origin;
+  const def = await loadDefaultConfig(origin);
+
   if (env.INVENTORY) {
     try {
       const cached = await env.INVENTORY.get(KV_KEY, { type: "json" });
       if (cached) {
-        return json({ ...cached, source: "kv" });
+        return json({
+          ...cached,
+          // File thắng cho registry; fallback KV/empty nếu file load fail.
+          account_to_groups: def?.account_to_groups || cached.account_to_groups || {},
+          source: def ? "kv+file_registry" : "kv",
+        });
       }
     } catch { /* ignore */ }
   }
 
-  const origin = new URL(request.url).origin;
-  const def = await loadDefaultConfig(origin);
   if (!def) {
     return json({
       close_rate_pct: 65,

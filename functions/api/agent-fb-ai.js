@@ -20,6 +20,7 @@ import {
   getComparisonRange,
   compactFbOrdersInRange,
   computeFbProfitInRange,
+  computeFbSpendByGroupInRange,
   compactFbAccounts,
   compactFbCampaigns,
   getUtmAnalysisForStaff,
@@ -850,13 +851,30 @@ async function computeMonthlyKpiContext(env, origin, cookieHeader) {
   if (kpiVnd <= 0) return null;
 
   const monthRange = resolveTimeRange("this_month");
-  const [revJson, costsJson] = await Promise.all([
+  const [fbAdsJson, revJson, costsJson] = await Promise.all([
+    fetchJson(origin, "/data/fb-ads-data.json", cookieHeader),
     fetchJson(origin, "/data/product-revenue.json", cookieHeader),
     fetchJson(origin, "/data/product-costs.json", cookieHeader),
   ]);
   if (!revJson || !costsJson) return null;
 
-  const profit = computeFbProfitInRange(revJson, costsJson, "ALL", monthRange);
+  // Spend THẬT (phân loại theo tên campaign) chỉ trên accounts team người
+  // (DUY+PN) loan-aware — KHỚP với doanh thu KPI (chỉ đơn DUY+PN). Account loan
+  // sang AI_AGENT bị loại cho phần sau loan_date (spend đó thuộc agent).
+  // Fallback ước lượng 40% nếu fbAdsJson rỗng.
+  const kpiAccts = [];
+  const kpiRanges = {};
+  for (const st of ["DUY", "PHUONG_NAM"]) {
+    for (const a of getAccountsForStaffInRange(fbConfig, st, monthRange)) {
+      kpiAccts.push(String(a.id));
+      kpiRanges[String(a.id)] = a.effectiveRange;
+    }
+  }
+  const spendByGroup = computeFbSpendByGroupInRange(fbAdsJson, monthRange, {
+    accountIds: kpiAccts,
+    accountRanges: kpiRanges,
+  });
+  const profit = computeFbProfitInRange(revJson, costsJson, "ALL", monthRange, { spendByGroup });
   const actualMtd = profit?.total?.revenue || 0;
   const ordersMtd = profit?.total?.orders || 0;
 
@@ -972,9 +990,19 @@ async function computeStaffAggregate(env, origin, cookieHeader, staff, fbConfig)
   // Pancake source group: DUY -> "DUY_FB_ADS", PHUONG_NAM -> "PHUONG_NAM_FB_ADS"
   // (chỉ đơn từ FB ad accounts, không gồm Hotline/Inbox manual).
   const staffSourceGroup = STAFF_TO_SOURCE_GROUP[staff];
+  // Spend THẬT của riêng accounts thuộc staff này (loan-aware: dùng
+  // effectiveRange đã truncate ở loan boundary) → khớp với revenue per-staff.
+  const staffAccountIds = accountsOfStaff.map(a => String(a.id));
+  const staffAccountRanges = {};
+  for (const a of accountsOfStaff) staffAccountRanges[String(a.id)] = a.effectiveRange;
+  const spendByGroup = computeFbSpendByGroupInRange(fbAdsJson, monthRange, {
+    accountIds: staffAccountIds,
+    accountRanges: staffAccountRanges,
+  });
   const profit = staffSourceGroup
     ? computeFbProfitInRange(revJson, costsJson, "ALL", monthRange, {
         salesGroups: [staffSourceGroup],
+        spendByGroup,
       })
     : { has_data: false, total: {}, groups: {} };
 
@@ -1338,8 +1366,14 @@ export async function onRequestPost(context) {
         if (cfg.data.includes("orders")) dataContext.fb_orders = compactFbOrdersInRange(revJson, group, timeRange);
         if (cfg.data.includes("trend")) dataContext.fb_trend = compactFbDailyTrend(revJson, 30);
         if (cfg.data.includes("profit")) {
-          const costsJson = await fetchJson(origin, "/data/product-costs.json", cookieHeader);
-          dataContext.fb_profit = computeFbProfitInRange(revJson, costsJson, group, timeRange);
+          const [costsJson, fbAdsJson2] = await Promise.all([
+            fetchJson(origin, "/data/product-costs.json", cookieHeader),
+            fetchJson(origin, "/data/fb-ads-data.json", cookieHeader),
+          ]);
+          // Spend THẬT theo nhóm trên TẤT CẢ account (salesGroups mặc định = cả 2
+          // staff → scope toàn bộ). `group` chỉ filter output, không đổi scope.
+          const spendByGroup = computeFbSpendByGroupInRange(fbAdsJson2, timeRange);
+          dataContext.fb_profit = computeFbProfitInRange(revJson, costsJson, group, timeRange, { spendByGroup });
         }
       }));
   }
@@ -1373,13 +1407,23 @@ export async function onRequestPost(context) {
     const staffSourceGroup = STAFF_TO_SOURCE_GROUP[staffOfAccount];
     let profitForAttribution = dataContext.fb_profit;
     if (staffSourceGroup) {
-      const [revJson2, costsJson2] = await Promise.all([
+      const [revJson2, costsJson2, fbAdsJson3] = await Promise.all([
         fetchJson(origin, "/data/product-revenue.json", cookieHeader),
         fetchJson(origin, "/data/product-costs.json", cookieHeader),
+        fetchJson(origin, "/data/fb-ads-data.json", cookieHeader),
       ]);
       if (revJson2 && costsJson2) {
+        // Spend THẬT của accounts thuộc staff sở hữu account này (loan-aware).
+        const staffAccts = getAccountsForStaffInRange(fbConfig, staffOfAccount, timeRange);
+        const spendByGroup = computeFbSpendByGroupInRange(fbAdsJson3, timeRange, {
+          accountIds: staffAccts.map(a => String(a.id)),
+          accountRanges: Object.fromEntries(
+            staffAccts.map(a => [String(a.id), a.effectiveRange])
+          ),
+        });
         profitForAttribution = computeFbProfitInRange(revJson2, costsJson2, group, timeRange, {
           salesGroups: [staffSourceGroup],
+          spendByGroup,
         });
       }
     }
