@@ -144,6 +144,12 @@ Mapping hiện tại (xem giá trị thật trong `data/fb-config.json`):
 ước lượng cũ `revenue × 40%`. Field `fb_spend_source` trong kết quả profit cho
 biết nguồn là `real_campaign` hay `estimated_40pct` (fallback khi thiếu data).
 
+**2 chỉ số lợi nhuận** (`computeFbProfitInRange` trả cả hai):
+- `total` / `groups` = **TRƯỚC HOÀN** — mọi đơn đã lên đơn (giữ tên cũ, backward-compat).
+- `total_real` / `groups_real` = **THẬT** — chỉ đơn `delivered` (đã giao + thanh toán); đã đồng bộ doanh thu + giá vốn + VAT + số đơn theo delivered. cpqc (`fb_spend`) **dùng chung** cho cả hai (tiền ads đã chi). Đơn hoàn thu hồi giá vốn (hàng về kho), CHƯA trừ phí ship hoàn.
+- `staff_overview.aggregate_mtd` có thêm `*_real_mtd_vnd` + `margin_real_pct`.
+- KPI tháng (`computeMonthlyKpiContext`) vẫn track doanh thu TRƯỚC HOÀN (booked) — không đổi.
+
 ## 🧠 AI Modes (functions/api/agent-fb-ai.js)
 
 | Mode | Skill | Model | Cache | History |

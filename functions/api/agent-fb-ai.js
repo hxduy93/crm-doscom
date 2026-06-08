@@ -1010,9 +1010,15 @@ async function computeStaffAggregate(env, origin, cookieHeader, staff, fbConfig)
   const profitMtd = profit?.total?.profit || 0;
   const ordersMtd = profit?.total?.orders || 0;
   const cogsMtd = profit?.total?.cogs || 0;
+  // THẬT (chỉ đơn đã giao+thanh toán) — đồng bộ DT+giá vốn+VAT theo delivered.
+  const revenueRealMtd = profit?.total_real?.revenue || 0;
+  const profitRealMtd = profit?.total_real?.profit || 0;
+  const ordersRealMtd = profit?.total_real?.orders || 0;
+  const cogsRealMtd = profit?.total_real?.cogs || 0;
   // groups_breakdown giờ là per-SP-group (NOMA, MAY_DO, ...) đã filter chỉ
   // đơn của staff này → không bị double-count với staff khác.
   const groupsBreakdown = profit?.groups || {};
+  const groupsBreakdownReal = profit?.groups_real || {};
 
   // Top 5 + weak 3 campaigns
   const sorted = [...allActiveCampaigns].sort((a, b) => {
@@ -1041,15 +1047,23 @@ async function computeStaffAggregate(env, origin, cookieHeader, staff, fbConfig)
       total_accounts: accountsOfStaff.length,
       active_campaigns: allActiveCampaigns.length,
       spend_mtd_vnd: totalSpend,
+      // TRƯỚC HOÀN (mọi đơn đã lên đơn)
       revenue_mtd_vnd: revenueMtd,
       profit_mtd_vnd: profitMtd,
       orders_mtd: ordersMtd,
       cogs_mtd_vnd: cogsMtd,
       margin_pct: revenueMtd > 0 ? Math.round((profitMtd / revenueMtd) * 1000) / 10 : 0,
+      // THẬT (chỉ đơn đã giao+thanh toán; đã loại đang giao/đang hoàn/đã hoàn/hủy)
+      revenue_real_mtd_vnd: revenueRealMtd,
+      profit_real_mtd_vnd: profitRealMtd,
+      orders_real_mtd: ordersRealMtd,
+      cogs_real_mtd_vnd: cogsRealMtd,
+      margin_real_pct: revenueRealMtd > 0 ? Math.round((profitRealMtd / revenueRealMtd) * 1000) / 10 : 0,
       cpa_avg: totalConversions > 0 ? Math.round(totalSpend / totalConversions) : null,
       ctr_avg_pct: totalImpressions > 0 ? Math.round((totalClicks / totalImpressions) * 10000) / 100 : 0,
     },
     groups_breakdown: groupsBreakdown,
+    groups_breakdown_real: groupsBreakdownReal,
     top_campaigns: topCampaigns,
     weak_campaigns: weakCampaigns,
     _data_note: staffSourceGroup

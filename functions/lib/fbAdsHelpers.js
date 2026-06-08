@@ -452,136 +452,182 @@ export function computeFbProfitInRange(productRevenueJson, productCostsJson, gro
   const { start, end } = timeRange;
   const costs = productCostsJson.products;
   const salesGroups = opts.salesGroups || FB_SALES_GROUPS;
+  const inRange = (d) => d >= start && d <= end;
 
-  // ── Per-group breakdown (4 FB_ACTIVE_GROUPS) — dùng cho top SP per group ──
-  const groupTotals = {};
-  for (const g of FB_ACTIVE_GROUPS) groupTotals[g] = { revenue: 0, orders: 0, cogs: 0 };
+  const unitCostOf = (name) => {
+    const c = costs[name.toLowerCase()] ||
+      Object.values(costs).find(x => x.ma_ten_goi?.toLowerCase() === name.toLowerCase());
+    return c?.gia_nhap_vnd ? Number(c.gia_nhap_vnd) : 0;
+  };
 
-  let mappedRevenue = 0, mappedOrderUnits = 0, mappedCogs = 0;
+  const newAcc = () => {
+    const groupTotals = {};
+    for (const g of FB_ACTIVE_GROUPS) groupTotals[g] = { revenue: 0, orders: 0, cogs: 0 };
+    return { groupTotals, mappedRevenue: 0, mappedCogs: 0 };
+  };
 
-  for (const sg of salesGroups) {
-    const products = productRevenueJson.source_groups[sg]?.products;
-    if (!products) continue;
-    for (const [name, p] of Object.entries(products)) {
+  // Gom 1 map sản phẩm (name -> {by_date, orders_by_date}) trong range vào acc.
+  const aggProductMap = (productMap, acc) => {
+    for (const [name, p] of Object.entries(productMap || {})) {
       const grp = classifyFbProduct(name);
-      const costEntry = costs[name.toLowerCase()] ||
-        Object.values(costs).find(c => c.ma_ten_goi?.toLowerCase() === name.toLowerCase());
-      const unitCost = costEntry?.gia_nhap_vnd ? Number(costEntry.gia_nhap_vnd) : 0;
-      const ordersByDate = p.orders_by_date || {};
+      const unitCost = unitCostOf(name);
+      const ordByDate = p.orders_by_date || {};
       const revByDate = p.by_date || {};
-      for (const [date, ord] of Object.entries(ordersByDate)) {
-        if (date < start || date > end) continue;
+      for (const [date, ord] of Object.entries(ordByDate)) {
+        if (!inRange(date)) continue;
         const orders = Number(ord) || 0;
         const rev = Number(revByDate[date]) || 0;
         if (FB_ACTIVE_GROUPS.includes(grp)) {
-          groupTotals[grp].revenue += rev;
-          groupTotals[grp].orders += orders;
-          groupTotals[grp].cogs += unitCost * orders;
+          acc.groupTotals[grp].revenue += rev;
+          acc.groupTotals[grp].orders += orders;
+          acc.groupTotals[grp].cogs += unitCost * orders;
         }
-        mappedRevenue += rev;
-        mappedOrderUnits += orders;
-        mappedCogs += unitCost * orders;
+        acc.mappedRevenue += rev;
+        acc.mappedCogs += unitCost * orders;
       }
     }
-  }
+  };
 
-  // ── TRUE TOTALS — gộp tất cả status + tất cả SP từ top-level fields ──
-  // Pancake JSON có `order_revenue_by_status_by_date[status][date]` đã sum
-  // all SP per đơn (dùng total_price_after_sub_discount), và
-  // `total_orders_by_date[date]` đếm unique đơn (1 đơn = +1).
-  let trueRevenue = 0;
-  let trueOrders = 0;
-  for (const sg of salesGroups) {
-    const sgData = productRevenueJson.source_groups[sg];
-    if (!sgData) continue;
-    const obd = sgData.total_orders_by_date || {};
-    for (const [date, cnt] of Object.entries(obd)) {
-      if (date < start || date > end) continue;
-      trueOrders += Number(cnt) || 0;
-    }
-    const rbsbd = sgData.order_revenue_by_status_by_date || {};
-    for (const stMap of Object.values(rbsbd)) {
-      for (const [date, rev] of Object.entries(stMap || {})) {
-        if (date < start || date > end) continue;
-        trueRevenue += Number(rev) || 0;
+  // Order-level TRUE totals cho 1 tập status (statuses=null → tất cả status).
+  // Pancake: order_revenue_by_status_by_date[status][date], total_orders_by_date,
+  // order_count_by_status_by_date[status][date].
+  const trueTotals = (statuses) => {
+    let revenue = 0, orders = 0;
+    for (const sg of salesGroups) {
+      const sgData = productRevenueJson.source_groups[sg];
+      if (!sgData) continue;
+      const rbsbd = sgData.order_revenue_by_status_by_date || {};
+      for (const [st, m] of Object.entries(rbsbd)) {
+        if (statuses && !statuses.includes(st)) continue;
+        for (const [date, v] of Object.entries(m || {})) {
+          if (inRange(date)) revenue += Number(v) || 0;
+        }
+      }
+      if (!statuses) {
+        const obd = sgData.total_orders_by_date || {};
+        for (const [date, c] of Object.entries(obd)) {
+          if (inRange(date)) orders += Number(c) || 0;
+        }
+      } else {
+        const ocs = sgData.order_count_by_status_by_date || {};
+        for (const [st, m] of Object.entries(ocs)) {
+          if (!statuses.includes(st)) continue;
+          for (const [date, c] of Object.entries(m || {})) {
+            if (inRange(date)) orders += Number(c) || 0;
+          }
+        }
       }
     }
-  }
+    return { revenue, orders };
+  };
 
-  // SPEND THẬT theo nhóm (opt-in): caller truyền opts.spendByGroup từ
-  // computeFbSpendByGroupInRange (phân loại theo TÊN CAMPAIGN). Nếu không có →
-  // fallback ước lượng cũ revenue × 40%. fb_spend_source ghi rõ nguồn để FE/AI
-  // biết con số là thật hay ước lượng.
+  // Mapped (per-product) totals cho 1 tập status. statuses=null → sg.products
+  // (mọi status); ngược lại → gộp sg.products_by_status[st].
+  const mappedTotals = (statuses) => {
+    const acc = newAcc();
+    for (const sg of salesGroups) {
+      const sgData = productRevenueJson.source_groups[sg];
+      if (!sgData) continue;
+      if (!statuses) {
+        aggProductMap(sgData.products, acc);
+      } else {
+        const pbs = sgData.products_by_status || {};
+        for (const st of statuses) aggProductMap(pbs[st], acc);
+      }
+    }
+    return acc;
+  };
+
+  // cpqc THẬT (gồm unclassified) từ opts.spendByGroup (phân loại theo TÊN
+  // CAMPAIGN). DÙNG CHUNG cho cả 2 chỉ số (tiền ads đã chi, không phụ thuộc đơn
+  // giao hay hoàn). Fallback ước lượng 40% × DT trước hoàn nếu thiếu data.
   const spendByGroup = opts.spendByGroup;
   const useRealSpend = !!(spendByGroup && spendByGroup.has_data);
 
-  // Per-group filter cho output `groups` (giữ logic cũ cho top SP breakdown)
-  const filterGroups = (group === "ALL") ? FB_ACTIVE_GROUPS : [group];
-  const out = {};
-  for (const g of filterGroups) {
-    const t = groupTotals[g];
-    if (!t || t.orders === 0) continue;
-    const realSpend = useRealSpend && spendByGroup.by_group
-      ? spendByGroup.by_group[g] : null;
-    const fbSpend = (realSpend != null) ? realSpend : t.revenue * 0.40;
-    const spendSource = (realSpend != null) ? "real_campaign" : "estimated_40pct";
-    const vat = t.revenue * 0.10;
-    const profit = t.revenue - t.cogs - fbSpend - vat;
-    out[g] = {
-      revenue: Math.round(t.revenue),
-      orders: t.orders,
-      cogs: Math.round(t.cogs),
-      fb_spend: Math.round(fbSpend),
-      fb_spend_source: spendSource,
-      // Giữ field cũ cho backward-compat (FE cũ đọc fb_spend_estimated).
-      fb_spend_estimated: Math.round(fbSpend),
-      vat: Math.round(vat),
-      profit: Math.round(profit),
-      profit_per_order: t.orders > 0 ? Math.round(profit / t.orders) : 0,
-      margin_pct: t.revenue > 0 ? Math.round((profit / t.revenue) * 1000) / 10 : 0,
-      aov: t.orders > 0 ? Math.round(t.revenue / t.orders) : 0,
+  // Dựng 1 bộ chỉ số (groups + total) từ true totals + mapped + cpqc tổng.
+  const buildMetric = (tt, mapped, fbSpendTotal) => {
+    const filterGroups = (group === "ALL") ? FB_ACTIVE_GROUPS : [group];
+    const out = {};
+    for (const g of filterGroups) {
+      const t = mapped.groupTotals[g];
+      if (!t || t.orders === 0) continue;
+      const realSpend = useRealSpend && spendByGroup.by_group ? spendByGroup.by_group[g] : null;
+      const fbSpend = (realSpend != null) ? realSpend : t.revenue * 0.40;
+      const spendSource = (realSpend != null) ? "real_campaign" : "estimated_40pct";
+      const vat = t.revenue * 0.10;
+      const profit = t.revenue - t.cogs - fbSpend - vat;
+      out[g] = {
+        revenue: Math.round(t.revenue),
+        orders: t.orders,
+        cogs: Math.round(t.cogs),
+        fb_spend: Math.round(fbSpend),
+        fb_spend_source: spendSource,
+        fb_spend_estimated: Math.round(fbSpend),  // backward-compat
+        vat: Math.round(vat),
+        profit: Math.round(profit),
+        profit_per_order: t.orders > 0 ? Math.round(profit / t.orders) : 0,
+        margin_pct: t.revenue > 0 ? Math.round((profit / t.revenue) * 1000) / 10 : 0,
+        aov: t.orders > 0 ? Math.round(t.revenue / t.orders) : 0,
+      };
+    }
+    const fbSpendTrue = (fbSpendTotal != null) ? fbSpendTotal : tt.revenue * 0.40;
+    const fbSpendSourceTrue = useRealSpend ? "real_campaign" : "estimated_40pct";
+    const vatTrue = tt.revenue * 0.10;
+    // Scale cogs theo tỷ lệ trueRevenue / mappedRevenue (chỉ mapped SP có giá nhập).
+    const cogsScale = mapped.mappedRevenue > 0 ? tt.revenue / mapped.mappedRevenue : 0;
+    const cogsTrue = mapped.mappedCogs * cogsScale;
+    const profitTrue = tt.revenue - cogsTrue - fbSpendTrue - vatTrue;
+    const cogsCoverage = mapped.mappedRevenue > 0 && tt.revenue > 0
+      ? Math.round((mapped.mappedRevenue / tt.revenue) * 1000) / 10 : 0;
+    return {
+      groups: out,
+      total: {
+        revenue: Math.round(tt.revenue),
+        orders: tt.orders,
+        cogs: Math.round(cogsTrue),
+        fb_spend: Math.round(fbSpendTrue),
+        fb_spend_source: fbSpendSourceTrue,
+        fb_spend_estimated: Math.round(fbSpendTrue),
+        vat: Math.round(vatTrue),
+        profit: Math.round(profitTrue),
+        profit_per_order: tt.orders > 0 ? Math.round(profitTrue / tt.orders) : 0,
+        margin_pct: tt.revenue > 0 ? Math.round((profitTrue / tt.revenue) * 1000) / 10 : 0,
+      },
+      cogs_coverage_pct: cogsCoverage,
+      cogs_coverage_note: cogsCoverage < 95
+        ? `Giá nhập chỉ cover ${cogsCoverage}% doanh thu. Profit là ước lượng (scale theo tỷ lệ).`
+        : null,
     };
-  }
+  };
 
-  // Total dùng TRUE values từ top-level Pancake aggregation
-  // fb_spend: ưu tiên spend THẬT (gồm cả unclassified) nếu caller truyền
-  // spendByGroup, fallback ước lượng 40%.
-  const fbSpendTrue = useRealSpend ? spendByGroup.total : trueRevenue * 0.40;
-  const fbSpendSourceTrue = useRealSpend ? "real_campaign" : "estimated_40pct";
-  const vatTrue = trueRevenue * 0.10;
-  // Scale cogs theo tỷ lệ trueRevenue / mappedRevenue (vì chỉ có cogs cho mapped SP).
-  // Nếu mappedRevenue = 0 → fallback cogs = 0.
-  const cogsScale = mappedRevenue > 0 ? trueRevenue / mappedRevenue : 0;
-  const cogsTrue = mappedCogs * cogsScale;
-  const profitTrue = trueRevenue - cogsTrue - fbSpendTrue - vatTrue;
+  // ── TRƯỚC HOÀN (gross, mọi đơn đã lên) — giữ tên cũ total/groups ──
+  const grossTrue = trueTotals(null);
+  const grossMapped = mappedTotals(null);
+  // cpqc tổng dùng chung: spend thật (nếu có) hoặc 40% × DT trước hoàn.
+  const fbSpendTotal = useRealSpend ? spendByGroup.total : grossTrue.revenue * 0.40;
+  const gross = buildMetric(grossTrue, grossMapped, fbSpendTotal);
 
-  const cogsCoverage = mappedRevenue > 0 && trueRevenue > 0
-    ? Math.round((mappedRevenue / trueRevenue) * 1000) / 10
-    : 0;
+  // ── THẬT (chỉ đơn delivered = đã giao + thanh toán) ──
+  const realTrue = trueTotals(["delivered"]);
+  const realMapped = mappedTotals(["delivered"]);
+  const real = buildMetric(realTrue, realMapped, fbSpendTotal);
 
   return {
-    has_data: trueOrders > 0,
+    has_data: grossTrue.orders > 0,
     time_range: timeRange,
-    groups: out,
-    total: {
-      revenue: Math.round(trueRevenue),
-      orders: trueOrders,
-      cogs: Math.round(cogsTrue),
-      fb_spend: Math.round(fbSpendTrue),
-      fb_spend_source: fbSpendSourceTrue,
-      fb_spend_estimated: Math.round(fbSpendTrue),
-      vat: Math.round(vatTrue),
-      profit: Math.round(profitTrue),
-      profit_per_order: trueOrders > 0 ? Math.round(profitTrue / trueOrders) : 0,
-      margin_pct: trueRevenue > 0 ? Math.round((profitTrue / trueRevenue) * 1000) / 10 : 0,
-    },
-    fb_spend_source: fbSpendSourceTrue,
+    // TRƯỚC HOÀN (backward-compat)
+    groups: gross.groups,
+    total: gross.total,
+    cogs_coverage_pct: gross.cogs_coverage_pct,
+    cogs_coverage_note: gross.cogs_coverage_note,
+    // THẬT (chỉ đơn đã giao) — đồng bộ doanh thu + giá vốn + VAT + số đơn
+    groups_real: real.groups,
+    total_real: real.total,
+    cogs_coverage_pct_real: real.cogs_coverage_pct,
+    // cpqc dùng chung cho cả hai
+    fb_spend_source: useRealSpend ? "real_campaign" : "estimated_40pct",
     fb_spend_unclassified: useRealSpend ? spendByGroup.unclassified : null,
-    // Audit fields — frontend có thể hiển thị nếu coverage < 95%
-    cogs_coverage_pct: cogsCoverage,
-    cogs_coverage_note: cogsCoverage < 95
-      ? `Giá nhập chỉ cover ${cogsCoverage}% doanh thu. Profit là ước lượng (scale theo tỷ lệ).`
-      : null,
+    _profit_note: "total/groups = TRƯỚC HOÀN (mọi đơn đã lên đơn). total_real/groups_real = THẬT (chỉ đơn delivered đã giao+thanh toán; đã loại đơn đang giao/đang hoàn/đã hoàn/hủy khỏi CẢ doanh thu, giá vốn, VAT, số đơn). cpqc (fb_spend) dùng CHUNG cho cả hai vì tiền ads đã chi rồi. Đơn hoàn thu hồi giá vốn (hàng về kho), CHƯA trừ phí ship hoàn.",
     data_freshness: productRevenueJson.generated_at || null,
   };
 }
