@@ -116,7 +116,18 @@ github-repo/
 - ✅ Auto-fallback Claude → Llama nếu fail
 - ✅ Debug fields trong response (claude_used, claude_error, claude_debug)
 
-### Account mapping FB Ads (data/fb-config.json)
+### Account mapping FB Ads — SỔ ĐĂNG KÝ TKQC
+
+> **Single source of truth**: khối `account_to_groups` trong
+> [`data/fb-config.json`](data/fb-config.json). Đây là **nơi duy nhất** khai báo
+> tkqc — cả `scripts/fetch_fb_ads.py` (kéo dữ liệu) lẫn backend đều đọc từ đây.
+>
+> 🔁 **Đổi agency / thêm / bớt tkqc → làm theo
+> [`docs/SWITCH-AD-ACCOUNTS.md`](docs/SWITCH-AD-ACCOUNTS.md)** (sửa 1 file →
+> `python scripts\validate_fb_config.py` → push → chạy workflow fetch). KHÔNG
+> hardcode ID trong file Python nữa.
+
+Mapping hiện tại (xem giá trị thật trong `data/fb-config.json`):
 
 | Account ID | Staff | Groups SP | Note |
 |---|---|---|---|
@@ -124,9 +135,20 @@ github-repo/
 | 927390616363424 | DUY | MAY_DO | D1 |
 | 1655506672244826 | DUY | NOMA | Noma chăm sóc xe |
 | 764394829882083 | PHƯƠNG NAM | NOMA | Noma 911 |
-| ~~906015559004892~~ | ~~PHƯƠNG NAM~~ | ~~MAY_DO~~ | **LOANED → fb-ads-auto-agent test từ 2026-05-29** |
+| 906015559004892 | PHƯƠNG NAM | MAY_DO | **LOANED → AI_AGENT từ 2026-05-29** (loaned_to_staff) |
 | 1416634670476226 | PHƯƠNG NAM | (rỗng) | Chưa chạy |
 | 1418124406240173 | PHƯƠNG NAM | CAMERA_VIDEO_CALL | DA8.1 mới (chưa chạy) |
+
+**Tách spend theo nhóm SP** giờ dùng **chi tiêu THẬT theo tên campaign**
+(`computeFbSpendByGroupInRange` trong `functions/lib/fbAdsHelpers.js`), thay cho
+ước lượng cũ `revenue × 40%`. Field `fb_spend_source` trong kết quả profit cho
+biết nguồn là `real_campaign` hay `estimated_40pct` (fallback khi thiếu data).
+
+**2 chỉ số lợi nhuận** (`computeFbProfitInRange` trả cả hai):
+- `total` / `groups` = **TRƯỚC HOÀN** — mọi đơn đã lên đơn (giữ tên cũ, backward-compat).
+- `total_real` / `groups_real` = **THẬT** — chỉ đơn `delivered` (đã giao + thanh toán); đã đồng bộ doanh thu + giá vốn + VAT + số đơn theo delivered. cpqc (`fb_spend`) **dùng chung** cho cả hai (tiền ads đã chi). Đơn hoàn thu hồi giá vốn (hàng về kho), CHƯA trừ phí ship hoàn.
+- `staff_overview.aggregate_mtd` có thêm `*_real_mtd_vnd` + `margin_real_pct`.
+- KPI tháng (`computeMonthlyKpiContext`) vẫn track doanh thu TRƯỚC HOÀN (booked) — không đổi.
 
 ## 🧠 AI Modes (functions/api/agent-fb-ai.js)
 
