@@ -318,6 +318,8 @@
     drawDayChart();
     // lợi nhuận tháng
     renderProfit();
+    // đơn đăng ký Noma911 (gọi API D1 riêng theo kỳ)
+    loadNoma(range.start, range.end);
   }
 
   function monthName(m){ var p=m.split('-'); return 'Th'+p[1]+'/'+p[0]; }
@@ -432,7 +434,11 @@
       }).join('')+'</div>';
     body.innerHTML=kpi+comboHtml+landingHtml;
   }
-  fetch('./data/noma911.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(renderNoma).catch(function(){renderNoma(null);});
+  function loadNoma(from,to){
+    document.getElementById('noma-range').textContent='đang tải…';
+    fetch('/api/noma911/stats?from='+from+'&to='+to,{cache:'no-store'})
+      .then(function(r){return r.ok?r.json():null;}).then(renderNoma).catch(function(){renderNoma(null);});
+  }
 
   fetch('./data/dashboard-data.json',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
     D=d;

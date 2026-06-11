@@ -28,17 +28,13 @@ jobs:
       - name: Đọc lại dữ liệu (refresh_data.py)
         run: python scripts/refresh_data.py
 
-      - name: Đọc thống kê Noma911 (cần secret TEST_BYPASS_TOKEN)
-        continue-on-error: true   # chưa có token / middleware chưa mở -> bỏ qua, không fail cả workflow
-        env:
-          TEST_BYPASS_TOKEN: ${{ secrets.TEST_BYPASS_TOKEN }}
-        run: python scripts/refresh_noma911.py
+      # Noma911: giờ đọc LIVE từ D1 riêng của CRM qua /api/noma911/stats — không cần fetch ở đây nữa.
 
       - name: Commit nếu dữ liệu đổi
         run: |
           git config user.name "crm-refresh-bot"
           git config user.email "kinhdoanh.doscom@gmail.com"
-          git add data/dashboard-data.json data/noma911.json 2>/dev/null || git add data/dashboard-data.json
+          git add data/dashboard-data.json
           if git diff --cached --quiet; then
             echo "Không có thay đổi dữ liệu."
           else

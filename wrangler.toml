@@ -1,0 +1,9 @@
+name = "crm-doscom"
+compatibility_date = "2024-11-01"
+pages_build_output_dir = "dist"
+
+# D1 riêng của CRM (đơn đăng ký Noma911). Binding tên DB để khớp functions/.
+[[d1_databases]]
+binding = "DB"
+database_name = "crm-doscom-db"
+database_id = "73cfb6ca-b9b4-4a9b-b74f-1a030f8db1d0"
