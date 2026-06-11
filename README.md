@@ -1,16 +1,18 @@
 # CRM Doscom
 
-Hệ thống CRM (quản lý khách hàng) của Doscom — project **độc lập**, tách khỏi `facebookadsallinone`.
+Giao diện vận hành **độc lập** với dashboard cũ (facebookadsallinone) — tách riêng để cập nhật của dashboard cũ không ảnh hưởng giao diện mới.
 
-- **Trang chủ:** `index.html` — dashboard CRM (Tổng quan, Phễu bán hàng, Nguồn khách, Khách hàng gần đây).
-- **Thiết kế:** font Nunito bo tròn, hỗ trợ sáng/tối, responsive. Dữ liệu hiện là **mẫu** (v0.1 khởi tạo).
-- **Deploy:** Cloudflare Pages — project `crm-doscom` → `crm-doscom.pages.dev`.
+- `index.html` — trang **Tổng quan** (khung modular): KPI thật, biểu đồ, ô "➕ thêm module".
+- `data/` — **bản sao (snapshot)** dữ liệu thật từ dashboard cũ. Trang đọc cùng origin nên hiện số thật, không cần CORS.
+- Thiết kế: Nunito bo tròn, sáng/tối, responsive.
 
-## Hướng phát triển tiếp
-- [ ] Nối dữ liệu thật từ Pancake CRM (`pancake-crm-contacts.json`).
-- [ ] Trang chi tiết khách hàng, lịch sử đơn, ghi chú chăm sóc.
-- [ ] Phễu bán hàng kéo-thả (kanban).
-- [ ] Phân quyền nhân sự (Duy / Phương Nam…).
+## Số liệu (snapshot hiện tại)
+Chi tiêu QC, doanh thu giao TC, ROAS gộp, tổng đơn, Google grade, lead→đơn — lấy từ `data/*.json` thật.
+
+## Hướng phát triển
+- [ ] Tự đồng bộ `data/` định kỳ từ repo cũ (GitHub Action) → số luôn mới mà vẫn tách biệt.
+- [ ] Nhét dần các module cũ vào 2 ô slot: bảng theo nhân sự, theo nhóm SP, lãi lỗ, khách hàng…
+- [ ] Deploy Cloudflare Pages → `crm-doscom.pages.dev`.
 
 ## Chạy thử cục bộ
-Mở thẳng `index.html` bằng trình duyệt (dữ liệu mẫu inline, không cần server).
+Cần server (vì fetch /data): `python -m http.server 8125` rồi mở http://127.0.0.1:8125/
