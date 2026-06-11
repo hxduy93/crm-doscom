@@ -223,8 +223,12 @@
         </div>
       </section>
 
+      <section class="mod wide" style="margin-bottom:16px" id="noma-mod">
+        <div class="mod-h"><div class="t"><i style="background:#0EA5E9"></i><h3>Đơn đăng ký Noma911 — theo combo &amp; landing</h3></div><span class="s" id="noma-range">…</span></div>
+        <div class="mod-b" id="noma-body"><div class="skl">Đang tải dữ liệu noma911…</div></div>
+      </section>
+
       <section class="slots">
-        <div class="slot">📝 Đơn đăng ký Noma911 Landing<small>Dữ liệu nằm ở API <code>/api/noma911/stats</code> + database D1 của dashboard cũ — đang được đăng nhập bảo vệ nên không lấy được từ ngoài.</small><span class="wip">cần export hoặc sync có credential</span></div>
         <div class="slot">➕ Module tiếp theo<small>vd: theo nhóm SP, top sản phẩm, khách hàng Pancake…</small><span class="wip">bạn chọn — ta làm tiếp</span></div>
       </section>
 
@@ -397,6 +401,38 @@
     if(s&&e&&s<=e){ range={start:s,end:e}; document.querySelectorAll('#presets button').forEach(function(b){b.classList.remove('on');}); render(); } }
   document.getElementById('dt-start').addEventListener('change',onCustom);
   document.getElementById('dt-end').addEventListener('change',onCustom);
+
+  // ===== Module Noma911 — đơn đăng ký landing theo combo + 2 landing (đọc data/noma911.json) =====
+  var NOMA_STAFF={ duy:{label:'Duy', slug:'nm911d', color:'#3257E6'}, pn:{label:'Phương Nam', slug:'911tpn', color:'#8B5CF6'} };
+  function noKpi(label,val,color){ return '<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:13px;padding:13px"><div style="font-size:12px;color:var(--text-2);font-weight:700">'+label+'</div><div style="font-size:19px;font-weight:800;margin-top:4px;color:'+color+'">'+val+'</div></div>'; }
+  function renderNoma(N){
+    var body=document.getElementById('noma-body'), rng=document.getElementById('noma-range');
+    if(!N || !N.summary){
+      rng.textContent='chưa nối dữ liệu';
+      body.innerHTML='<div style="color:var(--text-2);font-weight:600;font-size:13.3px;line-height:1.65">⚠️ Chưa có <code>data/noma911.json</code>. Dữ liệu nằm ở API <code>/api/noma911/stats</code> của dashboard cũ (khoá đăng nhập). Lấy bằng 1 trong 2 cách: (A) thêm token bypass + sync tự động, hoặc (B) paste JSON 1 lần.</div>';
+      return;
+    }
+    var s=N.summary, a=N.actual||{};
+    rng.textContent = N.range ? (N.range.from+' → '+N.range.to) : '';
+    var kpi='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">'+
+      noKpi('Đơn đăng ký', num(s.orders), '#0EA5E9')+
+      noKpi('Khách (SĐT)', num(s.unique_customers), '#3257E6')+
+      noKpi('DT đăng ký', vnd(s.revenue), '#16A34A')+
+      noKpi('Đã giao (POS)', num(a.orders_delivered)+' · '+(a.conversion_rate||0)+'%', '#F59E0B')+
+      '</div>';
+    var combos=(N.by_combo||[]).slice().sort(function(x,y){return y.orders-x.orders;});
+    var mx=Math.max.apply(null,combos.map(function(c){return c.orders;}))||1;
+    var comboHtml='<div style="font-weight:800;font-size:13.5px;margin:4px 0 8px">Theo combo</div><div class="bars">'+combos.map(function(c){
+      return '<div class="bar"><div class="bt"><span>'+(c.combo_label||c.combo)+'</span><span class="tnum">'+num(c.orders)+' đơn · '+vnd(c.revenue)+'</span></div><div class="track"><div class="fill" style="width:'+(c.orders/mx*100).toFixed(1)+'%;background:#0EA5E9"></div></div></div>';
+    }).join('')+'</div>';
+    var byStaff={}; (N.by_staff||[]).forEach(function(r){ byStaff[r.staff]=r; });
+    var landingHtml='<div style="font-weight:800;font-size:13.5px;margin:16px 0 8px">Theo landing (nguồn)</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
+      Object.keys(NOMA_STAFF).map(function(k){ var m=NOMA_STAFF[k], r=byStaff[k]||{orders:0,revenue:0};
+        return '<div style="border:1px solid var(--border);border-radius:13px;padding:14px"><div style="font-weight:800;display:flex;align-items:center;gap:8px"><span style="width:11px;height:11px;border-radius:4px;background:'+m.color+'"></span>'+m.label+' <span style="color:var(--text-2);font-weight:600;font-size:12px">noma.io.vn/'+m.slug+'</span></div><div style="font-size:22px;font-weight:800;margin-top:6px">'+num(r.orders)+' <span style="font-size:13px;color:var(--text-2);font-weight:700">đơn · '+vnd(r.revenue)+'</span></div></div>';
+      }).join('')+'</div>';
+    body.innerHTML=kpi+comboHtml+landingHtml;
+  }
+  fetch('./data/noma911.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(renderNoma).catch(function(){renderNoma(null);});
 
   fetch('./data/dashboard-data.json',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
     D=d;
