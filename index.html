@@ -67,6 +67,7 @@
   .seg button.on{background:var(--surface);color:var(--primary);box-shadow:var(--shadow-sm)}
   .dt{border:1px solid var(--border);background:var(--surface);border-radius:9px;padding:6px 9px;font-family:var(--font);font-size:12.5px;color:var(--text);font-weight:700}
   select.dt{cursor:pointer;padding-right:6px}
+  .dt:disabled{opacity:.4;cursor:not-allowed;background:var(--muted)}
   .btn-export{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:10px;cursor:pointer;padding:8px 13px;font-family:var(--font);font-weight:800;font-size:12.5px;color:#fff;background:linear-gradient(135deg,var(--accent),#D97706);box-shadow:0 8px 18px -10px var(--accent);transition:var(--t)}
   .btn-export:hover{transform:translateY(-1px)}
   .btn-export svg{width:15px;height:15px}
@@ -276,11 +277,8 @@
     }
   })();
 
-  function vnd(n){ n=Number(n)||0; var s=n<0?'-':''; n=Math.abs(n);
-    if(n>=1e9) return s+(n/1e9).toFixed(2).replace('.',',')+' tỷ';
-    if(n>=1e6) return s+Math.round(n/1e6).toLocaleString('vi-VN')+' tr';
-    if(n>=1e3) return s+Math.round(n/1e3)+'K';
-    return s+Math.round(n).toLocaleString('vi-VN')+'đ'; }
+  // Chi phí/doanh thu: hiển thị ĐẦY ĐỦ, làm tròn đến hàng nghìn (không rút gọn tr/tỷ)
+  function vnd(n){ n=Math.round((Number(n)||0)/1000)*1000; return n.toLocaleString('vi-VN')+'đ'; }
   function num(n){ return (Number(n)||0).toLocaleString('vi-VN'); }
   function set(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; }
 
@@ -324,7 +322,7 @@
     var cir=rev>0?(tot/rev*100):0; set('k-cir', cir?cir.toFixed(1).replace('.',',')+'%':'—');
     set('k-orders', orders?num(orders):'—');
     // donut kênh
-    drawDonut(tot,[['#3257E6',fb],['#16A34A',gg]],vnd(tot));
+    drawDonut(tot,[['#3257E6',fb],['#16A34A',gg]],fmtShort(tot));
     set('lg-fb', tot?Math.round(fb/tot*100)+'%':'—'); set('lg-gg', tot?Math.round(gg/tot*100)+'%':'—');
     // doanh thu theo nguồn
     var srows=SOURCES.map(function(s){ return {s:s, rev:srcRevenue(s.key), ord:srcOrders(s.key)}; }).sort(function(a,b){return b.rev-a.rev;});
@@ -437,16 +435,22 @@
     if(p==='last-month'){ var fm=new Date(MAX.slice(0,7)+'-01T00:00:00Z'), lastPrev=minusDays(fm,1); return {start:lastPrev.toISOString().slice(0,7)+'-01',end:ymd(lastPrev)}; }
     var n=parseInt(p,10)||7, s=ymd(minusDays(ref,n-1)); return {start:s,end:MAX};
   }
+  function applyFilterMode(){ // chọn preset -> khóa 2 ô ngày; chọn "Tùy chọn" -> mở
+    var custom=document.getElementById('preset-select').value==='custom';
+    document.getElementById('dt-start').disabled=!custom;
+    document.getElementById('dt-end').disabled=!custom;
+  }
   function setPreset(p){
     var r=presetRange(p);
     range={start:(r.start<MIN?MIN:r.start),end:(r.end>MAX?MAX:r.end)};
     var sel=document.getElementById('preset-select'); if(sel&&sel.value!==p) sel.value=p;
     document.getElementById('dt-start').value=range.start; document.getElementById('dt-end').value=range.end;
+    applyFilterMode();
     render();
   }
-  document.getElementById('preset-select').addEventListener('change',function(){ if(this.value==='custom'){ document.getElementById('dt-start').focus(); return; } setPreset(this.value); });
+  document.getElementById('preset-select').addEventListener('change',function(){ if(this.value==='custom'){ applyFilterMode(); document.getElementById('dt-start').focus(); return; } setPreset(this.value); });
   function onCustom(){ var s=document.getElementById('dt-start').value,e=document.getElementById('dt-end').value;
-    if(s&&e&&s<=e){ range={start:s,end:e}; document.getElementById('preset-select').value='custom'; render(); } }
+    if(s&&e&&s<=e){ range={start:s,end:e}; document.getElementById('preset-select').value='custom'; applyFilterMode(); render(); } }
   document.getElementById('dt-start').addEventListener('change',onCustom);
   document.getElementById('dt-end').addEventListener('change',onCustom);
 
