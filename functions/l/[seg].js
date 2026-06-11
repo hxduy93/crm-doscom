@@ -31,7 +31,7 @@ export async function onRequestGet({ env, params }) {
     if (seg === L.slug) { match = { cfg, slug: L.slug, staff: cfg.staff || "" }; break; }
     // Danh sách nhân sự động: routing.staff = [{name, suffix}]
     const staffArr = Array.isArray(r.staff) ? r.staff : [];
-    const hit = staffArr.find((p) => p && p.suffix && seg === (L.slug + p.suffix));
+    const hit = staffArr.find((p) => p && p.suffix && seg === p.suffix);
     if (hit) { match = { cfg, slug: L.slug, staff: hit.key || hit.name || "" }; break; }
     // Back-compat config cũ
     if (r.duySuffix && seg === (L.slug + r.duySuffix)) { match = { cfg, slug: L.slug, staff: "duy" }; break; }

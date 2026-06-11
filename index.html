@@ -1752,7 +1752,7 @@ function LandingBuilder() {
     footer: { company: "", desc: "", cols: [], bottom: "" },
     sticky: { title: "", sub: "", ctaText: "Đặt ngay →" },
     contact: { hotline: "", messenger: "" },
-    routing: { useCustom: false, domain: "", staff: [{ name: "Duy", suffix: "-duy" }, { name: "Phương Nam", suffix: "-pn" }] },
+    routing: { useCustom: false, domain: "", staff: [{ name: "Duy", suffix: "duy" }, { name: "Phương Nam", suffix: "pn" }] },
     integrations: { pancakeShopId: "", pancakeApiKey: "", sheetUrl: "" },
     imagePrompts: { hero: "", heroMobile: "", cause1: "", cause2: "", cause3: "", cause4: "", solution: "", design: "", apply: "", proof: "" },
     images: {}, staff: "", source: "", thankUrl: "",
@@ -1768,7 +1768,7 @@ function LandingBuilder() {
         if (r.duySuffix != null) staff.push({ name: "Duy", suffix: r.duySuffix })
         if (r.pnSuffix != null) staff.push({ name: "Phương Nam", suffix: r.pnSuffix })
       } else {
-        staff = [{ name: "Duy", suffix: "-duy" }, { name: "Phương Nam", suffix: "-pn" }]
+        staff = [{ name: "Duy", suffix: "duy" }, { name: "Phương Nam", suffix: "pn" }]
       }
     }
     return { useCustom: !!r.useCustom, domain: r.domain || "", staff }
@@ -2130,8 +2130,8 @@ function LandingBuilder() {
               </select>
             </F>
             {cfg.routing.useCustom && <F label="Tên miền riêng"><input className={inp} value={cfg.routing.domain} onChange={e => setPath("routing.domain", e.target.value)} placeholder="vd: noma.io.vn" /></F>}
-            <label className={lbl}>Nhân sự & hậu tố link (mỗi người 1 link riêng — thêm/xoá tuỳ ý)</label>
-            <ArrayEditor items={cfg.routing.staff} fields={[{ key: "name", ph: "Tên nhân sự (vd: Duy)" }, { key: "suffix", ph: "Hậu tố link (vd: -duy)" }]} blank={{ name: "", suffix: "" }} addLabel="nhân sự" onChange={v => setPath("routing.staff", v)} />
+            <label className={lbl}>Nhân sự & đường dẫn link (mỗi người tự điền TOÀN BỘ đường dẫn — phải khác nhau)</label>
+            <ArrayEditor items={cfg.routing.staff} fields={[{ key: "name", ph: "Tên nhân sự (vd: Duy)" }, { key: "suffix", ph: "Đường dẫn đầy đủ — bạn tự điền hết (vd: doscom-d1-duy)" }]} blank={{ name: "", suffix: "" }} addLabel="nhân sự" onChange={v => setPath("routing.staff", v)} />
             <div className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded p-2 mb-3 mt-2">
               <div className="font-semibold mb-1">Link landing (xem được ngay; định tuyến đơn theo nhân sự hoàn thiện ở Phase 3):</div>
               {(cfg.routing.staff || []).map((p, i) => (
