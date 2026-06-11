@@ -196,13 +196,10 @@
 
       <section class="bento">
         <div class="mod">
-          <div class="mod-h"><div class="t"><i style="background:#3257E6"></i><h3>Chi tiêu theo kênh</h3></div><span class="s">FB vs Google</span></div>
+          <div class="mod-h"><div class="t"><i style="background:#3257E6"></i><h3>Chi tiêu theo kênh</h3></div><span class="s">theo nguồn chạy QC</span></div>
           <div class="mod-b donut-row">
-            <svg id="donut" viewBox="0 0 180 180" width="138" height="138"></svg>
-            <div class="leg">
-              <div class="leg-row"><span class="nm"><i style="background:#3257E6"></i>Facebook</span><span class="pc" id="lg-fb">—</span></div>
-              <div class="leg-row"><span class="nm"><i style="background:#16A34A"></i>Google</span><span class="pc" id="lg-gg">—</span></div>
-            </div>
+            <svg id="donut" viewBox="0 0 180 180" width="172" height="172"></svg>
+            <div class="leg" id="chan-leg"></div>
           </div>
         </div>
         <div class="mod">
@@ -321,9 +318,15 @@
     set('k-rev', rev?vnd(rev):'—'); set('k-rev-foot', num(orders)+' đơn (mọi trạng thái)');
     var cir=rev>0?(tot/rev*100):0; set('k-cir', cir?cir.toFixed(1).replace('.',',')+'%':'—');
     set('k-orders', orders?num(orders):'—');
-    // donut kênh
-    drawDonut(tot,[['#3257E6',fb],['#16A34A',gg]],fmtShort(tot));
-    set('lg-fb', tot?Math.round(fb/tot*100)+'%':'—'); set('lg-gg', tot?Math.round(gg/tot*100)+'%':'—');
+    // donut chi tiêu theo nguồn (tách Duy / Phương Nam / Google + FB khác nếu có)
+    var duySp=staffSpend({ad:'DUY'}), pnSp=staffSpend({ad:'PHUONG_NAM'}), fbOther=Math.max(0,fb-duySp-pnSp);
+    var chSeg=[['#3257E6','Duy',duySp],['#8B5CF6','Phương Nam',pnSp]];
+    if(fbOther>tot*0.005) chSeg.push(['#94A3B8','FB khác',fbOther]);
+    chSeg.push(['#16A34A','Google',gg]);
+    drawDonut(tot, chSeg.map(function(x){return [x[0],x[2]];}), fmtShort(tot));
+    document.getElementById('chan-leg').innerHTML=chSeg.map(function(x){
+      return '<div class="leg-row"><span class="nm"><i style="background:'+x[0]+'"></i>'+x[1]+'</span><span class="pc">'+(tot?Math.round(x[2]/tot*100):0)+'%</span></div>';
+    }).join('');
     // doanh thu theo nguồn
     var srows=SOURCES.map(function(s){ return {s:s, rev:srcRevenue(s.key), ord:srcOrders(s.key)}; }).sort(function(a,b){return b.rev-a.rev;});
     var mxr=Math.max.apply(null,srows.map(function(x){return x.rev;}))||1;
