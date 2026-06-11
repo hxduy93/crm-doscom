@@ -1752,7 +1752,7 @@ function LandingBuilder() {
     footer: { company: "", desc: "", cols: [], bottom: "" },
     sticky: { title: "", sub: "", ctaText: "Đặt ngay →" },
     contact: { hotline: "", messenger: "" },
-    routing: { useCustom: false, domain: "", staff: [{ name: "Duy", suffix: "-duy" }, { name: "Phương Nam", suffix: "-pn" }] },
+    routing: { useCustom: false, domain: "", staff: [{ name: "Duy", suffix: "duy" }, { name: "Phương Nam", suffix: "pn" }] },
     integrations: { pancakeShopId: "", pancakeApiKey: "", sheetUrl: "" },
     imagePrompts: { hero: "", heroMobile: "", cause1: "", cause2: "", cause3: "", cause4: "", solution: "", design: "", apply: "", proof: "" },
     images: {}, staff: "", source: "", thankUrl: "",
@@ -1768,7 +1768,7 @@ function LandingBuilder() {
         if (r.duySuffix != null) staff.push({ name: "Duy", suffix: r.duySuffix })
         if (r.pnSuffix != null) staff.push({ name: "Phương Nam", suffix: r.pnSuffix })
       } else {
-        staff = [{ name: "Duy", suffix: "-duy" }, { name: "Phương Nam", suffix: "-pn" }]
+        staff = [{ name: "Duy", suffix: "duy" }, { name: "Phương Nam", suffix: "pn" }]
       }
     }
     return { useCustom: !!r.useCustom, domain: r.domain || "", staff }
@@ -1939,7 +1939,7 @@ function LandingBuilder() {
       const d = cfg.routing.domain.replace(/^https?:\/\//, "").replace(/\/+$/, "")
       return "https://" + d + "/"
     }
-    return window.location.origin + "/l/"
+    return window.location.origin + "/"
   }
 
   function applyAdvJson() {
@@ -2130,19 +2130,19 @@ function LandingBuilder() {
               </select>
             </F>
             {cfg.routing.useCustom && <F label="Tên miền riêng"><input className={inp} value={cfg.routing.domain} onChange={e => setPath("routing.domain", e.target.value)} placeholder="vd: noma.io.vn" /></F>}
-            <label className={lbl}>Nhân sự & hậu tố link (mỗi người 1 link riêng — thêm/xoá tuỳ ý)</label>
-            <ArrayEditor items={cfg.routing.staff} fields={[{ key: "name", ph: "Tên nhân sự (vd: Duy)" }, { key: "suffix", ph: "Hậu tố link (vd: -duy)" }]} blank={{ name: "", suffix: "" }} addLabel="nhân sự" onChange={v => setPath("routing.staff", v)} />
+            <label className={lbl}>Nhân sự & đường dẫn link (mỗi người tự điền TOÀN BỘ đường dẫn — phải khác nhau)</label>
+            <ArrayEditor items={cfg.routing.staff} fields={[{ key: "name", ph: "Tên nhân sự (vd: Duy)" }, { key: "suffix", ph: "Đường dẫn đầy đủ — bạn tự điền hết (vd: doscom-d1-duy)" }, { key: "apiKey", ph: "Pancake API Key RIÊNG của nhân sự này (đổ về nguồn CRM riêng)" }]} blank={{ name: "", suffix: "", apiKey: "" }} addLabel="nhân sự" onChange={v => setPath("routing.staff", v)} />
             <div className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded p-2 mb-3 mt-2">
               <div className="font-semibold mb-1">Link landing (xem được ngay; định tuyến đơn theo nhân sự hoàn thiện ở Phase 3):</div>
               {(cfg.routing.staff || []).map((p, i) => (
-                <div key={i}>👤 {p.name || "(chưa đặt tên)"}: <a href={routeBase() + slug + (p.suffix || "")} target="_blank" rel="noopener" className="text-blue-600 underline break-all">{routeBase() + slug + (p.suffix || "")}</a></div>
+                <div key={i}>👤 {p.name || "(chưa đặt tên)"}: <a href={routeBase() + (p.suffix || "")} target="_blank" rel="noopener" className="text-blue-600 underline break-all">{routeBase() + (p.suffix || "")}</a></div>
               ))}
             </div>
 
             <div className={sec}>Tích hợp nhận đơn (Pancake + Google Sheet)</div>
-            <p className="text-[11px] text-gray-400 mb-2">Đơn khách đặt trên trang /l/... sẽ tự đẩy về Pancake CRM và Google Sheet bên dưới. Để trống nếu chưa dùng.</p>
-            <F label="Pancake — Shop ID"><input className={inp} value={cfg.integrations.pancakeShopId} onChange={e => setPath("integrations.pancakeShopId", e.target.value)} placeholder="vd: 1942196207" /></F>
-            <F label="Pancake — API Key"><input className={inp} value={cfg.integrations.pancakeApiKey} onChange={e => setPath("integrations.pancakeApiKey", e.target.value)} placeholder="api_key của shop Pancake" /></F>
+            <p className="text-[11px] text-gray-400 mb-2">Shop ID + Google Sheet dùng <b>CHUNG</b>. Riêng <b>API Key đặt theo từng nhân sự ở mục trên</b> (để 2 link đổ về 2 nguồn CRM khác nhau). Ô API Key dưới đây chỉ là <b>mặc định</b> khi link KHÔNG gắn nhân sự.</p>
+            <F label="Pancake — Shop ID (dùng chung)"><input className={inp} value={cfg.integrations.pancakeShopId} onChange={e => setPath("integrations.pancakeShopId", e.target.value)} placeholder="vd: 1942196207" /></F>
+            <F label="Pancake — API Key mặc định (khi link không gắn nhân sự)"><input className={inp} value={cfg.integrations.pancakeApiKey} onChange={e => setPath("integrations.pancakeApiKey", e.target.value)} placeholder="api_key mặc định (tuỳ chọn)" /></F>
             <F label="Google Sheet — link nhận data (Apps Script Web App URL)"><input className={inp} value={cfg.integrations.sheetUrl} onChange={e => setPath("integrations.sheetUrl", e.target.value)} placeholder="https://script.google.com/macros/s/.../exec" /></F>
             <p className="text-[11px] text-gray-400 mb-1">Sheet: tạo Apps Script doPost(e) ghi vào sheet, Deploy → Web app → quyền "Anyone" → dán link /exec vào đây.</p>
 

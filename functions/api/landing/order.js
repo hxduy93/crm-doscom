@@ -54,10 +54,16 @@ export async function onRequestPost(context) {
     timestamp: String(d.timestamp || ""),
   };
 
+  // Pancake API key theo NHÂN SỰ: mỗi nhân sự (routing.staff[].apiKey) đổ về 1 nguồn CRM riêng.
+  // order.staff = key/name nhân sự (landing gắn theo đường dẫn). Fallback = API key mặc định.
+  const staffArr = (cfg.routing && Array.isArray(cfg.routing.staff)) ? cfg.routing.staff : [];
+  const staffMatch = order.staff ? staffArr.find((s) => s && (s.key === order.staff || s.name === order.staff)) : null;
+  const pancakeApiKey = (staffMatch && staffMatch.apiKey) ? staffMatch.apiKey : itg.pancakeApiKey;
+
   const sent = { pancake: "skip", sheet: "skip" };
 
   // 1) Pancake CRM — body phẳng giống LadiPage/noma911.
-  if (itg.pancakeShopId && itg.pancakeApiKey) {
+  if (itg.pancakeShopId && pancakeApiKey) {
     try {
       const noteParts = [
         order.note,
@@ -74,7 +80,7 @@ export async function onRequestPost(context) {
         san_pham: order.combo || cfg.brand || "",
       };
       const pcUrl = "https://pos.pancake.vn/api/v1/shops/" + encodeURIComponent(itg.pancakeShopId) +
-        "/crm/Contact/records?api_key=" + encodeURIComponent(itg.pancakeApiKey);
+        "/crm/Contact/records?api_key=" + encodeURIComponent(pancakeApiKey);
       const r = await fetch(pcUrl, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });

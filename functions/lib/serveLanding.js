@@ -18,8 +18,9 @@ export async function serveLanding(env, segRaw) {
 
   const cfg = { ...match.cfg, slug: match.slug };
   if (match.staff) cfg.staff = match.staff;
-  // KHÔNG để lộ secret tích hợp ra HTML công khai
+  // KHÔNG để lộ secret tích hợp / API key nhân sự ra HTML công khai
   delete cfg.integrations;
+  delete cfg.routing;
 
   let html;
   try {
