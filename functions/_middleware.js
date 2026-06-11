@@ -1,6 +1,8 @@
 // Google OAuth gate for Cloudflare Pages
 // Env vars required: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, ALLOWED_EMAILS, SESSION_SECRET
 
+import { matchLanding } from "./lib/landingMatch.js";
+
 const SESSION_COOKIE = "doscom_session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
@@ -68,6 +70,19 @@ export async function onRequest(context) {
   // Render từ D1; cho khách truy cập không cần session.
   if (request.method === "GET" && url.pathname.startsWith("/l/")) {
     return next();
+  }
+
+  // Landing Builder — trang landing CÔNG KHAI ở GỐC tên miền /<đường-dẫn> (không cần /l/).
+  // Chỉ cho qua khi path là 1 đoạn (không phải file .x, không /api,/auth) VÀ khớp 1 landing
+  // thật trong D1. Mọi path khác (dashboard, file tĩnh...) vẫn bị gate đăng nhập như cũ.
+  // FAIL-SAFE: lỗi/không khớp -> rơi xuống kiểm tra session bên dưới (an toàn, không lộ gì).
+  if (request.method === "GET" && env.DB) {
+    const seg = url.pathname.replace(/^\/+/, "");
+    if (seg && !seg.includes("/") && !seg.includes(".")) {
+      try {
+        if (await matchLanding(env.DB, seg)) return next();
+      } catch (_) { /* rơi xuống gate session */ }
+    }
   }
 
   // Landing Builder — nhận đơn từ trang landing công khai (khách không có session).
