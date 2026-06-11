@@ -406,7 +406,7 @@
 
   // ===== Module Noma911 — đơn đăng ký landing theo combo + 2 landing (đọc data/noma911.json) =====
   var NOMA_STAFF={ duy:{label:'Duy', slug:'nm911d', color:'#3257E6'}, pn:{label:'Phương Nam', slug:'911tpn', color:'#8B5CF6'} };
-  function noKpi(label,val,color){ return '<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:13px;padding:13px"><div style="font-size:12px;color:var(--text-2);font-weight:700">'+label+'</div><div style="font-size:19px;font-weight:800;margin-top:4px;color:'+color+'">'+val+'</div></div>'; }
+  function noKpi(label,val,color,tip){ return '<div title="'+(tip||'').replace(/"/g,'&quot;')+'" style="background:var(--surface-2);border:1px solid var(--border);border-radius:13px;padding:13px'+(tip?';cursor:help':'')+'"><div style="font-size:12px;color:var(--text-2);font-weight:700">'+label+(tip?' <span style="opacity:.5">ⓘ</span>':'')+'</div><div style="font-size:19px;font-weight:800;margin-top:4px;color:'+color+'">'+val+'</div></div>'; }
   function renderNoma(N){
     var body=document.getElementById('noma-body'), rng=document.getElementById('noma-range');
     if(!N || !N.summary){
@@ -416,23 +416,29 @@
     }
     var s=N.summary, a=N.actual||{};
     rng.textContent = N.range ? (N.range.from+' → '+N.range.to) : '';
-    var kpi='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">'+
-      noKpi('Đơn đăng ký', num(s.orders), '#0EA5E9')+
-      noKpi('Khách (SĐT)', num(s.unique_customers), '#3257E6')+
-      noKpi('DT đăng ký', vnd(s.revenue), '#16A34A')+
-      noKpi('Đã giao (POS)', num(a.orders_delivered)+' · '+(a.conversion_rate||0)+'%', '#F59E0B')+
-      '</div>';
     var combos=(N.by_combo||[]).slice().sort(function(x,y){return y.orders-x.orders;});
+    var totalO=s.orders||0;
+    var comboO=combos.reduce(function(t,c){return t+(c.combo!=='le-911'?c.orders:0);},0);
+    var comboPct=totalO?(comboO/totalO*100):0;
+    var kpi='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:10px">'+
+      noKpi('Đơn đăng ký', num(totalO), '#0EA5E9', 'Số lượt khách điền form đăng ký thành công trên landing (mỗi submit = 1 đơn ĐK). Đây là LEAD, chưa phải đơn chốt POS.')+
+      noKpi('Khách (SĐT)', num(s.unique_customers), '#3257E6', 'Số khách khác nhau theo số điện thoại (đã loại trùng — 1 khách đăng ký nhiều lần chỉ tính 1).')+
+      noKpi('DT đăng ký', vnd(s.revenue), '#16A34A', 'Doanh thu DỰ KIẾN = giá combo × số đơn đăng ký. CHƯA phải doanh thu thực thu — xem "Đã giao (POS)".')+
+      noKpi('Tỉ lệ đơn combo', comboPct.toFixed(1).replace('.',',')+'%', '#8B5CF6', comboO+' đơn combo / '+totalO+' tổng đơn (combo = mọi loại trừ "1 chai lẻ").')+
+      noKpi('Đã giao (POS)', num(a.orders_delivered)+' · '+(a.conversion_rate||0)+'%', '#F59E0B', 'Số đơn đã giao thành công (đối chiếu POS Pancake) + tỉ lệ chốt = đã giao / đơn đăng ký.')+
+      '</div>';
+    var noteHtml='<div style="font-size:11.5px;color:var(--text-2);font-weight:600;line-height:1.65;margin-bottom:14px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;padding:10px 13px">ℹ️ <b>Đơn đăng ký</b> = lượt điền form trên landing (lead) · <b>Khách</b> = theo SĐT duy nhất · <b>DT đăng ký</b> = doanh thu dự kiến theo combo (chưa thực thu) · <b>Tỉ lệ combo</b> = đơn combo / tổng đơn · <b>Đã giao</b> = đơn POS thật đã giao.</div>';
     var mx=Math.max.apply(null,combos.map(function(c){return c.orders;}))||1;
-    var comboHtml='<div style="font-weight:800;font-size:13.5px;margin:4px 0 8px">Theo combo</div><div class="bars">'+combos.map(function(c){
-      return '<div class="bar"><div class="bt"><span>'+(c.combo_label||c.combo)+'</span><span class="tnum">'+num(c.orders)+' đơn · '+vnd(c.revenue)+'</span></div><div class="track"><div class="fill" style="width:'+(c.orders/mx*100).toFixed(1)+'%;background:#0EA5E9"></div></div></div>';
+    var comboHtml='<div style="font-weight:800;font-size:13.5px;margin:4px 0 8px">Theo combo <span style="color:var(--text-2);font-weight:700">· '+comboPct.toFixed(1).replace('.',',')+'% đơn là combo (' + comboO + '/' + totalO + ')</span></div><div class="bars">'+combos.map(function(c){
+      var pct=totalO?(c.orders/totalO*100):0, isC=c.combo!=='le-911';
+      return '<div class="bar"><div class="bt"><span>'+(c.combo_label||c.combo)+(isC?' <span style="font-size:10px;font-weight:800;color:#8B5CF6;background:color-mix(in srgb,#8B5CF6 14%,transparent);padding:1px 6px;border-radius:999px;margin-left:4px">combo</span>':' <span style="font-size:10px;font-weight:800;color:var(--text-2);background:var(--muted);padding:1px 6px;border-radius:999px;margin-left:4px">lẻ</span>')+'</span><span class="tnum">'+num(c.orders)+' đơn · '+pct.toFixed(1).replace('.',',')+'% · '+vnd(c.revenue)+'</span></div><div class="track"><div class="fill" style="width:'+(c.orders/mx*100).toFixed(1)+'%;background:'+(isC?'#8B5CF6':'#0EA5E9')+'"></div></div></div>';
     }).join('')+'</div>';
     var byStaff={}; (N.by_staff||[]).forEach(function(r){ byStaff[r.staff]=r; });
     var landingHtml='<div style="font-weight:800;font-size:13.5px;margin:16px 0 8px">Theo landing (nguồn)</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
       Object.keys(NOMA_STAFF).map(function(k){ var m=NOMA_STAFF[k], r=byStaff[k]||{orders:0,revenue:0};
         return '<div style="border:1px solid var(--border);border-radius:13px;padding:14px"><div style="font-weight:800;display:flex;align-items:center;gap:8px"><span style="width:11px;height:11px;border-radius:4px;background:'+m.color+'"></span>'+m.label+' <span style="color:var(--text-2);font-weight:600;font-size:12px">noma.io.vn/'+m.slug+'</span></div><div style="font-size:22px;font-weight:800;margin-top:6px">'+num(r.orders)+' <span style="font-size:13px;color:var(--text-2);font-weight:700">đơn · '+vnd(r.revenue)+'</span></div></div>';
       }).join('')+'</div>';
-    body.innerHTML=kpi+comboHtml+landingHtml;
+    body.innerHTML=kpi+noteHtml+comboHtml+landingHtml;
   }
   function loadNoma(from,to){
     document.getElementById('noma-range').textContent='đang tải…';
