@@ -1,0 +1,76 @@
+"""Đọc lại dữ liệu cho CRM Doscom.
+
+Kéo khối `const DATA = {...}` mới nhất từ dashboard cũ (repo PUBLIC trên GitHub),
+cắt bớt vài field cấp-đơn nhạy cảm, ghi vào data/dashboard-data.json.
+
+Chạy tay:   python scripts/refresh_data.py
+Trong CI :   bước này nằm trong .github/workflows/refresh-data.yml
+
+Nguồn mặc định là index.html của repo cũ trên GitHub raw. Khi sau này bỏ dashboard cũ
+và tự fetch từ nguồn gốc (FB/Google/Pancake), chỉ cần thay hàm fetch_source() bên dưới.
+"""
+import json
+import os
+import sys
+import urllib.request
+
+# Có thể override bằng biến môi trường DATA_SOURCE_URL
+SRC = os.environ.get(
+    "DATA_SOURCE_URL",
+    "https://raw.githubusercontent.com/hxduy93/facebook-ads-dashboard/main/index.html",
+)
+OUT = os.path.join(os.path.dirname(__file__), "..", "data", "dashboard-data.json")
+TRIM_FIELDS = ["orders_minimal", "web_items_flat"]  # cấp-đơn, không dùng → bỏ cho gọn/an toàn
+
+
+def fetch_source() -> str:
+    req = urllib.request.Request(SRC, headers={"User-Agent": "crm-doscom-refresh"})
+    with urllib.request.urlopen(req, timeout=120) as r:
+        return r.read().decode("utf-8")
+
+
+def extract_data_blob(html: str) -> dict:
+    p = html.find("const DATA =")
+    if p < 0:
+        raise SystemExit("DATA marker not found in source.")
+    b = html.find("{", p)
+    depth, i, instr, esc = 0, b, False, False
+    while i < len(html):
+        c = html[i]
+        if instr:
+            if esc:
+                esc = False
+            elif c == "\\":
+                esc = True
+            elif c == '"':
+                instr = False
+        else:
+            if c == '"':
+                instr = True
+            elif c == "{":
+                depth += 1
+            elif c == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+        i += 1
+    raw = html[b:i + 1].replace("<\\/", "</")
+    return json.loads(raw)
+
+
+def main():
+    print("[refresh] source:", SRC)
+    html = fetch_source()
+    D = extract_data_blob(html)
+    rev = D.get("revenue", {})
+    for f in TRIM_FIELDS:
+        rev.pop(f, None)
+    gen = D.get("generated_at") or rev.get("generated_at") or "?"
+    out_path = os.path.normpath(OUT)
+    with open(out_path, "w", encoding="utf-8") as fh:
+        json.dump(D, fh, ensure_ascii=False, separators=(",", ":"))
+    print("[refresh] OK ->", out_path, "| generated_at=", gen, "|", os.path.getsize(out_path), "bytes")
+
+
+if __name__ == "__main__":
+    main()

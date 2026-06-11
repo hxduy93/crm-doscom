@@ -1,0 +1,53 @@
+name: Đọc lại dữ liệu (refresh + deploy)
+
+# Kéo dữ liệu mới nhất từ dashboard cũ -> cập nhật data/dashboard-data.json -> deploy CRM.
+# Bấm tay: tab Actions -> "Đọc lại dữ liệu" -> Run workflow.
+on:
+  workflow_dispatch:        # nút bấm tay
+  schedule:
+    - cron: '20 */3 * * *'  # tự chạy mỗi 3 giờ (lệch sau lúc dashboard cũ cập nhật)
+
+permissions:
+  contents: write           # cho phép commit data mới
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Đọc lại dữ liệu (refresh_data.py)
+        run: python scripts/refresh_data.py
+
+      - name: Commit nếu dữ liệu đổi
+        run: |
+          git config user.name "crm-refresh-bot"
+          git config user.email "kinhdoanh.doscom@gmail.com"
+          git add data/dashboard-data.json
+          if git diff --cached --quiet; then
+            echo "Không có thay đổi dữ liệu."
+          else
+            git commit -m "refresh data $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push
+          fi
+
+      - name: Chuẩn bị thư mục deploy sạch (chỉ index.html + data)
+        run: |
+          rm -rf dist && mkdir dist
+          cp index.html dist/
+          cp -r data dist/data
+
+      - name: Deploy lên Cloudflare Pages
+        run: npx wrangler@4 pages deploy dist --project-name=crm-doscom --branch=master --commit-dirty=true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: cffb0c35f8c649872436b2087a64b7bc
