@@ -209,7 +209,7 @@
       </section>
 
       <section class="mod wide" style="margin-bottom:16px" id="sec-staff">
-        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo nhân sự</h3></div><span class="s">DT đã loại đơn hoàn/huỷ · ad spend theo kỳ</span></div>
+        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo nhân sự</h3></div><span class="s">Website/Hotline = gộp Website + Zalo + Hotline (kênh Google) · DT đã loại đơn hoàn/huỷ</span></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
             <thead><tr><th>Nhân sự / Nguồn</th><th class="num">Chi phí QC</th><th class="num">Doanh thu</th><th class="num">ROAS</th><th class="num">Đơn</th><th class="num">Lãi gộp tạm (DT−chi)</th></tr></thead>
@@ -334,9 +334,18 @@
       return '<div class="bar"><div class="bt"><span>'+x.s.label+'</span><span class="tnum">'+vnd(x.rev)+' · '+num(x.ord)+' đơn</span></div><div class="track"><div class="fill" style="width:'+(x.rev/mxr*100).toFixed(1)+'%;background:'+x.s.color+'"></div></div></div>';
     }).join('');
     // bảng theo nhân sự
+    // Gộp Website + Zalo OA + Hotline = 1 kênh inbound (cùng do Google Ads kéo về)
+    var STAFF_GROUPS=[
+      {label:'Duy', color:'#3257E6', keys:['DUY'], ad:'DUY'},
+      {label:'Phương Nam', color:'#8B5CF6', keys:['PHUONG_NAM'], ad:'PHUONG_NAM'},
+      {label:'Website / Hotline', color:'#16A34A', keys:['WEBSITE','ZALO_OA','HOTLINE'], ad:'GOOGLE'},
+      {label:'Page Facebook', color:'#F472B6', keys:['FB_PAGE'], ad:null}
+    ];
     var tRev=0,tSp=0,tOrd=0;
-    var rows=SOURCES.map(function(s){
-      var sp=staffSpend(s), rv=srcRevenue(s.key), od=srcOrders(s.key);
+    var rows=STAFF_GROUPS.map(function(s){
+      var sp=staffSpend({ad:s.ad});
+      var rv=s.keys.reduce(function(t,k){return t+srcRevenue(k);},0);
+      var od=s.keys.reduce(function(t,k){return t+srcOrders(k);},0);
       tRev+=rv;tSp+=sp;tOrd+=od;
       var roas=sp>0?(rv/sp):null;
       return '<tr><td><span class="who"><i style="background:'+s.color+'"></i>'+s.label+'</span></td>'+
