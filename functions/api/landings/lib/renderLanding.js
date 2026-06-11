@@ -790,9 +790,9 @@ section{padding:72px 0;position:relative}
 .section-combo{background:linear-gradient(180deg,var(--black) 0%,#1a1410 100%);color:white;position:relative}
 .section-combo::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle at 20% 30%,rgba(212,160,23,0.16),transparent 50%),radial-gradient(circle at 80% 70%,rgba(255,107,26,0.13),transparent 50%);pointer-events:none}
 .section-combo .section-head h2{color:white}
-.combo-grid{display:grid;gap:26px;position:relative;z-index:2;margin-top:24px}
-@media(min-width:900px){.combo-grid{grid-template-columns:repeat(3,1fr);align-items:stretch}}
-.combo-card{background:linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.1);border-radius:var(--r-xl);padding:34px 24px;text-align:center;position:relative;transition:transform 0.3s,border-color 0.3s;display:flex;flex-direction:column}
+/* flex + justify-center: 1 combo ở giữa, nhiều combo vẫn cân giữa & xuống dòng đều */
+.combo-grid{display:flex;flex-wrap:wrap;justify-content:center;align-items:stretch;gap:26px;position:relative;z-index:2;margin-top:24px}
+.combo-card{flex:1 1 280px;max-width:360px;background:linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.1);border-radius:var(--r-xl);padding:34px 24px;text-align:center;position:relative;transition:transform 0.3s,border-color 0.3s;display:flex;flex-direction:column}
 .combo-card:hover{transform:translateY(-6px);border-color:var(--gold)}
 .combo-card.featured{background:linear-gradient(180deg,rgba(212,160,23,0.16),rgba(255,107,26,0.08));border:2px solid var(--gold);box-shadow:var(--shadow-gold),0 20px 60px rgba(212,160,23,0.2)}
 .combo-tag{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--black);font-family:var(--font-body);font-weight:800;font-size:11px;padding:6px 16px;border-radius:999px;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap}
@@ -808,9 +808,8 @@ section{padding:72px 0;position:relative}
 .combo-btn:hover{transform:scale(1.02)}
 .gift-block{margin-top:42px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:var(--r-xl);padding:26px 22px;position:relative;z-index:2}
 .gift-head{text-align:center;font-family:var(--font-body);font-weight:800;font-size:14px;color:var(--gold-light);letter-spacing:0.08em;margin-bottom:20px;text-transform:uppercase}
-.gift-grid{display:grid;gap:16px}
-@media(min-width:680px){.gift-grid{grid-template-columns:repeat(2,1fr)}}
-.gift-card{display:flex;gap:16px;align-items:center;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:var(--r-lg);padding:16px;cursor:pointer;transition:all 0.25s}
+.gift-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:16px}
+.gift-card{flex:1 1 320px;max-width:460px;display:flex;gap:16px;align-items:center;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:var(--r-lg);padding:16px;cursor:pointer;transition:all 0.25s}
 .gift-card:hover{border-color:var(--gold);background:rgba(212,160,23,0.1);transform:translateY(-3px)}
 .gift-pick{display:inline-block;margin-top:8px;font-size:12px;font-weight:800;color:var(--gold-light);letter-spacing:0.02em}
 .gift-thumb{width:84px;height:84px;flex-shrink:0;background:#fff;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;padding:6px}
@@ -875,8 +874,8 @@ details[open] .faq-toggle{transform:rotate(45deg);background:var(--orange);color
   .form-label{font-size:12px;margin-bottom:4px}.form-input,.form-textarea,.form-select{padding:11px 13px;font-size:14px}
   .gift-radio-thumb{width:42px;height:42px}
   .section-head{margin-bottom:30px}.section-head h2{font-size:clamp(20px,5.4vw,32px);line-height:1.2;margin-bottom:10px}
-  .combo-grid{grid-template-columns:repeat(3,1fr);gap:7px;margin-top:18px;align-items:stretch}
-  .combo-card{padding:20px 6px 11px;border-radius:13px}.combo-tag{font-size:7.5px;padding:3px 6px;top:-8px;letter-spacing:0.04em}
+  .combo-grid{gap:7px;margin-top:18px}
+  .combo-card{flex-basis:90px;padding:20px 6px 11px;border-radius:13px}.combo-tag{font-size:7.5px;padding:3px 6px;top:-8px;letter-spacing:0.04em}
   .combo-img-wrap{height:60px;margin-bottom:8px;gap:3px}.combo-img-wrap img{height:auto !important;max-height:100%;max-width:47%;filter:drop-shadow(0 3px 7px rgba(0,0,0,0.45))}.combo-img-wrap img:only-child{max-width:74%}
   .combo-card h3{font-size:11.5px;margin-bottom:3px;line-height:1.12;letter-spacing:0}.combo-desc{font-size:8.5px;margin-bottom:6px;min-height:0;line-height:1.28}
   .combo-price{font-size:19px;margin-bottom:3px}.combo-gift{font-size:8px;padding:5px 5px;margin-bottom:8px;line-height:1.22}.combo-btn{padding:8px 4px;font-size:9px;letter-spacing:0.02em}
