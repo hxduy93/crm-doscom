@@ -66,6 +66,10 @@
   .seg button{border:0;background:none;font-family:var(--font);font-weight:800;font-size:12.5px;color:var(--text-2);padding:7px 12px;border-radius:8px;cursor:pointer;transition:var(--t)}
   .seg button.on{background:var(--surface);color:var(--primary);box-shadow:var(--shadow-sm)}
   .dt{border:1px solid var(--border);background:var(--surface);border-radius:9px;padding:6px 9px;font-family:var(--font);font-size:12.5px;color:var(--text);font-weight:700}
+  select.dt{cursor:pointer;padding-right:6px}
+  .btn-export{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:10px;cursor:pointer;padding:8px 13px;font-family:var(--font);font-weight:800;font-size:12.5px;color:#fff;background:linear-gradient(135deg,var(--accent),#D97706);box-shadow:0 8px 18px -10px var(--accent);transition:var(--t)}
+  .btn-export:hover{transform:translateY(-1px)}
+  .btn-export svg{width:15px;height:15px}
   .fresh{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-2);font-weight:700}
   .fresh .pulse{width:8px;height:8px;border-radius:50%;background:var(--success)}
   .icon-btn{width:40px;height:40px;border-radius:11px;border:1px solid var(--border);background:var(--surface);display:grid;place-items:center;cursor:pointer;color:var(--text-2);transition:var(--t);box-shadow:var(--shadow-sm)}
@@ -144,7 +148,7 @@
     <button class="nav-item"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span>Theo nhân sự</button>
     <button class="nav-item"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg></span>Doanh số ngày</button>
     <button class="nav-item"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>Lợi nhuận</button>
-    <button class="nav-item"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2l6 6-9 9-6 1 1-6z"/></svg></span>Noma911 Landing</button>
+    <button class="nav-item"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2l6 6-9 9-6 1 1-6z"/></svg></span>Tỉ lệ combo Noma</button>
     <div class="sidebar-foot"><b>CRM Doscom</b> · v0.3<br/>Số thật · bộ lọc thời gian<br/><span id="foot-fresh">…</span></div>
   </aside>
 
@@ -153,14 +157,24 @@
       <h1>Tổng quan</h1>
       <div class="spacer"></div>
       <div class="filter">
-        <div class="seg" id="presets">
-          <button data-p="7">7N</button>
-          <button data-p="30">30N</button>
-          <button data-p="90">90N</button>
-          <button data-p="all" class="on">Toàn kỳ</button>
-        </div>
+        <select class="dt" id="preset-select" aria-label="Kỳ báo cáo">
+          <option value="today">Hôm nay</option>
+          <option value="yesterday">Hôm qua</option>
+          <option value="this-week">Tuần này</option>
+          <option value="last-week">Tuần trước</option>
+          <option value="this-month">Tháng này</option>
+          <option value="last-month">Tháng trước</option>
+          <option value="7">7 ngày</option>
+          <option value="30">30 ngày</option>
+          <option value="90">90 ngày</option>
+          <option value="all" selected>Toàn kỳ</option>
+          <option value="custom">Tùy chọn…</option>
+        </select>
         <input type="date" class="dt" id="dt-start" aria-label="Từ ngày" />
         <input type="date" class="dt" id="dt-end" aria-label="Đến ngày" />
+        <button class="btn-export" id="btnExport" title="Xuất báo cáo tuần trước ra bản in / PDF">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Báo cáo tuần
+        </button>
       </div>
       <span class="fresh" id="fresh"><span class="pulse"></span>tải…</span>
       <button class="icon-btn" id="themeBtn" aria-label="Sáng/Tối"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
@@ -246,7 +260,7 @@
 
   // Nav bên trái: bấm -> cuộn tới khu vực; tự highlight mục đang xem (scroll-spy)
   (function(){
-    var MAP={'Tổng quan':'sec-overview','Theo nhân sự':'sec-staff','Doanh số ngày':'sec-daily','Lợi nhuận':'sec-profit','Noma911 Landing':'noma-mod'};
+    var MAP={'Tổng quan':'sec-overview','Theo nhân sự':'sec-staff','Doanh số ngày':'sec-daily','Lợi nhuận':'sec-profit','Tỉ lệ combo Noma':'noma-mod'};
     var items=Array.prototype.slice.call(document.querySelectorAll('.sidebar .nav-item'));
     function activate(id){ items.forEach(function(b){ b.classList.toggle('active', MAP[(b.textContent||'').trim()]===id); }); }
     items.forEach(function(b){ b.addEventListener('click',function(){ var id=MAP[(b.textContent||'').trim()]; if(!id)return; var el=document.getElementById(id); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); activate(id); }); });
@@ -410,19 +424,78 @@
   }
 
   // ===== filter wiring =====
+  function ymd(d){ return d.toISOString().slice(0,10); }
+  function minusDays(d,n){ var x=new Date(d); x.setUTCDate(x.getUTCDate()-n); return x; }
+  function presetRange(p){
+    if(p==='all') return {start:MIN,end:MAX};
+    var ref=new Date(MAX+'T00:00:00Z'), dow=ref.getUTCDay(), monOff=(dow===0?6:dow-1);
+    if(p==='today') return {start:MAX,end:MAX};
+    if(p==='yesterday'){ var y=ymd(minusDays(ref,1)); return {start:y,end:y}; }
+    if(p==='this-week') return {start:ymd(minusDays(ref,monOff)),end:MAX};
+    if(p==='last-week'){ var monThis=minusDays(ref,monOff), monLast=minusDays(monThis,7), sunLast=new Date(monLast); sunLast.setUTCDate(sunLast.getUTCDate()+6); return {start:ymd(monLast),end:ymd(sunLast)}; }
+    if(p==='this-month') return {start:MAX.slice(0,7)+'-01',end:MAX};
+    if(p==='last-month'){ var fm=new Date(MAX.slice(0,7)+'-01T00:00:00Z'), lastPrev=minusDays(fm,1); return {start:lastPrev.toISOString().slice(0,7)+'-01',end:ymd(lastPrev)}; }
+    var n=parseInt(p,10)||7, s=ymd(minusDays(ref,n-1)); return {start:s,end:MAX};
+  }
   function setPreset(p){
-    document.querySelectorAll('#presets button').forEach(function(b){ b.classList.toggle('on', b.dataset.p===p); });
-    if(p==='all'){ range={start:MIN,end:MAX}; }
-    else { var n=parseInt(p,10); var end=new Date(MAX+'T00:00:00Z'); var st=new Date(end); st.setUTCDate(st.getUTCDate()-(n-1));
-      var s=st.toISOString().slice(0,10); range={start:(s<MIN?MIN:s),end:MAX}; }
+    var r=presetRange(p);
+    range={start:(r.start<MIN?MIN:r.start),end:(r.end>MAX?MAX:r.end)};
+    var sel=document.getElementById('preset-select'); if(sel&&sel.value!==p) sel.value=p;
     document.getElementById('dt-start').value=range.start; document.getElementById('dt-end').value=range.end;
     render();
   }
-  document.getElementById('presets').addEventListener('click',function(e){ var b=e.target.closest('button'); if(b) setPreset(b.dataset.p); });
+  document.getElementById('preset-select').addEventListener('change',function(){ if(this.value==='custom'){ document.getElementById('dt-start').focus(); return; } setPreset(this.value); });
   function onCustom(){ var s=document.getElementById('dt-start').value,e=document.getElementById('dt-end').value;
-    if(s&&e&&s<=e){ range={start:s,end:e}; document.querySelectorAll('#presets button').forEach(function(b){b.classList.remove('on');}); render(); } }
+    if(s&&e&&s<=e){ range={start:s,end:e}; document.getElementById('preset-select').value='custom'; render(); } }
   document.getElementById('dt-start').addEventListener('change',onCustom);
   document.getElementById('dt-end').addEventListener('change',onCustom);
+
+  // ===== Trích xuất BÁO CÁO TUẦN (tuần trước) ra bản in/PDF =====
+  function exportWeekly(){
+    var saved={start:range.start,end:range.end};
+    var wk=presetRange('last-week');
+    range={start:(wk.start<MIN?MIN:wk.start),end:wk.end};
+    var fb=fbSpend(), gg=ggSpend(), tot=fb+gg, rev=pkRevenue(), orders=pkOrders();
+    var cir=rev>0?(tot/rev*100):0;
+    var staff=SOURCES.map(function(s){ var sp=staffSpend(s), rv=srcRevenue(s.key), od=srcOrders(s.key); return {label:s.label,sp:sp,rv:rv,od:od,roas:sp>0?rv/sp:null}; });
+    var nomaUrl='/api/noma911/stats?from='+range.start+'&to='+range.end;
+    fetch(nomaUrl,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}).then(function(N){
+      range=saved; // khôi phục view
+      var rowsHtml=staff.map(function(x){ return '<tr><td>'+x.label+'</td><td class="n">'+(x.sp>0?vnd(x.sp):'—')+'</td><td class="n">'+vnd(x.rv)+'</td><td class="n">'+(x.roas!=null?x.roas.toFixed(2)+'×':'—')+'</td><td class="n">'+num(x.od)+'</td></tr>'; }).join('');
+      var nomaHtml='';
+      if(N&&N.summary){
+        var cb=(N.by_combo||[]).slice().sort(function(a,b){return b.orders-a.orders;});
+        var totO=N.summary.orders||0, comboO=cb.reduce(function(t,c){return t+(c.combo!=='le-911'?c.orders:0);},0);
+        nomaHtml='<h2>Noma911 — đơn đăng ký landing</h2><p>Tổng <b>'+num(totO)+'</b> đơn · tỉ lệ combo <b>'+(totO?(comboO/totO*100).toFixed(1):0)+'%</b> · đã giao '+num((N.actual||{}).orders_delivered)+' (chốt '+((N.actual||{}).conversion_rate||0)+'%)</p><table><thead><tr><th>Combo</th><th class="n">Đơn</th><th class="n">% tổng</th><th class="n">DT đăng ký</th></tr></thead><tbody>'+cb.map(function(c){return '<tr><td>'+(c.combo_label||c.combo)+'</td><td class="n">'+num(c.orders)+'</td><td class="n">'+(totO?(c.orders/totO*100).toFixed(1):0)+'%</td><td class="n">'+vnd(c.revenue)+'</td></tr>';}).join('')+'</tbody></table>';
+      }
+      var html='<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><title>Báo cáo tuần — Doscom ('+wk.start+' → '+wk.end+')</title>'+
+        '<style>@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap");'+
+        'body{font-family:Nunito,system-ui,sans-serif;color:#111A2E;max-width:900px;margin:24px auto;padding:0 20px;font-size:14px}'+
+        'h1{font-size:24px;margin:0 0 2px;color:#2440C4}h2{font-size:16px;margin:22px 0 8px;border-left:4px solid #3257E6;padding-left:9px}'+
+        '.sub{color:#5A6478;font-weight:600;margin:0 0 18px}'+
+        '.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}'+
+        '.k{border:1px solid #E6ECF6;border-radius:10px;padding:11px}.k .l{font-size:11px;color:#5A6478;font-weight:700}.k .v{font-size:18px;font-weight:800;margin-top:3px}'+
+        'table{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}th,td{padding:7px 9px;border-bottom:1px solid #E6ECF6;text-align:left}th{font-size:11px;text-transform:uppercase;color:#5A6478}.n{text-align:right;font-variant-numeric:tabular-nums}'+
+        '.foot{margin-top:24px;color:#94A3B8;font-size:11px}'+
+        '@media print{.noprint{display:none}body{margin:0}}'+
+        '.noprint{position:fixed;top:14px;right:14px}.pbtn{background:#2440C4;color:#fff;border:0;border-radius:9px;padding:9px 15px;font-weight:800;cursor:pointer;font-family:Nunito}</style></head><body>'+
+        '<div class="noprint"><button class="pbtn" onclick="window.print()">🖨️ In / Lưu PDF</button></div>'+
+        '<h1>Báo cáo tuần — Doscom Ads</h1>'+
+        '<p class="sub">Tuần trước: '+wk.start+' → '+wk.end+' · số liệu thật từ dashboard</p>'+
+        '<div class="kpis"><div class="k"><div class="l">Chi tiêu QC</div><div class="v">'+vnd(tot)+'</div></div>'+
+        '<div class="k"><div class="l">Doanh thu Pancake</div><div class="v">'+vnd(rev)+'</div></div>'+
+        '<div class="k"><div class="l">CIR</div><div class="v">'+cir.toFixed(1)+'%</div></div>'+
+        '<div class="k"><div class="l">Tổng đơn</div><div class="v">'+num(orders)+'</div></div></div>'+
+        '<h2>Theo nhân sự / nguồn</h2><table><thead><tr><th>Nguồn</th><th class="n">Chi phí QC</th><th class="n">Doanh thu</th><th class="n">ROAS</th><th class="n">Đơn</th></tr></thead><tbody>'+rowsHtml+'</tbody></table>'+
+        nomaHtml+
+        '<p class="foot">Xuất từ CRM Doscom · crm-doscom.pages.dev</p>'+
+        '<script>setTimeout(function(){window.print()},600)<\/script></body></html>';
+      var w=window.open('','_blank');
+      if(w){ w.document.open(); w.document.write(html); w.document.close(); }
+      else { alert('Trình duyệt chặn cửa sổ bật lên — hãy cho phép pop-up để xuất báo cáo.'); }
+    });
+  }
+  document.getElementById('btnExport').addEventListener('click',exportWeekly);
 
   // ===== Module Noma911 — đơn đăng ký landing theo combo + 2 landing (đọc data/noma911.json) =====
   var NOMA_STAFF={ duy:{label:'Duy', slug:'nm911d', color:'#3257E6'}, pn:{label:'Phương Nam', slug:'911tpn', color:'#8B5CF6'} };
