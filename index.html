@@ -49,6 +49,8 @@
   .nav-item:hover{background:var(--muted);color:var(--text)}
   .nav-item.active{background:linear-gradient(135deg,var(--primary),var(--primary-700));color:#fff;box-shadow:0 10px 22px -10px var(--primary)}
   .nav-item.active .ni{background:rgba(255,255,255,.18);color:#fff}
+  html{scroll-behavior:smooth}
+  #sec-overview,#sec-staff,#sec-daily,#sec-profit,#noma-mod{scroll-margin-top:76px}
   .nav-soon{margin-left:auto;font-size:9.5px;font-weight:800;background:var(--muted);color:var(--text-2);border-radius:999px;padding:2px 6px}
   .sidebar-foot{margin-top:auto;padding:12px;border-radius:12px;background:var(--muted);font-size:11.5px;color:var(--text-2);line-height:1.5}
   .sidebar-foot b{color:var(--text);font-weight:800}
@@ -141,8 +143,8 @@
     <div class="nav-label">Phân tích</div>
     <button class="nav-item"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span>Theo nhân sự</button>
     <button class="nav-item"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg></span>Doanh số ngày</button>
-    <button class="nav-item"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>Lợi nhuận<span class="nav-soon">soon</span></button>
-    <button class="nav-item"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2l6 6-9 9-6 1 1-6z"/></svg></span>Noma911 Landing<span class="nav-soon">soon</span></button>
+    <button class="nav-item"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>Lợi nhuận</button>
+    <button class="nav-item"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2l6 6-9 9-6 1 1-6z"/></svg></span>Noma911 Landing</button>
     <div class="sidebar-foot"><b>CRM Doscom</b> · v0.3<br/>Số thật · bộ lọc thời gian<br/><span id="foot-fresh">…</span></div>
   </aside>
 
@@ -170,7 +172,7 @@
         <p>Số liệu thật từ dashboard · kỳ <b id="period">…</b></p>
       </div>
 
-      <section class="kpis">
+      <section class="kpis" id="sec-overview">
         <div class="kpi"><div class="ktop"><span class="ktile" style="background:linear-gradient(140deg,#3257E6,#5B8DEF)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span class="label">Tổng chi tiêu QC</span></div><p class="val tnum" id="k-spend">—</p><div class="foot" id="k-spend-foot">FB + Google</div></div>
         <div class="kpi"><div class="ktop"><span class="ktile" style="background:linear-gradient(140deg,#16A34A,#22C55E)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M21 7v5h-5"/></svg></span><span class="label">Doanh thu Pancake</span></div><p class="val tnum" id="k-rev">—</p><div class="foot" id="k-rev-foot">mọi trạng thái</div></div>
         <div class="kpi"><div class="ktop"><span class="ktile" style="background:linear-gradient(140deg,#8B5CF6,#A78BFA)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12A10 10 0 1 1 12 2M22 2L12 12"/></svg></span><span class="label">CIR</span></div><p class="val tnum" id="k-cir">—</p><div class="foot">chi phí / doanh thu</div></div>
@@ -194,7 +196,7 @@
         </div>
       </section>
 
-      <section class="mod wide" style="margin-bottom:16px">
+      <section class="mod wide" style="margin-bottom:16px" id="sec-staff">
         <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo nhân sự</h3></div><span class="s">DT đã loại đơn hoàn/huỷ · ad spend theo kỳ</span></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
@@ -204,7 +206,7 @@
         </div>
       </section>
 
-      <section class="mod wide" style="margin-bottom:16px">
+      <section class="mod wide" style="margin-bottom:16px" id="sec-daily">
         <div class="mod-h"><div class="t"><i style="background:#F59E0B"></i><h3>Doanh số theo ngày — tất cả nhân sự</h3></div><span class="s" id="chart-sub">doanh số (đ) / ngày · 3 nguồn</span></div>
         <div class="mod-b">
           <div class="chart-leg" id="chart-leg"></div>
@@ -212,7 +214,7 @@
         </div>
       </section>
 
-      <section class="mod wide" style="margin-bottom:16px">
+      <section class="mod wide" style="margin-bottom:16px" id="sec-profit">
         <div class="mod-h"><div class="t"><i style="background:#16A34A"></i><h3>Bảng lợi nhuận theo tháng</h3></div><span class="s">LN = DT giao − VAT 10% − Chi phí QC − Giá vốn</span></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
@@ -241,6 +243,24 @@
   var root=document.documentElement, tbtn=document.getElementById('themeBtn');
   if(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme','dark');
   tbtn.addEventListener('click',function(){root.setAttribute('data-theme',root.getAttribute('data-theme')==='dark'?'light':'dark')});
+
+  // Nav bên trái: bấm -> cuộn tới khu vực; tự highlight mục đang xem (scroll-spy)
+  (function(){
+    var MAP={'Tổng quan':'sec-overview','Theo nhân sự':'sec-staff','Doanh số ngày':'sec-daily','Lợi nhuận':'sec-profit','Noma911 Landing':'noma-mod'};
+    var items=Array.prototype.slice.call(document.querySelectorAll('.sidebar .nav-item'));
+    function activate(id){ items.forEach(function(b){ b.classList.toggle('active', MAP[(b.textContent||'').trim()]===id); }); }
+    items.forEach(function(b){ b.addEventListener('click',function(){ var id=MAP[(b.textContent||'').trim()]; if(!id)return; var el=document.getElementById(id); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); activate(id); }); });
+    var ids=['sec-overview','sec-staff','sec-daily','sec-profit','noma-mod'];
+    if('IntersectionObserver' in window){
+      var seen={};
+      var io=new IntersectionObserver(function(es){
+        es.forEach(function(e){ seen[e.target.id]=e.isIntersecting?e.intersectionRatio:0; });
+        var best=null,bw=-1; ids.forEach(function(id){ var v=seen[id]||0; if(v>bw){bw=v;best=id;} });
+        if(best&&bw>0) activate(best);
+      },{rootMargin:'-72px 0px -55% 0px',threshold:[0,.2,.5,1]});
+      ids.forEach(function(id){ var el=document.getElementById(id); if(el) io.observe(el); });
+    }
+  })();
 
   function vnd(n){ n=Number(n)||0; var s=n<0?'-':''; n=Math.abs(n);
     if(n>=1e9) return s+(n/1e9).toFixed(2).replace('.',',')+' tỷ';
