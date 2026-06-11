@@ -21,7 +21,8 @@ export async function onRequestOptions() {
   return json({ ok: true });
 }
 
-export async function onRequestPost({ request, env, ctx }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   if (!env.DB) return json({ ok: false, error: "DB binding missing" }, 500);
 
   let d;
@@ -83,14 +84,21 @@ export async function onRequestPost({ request, env, ctx }) {
     }
   }
 
-  // 2) Google Sheet (Apps Script Web App) — fire-and-forget.
+  // 2) Google Sheet (Apps Script Web App). Phải dùng context.waitUntil để fetch chạy xong
+  // SAU khi đã trả response (Pages Functions: waitUntil nằm trên context, KHÔNG phải ctx).
+  // Nếu không có waitUntil thì await luôn để chắc chắn ghi được (tránh runtime huỷ fetch giữa chừng).
   if (itg.sheetUrl) {
-    sent.sheet = "sent";
     const p = fetch(itg.sheetUrl, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ slug, ...order }),
     }).then(() => {}).catch(() => {});
-    if (ctx && ctx.waitUntil) ctx.waitUntil(p);
+    if (typeof context.waitUntil === "function") {
+      context.waitUntil(p);
+      sent.sheet = "sent";
+    } else {
+      await p;
+      sent.sheet = "awaited";
+    }
   }
 
   return json({ ok: true, sent });
