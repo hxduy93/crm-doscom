@@ -216,10 +216,10 @@
         <div class="mod-h"><div class="t"><i style="background:#16A34A"></i><h3>Bảng lợi nhuận theo tháng</h3></div><span class="s">LN = DT giao − VAT 10% − Chi phí QC − Giá vốn</span></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
-            <thead><tr><th>Tháng</th><th class="num">DT giao (delivered)</th><th class="num">VAT 10%</th><th class="num">Chi phí QC</th><th class="num">Giá vốn</th><th class="num">Lợi nhuận</th><th class="num">Biên LN</th></tr></thead>
+            <thead><tr><th>Tháng</th><th class="num">Doanh thu</th><th class="num">VAT 10%</th><th class="num">Chi phí QC</th><th class="num">Giá vốn</th><th class="num">Lợi nhuận</th><th class="num">Biên LN</th></tr></thead>
             <tbody id="profit-rows"></tbody>
           </table>
-          <p style="font-size:11.5px;color:var(--text-2);margin:10px 2px 0;font-weight:600">* Chỉ tính đơn <b>đã giao (delivered)</b> — doanh thu &amp; giá vốn thực nhận. Giá vốn = số lượng giao × giá nhập (kho). Tháng dở dang có thể âm vì chi phí QC đi trước, đơn chưa kịp giao.</p>
+          <p style="font-size:11.5px;color:var(--text-2);margin:10px 2px 0;font-weight:600">* Công thức &amp; cơ sở doanh thu <b>khớp đúng dashboard cũ</b> (revenueByProd theo SP). LN = Doanh thu − VAT 10% − Chi phí QC (FB+Google) − Giá vốn (số lượng × giá nhập kho).</p>
         </div>
       </section>
 
@@ -318,9 +318,10 @@
 
   function monthName(m){ var p=m.split('-'); return 'Th'+p[1]+'/'+p[0]; }
   function renderProfit(){
-    var deliv=((D.revenue||{}).products_by_status||{}).delivered||{}, pc=D.product_costs||{};
+    // Dùng revenue.products (mọi trạng thái) — KHỚP đúng revenueByProd của dashboard cũ
+    var prods=(D.revenue||{}).products||{}, pc=D.product_costs||{};
     var mrev={},mcogs={},mad={};
-    for(var p in deliv){ var cost=(pc[p]||{}).gia_nhap_vnd||0,o=deliv[p];
+    for(var p in prods){ var cost=(pc[p]||{}).gia_nhap_vnd||0,o=prods[p];
       var bd=o.by_date||{}; for(var d in bd){ if(inR(d)){ var m=d.slice(0,7); mrev[m]=(mrev[m]||0)+(Number(bd[d])||0); } }
       var ud=o.units_by_date||{}; for(var d2 in ud){ if(inR(d2)){ var m2=d2.slice(0,7); mcogs[m2]=(mcogs[m2]||0)+((Number(ud[d2])||0)*cost); } }
     }
