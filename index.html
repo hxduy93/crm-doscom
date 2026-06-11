@@ -2135,7 +2135,7 @@ function LandingBuilder() {
             <div className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded p-2 mb-3 mt-2">
               <div className="font-semibold mb-1">Link landing (xem được ngay; định tuyến đơn theo nhân sự hoàn thiện ở Phase 3):</div>
               {(cfg.routing.staff || []).map((p, i) => (
-                <div key={i}>👤 {p.name || "(chưa đặt tên)"}: <a href={routeBase() + slug + (p.suffix || "")} target="_blank" rel="noopener" className="text-blue-600 underline break-all">{routeBase() + slug + (p.suffix || "")}</a></div>
+                <div key={i}>👤 {p.name || "(chưa đặt tên)"}: <a href={routeBase() + (p.suffix || "")} target="_blank" rel="noopener" className="text-blue-600 underline break-all">{routeBase() + (p.suffix || "")}</a></div>
               ))}
             </div>
 
