@@ -470,7 +470,7 @@ function renderForm(c, img) {
         <label class="form-label">${esc(f.giftLabel)} <span class="req">*</span></label>
         <div class="form-radio-group">${renderGiftRadios(c.gifts, img)}</div>
       </div>` : "";
-  return `<section class="section-form" id="dat-hang"><div class="container-narrow">
+  return `<section class="section-form" id="dat-hang"><div class="container-narrow form-shell">
     <div class="form-card">
       <div class="form-header">
         <span class="eyebrow eyebrow-crimson">${esc(f.eyebrow)}</span>
@@ -826,7 +826,9 @@ details[open] .faq-toggle{transform:rotate(45deg);background:var(--orange);color
 .faq-a{padding:14px 0 6px;font-size:14px;color:var(--gray-700);line-height:1.7}
 .faq-a strong{color:var(--black)}
 .section-form{background:linear-gradient(180deg,var(--cream) 0%,var(--white) 100%);position:relative}
-.form-card{background:var(--white);border-radius:var(--r-xl);padding:40px 28px;box-shadow:var(--shadow-lg);max-width:600px;margin:0 auto;border:1px solid var(--gray-100)}
+/* Khung bọc form: flex căn giữa tuyệt đối — 1 form ở giữa, nhiều form vẫn cân giữa & xuống dòng đều */
+.form-shell{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:24px;width:100%}
+.form-card{flex:0 1 600px;width:100%;max-width:600px;margin:0 auto;background:var(--white);border-radius:var(--r-xl);padding:40px 28px;box-shadow:var(--shadow-lg);border:1px solid var(--gray-100)}
 .form-header{text-align:center;margin-bottom:28px}
 .form-header h2{font-size:clamp(30px,7vw,44px);margin-bottom:8px;line-height:1.14}
 .form-header p{color:var(--gray-500);font-size:14px}
