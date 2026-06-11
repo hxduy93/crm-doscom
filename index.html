@@ -205,10 +205,10 @@
       </section>
 
       <section class="mod wide" style="margin-bottom:16px">
-        <div class="mod-h"><div class="t"><i style="background:#F59E0B"></i><h3>Doanh số theo ngày — tất cả nhân sự</h3></div><span class="s" id="chart-sub">số đơn / ngày</span></div>
+        <div class="mod-h"><div class="t"><i style="background:#F59E0B"></i><h3>Doanh số theo ngày — tất cả nhân sự</h3></div><span class="s" id="chart-sub">doanh số (đ) / ngày · 3 nguồn</span></div>
         <div class="mod-b">
           <div class="chart-leg" id="chart-leg"></div>
-          <svg id="dayChart" viewBox="0 0 960 280" width="100%" style="display:block;overflow:visible"></svg>
+          <svg id="dayChart" viewBox="0 0 960 300" width="100%" style="display:block;overflow:visible"></svg>
         </div>
       </section>
 
@@ -353,26 +353,34 @@
       d+='C'+(p1[0]+(p2[0]-p0[0])/6)+','+(p1[1]+(p2[1]-p0[1])/6)+' '+(p2[0]-(p3[0]-p1[0])/6)+','+(p2[1]-(p3[1]-p1[1])/6)+' '+p2[0]+','+p2[1];}
     return d; }
 
+  function fmtShort(n){ n=Number(n)||0; if(n>=1e9)return (n/1e9).toFixed(1).replace('.',',')+'tỷ'; if(n>=1e6)return Math.round(n/1e6)+'tr'; if(n>=1e3)return Math.round(n/1e3)+'K'; return Math.round(n).toString(); }
+  // doanh số/ngày theo nguồn (đã loại đơn hoàn/huỷ)
+  function srcRevByDate(key){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return {}; var r=g.order_revenue_by_status_by_date||{},out={}; for(var st in r){ if(EXCL[st])continue; var pd=r[st]; for(var d in pd){ if(inR(d)) out[d]=(out[d]||0)+(Number(pd[d])||0); } } return out; }
+
   function drawDayChart(){
     var days=dateList();
-    if(days.length>62){ // gộp theo tuần nếu kỳ quá dài để dễ nhìn
-      // giữ daily nhưng giảm nhãn; vẫn vẽ theo ngày
-    }
-    var STAFF=[{key:'DUY',label:'Duy',color:'#3257E6'},{key:'PHUONG_NAM',label:'Phương Nam',color:'#8B5CF6'}];
-    var W=960,H=280,pad=30,baseY=H-pad-16;
-    var series=STAFF.map(function(s){ var od=srcDailyOrders(s.key); return {s:s, vals:days.map(function(d){return Number(od[d])||0;})}; });
-    var max=Math.max(1, Math.max.apply(null, series.map(function(se){return Math.max.apply(null,se.vals);})));
-    function pts(vals){ var n=vals.length, iw=W-pad*2; return vals.map(function(v,i){ return [pad+(n<=1?0:iw*i/(n-1)), pad+(baseY-pad)*(1-v/max)]; }); }
+    var STAFF=[{key:'DUY',label:'Duy',color:'#3257E6'},{key:'PHUONG_NAM',label:'Phương Nam',color:'#8B5CF6'},{key:'WEBSITE',label:'Google Ads',color:'#16A34A'}];
+    var maps=STAFF.map(function(s){return srcRevByDate(s.key);});
+    var n=days.length, W=960,H=300,padL=40,padR=12,padT=22,baseY=H-32, ih=baseY-padT, iw=W-padL-padR;
+    var groupW=iw/Math.max(1,n), nbar=STAFF.length, barW=Math.max(1.5,(groupW*0.76)/nbar);
+    var max=1; days.forEach(function(d){ maps.forEach(function(m){ var v=Number(m[d])||0; if(v>max)max=v; }); });
     var grid='';
-    for(var g=0;g<=4;g++){ var y=pad+(baseY-pad)*g/4; grid+='<line x1="'+pad+'" y1="'+y+'" x2="'+(W-pad)+'" y2="'+y+'" stroke="var(--border)" stroke-width="1"/>'+
-      '<text x="'+(W-pad+5)+'" y="'+(y+4)+'" font-size="10" fill="var(--text-2)" font-family="Nunito" font-weight="700">'+Math.round(max-max*g/4)+'</text>'; }
-    var lines=series.map(function(se){ var p=pts(se.vals); return '<path d="'+smooth(p)+'" fill="none" stroke="'+se.s.color+'" stroke-width="2.5" stroke-linecap="round"/>'; }).join('');
-    // nhãn x: ~8 mốc
-    var step=Math.max(1,Math.ceil(days.length/8));
-    var xl='';
-    days.forEach(function(d,i){ if(i%step===0||i===days.length-1){ var x=pad+(days.length<=1?0:(W-pad*2)*i/(days.length-1)); xl+='<text x="'+x+'" y="'+(H-4)+'" font-size="10" fill="var(--text-2)" font-family="Nunito" font-weight="700" text-anchor="middle">'+d.slice(5)+'</text>'; } });
-    document.getElementById('dayChart').innerHTML=grid+lines+xl;
-    document.getElementById('chart-leg').innerHTML=STAFF.map(function(s){return '<span><i style="background:'+s.color+'"></i>'+s.label+'</span>';}).join('')+'<span style="color:var(--text-2)">· số đơn/ngày</span>';
+    for(var g=0;g<=4;g++){ var y=padT+ih*g/4; grid+='<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'" stroke="var(--border)" stroke-width="1"/>'+
+      '<text x="'+(padL-6)+'" y="'+(y+4)+'" font-size="10" fill="var(--text-2)" font-family="Nunito" font-weight="700" text-anchor="end">'+fmtShort(max-max*g/4)+'</text>'; }
+    var showLabel = n<=31;
+    var bars='',labels='';
+    days.forEach(function(d,i){
+      var gx=padL+groupW*i+(groupW-barW*nbar)/2;
+      maps.forEach(function(m,j){
+        var v=Number(m[d])||0, h=ih*(v/max), x=gx+j*barW, y=baseY-h;
+        bars+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+Math.max(1,barW-0.8).toFixed(1)+'" height="'+Math.max(0,h).toFixed(1)+'" rx="1.5" fill="'+STAFF[j].color+'"><title>'+STAFF[j].label+' '+d+': '+vnd(v)+'</title></rect>';
+        if(showLabel && v>0){ var cx=x+barW/2, ty=y-3; labels+='<text x="'+cx.toFixed(1)+'" y="'+ty.toFixed(1)+'" font-size="8.5" font-family="Nunito" font-weight="800" fill="'+STAFF[j].color+'" text-anchor="start" transform="rotate(-90 '+cx.toFixed(1)+' '+ty.toFixed(1)+')">'+fmtShort(v)+'</text>'; }
+      });
+    });
+    var step=Math.max(1,Math.ceil(n/12)),xl='';
+    days.forEach(function(d,i){ if(i%step===0||i===n-1){ var cx=padL+groupW*i+groupW/2; xl+='<text x="'+cx.toFixed(1)+'" y="'+(H-4)+'" font-size="9.5" fill="var(--text-2)" font-family="Nunito" font-weight="700" text-anchor="middle">'+d.slice(5)+'</text>'; } });
+    document.getElementById('dayChart').innerHTML=grid+bars+labels+xl;
+    document.getElementById('chart-leg').innerHTML=STAFF.map(function(s){return '<span><i style="background:'+s.color+'"></i>'+s.label+'</span>';}).join('')+'<span style="color:var(--text-2)">· doanh số/ngày'+(showLabel?'':' — chọn ≤30N để hiện số trên cột')+'</span>';
   }
 
   // ===== filter wiring =====
