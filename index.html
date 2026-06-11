@@ -212,9 +212,20 @@
         </div>
       </section>
 
+      <section class="mod wide" style="margin-bottom:16px">
+        <div class="mod-h"><div class="t"><i style="background:#16A34A"></i><h3>Bảng lợi nhuận theo tháng</h3></div><span class="s">LN = DT giao − VAT 10% − Chi phí QC − Giá vốn</span></div>
+        <div class="mod-b" style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Tháng</th><th class="num">DT giao (delivered)</th><th class="num">VAT 10%</th><th class="num">Chi phí QC</th><th class="num">Giá vốn</th><th class="num">Lợi nhuận</th><th class="num">Biên LN</th></tr></thead>
+            <tbody id="profit-rows"></tbody>
+          </table>
+          <p style="font-size:11.5px;color:var(--text-2);margin:10px 2px 0;font-weight:600">* Chỉ tính đơn <b>đã giao (delivered)</b> — doanh thu &amp; giá vốn thực nhận. Giá vốn = số lượng giao × giá nhập (kho). Tháng dở dang có thể âm vì chi phí QC đi trước, đơn chưa kịp giao.</p>
+        </div>
+      </section>
+
       <section class="slots">
-        <div class="slot">📊 Bảng lợi nhuận tháng<small>LN = Doanh thu − VAT 10% − Chi phí QC − Giá vốn, theo từng tháng</small><span class="wip">đang xây — turn sau</span></div>
-        <div class="slot">📝 Đơn đăng ký Noma911 Landing<small>dữ liệu nằm ở API/D1 của dashboard cũ</small><span class="wip">cần nối API — sẽ bàn</span></div>
+        <div class="slot">📝 Đơn đăng ký Noma911 Landing<small>Dữ liệu nằm ở API <code>/api/noma911/stats</code> + database D1 của dashboard cũ — đang được đăng nhập bảo vệ nên không lấy được từ ngoài.</small><span class="wip">cần export hoặc sync có credential</span></div>
+        <div class="slot">➕ Module tiếp theo<small>vd: theo nhóm SP, top sản phẩm, khách hàng Pancake…</small><span class="wip">bạn chọn — ta làm tiếp</span></div>
       </section>
 
       <footer id="footer">Dữ liệu là bản sao (snapshot) từ dashboard facebookadsallinone · bộ lọc &amp; tính toán khớp logic dashboard cũ</footer>
@@ -301,6 +312,31 @@
     document.getElementById('staff-rows').innerHTML=rows;
     // biểu đồ ngày theo nhân sự
     drawDayChart();
+    // lợi nhuận tháng
+    renderProfit();
+  }
+
+  function monthName(m){ var p=m.split('-'); return 'Th'+p[1]+'/'+p[0]; }
+  function renderProfit(){
+    var deliv=((D.revenue||{}).products_by_status||{}).delivered||{}, pc=D.product_costs||{};
+    var mrev={},mcogs={},mad={};
+    for(var p in deliv){ var cost=(pc[p]||{}).gia_nhap_vnd||0,o=deliv[p];
+      var bd=o.by_date||{}; for(var d in bd){ if(inR(d)){ var m=d.slice(0,7); mrev[m]=(mrev[m]||0)+(Number(bd[d])||0); } }
+      var ud=o.units_by_date||{}; for(var d2 in ud){ if(inR(d2)){ var m2=d2.slice(0,7); mcogs[m2]=(mcogs[m2]||0)+((Number(ud[d2])||0)*cost); } }
+    }
+    (D.accounts||[]).forEach(function(a){ (a.daily||[]).forEach(function(x){ if(inR(x.date)){ var m=x.date.slice(0,7); mad[m]=(mad[m]||0)+(Number(x.spend)||0); } }); });
+    var ga=(D.google_ads||{}).by_category||{}; for(var k in ga){ var b=ga[k].by_date||{}; for(var d3 in b){ if(inR(d3)){ var m3=d3.slice(0,7); mad[m3]=(mad[m3]||0)+(Number(b[d3])||0); } } }
+    var months=Object.keys(mrev).sort();
+    var TR=0,TV=0,TA=0,TC=0,TP=0;
+    var rows=months.map(function(m){ var r=mrev[m]||0,vat=r*0.10,ad=mad[m]||0,cogs=mcogs[m]||0,pf=r-vat-ad-cogs,mg=r>0?pf/r*100:0;
+      TR+=r;TV+=vat;TA+=ad;TC+=cogs;TP+=pf;
+      return '<tr><td style="font-weight:800">'+monthName(m)+'</td><td class="num tnum">'+vnd(r)+'</td><td class="num tnum">'+vnd(vat)+'</td><td class="num tnum">'+vnd(ad)+'</td><td class="num tnum">'+vnd(cogs)+'</td>'+
+        '<td class="num tnum" style="font-weight:800;color:'+(pf>=0?'#16A34A':'#E5484D')+'">'+vnd(pf)+'</td>'+
+        '<td class="num" style="font-weight:800;color:'+(mg>=0?'#16A34A':'#E5484D')+'">'+mg.toFixed(0)+'%</td></tr>';
+    }).join('');
+    var tm=TR>0?TP/TR*100:0;
+    rows+='<tr class="tot"><td>Tổng</td><td class="num tnum">'+vnd(TR)+'</td><td class="num tnum">'+vnd(TV)+'</td><td class="num tnum">'+vnd(TA)+'</td><td class="num tnum">'+vnd(TC)+'</td><td class="num tnum" style="color:'+(TP>=0?'#16A34A':'#E5484D')+'">'+vnd(TP)+'</td><td class="num" style="color:'+(tm>=0?'#16A34A':'#E5484D')+'">'+tm.toFixed(0)+'%</td></tr>';
+    document.getElementById('profit-rows').innerHTML=rows||'<tr><td colspan="7" style="color:var(--text-2)">Không có dữ liệu trong kỳ.</td></tr>';
   }
 
   function drawDonut(total,segs,center){
