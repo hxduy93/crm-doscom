@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-12 16:40",
+  "generated_at": "2026-06-12 19:50",
   "source_data_date_range": {
     "start_7d": "2026-06-05",
     "end": "2026-06-11",
@@ -60,8 +60,8 @@
     "orders_30d": 80,
     "by_status": {
       "delivered": {
-        "revenue": 154793000.0,
-        "orders": 63
+        "revenue": 154992000.0,
+        "orders": 64
       },
       "returning": {
         "revenue": 2100000.0,
@@ -72,8 +72,8 @@
         "orders": 3
       },
       "other": {
-        "revenue": 19283000.0,
-        "orders": 13
+        "revenue": 19084000.0,
+        "orders": 12
       }
     },
     "by_source": {
@@ -1606,8 +1606,8 @@
   "search_term_insights": {
     "summary": {
       "total_unique_terms": 4044,
-      "terms_with_conversions": 38,
-      "conv_rate_terms": 0.009,
+      "terms_with_conversions": 41,
+      "conv_rate_terms": 0.01,
       "total_spend_30d": 19916828.0
     },
     "top_converting_terms": [
@@ -1704,6 +1704,32 @@
         ]
       },
       {
+        "search_term": "định vị gắn xe máy",
+        "spend_30d": 23701.0,
+        "clicks_30d": 8,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1194,
+        "match_types": [
+          "NEAR_PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "định vị xe máy siêu nhỏ không dây",
+        "spend_30d": 17621.0,
+        "clicks_30d": 5,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.125,
+        "match_types": [
+          "NEAR_PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
         "search_term": "máy ghi âm mini pin khủng",
         "spend_30d": 92221.0,
         "clicks_30d": 13,
@@ -1715,33 +1741,6 @@
         ],
         "statuses": [
           "ADDED",
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "máy ghi âm mini kết nối điện thoại",
-        "spend_30d": 92340.0,
-        "clicks_30d": 14,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.3043,
-        "match_types": [
-          "NEAR_PHRASE",
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "máy ghi âm philips",
-        "spend_30d": 49962.0,
-        "clicks_30d": 11,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1964,
-        "match_types": [
-          "PHRASE"
-        ],
-        "statuses": [
           "NONE"
         ]
       }
@@ -2000,22 +1999,6 @@
         ]
       },
       {
-        "search_term": "thiết bị định vị theo dõi người",
-        "spend_30d": 84504.0,
-        "clicks_30d": 20,
-        "conversions_30d": 0.0,
-        "match_types": [
-          "NEAR_PHRASE",
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ],
-        "campaigns": [
-          "8/5/2025 Search - TBĐV GPS"
-        ]
-      },
-      {
         "search_term": "máy ghi âm fpt",
         "spend_30d": 81272.0,
         "clicks_30d": 3,
@@ -2108,32 +2091,47 @@
           "8/5/2025 Search - Cam mini",
           "8/5/2025 Search - Sim 4G"
         ]
+      },
+      {
+        "search_term": "thiết bị định vị siêu nhỏ gắn vào điện thoại",
+        "spend_30d": 68691.0,
+        "clicks_30d": 18,
+        "conversions_30d": 0.0,
+        "match_types": [
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TBĐV GPS"
+        ]
       }
     ],
     "match_type_breakdown": {
       "EXACT": {
         "spend_30d": 2071430.0,
         "clicks_30d": 460,
-        "conversions_30d": 3.4,
+        "conversions_30d": 3.49,
         "term_count": 76
+      },
+      "NEAR_PHRASE": {
+        "spend_30d": 5321002.0,
+        "clicks_30d": 1348,
+        "conversions_30d": 8.09,
+        "term_count": 1342
+      },
+      "PHRASE": {
+        "spend_30d": 5482552.0,
+        "clicks_30d": 1176,
+        "conversions_30d": 7.58,
+        "term_count": 816
       },
       "BROAD": {
         "spend_30d": 10277650.0,
         "clicks_30d": 1468,
         "conversions_30d": 40.84,
         "term_count": 2035
-      },
-      "NEAR_PHRASE": {
-        "spend_30d": 5321002.0,
-        "clicks_30d": 1348,
-        "conversions_30d": 7.0,
-        "term_count": 1342
-      },
-      "PHRASE": {
-        "spend_30d": 5482552.0,
-        "clicks_30d": 1176,
-        "conversions_30d": 7.49,
-        "term_count": 816
       },
       "NEAR_EXACT": {
         "spend_30d": 39150.0,
@@ -2145,14 +2143,14 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 24250,
+      "total_unique_placements": 24283,
       "total_spend_30d": 28634566.0
     },
     "network_breakdown": {
       "CONTENT": {
         "spend_30d": 28641136.0,
         "clicks_30d": 17488,
-        "impressions_30d": 1405945,
+        "impressions_30d": 1405943,
         "ctr_30d": 0.0124,
         "cpc_30d": 1638.0,
         "campaign_count": 7
@@ -2170,9 +2168,9 @@
       "WEBSITE": {
         "spend_30d": 28634566.0,
         "clicks_30d": 17486,
-        "impressions_30d": 1351593,
+        "impressions_30d": 1351903,
         "ctr_30d": 0.0129,
-        "placement_count": 24250
+        "placement_count": 24283
       }
     },
     "top_waste_placements": [],
@@ -2221,7 +2219,7 @@
         "placement": "giavang.org/the-gioi",
         "spend_30d": 84235.0,
         "clicks_30d": 24,
-        "impressions_30d": 11941,
+        "impressions_30d": 11940,
         "ctr_30d": 0.002,
         "placement_type": "WEBSITE"
       },
@@ -2384,20 +2382,20 @@
   "ad_insights": {
     "summary": {
       "total_ads": 128,
-      "total_spend_30d": 64044150.0
+      "total_spend_30d": 64041678.0
     },
     "format_breakdown": {
       "DISPLAY_BANNER": {
-        "spend_30d": 6651864.0,
-        "clicks_30d": 4436,
-        "impressions_30d": 445145,
+        "spend_30d": 6650555.0,
+        "clicks_30d": 4435,
+        "impressions_30d": 445141,
         "ctr_30d": 0.01,
         "ad_count": 5
       },
       "OTHER": {
-        "spend_30d": 57392286.0,
-        "clicks_30d": 19718,
-        "impressions_30d": 1729434,
+        "spend_30d": 57391123.0,
+        "clicks_30d": 19717,
+        "impressions_30d": 1729435,
         "ctr_30d": 0.0114,
         "ad_count": 123
       }
@@ -2419,8 +2417,8 @@
         "ad_group_name": "Ad group 1",
         "ad_name": "300x600.gif",
         "ad_format": "DISPLAY_BANNER",
-        "spend_30d": 3101533.0,
-        "clicks_30d": 1236,
+        "spend_30d": 3100224.0,
+        "clicks_30d": 1235,
         "ctr_30d": 0.011
       },
       {
