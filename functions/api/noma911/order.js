@@ -71,17 +71,19 @@ export async function onRequestPost(context) {
     referrer: String(d.referrer || "").slice(0, 500),
     created_at: createdAt,
     created_date: vnDate(createdAt),
+    // IP khách do landing worker gửi kèm (d.ip = CF-Connecting-IP). CHỈ lưu D1, không đẩy Pancake.
+    ip: String(d.ip || "").trim().slice(0, 64),
   };
 
   try {
     await env.DB.prepare(`
       INSERT INTO noma911_orders
-        (staff, combo, combo_label, gift, source, province, phone, amount, url, referrer, created_at, created_date)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (staff, combo, combo_label, gift, source, province, phone, amount, url, referrer, created_at, created_date, ip)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       row.staff, row.combo, row.combo_label, row.gift, row.source,
       row.province, row.phone, row.amount, row.url, row.referrer,
-      row.created_at, row.created_date
+      row.created_at, row.created_date, row.ip
     ).run();
 
     return json({ ok: true, stored: { combo: row.combo, combo_label: row.combo_label, amount: row.amount, staff: row.staff } });
