@@ -7,3 +7,18 @@ pages_build_output_dir = "dist"
 binding = "DB"
 database_name = "crm-doscom-db"
 database_id = "73cfb6ca-b9b4-4a9b-b74f-1a030f8db1d0"
+
+# KV cho Agent FB Ads: cache kết quả audit + bộ nhớ lịch sử campaign + fb_config.
+# Dùng LẠI namespace DOSCOM_INVENTORY của dashboard cũ (cùng tài khoản CF).
+[[kv_namespaces]]
+binding = "INVENTORY"
+id = "3efb5b02ea844d67ade8d070547ae707"
+
+# Workers AI — fallback Llama khi Claude lỗi (qua AI Gateway 'doscom-erp').
+[ai]
+binding = "AI"
+
+# Vars (plaintext). Secret ANTHROPIC_API_KEY set riêng:
+#   npx wrangler pages secret put ANTHROPIC_API_KEY --project-name crm-doscom
+[vars]
+CF_ACCOUNT_ID = "cffb0c35f8c649872436b2087a64b7bc"

@@ -33,29 +33,55 @@
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
   .tnum{font-variant-numeric:tabular-nums lining-nums}
 
-  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
-  .sidebar{padding:22px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow-y:auto;
+  .app{display:flex;min-height:100vh}
+  /* Sidebar icon-rail: thu gọn 72px, rê chuột mở rộng 240px */
+  .sidebar{width:72px;transition:width var(--t);padding:18px 12px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow-x:hidden;overflow-y:auto;z-index:8;
     background:linear-gradient(180deg,var(--surface),var(--surface-2));border-right:1px solid var(--border)}
-  .brand{display:flex;align-items:center;gap:11px;padding:6px 8px 18px}
-  .brand-mark{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:19px;
+  .sidebar:hover{width:240px;box-shadow:14px 0 40px -24px rgba(17,26,46,.4)}
+  .sidebar::-webkit-scrollbar{width:0}
+  .brand{display:flex;align-items:center;gap:11px;padding:4px 6px 14px}
+  .brand-mark{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:19px;flex:none;
     background:linear-gradient(140deg,var(--primary),var(--violet));box-shadow:0 10px 22px -8px var(--primary)}
+  .brand .bt{white-space:nowrap;opacity:0;transition:var(--t)}
+  .sidebar:hover .brand .bt{opacity:1}
   .brand b{font-size:16px;font-weight:800;letter-spacing:-.3px;line-height:1.1}
   .brand span{display:block;font-size:11px;color:var(--text-2)}
-  .nav-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.13em;color:var(--text-2);padding:14px 12px 5px;font-weight:700}
-  .nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:11px;color:var(--text-2);
-    text-decoration:none;font-weight:700;font-size:13.6px;cursor:pointer;transition:var(--t);border:0;background:none;width:100%;text-align:left;font-family:var(--font)}
-  .nav-item .ni{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--muted);color:var(--text-2);flex:none}
-  .nav-item .ni svg{width:16px;height:16px}
+  .nav-label{font-size:10px;text-transform:uppercase;letter-spacing:.13em;color:var(--text-2);padding:12px 12px 4px;font-weight:800;white-space:nowrap;opacity:0;transition:var(--t)}
+  .sidebar:hover .nav-label{opacity:1}
+  .nav-item{display:flex;align-items:center;gap:12px;padding:9px;border-radius:12px;color:var(--text-2);
+    font-weight:700;font-size:13.6px;cursor:pointer;transition:var(--t);border:0;background:none;width:100%;text-align:left;font-family:var(--font);white-space:nowrap}
+  .nav-item .ni{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--muted);color:var(--text-2);flex:none}
+  .nav-item .ni svg{width:18px;height:18px}
+  .nav-item .lb{opacity:0;transition:var(--t)}
+  .sidebar:hover .nav-item .lb{opacity:1}
   .nav-item:hover{background:var(--muted);color:var(--text)}
   .nav-item.active{background:linear-gradient(135deg,var(--primary),var(--primary-700));color:#fff;box-shadow:0 10px 22px -10px var(--primary)}
   .nav-item.active .ni{background:rgba(255,255,255,.18);color:#fff}
+  /* Mục con Dashboard — màu TÍM (khác mục to xanh dương); chỉ hiện khi rail mở rộng */
+  .nav-subs{display:flex;flex-direction:column;gap:2px;margin:1px 0 5px 21px;padding-left:13px;border-left:2px solid color-mix(in srgb,var(--violet) 38%,var(--border));max-height:0;opacity:0;overflow:hidden;transition:var(--t)}
+  .sidebar:hover .nav-subs.open{max-height:320px;opacity:1}
+  .nav-sub{display:flex;align-items:center;gap:9px;text-align:left;background:none;border:0;font-family:var(--font);font-weight:800;font-size:12.6px;color:var(--violet);padding:7px 10px;border-radius:9px;cursor:pointer;white-space:nowrap;transition:var(--t)}
+  .nav-sub::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none;opacity:.65}
+  .nav-sub:hover{background:color-mix(in srgb,var(--violet) 12%,transparent)}
+  .nav-sub.active{background:color-mix(in srgb,var(--violet) 16%,transparent);color:#6D28D9}
   html{scroll-behavior:smooth}
-  #sec-overview,#sec-staff,#sec-daily,#sec-profit,#noma-mod{scroll-margin-top:76px}
-  .nav-soon{margin-left:auto;font-size:9.5px;font-weight:800;background:var(--muted);color:var(--text-2);border-radius:999px;padding:2px 6px}
-  .sidebar-foot{margin-top:auto;padding:12px;border-radius:12px;background:var(--muted);font-size:11.5px;color:var(--text-2);line-height:1.5}
+  #sec-overview,#sec-staff,#sec-daily,#sec-prodtrend,#sec-profit,#noma-mod{scroll-margin-top:84px}
+  .sidebar-foot{margin-top:auto;padding:12px;border-radius:12px;background:var(--muted);font-size:11.5px;color:var(--text-2);line-height:1.5;white-space:nowrap;overflow:hidden;opacity:0;transition:var(--t)}
+  .sidebar:hover .sidebar-foot{opacity:1}
   .sidebar-foot b{color:var(--text);font-weight:800}
+  /* Views — chuyển trang theo menu */
+  .view{display:none}
+  .view.active{display:block;animation:viewIn .25s ease}
+  @keyframes viewIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .coming{display:flex;flex-direction:column;align-items:center;text-align:center;gap:13px;padding:64px 24px;background:var(--surface);border:2px dashed var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm)}
+  [data-theme="dark"] .coming{border-color:#2C3A57}
+  .coming-ic{width:66px;height:66px;border-radius:19px;display:grid;place-items:center;color:#fff;background:linear-gradient(140deg,var(--primary),var(--violet))}
+  .coming-ic svg{width:30px;height:30px}
+  .coming h3{margin:0;font-size:18px;font-weight:800}
+  .coming p{max-width:460px;color:var(--text-2);margin:0;font-size:13.5px;line-height:1.6}
+  .coming .wip{font-size:11px;font-weight:800;background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn);padding:4px 13px;border-radius:999px}
 
-  .main{display:flex;flex-direction:column;min-width:0}
+  .main{display:flex;flex-direction:column;min-width:0;flex:1}
   .topbar{display:flex;align-items:center;gap:12px;padding:14px 28px;position:sticky;top:0;z-index:6;flex-wrap:wrap;
     background:color-mix(in srgb,var(--surface) 85%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
   .topbar h1{font-size:18px;margin:0;font-weight:800;letter-spacing:-.4px}
@@ -136,6 +162,30 @@
 
   footer{margin-top:24px;font-size:11.5px;color:var(--text-2);font-weight:600;text-align:center}
   .skl{opacity:.45}
+  /* ===== Agent FB Ads ===== */
+  .ag-modes{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .ag-mode{border:1px solid var(--border);background:var(--surface);color:var(--text-2);font-family:var(--font);font-weight:700;font-size:12.5px;padding:8px 14px;border-radius:11px;cursor:pointer;transition:var(--t)}
+  .ag-mode:hover{color:var(--text);border-color:var(--secondary)}
+  .ag-mode.on{background:linear-gradient(135deg,var(--violet),#6D28D9);color:#fff;border-color:transparent;box-shadow:0 8px 18px -10px var(--violet)}
+  .ag-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+  .ag-controls label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text-2)}
+  .ag-btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:10px;cursor:pointer;padding:9px 16px;font-family:var(--font);font-weight:800;font-size:13px;color:#fff;background:linear-gradient(135deg,var(--violet),#6D28D9);box-shadow:0 8px 18px -10px var(--violet);transition:var(--t)}
+  .ag-btn:hover{transform:translateY(-1px)}
+  .ag-btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+  .ag-btn.ghost{background:var(--surface);color:var(--text-2);border:1px solid var(--border);box-shadow:none}
+  .ag-q{width:100%;min-height:72px;border:1px solid var(--border);border-radius:11px;padding:10px 12px;font-family:var(--font);font-size:13.5px;color:var(--text);background:var(--surface);margin-bottom:12px;resize:vertical}
+  .ag-meta{font-size:11.5px;color:var(--text-2);font-weight:700;margin-bottom:8px;display:flex;gap:14px;flex-wrap:wrap}
+  .ag-meta .pill{background:var(--muted);padding:3px 9px;border-radius:999px}
+  .ag-result{background:var(--surface-2);border:1px solid var(--border);border-radius:14px;padding:16px 18px;font-size:13.5px;line-height:1.62;min-height:80px;color:var(--text)}
+  .ag-result .ag-h{color:var(--primary);font-weight:800;margin:14px 0 6px;line-height:1.3}
+  .ag-result h3.ag-h{font-size:16px}.ag-result h4.ag-h{font-size:14.5px}.ag-result h5.ag-h,.ag-result h6.ag-h{font-size:13px}
+  .ag-result p{margin:6px 0}.ag-result ul,.ag-result ol{margin:6px 0 6px 20px}.ag-result li{margin:3px 0}
+  .ag-result code{background:var(--muted);padding:1px 5px;border-radius:5px;font-size:12px}
+  .ag-tbl{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px}
+  .ag-tbl th{background:var(--muted);border:1px solid var(--border);padding:6px 8px;text-align:left;font-weight:800}
+  .ag-tbl td{border:1px solid var(--border);padding:5px 8px}
+  .ag-json{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:12px;overflow:auto;font-size:12px;white-space:pre-wrap;margin-top:10px}
+  .ag-spin{color:var(--violet);font-weight:800}
   @media (max-width:1080px){.app{grid-template-columns:1fr}.sidebar{display:none}.kpis{grid-template-columns:repeat(2,1fr)}.bento{grid-template-columns:1fr}.slots{grid-template-columns:1fr}}
   @media (max-width:560px){.kpis{grid-template-columns:1fr}.content{padding:16px 14px 60px}}
 </style>
@@ -143,21 +193,33 @@
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><div class="brand-mark">D</div><div><b>CRM Doscom</b><span>Tổng quan vận hành</span></div></div>
-    <button class="nav-item active"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>Tổng quan</button>
+    <div class="brand"><div class="brand-mark">D</div><div class="bt"><b>CRM Doscom</b><span>Tổng quan vận hành</span></div></div>
     <div class="nav-label">Phân tích</div>
-    <button class="nav-item"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span>Theo nhân sự</button>
-    <button class="nav-item"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg></span>Doanh số ngày</button>
-    <button class="nav-item"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>Lợi nhuận</button>
-    <button class="nav-item"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2l6 6-9 9-6 1 1-6z"/></svg></span>Tỉ lệ combo Noma</button>
-    <div class="sidebar-foot"><b>CRM Doscom</b> · v0.3<br/>Số thật · bộ lọc thời gian<br/><span id="foot-fresh">…</span></div>
+    <button class="nav-item active" data-view="dashboard"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span><span class="lb">Tổng quan Dashboard</span></button>
+    <div class="nav-subs open" id="dash-subs">
+      <button class="nav-sub active" data-scroll="sec-overview">Tổng quan</button>
+      <button class="nav-sub" data-scroll="sec-staff">Theo nhân sự</button>
+      <button class="nav-sub" data-scroll="sec-daily">Doanh số ngày</button>
+      <button class="nav-sub" data-scroll="sec-prodtrend">Đăng ký &amp; CPL theo SP</button>
+      <button class="nav-sub" data-scroll="sec-profit">Lợi nhuận</button>
+      <button class="nav-sub" data-scroll="noma-mod">Tỉ lệ combo Noma</button>
+    </div>
+    <button class="nav-item" data-view="agent-fb"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M9 2h6M8 13h.01M16 13h.01M9 17h6"/></svg></span><span class="lb">Agent Facebook Ads</span></button>
+    <button class="nav-item" data-view="agent-gg"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg></span><span class="lb">Agent Google Ads</span></button>
+    <div class="nav-label">Công cụ</div>
+    <button class="nav-item" data-view="ads-creator"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14zM11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></span><span class="lb">Tạo Ads tự động</span></button>
+    <button class="nav-item" data-view="geo"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></span><span class="lb">GEO Monitor</span></button>
+    <button class="nav-item" data-view="landing"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span><span class="lb">Landing Builder</span></button>
+    <div class="nav-label">Vận hành</div>
+    <button class="nav-item" data-view="warehouse"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><span class="lb">Kho tổng Doscom</span></button>
+    <div class="sidebar-foot"><b>CRM Doscom</b> · v0.4<br/>Menu phân nhóm · số thật<br/><span id="foot-fresh">…</span></div>
   </aside>
 
   <div class="main">
     <header class="topbar">
-      <h1>Tổng quan</h1>
+      <h1 id="page-title">Tổng quan Dashboard</h1>
       <div class="spacer"></div>
-      <div class="filter">
+      <div class="filter" id="topfilter">
         <select class="dt" id="preset-select" aria-label="Kỳ báo cáo">
           <option value="today">Hôm nay</option>
           <option value="yesterday">Hôm qua</option>
@@ -173,7 +235,7 @@
         </select>
         <input type="date" class="dt" id="dt-start" aria-label="Từ ngày" />
         <input type="date" class="dt" id="dt-end" aria-label="Đến ngày" />
-        <button class="btn-export" id="btnExport" title="Xuất báo cáo tuần trước ra bản in / PDF">
+        <button class="btn-export" id="btnExport" title="Xuất báo cáo họp giao ban đầy đủ (KPI, SKU, kênh, creative, ngân sách) theo khoảng đang chọn — ra bản in / PDF">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Báo cáo tuần
         </button>
       </div>
@@ -182,6 +244,7 @@
     </header>
 
     <main class="content">
+      <div class="view active" id="view-dashboard">
       <div class="hero">
         <h2>Toàn cảnh vận hành</h2>
         <p>Số liệu thật từ dashboard · kỳ <b id="period">…</b></p>
@@ -226,6 +289,23 @@
         </div>
       </section>
 
+      <section class="bento" style="margin-bottom:16px" id="sec-prodtrend">
+        <div class="mod">
+          <div class="mod-h"><div class="t"><i style="background:#3257E6"></i><h3>Tiến độ đăng ký theo ngày — từng sản phẩm</h3></div><span class="s">Tổng số đăng ký mỗi ngày, gộp tất cả campaign theo từng sản phẩm</span></div>
+          <div class="mod-b">
+            <svg id="regChart" viewBox="0 0 960 300" width="100%" style="display:block;overflow:visible"></svg>
+            <div class="chart-leg" id="regLeg" style="justify-content:center;margin-top:6px"></div>
+          </div>
+        </div>
+        <div class="mod">
+          <div class="mod-h"><div class="t"><i style="background:#F59E0B"></i><h3>Chi phí / mỗi đăng ký (CPL) theo ngày — từng sản phẩm</h3></div><span class="s">CPL trung bình mỗi ngày, gộp tất cả campaign theo từng sản phẩm</span></div>
+          <div class="mod-b">
+            <svg id="cplChart" viewBox="0 0 960 300" width="100%" style="display:block;overflow:visible"></svg>
+            <div class="chart-leg" id="cplLeg" style="justify-content:center;margin-top:6px"></div>
+          </div>
+        </div>
+      </section>
+
       <section class="mod wide" style="margin-bottom:16px" id="sec-profit">
         <div class="mod-h"><div class="t"><i style="background:#16A34A"></i><h3>Bảng lợi nhuận theo tháng</h3></div><span class="s">LN = DT giao − VAT 10% − Chi phí QC − Giá vốn</span></div>
         <div class="mod-b" style="overflow-x:auto">
@@ -245,6 +325,58 @@
       <section class="slots">
         <div class="slot">➕ Module tiếp theo<small>vd: theo nhóm SP, top sản phẩm, khách hàng Pancake…</small><span class="wip">bạn chọn — ta làm tiếp</span></div>
       </section>
+      </div><!-- /view-dashboard -->
+
+      <div class="view" id="view-agent-fb">
+        <div class="hero"><h2>Agent phân tích Facebook Ads</h2><p>AI (Claude Haiku) đọc dữ liệu FB Ads + Pancake để audit tài khoản, phân tích chỉ số, funnel, theo nhân sự và trả lời câu hỏi.</p></div>
+      <section class="mod wide" style="margin-bottom:16px" id="sec-agent">
+        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Agent phân tích Facebook Ads</h3></div><span class="s">AI (Claude Haiku) · audit tài khoản · chỉ số · funnel · theo nhân sự · hỏi tự do</span></div>
+        <div class="mod-b">
+          <div class="ag-modes" id="ag-modes"></div>
+          <div class="ag-controls">
+            <label>Kỳ
+              <select class="dt" id="ag-time">
+                <option value="last_7d">7 ngày qua</option>
+                <option value="last_30d" selected>30 ngày qua</option>
+                <option value="last_90d">90 ngày qua</option>
+                <option value="this_week">Tuần này</option>
+                <option value="last_week">Tuần trước</option>
+                <option value="this_month">Tháng này</option>
+                <option value="last_month">Tháng trước</option>
+                <option value="yesterday">Hôm qua</option>
+              </select>
+            </label>
+            <label>Nhóm SP
+              <select class="dt" id="ag-group">
+                <option value="ALL" selected>Tất cả nhóm</option>
+                <option value="MAY_DO">Máy dò (D-series)</option>
+                <option value="CAMERA_VIDEO_CALL">Camera video call (DA8.1)</option>
+                <option value="GHI_AM">Máy ghi âm (DR1)</option>
+                <option value="NOMA">NOMA (chăm sóc xe)</option>
+              </select>
+            </label>
+            <label id="ag-staff-wrap" style="display:none">Nhân sự
+              <select class="dt" id="ag-staff">
+                <option value="DUY">Duy</option>
+                <option value="PHUONG_NAM">Phương Nam</option>
+                <option value="AI_AGENT">AI Agent</option>
+              </select>
+            </label>
+            <button class="ag-btn" id="ag-run">⚡ Chạy phân tích</button>
+            <button class="ag-btn ghost" id="ag-refresh" title="Bỏ qua cache, gọi Claude mới">↻ Làm mới</button>
+          </div>
+          <div id="ag-q-wrap" style="display:none"><textarea class="ag-q" id="ag-q" placeholder="Nhập câu hỏi về hiệu suất FB Ads… (vd: Nhóm nào CPL cao bất thường? Nên scale campaign nào?)"></textarea></div>
+          <div class="ag-meta" id="ag-meta"></div>
+          <div class="ag-result" id="ag-result">Chọn chế độ phân tích, kỳ thời gian rồi bấm <b>⚡ Chạy phân tích</b>. Kết quả do AI (Claude Haiku) tạo từ dữ liệu FB Ads + Pancake.</div>
+        </div>
+      </section>
+      </div><!-- /view-agent-fb -->
+
+      <div class="view" id="view-agent-gg"></div>
+      <div class="view" id="view-ads-creator"></div>
+      <div class="view" id="view-geo"></div>
+      <div class="view" id="view-landing"></div>
+      <div class="view" id="view-warehouse"></div>
 
       <footer id="footer">Dữ liệu là bản sao (snapshot) từ dashboard facebookadsallinone · bộ lọc &amp; tính toán khớp logic dashboard cũ</footer>
     </main>
@@ -256,22 +388,34 @@
   if(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme','dark');
   tbtn.addEventListener('click',function(){root.setAttribute('data-theme',root.getAttribute('data-theme')==='dark'?'light':'dark')});
 
-  // Nav bên trái: bấm -> cuộn tới khu vực; tự highlight mục đang xem (scroll-spy)
+  // ===== Menu chính: chuyển VIEW (trang) + sub-nav cuộn trong Dashboard =====
   (function(){
-    var MAP={'Tổng quan':'sec-overview','Theo nhân sự':'sec-staff','Doanh số ngày':'sec-daily','Lợi nhuận':'sec-profit','Tỉ lệ combo Noma':'noma-mod'};
-    var items=Array.prototype.slice.call(document.querySelectorAll('.sidebar .nav-item'));
-    function activate(id){ items.forEach(function(b){ b.classList.toggle('active', MAP[(b.textContent||'').trim()]===id); }); }
-    items.forEach(function(b){ b.addEventListener('click',function(){ var id=MAP[(b.textContent||'').trim()]; if(!id)return; var el=document.getElementById(id); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); activate(id); }); });
-    var ids=['sec-overview','sec-staff','sec-daily','sec-profit','noma-mod'];
-    if('IntersectionObserver' in window){
-      var seen={};
-      var io=new IntersectionObserver(function(es){
-        es.forEach(function(e){ seen[e.target.id]=e.isIntersecting?e.intersectionRatio:0; });
-        var best=null,bw=-1; ids.forEach(function(id){ var v=seen[id]||0; if(v>bw){bw=v;best=id;} });
-        if(best&&bw>0) activate(best);
-      },{rootMargin:'-72px 0px -55% 0px',threshold:[0,.2,.5,1]});
-      ids.forEach(function(id){ var el=document.getElementById(id); if(el) io.observe(el); });
+    var TITLES={'dashboard':'Tổng quan Dashboard','agent-fb':'Agent Facebook Ads','agent-gg':'Agent Google Ads','ads-creator':'Tạo Ads tự động','geo':'GEO Monitor','landing':'Landing Builder','warehouse':'Kho tổng Doscom'};
+    var DESC={'agent-gg':'Phân tích keyword / banner / category Google Ads bằng AI — chuyển từ dashboard cũ.','ads-creator':'Tự sinh & đăng campaign theo mẫu, gợi ý ngân sách + đối tượng.','geo':'Theo dõi thứ hạng GEO/SEO, đối thủ và nội dung.','landing':'Dựng landing page kéo-thả, xuất bản nhanh.','warehouse':'Tồn kho, nhập–xuất, định giá vốn toàn Doscom.'};
+    function comingHtml(v){ return '<div class="hero"><h2>'+TITLES[v]+'</h2><p>Module sắp được chuyển sang CRM</p></div>'+
+      '<div class="coming"><div class="coming-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg></div>'+
+      '<h3>Đang phát triển</h3><p>'+(DESC[v]||'')+'</p><span class="wip">sắp có</span></div>'; }
+    ['agent-gg','ads-creator','geo','landing','warehouse'].forEach(function(v){ var el=document.getElementById('view-'+v); if(el) el.innerHTML=comingHtml(v); });
+
+    var navItems=Array.prototype.slice.call(document.querySelectorAll('.sidebar .nav-item[data-view]'));
+    var views=Array.prototype.slice.call(document.querySelectorAll('.view'));
+    var subs=document.getElementById('dash-subs');
+    var topfilter=document.getElementById('topfilter');
+    function showView(v){
+      navItems.forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-view')===v); });
+      views.forEach(function(el){ el.classList.toggle('active', el.id==='view-'+v); });
+      if(subs) subs.classList.toggle('open', v==='dashboard');
+      var t=document.getElementById('page-title'); if(t) t.textContent=TITLES[v]||'CRM Doscom';
+      if(topfilter) topfilter.style.display=(v==='dashboard')?'flex':'none';
+      window.scrollTo({top:0,behavior:'auto'});
     }
+    navItems.forEach(function(b){ b.addEventListener('click',function(){ showView(b.getAttribute('data-view')); }); });
+    // Mục con Dashboard → cuộn tới section
+    if(subs){ subs.addEventListener('click',function(e){ var b=e.target.closest('[data-scroll]'); if(!b)return;
+      var el=document.getElementById(b.getAttribute('data-scroll')); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+      Array.prototype.slice.call(subs.querySelectorAll('.nav-sub')).forEach(function(x){ x.classList.toggle('active', x===b); });
+    }); }
+    showView('dashboard');
   })();
 
   // Chi phí/doanh thu: hiển thị ĐẦY ĐỦ, làm tròn đến hàng nghìn (không rút gọn tr/tỷ)
@@ -360,6 +504,8 @@
     document.getElementById('staff-rows').innerHTML=rows;
     // biểu đồ ngày theo nhân sự
     drawDayChart();
+    // biểu đồ đăng ký + CPL theo ngày, từng sản phẩm
+    drawProductCharts();
     // lợi nhuận tháng
     renderProfit();
     // đơn đăng ký Noma911 (gọi API D1 riêng theo kỳ)
@@ -433,19 +579,75 @@
     document.getElementById('chart-leg').innerHTML=STAFF.map(function(s){return '<span><i style="background:'+s.color+'"></i>'+s.label+'</span>';}).join('')+'<span style="color:var(--text-2)">· doanh số/ngày'+(showLabel?'':' — chọn ≤30N để hiện số trên cột')+'</span>';
   }
 
+  // ===== Biểu đồ đường theo SẢN PHẨM: đăng ký/ngày + CPL/ngày =====
+  var PROD_COLORS={'D1':'#3257E6','Noma911':'#16A34A','DR1':'#F59E0B'};
+  var PROD_PALETTE=['#8B5CF6','#0EA5E9','#E5484D','#14B8A6','#F472B6','#E08600'];
+  function niceMax(m){ if(!(m>0))return 1; var pow=Math.pow(10,Math.floor(Math.log10(m))),f=m/pow,nf=f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10; return nf*pow; }
+  // Gộp theo SP: registrations + spend mỗi ngày (mọi campaign cùng product), loại '(none)'
+  function productDailyAgg(){
+    var agg={};
+    (D.campaigns||[]).forEach(function(c){ var p=c.product; if(!p||p==='(none)')return;
+      if(!agg[p]) agg[p]={regs:{},spend:{}};
+      (c.daily||[]).forEach(function(x){ if(!inR(x.date))return;
+        agg[p].regs[x.date]=(agg[p].regs[x.date]||0)+(Number(x.registrations)||0);
+        agg[p].spend[x.date]=(agg[p].spend[x.date]||0)+(Number(x.spend)||0); }); });
+    return agg;
+  }
+  // Vẽ 1 line chart đa series. series=[{label,color,vals:[number|null]}]. yfmt format nhãn trục.
+  function drawLineChart(svgId,legId,days,series,yfmt){
+    var svg=document.getElementById(svgId); if(!svg)return;
+    var W=960,H=300,padL=48,padR=14,padT=20,baseY=H-30, ih=baseY-padT, iw=W-padL-padR, n=days.length;
+    var dataMax=0; series.forEach(function(s){ s.vals.forEach(function(v){ if(v!=null&&v>dataMax)dataMax=v; }); });
+    var max=niceMax(dataMax);
+    var X=function(i){ return n<=1?padL+iw/2:padL+iw*i/(n-1); };
+    var Y=function(v){ return baseY-ih*(v/max); };
+    var grid='';
+    for(var g=0;g<=4;g++){ var y=padT+ih*g/4;
+      grid+='<line x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y.toFixed(1)+'" stroke="var(--border)" stroke-width="1"/>'+
+        '<text x="'+(padL-6)+'" y="'+(y+4).toFixed(1)+'" font-size="10" fill="var(--text-2)" font-family="Nunito" font-weight="700" text-anchor="end">'+yfmt(max-max*g/4)+'</text>'; }
+    var paths='',dots='';
+    series.forEach(function(s){
+      var run=[];
+      var flush=function(){ if(!run.length)return;
+        paths+='<path d="'+smooth(run)+'" fill="none" stroke="'+s.color+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
+        run.forEach(function(p){ dots+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3" fill="var(--surface)" stroke="'+s.color+'" stroke-width="2"><title>'+s.label+' '+p[2]+': '+yfmt(p[3])+'</title></circle>'; });
+        run=[]; };
+      days.forEach(function(d,i){ var v=s.vals[i]; if(v==null){ flush(); } else { run.push([X(i),Y(v),d,v]); } });
+      flush();
+    });
+    var step=Math.max(1,Math.ceil(n/12)),xl='';
+    days.forEach(function(d,i){ if(i%step===0||i===n-1){ var cx=X(i); xl+='<text x="'+cx.toFixed(1)+'" y="'+(H-4)+'" font-size="9.5" fill="var(--text-2)" font-family="Nunito" font-weight="700" text-anchor="middle">'+d.slice(5)+'</text>'; } });
+    svg.innerHTML=grid+paths+dots+xl;
+    var leg=document.getElementById(legId);
+    if(leg) leg.innerHTML=series.map(function(s){ return '<span><i style="background:'+s.color+'"></i>'+s.label+'</span>'; }).join('')||'<span style="color:var(--text-2)">Không có dữ liệu đăng ký theo SP trong kỳ</span>';
+  }
+  function drawProductCharts(){
+    var days=dateList(), agg=productDailyAgg();
+    var prods=Object.keys(agg).map(function(p){ return {p:p,total:days.reduce(function(t,d){return t+(agg[p].regs[d]||0);},0)}; })
+      .filter(function(x){return x.total>0;}).sort(function(a,b){return b.total-a.total;}).slice(0,6);
+    var pi=0, colorOf={};
+    prods.forEach(function(x){ colorOf[x.p]=PROD_COLORS[x.p]||PROD_PALETTE[pi++%PROD_PALETTE.length]; });
+    var regsSeries=prods.map(function(x){ return {label:x.p,color:colorOf[x.p],vals:days.map(function(d){return agg[x.p].regs[d]||0;})}; });
+    var cplSeries=prods.map(function(x){ return {label:x.p,color:colorOf[x.p],vals:days.map(function(d){ var r=agg[x.p].regs[d]||0; return r>0?(agg[x.p].spend[d]||0)/r:null; })}; });
+    drawLineChart('regChart','regLeg',days,regsSeries,function(v){return fmtShort(v);});
+    drawLineChart('cplChart','cplLeg',days,cplSeries,function(v){return fmtShort(v);});
+  }
+
   // ===== filter wiring =====
   function ymd(d){ return d.toISOString().slice(0,10); }
   function minusDays(d,n){ var x=new Date(d); x.setUTCDate(x.getUTCDate()-n); return x; }
+  // Hôm nay THẬT theo giờ VN (UTC+7) — KHÔNG dùng ngày cuối của data làm "hôm nay"
+  var TODAY=new Date(Date.now()+7*3600*1000).toISOString().slice(0,10);
   function presetRange(p){
     if(p==='all') return {start:MIN,end:MAX};
-    var ref=new Date(MAX+'T00:00:00Z'), dow=ref.getUTCDay(), monOff=(dow===0?6:dow-1);
-    if(p==='today') return {start:MAX,end:MAX};
+    var ref=new Date(TODAY+'T00:00:00Z'), dow=ref.getUTCDay(), monOff=(dow===0?6:dow-1);
+    if(p==='today') return {start:TODAY,end:TODAY};
     if(p==='yesterday'){ var y=ymd(minusDays(ref,1)); return {start:y,end:y}; }
-    if(p==='this-week') return {start:ymd(minusDays(ref,monOff)),end:MAX};
+    if(p==='this-week') return {start:ymd(minusDays(ref,monOff)),end:TODAY};
     if(p==='last-week'){ var monThis=minusDays(ref,monOff), monLast=minusDays(monThis,7), sunLast=new Date(monLast); sunLast.setUTCDate(sunLast.getUTCDate()+6); return {start:ymd(monLast),end:ymd(sunLast)}; }
-    if(p==='this-month') return {start:MAX.slice(0,7)+'-01',end:MAX};
-    if(p==='last-month'){ var fm=new Date(MAX.slice(0,7)+'-01T00:00:00Z'), lastPrev=minusDays(fm,1); return {start:lastPrev.toISOString().slice(0,7)+'-01',end:ymd(lastPrev)}; }
-    var n=parseInt(p,10)||7, s=ymd(minusDays(ref,n-1)); return {start:s,end:MAX};
+    if(p==='this-month') return {start:TODAY.slice(0,7)+'-01',end:TODAY};
+    if(p==='last-month'){ var fm=new Date(TODAY.slice(0,7)+'-01T00:00:00Z'), lastPrev=minusDays(fm,1); return {start:lastPrev.toISOString().slice(0,7)+'-01',end:ymd(lastPrev)}; }
+    var n=parseInt(p,10)||7, s=ymd(minusDays(ref,n-1)); return {start:s,end:TODAY};
   }
   function applyFilterMode(){ // chọn preset -> khóa 2 ô ngày; chọn "Tùy chọn" -> mở
     var custom=document.getElementById('preset-select').value==='custom';
@@ -454,7 +656,8 @@
   }
   function setPreset(p){
     var r=presetRange(p);
-    range={start:(r.start<MIN?MIN:r.start),end:(r.end>MAX?MAX:r.end)};
+    var hi=(TODAY>MAX?TODAY:MAX);
+    range={start:(r.start<MIN?MIN:r.start),end:(r.end>hi?hi:r.end)};
     var sel=document.getElementById('preset-select'); if(sel&&sel.value!==p) sel.value=p;
     document.getElementById('dt-start').value=range.start; document.getElementById('dt-end').value=range.end;
     applyFilterMode();
@@ -466,49 +669,345 @@
   document.getElementById('dt-start').addEventListener('change',onCustom);
   document.getElementById('dt-end').addEventListener('change',onCustom);
 
-  // ===== Trích xuất BÁO CÁO TUẦN (tuần trước) ra bản in/PDF =====
+  // =============================================================
+  // BÁO CÁO TUẦN ĐẦY ĐỦ — port nguyên tiêu chí từ dashboard facebookadsallinone
+  // 5 mục: (1) Hiệu suất KD · (2) Dữ liệu–hiệu suất · (3) Creative (CTR/CVR)
+  //        (4) Ngân sách QC theo SP + Google · (5) Câu hỏi họp · + Noma911
+  // So sánh WoW với kỳ liền trước cùng độ dài · chia tuần T2→CN.
+  // Dùng khoảng thời gian ĐANG CHỌN trên bộ lọc (mặc định mở app = toàn kỳ).
+  // =============================================================
+  // Map account_id → nhân sự (mirror dashboard cũ)
+  var REPORT_ACCOUNT_STAFF={
+    "act_927390616363424":"DUY","act_1655506672244826":"DUY","act_1449385949897024":"DUY",
+    "act_764394829882083":"PHUONG_NAM","act_906015559004892":"PHUONG_NAM",
+    "act_1416634670476226":"PHUONG_NAM","act_1418124406240173":"PHUONG_NAM"
+  };
+  // Google category khớp 14 PROFIT_PRODUCTS → tính vào profit attribution WEBSITE
+  var GOOGLE_CATS_MATCH=new Set(["MAYDO","DINHVI","GHIAM","CAMCALL","OTHER_CAM","OTHER_DI","OTHER_RAZOR","OTHER_SIM","CHONG_GHI_AM"]);
+
+  function splitRangeIntoWeeks(rangeStart,rangeEnd){
+    var out=[],start=new Date(rangeStart+"T00:00:00Z"),end=new Date(rangeEnd+"T00:00:00Z");
+    if(end<start) return out;
+    var dow=start.getUTCDay(),toMon=dow===0?6:dow-1;
+    var weekStart=new Date(start); weekStart.setUTCDate(weekStart.getUTCDate()-toMon);
+    var idx=0;
+    while(weekStart<=end){
+      var weekEnd=new Date(weekStart); weekEnd.setUTCDate(weekEnd.getUTCDate()+6);
+      var clipStart=weekStart<start?start:weekStart, clipEnd=weekEnd>end?end:weekEnd;
+      out.push({label:"Tuần "+(idx+1),start:clipStart.toISOString().slice(0,10),end:clipEnd.toISOString().slice(0,10),
+        monLabel:weekStart.toISOString().slice(0,10),sunLabel:weekEnd.toISOString().slice(0,10)});
+      weekStart=new Date(weekStart); weekStart.setUTCDate(weekStart.getUTCDate()+7); idx++;
+    }
+    return out;
+  }
+  function _sumDateMap(byDate,rStart,rEnd){ var s=0; for(var d in (byDate||{})){ if(d>=rStart&&d<=rEnd) s+=Number(byDate[d])||0; } return s; }
+  function _shiftPeriod(rangeStart,rangeEnd){
+    var s=new Date(rangeStart+"T00:00:00Z"),e=new Date(rangeEnd+"T00:00:00Z");
+    var days=Math.round((e-s)/86400000)+1;
+    var prevEnd=new Date(s); prevEnd.setUTCDate(prevEnd.getUTCDate()-1);
+    var prevStart=new Date(prevEnd); prevStart.setUTCDate(prevStart.getUTCDate()-days+1);
+    return {start:prevStart.toISOString().slice(0,10),end:prevEnd.toISOString().slice(0,10),days:days};
+  }
+  function _pctDelta(now,prev){ if(prev==null||prev===0) return now>0?100:null; return ((Number(now)-Number(prev))/Number(prev))*100; }
+
+  function buildWeeklyReportData(rangeStart,rangeEnd){
+    var accounts=D.accounts||[], campaigns=D.campaigns||[];
+    var adSpendByStaff=D.ad_spend_by_staff||{};
+    var revenueGroups=(D.revenue||{}).source_groups||{};
+    var googleAds=D.google_ads||{by_category:{}};
+    var productCosts=D.product_costs||{};
+    var monthlyKpi=Number(D.monthly_kpi_vnd)||1000000000;
+    var products=D.profit_products||["D1","D1 Pro","D2","D3","D4","D8 Pro","DR1","DR4 Plus","DV1 Pro","DA8.1","DA8.1 Pro","Noma 911","Noma 922","Noma 250"];
+    var VAT_RATE=0.10;
+    var weeks=splitRangeIntoWeeks(rangeStart,rangeEnd);
+    var prevPeriod=_shiftPeriod(rangeStart,rangeEnd);
+
+    var STAFF_DEFS=[
+      {key:"DUY",label:"DUY",adKey:"DUY",revKeys:["DUY"],hasGoogle:false},
+      {key:"PHUONG_NAM",label:"PHƯƠNG NAM",adKey:"PHUONG_NAM",revKeys:["PHUONG_NAM"],hasGoogle:false},
+      {key:"WEBSITE_STAFF",label:"WEBSITE",adKey:null,revKeys:["WEBSITE","ZALO_OA","HOTLINE"],hasGoogle:true},
+      {key:"FB_PAGE",label:"Page Facebook",adKey:null,revKeys:["FB_PAGE"],hasGoogle:false}
+    ];
+
+    function aggSku(rStart,rEnd){
+      var map={};
+      products.forEach(function(p){ map[p]={product:p,adSpend:0,revenue:0,units:0,orders:0}; });
+      Object.keys(adSpendByStaff).forEach(function(_){ var buckets=adSpendByStaff[_]||{};
+        Object.keys(buckets).forEach(function(prod){ if(!map[prod])return; map[prod].adSpend+=_sumDateMap((buckets[prod]||{}).by_date,rStart,rEnd); }); });
+      Object.keys(revenueGroups).forEach(function(gk){ var prods=(revenueGroups[gk]||{}).products||{};
+        products.forEach(function(p){ var pd=prods[p]; if(!pd)return;
+          map[p].revenue+=_sumDateMap(pd.by_date,rStart,rEnd);
+          map[p].units+=_sumDateMap(pd.units_by_date,rStart,rEnd);
+          map[p].orders+=_sumDateMap(pd.orders_by_date,rStart,rEnd); }); });
+      products.forEach(function(p){ var r=map[p],cost=Number((productCosts[p]||{}).gia_nhap_vnd)||0;
+        r.cogs=r.units*cost; r.vat=r.revenue*VAT_RATE; r.profit=r.revenue-r.vat-r.adSpend-r.cogs;
+        r.margin=r.revenue>0?r.profit/r.revenue*100:null; r.cir=r.revenue>0?r.adSpend/r.revenue*100:null;
+        r.roi=r.adSpend>0?r.profit/r.adSpend:null; r.cpa=r.orders>0?r.adSpend/r.orders:null; });
+      return map;
+    }
+    var skuCur=aggSku(rangeStart,rangeEnd), skuPrev=aggSku(prevPeriod.start,prevPeriod.end);
+    var skuList=products.map(function(p){ var c=skuCur[p],pv=skuPrev[p];
+      return Object.assign({},c,{prev:{revenue:pv.revenue,units:pv.units,adSpend:pv.adSpend,profit:pv.profit,orders:pv.orders},
+        revDelta:_pctDelta(c.revenue,pv.revenue),unitsDelta:_pctDelta(c.units,pv.units),
+        spendDelta:_pctDelta(c.adSpend,pv.adSpend),profitDelta:_pctDelta(c.profit,pv.profit)}); });
+
+    // (A) KPI tháng vs MTD
+    var refDate=new Date(rangeEnd+"T00:00:00Z");
+    var monthDays=new Date(Date.UTC(refDate.getUTCFullYear(),refDate.getUTCMonth()+1,0)).getUTCDate();
+    var mtdStart=rangeEnd.slice(0,7)+"-01", mtdRev=0, mtdRevFinal=0;
+    Object.keys(revenueGroups).forEach(function(gk){ var rev=(revenueGroups[gk]||{}).order_revenue_by_status_by_date||{};
+      ["delivered","other","returning"].forEach(function(s){ mtdRev+=_sumDateMap(rev[s],mtdStart,rangeEnd); });
+      mtdRevFinal+=_sumDateMap(rev.delivered,mtdStart,rangeEnd); });
+    var dayOfMonth=refDate.getUTCDate(), projected=dayOfMonth>0?mtdRev/dayOfMonth*monthDays:0;
+    var kpi={kpi_vnd:monthlyKpi,month_label:"Tháng "+(refDate.getUTCMonth()+1)+"/"+refDate.getUTCFullYear(),
+      mtd_revenue:mtdRev,mtd_revenue_final:mtdRevFinal,mtd_pct:monthlyKpi>0?mtdRev/monthlyKpi*100:0,
+      day_of_month:dayOfMonth,days_in_month:monthDays,projected_revenue:projected,projected_pct:monthlyKpi>0?projected/monthlyKpi*100:0};
+
+    // (B) Top SP
+    var skuActive=skuList.filter(function(s){ return s.adSpend>0||s.revenue>0; });
+    var topSpike=skuActive.slice().filter(function(s){ return s.revDelta!=null&&isFinite(s.revDelta)&&s.revenue>0; }).sort(function(a,b){return b.revDelta-a.revDelta;}).slice(0,3);
+    var topDrop=skuActive.slice().filter(function(s){ return s.revDelta!=null&&isFinite(s.revDelta)&&s.prev.revenue>0; }).sort(function(a,b){return a.revDelta-b.revDelta;}).slice(0,3);
+    var topBySku=skuActive.slice().sort(function(a,b){return b.profit-a.profit;}).slice(0,5);
+    var hardToSell=skuActive.slice().filter(function(s){ return s.adSpend>100000&&(s.units===0||(s.cir!=null&&s.cir>100)); }).sort(function(a,b){return b.adSpend-a.adSpend;}).slice(0,5);
+
+    // (C) Channel aggregates + WoW
+    function aggChannel(rStart,rEnd){
+      return STAFF_DEFS.map(function(st){
+        var fbSpend=0;
+        if(st.adKey){ var o=adSpendByStaff[st.adKey]||{}; Object.keys(o).forEach(function(p){ fbSpend+=_sumDateMap((o[p]||{}).by_date,rStart,rEnd); }); }
+        var googleMatchSpend=0,googleUnmatchSpend=0;
+        if(st.hasGoogle){ var bc=googleAds.by_category||{}; Object.keys(bc).forEach(function(cat){ var s=_sumDateMap((bc[cat]||{}).by_date,rStart,rEnd); if(GOOGLE_CATS_MATCH.has(cat)) googleMatchSpend+=s; else googleUnmatchSpend+=s; }); }
+        var revPending=0,revFinal=0,ordersFinal=0,revenueByProd=0,unitsByProd=0,cogsByProd=0;
+        st.revKeys.forEach(function(rk){ var g=revenueGroups[rk]; if(!g)return;
+          var rev=g.order_revenue_by_status_by_date||{}, ord=g.order_count_by_status_by_date||{};
+          ["delivered","other","returning"].forEach(function(s){ revPending+=_sumDateMap(rev[s],rStart,rEnd); });
+          revFinal+=_sumDateMap(rev.delivered,rStart,rEnd); ordersFinal+=_sumDateMap(ord.delivered,rStart,rEnd);
+          var prods=g.products||{};
+          products.forEach(function(p){ var pd=prods[p]; if(!pd)return;
+            revenueByProd+=_sumDateMap(pd.by_date,rStart,rEnd);
+            var unitsP=_sumDateMap(pd.units_by_date,rStart,rEnd); unitsByProd+=unitsP;
+            cogsByProd+=unitsP*(Number((productCosts[p]||{}).gia_nhap_vnd)||0); }); });
+        var impr=0,clicks=0,regs=0;
+        if(st.adKey){ campaigns.forEach(function(c){ if(REPORT_ACCOUNT_STAFF[c.account_id]!==st.adKey)return;
+          (c.daily||[]).forEach(function(d){ if(d.date<rStart||d.date>rEnd)return; impr+=Number(d.impressions)||0; clicks+=Number(d.clicks)||0; regs+=Number(d.registrations)||0; }); }); }
+        var totalSpend=fbSpend+googleMatchSpend, totalSpendInclUnmatch=totalSpend+googleUnmatchSpend;
+        var vat=revenueByProd*VAT_RATE, profit=revenueByProd-vat-totalSpend-cogsByProd;
+        return {key:st.key,label:st.label,hasGoogle:st.hasGoogle,fbSpend:fbSpend,googleMatchSpend:googleMatchSpend,googleUnmatchSpend:googleUnmatchSpend,
+          totalSpend:totalSpend,totalSpendInclUnmatch:totalSpendInclUnmatch,revPending:revPending,revFinal:revFinal,ordersFinal:ordersFinal,
+          revenueByProd:revenueByProd,unitsByProd:unitsByProd,cogsByProd:cogsByProd,vat:vat,profit:profit,
+          margin:revenueByProd>0?profit/revenueByProd*100:null,cir:revPending>0?totalSpendInclUnmatch/revPending*100:null,
+          impressions:impr,clicks:clicks,regs:regs,ctr:impr>0?clicks/impr*100:null,convRate:clicks>0?regs/clicks*100:null,cpa:regs>0?fbSpend/regs:null};
+      });
+    }
+    var channelsCur=aggChannel(rangeStart,rangeEnd), channelsPrev=aggChannel(prevPeriod.start,prevPeriod.end);
+    var channels=channelsCur.map(function(c,i){ return Object.assign({},c,{prev:channelsPrev[i],
+      cpaDelta:_pctDelta(c.cpa,channelsPrev[i].cpa),convRateDelta:_pctDelta(c.convRate,channelsPrev[i].convRate),
+      spendDelta:_pctDelta(c.totalSpendInclUnmatch,channelsPrev[i].totalSpendInclUnmatch),
+      revDelta:_pctDelta(c.revPending,channelsPrev[i].revPending),profitDelta:_pctDelta(c.profit,channelsPrev[i].profit)}); });
+    var fbStaff=channelsCur.filter(function(c){return c.fbSpend>0;});
+    var cpaTotalCur=fbStaff.reduce(function(s,c){return s+c.fbSpend;},0)/Math.max(1,fbStaff.reduce(function(s,c){return s+c.regs;},0));
+    var fbStaffPrev=channelsPrev.filter(function(c){return c.fbSpend>0;});
+    var cpaTotalPrev=fbStaffPrev.reduce(function(s,c){return s+c.fbSpend;},0)/Math.max(1,fbStaffPrev.reduce(function(s,c){return s+c.regs;},0));
+    var aovRevCur=channelsCur.reduce(function(s,c){return s+c.revFinal;},0), aovOrdCur=channelsCur.reduce(function(s,c){return s+c.ordersFinal;},0);
+    var aovCur=aovOrdCur>0?aovRevCur/aovOrdCur:null;
+    var aovRevPrev=channelsPrev.reduce(function(s,c){return s+c.revFinal;},0), aovOrdPrev=channelsPrev.reduce(function(s,c){return s+c.ordersFinal;},0);
+    var aovPrev=aovOrdPrev>0?aovRevPrev/aovOrdPrev:null;
+
+    // (D) Campaign-level
+    function aggCampaigns(rStart,rEnd){
+      var rows=[];
+      campaigns.forEach(function(c){ var spend=0,impr=0,clicks=0,regs=0;
+        (c.daily||[]).forEach(function(d){ if(d.date<rStart||d.date>rEnd)return; spend+=Number(d.spend)||0; impr+=Number(d.impressions)||0; clicks+=Number(d.clicks)||0; regs+=Number(d.registrations)||0; });
+        if(spend<10000)return;
+        rows.push({id:c.id,name:c.name,account_id:c.account_id,staff:REPORT_ACCOUNT_STAFF[c.account_id]||"?",
+          spend:spend,impressions:impr,clicks:clicks,regs:regs,ctr:impr>0?clicks/impr*100:0,convRate:clicks>0?regs/clicks*100:0,cpa:regs>0?spend/regs:null}); });
+      return rows;
+    }
+    var campRows=aggCampaigns(rangeStart,rangeEnd), totalCampSpend=campRows.reduce(function(s,r){return s+r.spend;},0);
+    var avgSpend=campRows.length?totalCampSpend/campRows.length:0;
+    var overspendCampaigns=campRows.filter(function(r){ return r.spend>avgSpend*1.2&&(r.regs===0||(r.cpa!=null&&r.cpa>250000)); }).sort(function(a,b){return b.spend-a.spend;}).slice(0,5);
+    var topCtrCampaigns=campRows.slice().filter(function(r){return r.impressions>1000;}).sort(function(a,b){return b.ctr-a.ctr;}).slice(0,5);
+    var bottomCtrCampaigns=campRows.slice().filter(function(r){return r.impressions>1000;}).sort(function(a,b){return a.ctr-b.ctr;}).slice(0,5);
+    var topCvrCampaigns=campRows.slice().filter(function(r){return r.clicks>50;}).sort(function(a,b){return b.convRate-a.convRate;}).slice(0,5);
+
+    // (E) Budget breakdown
+    var totalAdAcrossSku=skuList.reduce(function(s,r){return s+r.adSpend;},0);
+    var budgetBySku=skuList.filter(function(s){return s.adSpend>0;}).map(function(s){ return {product:s.product,spend:s.adSpend,share:totalAdAcrossSku>0?s.adSpend/totalAdAcrossSku*100:0}; }).sort(function(a,b){return b.spend-a.spend;});
+    var googleCategories=Object.keys(googleAds.by_category||{}).map(function(cat){ return {category:cat,spend:_sumDateMap((googleAds.by_category[cat]||{}).by_date,rangeStart,rangeEnd),matched:GOOGLE_CATS_MATCH.has(cat)}; }).filter(function(g){return g.spend>0;}).sort(function(a,b){return b.spend-a.spend;});
+    var googleMatchTotal=googleCategories.filter(function(g){return g.matched;}).reduce(function(s,g){return s+g.spend;},0);
+    var googleUnmatchTotal=googleCategories.filter(function(g){return !g.matched;}).reduce(function(s,g){return s+g.spend;},0);
+    var validCirs=channels.filter(function(c){return c.cir!=null&&c.cir>0;});
+    var avgCir=validCirs.length?validCirs.reduce(function(s,c){return s+c.cir;},0)/validCirs.length:0;
+    var channelRanking=channels.map(function(c){ return Object.assign({},c,{underperforming:c.cir!=null&&avgCir>0&&c.cir>avgCir*1.2}); });
+
+    // CPA & AOV theo dòng SP (Doscom vs Noma) — từ skuList: Ad spend FB + đơn/DT Pancake
+    var isNoma=function(p){ return /^\s*noma/i.test(p||""); };
+    function aggLine(which,filt){ var ad=0,rev=0,ord=0;
+      skuList.forEach(function(s){ if(!filt(s.product))return; var o=which==='prev'?s.prev:s; ad+=o.adSpend||0; rev+=o.revenue||0; ord+=o.orders||0; });
+      return {adSpend:ad,revenue:rev,orders:ord,cpa:ord>0?ad/ord:null,aov:ord>0?rev/ord:null}; }
+    function lineObj(filt){ var c=aggLine('cur',filt),p=aggLine('prev',filt);
+      return Object.assign(c,{prev:p,cpaDelta:_pctDelta(c.cpa,p.cpa),aovDelta:_pctDelta(c.aov,p.aov)}); }
+    var productLines={doscom:lineObj(function(p){return !isNoma(p);}),noma:lineObj(isNoma)};
+
+    return {range:{start:rangeStart,end:rangeEnd,days:prevPeriod.days},prevRange:prevPeriod,weeks:weeks,kpi:kpi,skuList:skuList,productLines:productLines,
+      topSpike:topSpike,topDrop:topDrop,topBySku:topBySku,hardToSell:hardToSell,channels:channelRanking,
+      cpaAvg:{cur:isFinite(cpaTotalCur)?cpaTotalCur:null,prev:isFinite(cpaTotalPrev)?cpaTotalPrev:null,delta:_pctDelta(cpaTotalCur,cpaTotalPrev)},
+      aovAvg:{cur:aovCur,prev:aovPrev,delta:_pctDelta(aovCur,aovPrev),orders:aovOrdCur},
+      campaigns:{all:campRows,overspend:overspendCampaigns,topCtr:topCtrCampaigns,bottomCtr:bottomCtrCampaigns,topCvr:topCvrCampaigns},
+      budgetBySku:budgetBySku,googleCategories:googleCategories,googleSplit:{match:googleMatchTotal,unmatch:googleUnmatchTotal},
+      generatedAt:new Date().toISOString().slice(0,19).replace("T"," ")};
+  }
+
+  function buildNomaReportHtml(N){
+    if(!N||!N.summary) return '';
+    var cb=(N.by_combo||[]).slice().sort(function(a,b){return b.orders-a.orders;});
+    var totO=N.summary.orders||0, comboO=cb.reduce(function(t,c){return t+(c.combo!=='le-911'?c.orders:0);},0), a=N.actual||{};
+    return '<h2>5. Noma911 — đơn đăng ký landing</h2>'+
+      '<p class="muted">Tổng <b>'+num(totO)+'</b> đơn đăng ký (lead) · tỉ lệ combo <b>'+(totO?(comboO/totO*100).toFixed(1):0)+'%</b> · đã giao (POS) '+num(a.orders_delivered)+' đơn (chốt '+(a.conversion_rate||0)+'%)</p>'+
+      '<table class="rpt"><thead><tr><th>Combo</th><th class="num">Đơn ĐK</th><th class="num">% tổng</th><th class="num">DT đăng ký</th></tr></thead><tbody>'+
+      cb.map(function(c){ return '<tr><td class="lbl">'+(c.combo_label||c.combo)+'</td><td class="num">'+num(c.orders)+'</td><td class="num">'+(totO?(c.orders/totO*100).toFixed(1):0)+'%</td><td class="num">'+vnd(c.revenue)+'</td></tr>'; }).join('')+
+      '</tbody></table>';
+  }
+
+  function renderWeeklyReportHtml(data){
+    var fmtV=function(n){ return Math.round(Number(n||0)).toLocaleString("vi-VN")+"₫"; };
+    var fmtN=function(n){ return Math.round(Number(n||0)).toLocaleString("vi-VN"); };
+    var fmtP=function(n){ return (n==null||!isFinite(n))?"—":Number(n).toFixed(1)+"%"; };
+    var fmtDelta=function(n){ if(n==null||!isFinite(n))return"—"; var sign=n>0?"▲":n<0?"▼":"·",cls=n>0?"delta-up":n<0?"delta-down":"delta-zero"; return '<span class="'+cls+'">'+sign+" "+Math.abs(n).toFixed(1)+"%</span>"; };
+    var fmtDeltaNeg=function(n){ if(n==null||!isFinite(n))return"—"; var sign=n>0?"▲":n<0?"▼":"·",cls=n>0?"delta-down":n<0?"delta-up":"delta-zero"; return '<span class="'+cls+'">'+sign+" "+Math.abs(n).toFixed(1)+"%</span>"; };
+    var esc=function(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); };
+    var dateLabel=data.range.start+" → "+data.range.end+" ("+data.weeks.length+" tuần · "+data.range.days+" ngày)";
+    var prevLabel=data.prevRange.start+" → "+data.prevRange.end;
+    var kpi=data.kpi, kpiColor=kpi.mtd_pct>=100?"kpi-good":kpi.mtd_pct>=70?"kpi-on-track":"kpi-behind";
+
+    var s1aKpi='<div class="kpi-card '+kpiColor+'"><div class="kpi-label">'+esc(kpi.month_label)+' · KPI tháng</div>'+
+      '<div class="kpi-main">'+fmtV(kpi.mtd_revenue)+' / '+fmtV(kpi.kpi_vnd)+'</div>'+
+      '<div class="kpi-bar"><div class="kpi-fill" style="width:'+Math.min(100,kpi.mtd_pct).toFixed(1)+'%"></div></div>'+
+      '<div class="kpi-sub">Đạt <b>'+fmtP(kpi.mtd_pct)+'</b> KPI · MTD '+kpi.day_of_month+'/'+kpi.days_in_month+' ngày · Projected cuối tháng: <b>'+fmtV(kpi.projected_revenue)+'</b> ('+fmtP(kpi.projected_pct)+' KPI)</div></div>';
+
+    var skuTrendRow=function(s){ return '<tr><td class="lbl">'+esc(s.product)+'</td><td class="num">'+fmtV(s.revenue)+'</td><td class="num muted">'+fmtV(s.prev.revenue)+'</td><td class="num">'+fmtDelta(s.revDelta)+'</td><td class="num">'+fmtN(s.units)+'</td><td class="num">'+fmtDelta(s.unitsDelta)+'</td><td class="num">'+fmtV(s.adSpend)+'</td></tr>'; };
+    var s1b='<div class="grid-2"><div><h4>📈 SKU TĂNG TRƯỞNG ĐỘT BIẾN (top 3 theo DT vs kỳ trước)</h4>'+
+      '<table class="rpt"><thead><tr><th>SKU</th><th>DT kỳ này</th><th>DT kỳ trước</th><th>Δ</th><th>SL</th><th>ΔSL</th><th>Spend</th></tr></thead>'+
+      '<tbody>'+(data.topSpike.map(skuTrendRow).join("")||'<tr><td colspan="7" class="muted">Không có SP nào tăng trong kỳ.</td></tr>')+'</tbody></table></div>'+
+      '<div><h4>📉 SKU GIẢM MẠNH NHẤT (top 3)</h4>'+
+      '<table class="rpt"><thead><tr><th>SKU</th><th>DT kỳ này</th><th>DT kỳ trước</th><th>Δ</th><th>SL</th><th>ΔSL</th><th>Spend</th></tr></thead>'+
+      '<tbody>'+(data.topDrop.map(skuTrendRow).join("")||'<tr><td colspan="7" class="muted">Không có SP nào giảm trong kỳ.</td></tr>')+'</tbody></table></div></div>';
+
+    var s1c='<h4>⭐ TOP 5 SKU HIỆU QUẢ NHẤT (xếp theo lợi nhuận)</h4>'+
+      '<table class="rpt"><thead><tr><th>SKU</th><th>Doanh thu</th><th>SL bán</th><th>Ad spend</th><th>Lợi nhuận</th><th>Biên LN</th><th>CIR</th><th>ROI (LN/Spend)</th></tr></thead><tbody>'+
+      (data.topBySku.map(function(s){ return '<tr><td class="lbl">'+esc(s.product)+'</td><td class="num">'+fmtV(s.revenue)+'</td><td class="num">'+fmtN(s.units)+'</td><td class="num">'+fmtV(s.adSpend)+'</td><td class="num '+(s.profit>=0?'pos':'neg')+'">'+fmtV(s.profit)+'</td><td class="num">'+fmtP(s.margin)+'</td><td class="num">'+fmtP(s.cir)+'</td><td class="num">'+(s.roi==null?"—":s.roi.toFixed(2)+"x")+'</td></tr>'; }).join("")||'<tr><td colspan="8" class="muted">Không có data.</td></tr>')+'</tbody></table>';
+
+    var s1d='<h4>⚠ SKU KHÓ BÁN (spend &gt; 100k nhưng 0 đơn hoặc CIR &gt; 100%)</h4>'+
+      '<table class="rpt"><thead><tr><th>SKU</th><th>Ad spend</th><th>Doanh thu</th><th>SL bán</th><th>Đơn</th><th>CIR</th><th>Lợi nhuận</th></tr></thead><tbody>'+
+      (data.hardToSell.map(function(s){ return '<tr><td class="lbl">'+esc(s.product)+'</td><td class="num">'+fmtV(s.adSpend)+'</td><td class="num">'+fmtV(s.revenue)+'</td><td class="num">'+fmtN(s.units)+'</td><td class="num">'+fmtN(s.orders)+'</td><td class="num neg">'+fmtP(s.cir)+'</td><td class="num '+(s.profit>=0?'pos':'neg')+'">'+fmtV(s.profit)+'</td></tr>'; }).join("")||'<tr><td colspan="7" class="muted">Không có SKU khó bán đáng kể.</td></tr>')+'</tbody></table>';
+
+    var s2a='<h4>🎯 HIỆU SUẤT THEO KÊNH (so với kỳ trước '+esc(prevLabel)+')</h4>'+
+      '<table class="rpt"><thead><tr><th>Kênh</th><th>Spend (Σ)</th><th>ΔSpend</th><th>DT tạm tính</th><th>ΔDT</th><th>Đơn (deliv)</th><th>CIR</th><th>Conv/Click</th><th>CPA</th><th>ΔCPA</th><th>Lợi nhuận</th></tr></thead><tbody>'+
+      data.channels.map(function(c){ return '<tr '+(c.underperforming?'class="row-warn"':'')+'><td class="lbl">'+esc(c.label)+(c.underperforming?' <span class="badge-warn">⚠ CIR cao</span>':'')+'</td><td class="num">'+fmtV(c.totalSpendInclUnmatch)+'</td><td class="num">'+fmtDelta(c.spendDelta)+'</td><td class="num">'+fmtV(c.revPending)+'</td><td class="num">'+fmtDelta(c.revDelta)+'</td><td class="num">'+fmtN(c.ordersFinal)+'</td><td class="num">'+fmtP(c.cir)+'</td><td class="num">'+fmtP(c.convRate)+'</td><td class="num">'+(c.cpa==null?"—":fmtV(c.cpa))+'</td><td class="num">'+fmtDeltaNeg(c.cpaDelta)+'</td><td class="num '+(c.profit>=0?'pos':'neg')+'">'+fmtV(c.profit)+'</td></tr>'; }).join("")+
+      '</tbody></table><p class="muted" style="margin-top:-8px">Conv/Click = tỉ lệ chuyển đổi FB Ads (chỉ kênh có spend FB) · ΔCPA: ▼ xanh = giảm CPA = tốt · ⚠ CIR cao = CIR &gt; 1.2× trung bình các kênh.</p>';
+
+    var s2b='<div class="metric-row"><div class="metric-card"><div class="metric-label">CPA trung bình FB Ads (DUY + PN)</div><div class="metric-value">'+(data.cpaAvg.cur==null?"—":fmtV(data.cpaAvg.cur))+'</div><div class="metric-sub">Kỳ trước: '+(data.cpaAvg.prev==null?"—":fmtV(data.cpaAvg.prev))+' · '+fmtDeltaNeg(data.cpaAvg.delta)+'</div></div>'+
+      '<div class="metric-card"><div class="metric-label">AOV — Giá trị đơn TB toàn công ty</div><div class="metric-value">'+(data.aovAvg.cur==null?"—":fmtV(data.aovAvg.cur))+'</div><div class="metric-sub">Kỳ trước: '+(data.aovAvg.prev==null?"—":fmtV(data.aovAvg.prev))+' · '+fmtDelta(data.aovAvg.delta)+' · '+fmtN(data.aovAvg.orders)+' đơn chốt</div></div></div>'+
+      '<p class="muted" style="margin-top:-8px">AOV = Tổng DT chốt (delivered) ÷ Tổng đơn chốt · AOV tăng (▲ xanh) = tốt.</p>'+
+      (function(){ var PL=data.productLines||{}; var lineRow=function(name,L){ if(!L)return"";
+          return '<tr><td class="lbl">'+name+'</td><td class="num">'+fmtV(L.adSpend)+'</td><td class="num">'+fmtN(L.orders)+'</td><td class="num">'+fmtV(L.revenue)+'</td><td class="num">'+(L.cpa==null?"—":fmtV(L.cpa))+'</td><td class="num">'+fmtDeltaNeg(L.cpaDelta)+'</td><td class="num">'+(L.aov==null?"—":fmtV(L.aov))+'</td><td class="num">'+fmtDelta(L.aovDelta)+'</td></tr>'; };
+        return '<h4>📦 CPA &amp; AOV THEO DÒNG SẢN PHẨM (Doscom vs Noma)</h4>'+
+          '<table class="rpt"><thead><tr><th>Dòng SP</th><th>Ad spend (FB)</th><th>Đơn</th><th>Doanh thu</th><th>CPA</th><th>ΔCPA</th><th>AOV</th><th>ΔAOV</th></tr></thead><tbody>'+
+          lineRow("Doscom",PL.doscom)+lineRow("Noma",PL.noma)+'</tbody></table>'+
+          '<p class="muted" style="margin-top:-8px">CPA = Ad spend FB ÷ đơn (Pancake) · AOV = Doanh thu ÷ đơn · Noma = Noma 911/922/250, Doscom = các SKU còn lại · ΔCPA ▼ xanh = tốt, ΔAOV ▲ xanh = tốt.</p>'; })();
+
+    var campRowFmt=function(c){ return '<tr><td class="lbl" style="max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(c.name)+'"><span class="staff-chip staff-'+esc(c.staff)+'">'+esc(c.staff)+'</span> '+esc(c.name)+'</td><td class="num">'+fmtV(c.spend)+'</td><td class="num">'+fmtN(c.impressions)+'</td><td class="num">'+fmtN(c.clicks)+'</td><td class="num">'+fmtP(c.ctr)+'</td><td class="num">'+fmtN(c.regs)+'</td><td class="num">'+(c.cpa==null?"—":fmtV(c.cpa))+'</td></tr>'; };
+    var s2c='<h4>🚨 CAMPAIGN LỖ / VƯỢT NGÂN SÁCH (spend &gt; 1.2× trung bình, 0 đơn hoặc CPA &gt; 250k)</h4>'+
+      '<table class="rpt"><thead><tr><th>Campaign</th><th>Spend</th><th>Impr</th><th>Clicks</th><th>CTR</th><th>Conv</th><th>CPA</th></tr></thead><tbody>'+(data.campaigns.overspend.map(campRowFmt).join("")||'<tr><td colspan="7" class="muted">Không có campaign vượt ngưỡng.</td></tr>')+'</tbody></table>';
+
+    var s3='<div class="grid-2"><div><h4>🏆 TOP 5 CAMPAIGN CTR CAO NHẤT (creative tốt)</h4>'+
+      '<table class="rpt"><thead><tr><th>Campaign</th><th>Spend</th><th>Impr</th><th>Clicks</th><th>CTR</th><th>Conv</th><th>CPA</th></tr></thead><tbody>'+(data.campaigns.topCtr.map(campRowFmt).join("")||'<tr><td colspan="7" class="muted">Không có data.</td></tr>')+'</tbody></table></div>'+
+      '<div><h4>📉 BOTTOM 5 CAMPAIGN CTR (creative cần làm mới)</h4>'+
+      '<table class="rpt"><thead><tr><th>Campaign</th><th>Spend</th><th>Impr</th><th>Clicks</th><th>CTR</th><th>Conv</th><th>CPA</th></tr></thead><tbody>'+(data.campaigns.bottomCtr.map(campRowFmt).join("")||'<tr><td colspan="7" class="muted">Không có data.</td></tr>')+'</tbody></table></div></div>'+
+      '<h4>🎯 TOP 5 CAMPAIGN CVR CAO NHẤT (conversion rate từ click)</h4>'+
+      '<table class="rpt"><thead><tr><th>Campaign</th><th>Spend</th><th>Clicks</th><th>Conv</th><th>CVR (Conv/Click)</th><th>CPA</th></tr></thead><tbody>'+
+      (data.campaigns.topCvr.map(function(c){ return '<tr><td class="lbl" style="max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(c.name)+'"><span class="staff-chip staff-'+esc(c.staff)+'">'+esc(c.staff)+'</span> '+esc(c.name)+'</td><td class="num">'+fmtV(c.spend)+'</td><td class="num">'+fmtN(c.clicks)+'</td><td class="num">'+fmtN(c.regs)+'</td><td class="num pos">'+fmtP(c.convRate)+'</td><td class="num">'+(c.cpa==null?"—":fmtV(c.cpa))+'</td></tr>'; }).join("")||'<tr><td colspan="6" class="muted">Không có data.</td></tr>')+'</tbody></table>';
+
+    var totalBudget=data.budgetBySku.reduce(function(s,x){return s+x.spend;},0);
+    var s4a='<h4>💰 NGÂN SÁCH FB ADS THEO SẢN PHẨM</h4>'+
+      '<table class="rpt"><thead><tr><th>SKU</th><th>Spend</th><th>% Tổng</th><th>Conv (đơn)</th><th>CPA</th><th>ROI (LN/Spend)</th></tr></thead><tbody>'+
+      data.budgetBySku.map(function(b){ var sku=data.skuList.find(function(s){return s.product===b.product;})||{}; return '<tr><td class="lbl">'+esc(b.product)+'</td><td class="num">'+fmtV(b.spend)+'</td><td class="num">'+fmtP(b.share)+'</td><td class="num">'+fmtN(sku.orders)+'</td><td class="num">'+(sku.cpa==null?"—":fmtV(sku.cpa))+'</td><td class="num">'+(sku.roi==null?"—":sku.roi.toFixed(2)+"x")+'</td></tr>'; }).join("")+
+      '<tr class="total"><td class="lbl">TỔNG FB ADS</td><td class="num">'+fmtV(totalBudget)+'</td><td class="num">100.0%</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr></tbody></table>';
+
+    var s4b=data.googleCategories.length?('<h4>🔍 NGÂN SÁCH GOOGLE ADS THEO CATEGORY (Match vs Unmatch 14 SP)</h4>'+
+      '<table class="rpt"><thead><tr><th>Category</th><th>Spend</th><th>% Tổng Google</th><th>Khớp 14 SP?</th></tr></thead><tbody>'+
+      data.googleCategories.map(function(g){ var total=data.googleSplit.match+data.googleSplit.unmatch; return '<tr><td class="lbl">'+esc(g.category)+'</td><td class="num">'+fmtV(g.spend)+'</td><td class="num">'+fmtP(total>0?g.spend/total*100:0)+'</td><td class="num">'+(g.matched?'<span class="badge-ok">✓ Match</span>':'<span class="badge-warn">⚠ Unmatch</span>')+'</td></tr>'; }).join("")+
+      '<tr class="total"><td class="lbl">TỔNG</td><td class="num">'+fmtV(data.googleSplit.match+data.googleSplit.unmatch)+'</td><td class="num">100%</td><td class="num">Match: '+fmtV(data.googleSplit.match)+' · Unmatch: '+fmtV(data.googleSplit.unmatch)+'</td></tr></tbody></table>'+
+      '<p class="muted"><b>Match</b> = MAYDO/DINHVI/GHIAM/CAMCALL… khớp 14 PROFIT_PRODUCTS, tính vào profit attribution WEBSITE.<br><b>Unmatch</b> = SP ngoài 14 SKU (razor, sim…), Pancake không track riêng → profit attribution phần này chưa chính xác.</p>'):"";
+
+    return '<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8">'+
+      '<title>Báo cáo họp giao ban '+esc(data.range.start)+' → '+esc(data.range.end)+'</title>'+
+      '<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">'+
+      '<style>*{box-sizing:border-box}'+
+      'body{font-family:Nunito,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;padding:20px;background:#F5F7FB;color:#111A2E;font-size:13px}'+
+      '.toolbar{position:sticky;top:0;background:#fff;border-bottom:2px solid #E6ECF6;padding:10px 16px;margin:-20px -20px 20px;display:flex;gap:10px;align-items:center;z-index:10}'+
+      '.toolbar h1{margin:0;font-size:16px;color:#2440C4;font-weight:800}.toolbar .subtitle{font-size:11px;color:#5A6478;margin-left:8px}'+
+      '.btn{padding:6px 14px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;border:none;font-family:Nunito}'+
+      '.btn-primary{background:#3257E6;color:#fff}.btn-primary:hover{background:#2440C4}.btn-secondary{background:#EEF2FA;color:#374151}'+
+      'h2{font-size:16px;color:#2440C4;margin:28px 0 12px;padding:8px 12px;background:#E8EEFF;border-left:4px solid #3257E6;border-radius:8px}'+
+      'h4{font-size:12.5px;color:#374151;margin:14px 0 4px;font-weight:800}'+
+      '.meta{background:#fff;padding:12px 16px;border-radius:12px;border:1px solid #E6ECF6;margin-bottom:16px;font-size:11.5px}.meta b{color:#2440C4}'+
+      'table.rpt{width:100%;border-collapse:collapse;background:#fff;font-size:11px;margin-bottom:10px;page-break-inside:avoid}'+
+      'table.rpt th{background:#F3F6FC;border:1px solid #D9E2F0;padding:6px 8px;text-align:left;font-weight:800;color:#374151;font-size:10.5px}'+
+      'table.rpt td{border:1px solid #E6ECF6;padding:5px 8px}table.rpt .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}'+
+      'table.rpt .lbl{font-weight:600}table.rpt .total{background:#F7F9FD;font-weight:800}table.rpt .total td{border-top:2px solid #9DB2D6}'+
+      'table.rpt .pos{color:#16A34A;font-weight:700}table.rpt .neg{color:#E5484D;font-weight:700}table.rpt .row-warn{background:#FEF3C7}'+
+      '.muted{color:#94A3B8;font-weight:500;font-size:10.5px;line-height:1.5}'+
+      '.badge-warn{display:inline-block;padding:1px 6px;background:#FDE68A;color:#92400E;border-radius:4px;font-size:9.5px;font-weight:800}'+
+      '.badge-ok{display:inline-block;padding:1px 6px;background:#BBF7D0;color:#166534;border-radius:4px;font-size:9.5px;font-weight:800}'+
+      '.staff-chip{display:inline-block;padding:1px 6px;border-radius:4px;font-size:9.5px;font-weight:800;margin-right:4px}'+
+      '.staff-DUY{background:#DBE5FE;color:#2440C4}.staff-PHUONG_NAM{background:#EDE9FE;color:#6D28D9}.staff-\\?{background:#EEF2FA;color:#5A6478}'+
+      '.delta-up{color:#16A34A;font-weight:700}.delta-down{color:#E5484D;font-weight:700}.delta-zero{color:#94A3B8}'+
+      '.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px}'+
+      '.kpi-card{padding:14px 18px;border-radius:14px;margin-bottom:12px;border:2px solid}'+
+      '.kpi-good{background:#DCFCE7;border-color:#16A34A}.kpi-on-track{background:#FEF9C3;border-color:#CA8A04}.kpi-behind{background:#FEE2E2;border-color:#E5484D}'+
+      '.kpi-label{font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px}'+
+      '.kpi-main{font-size:22px;font-weight:900;margin:4px 0;color:#111A2E}'+
+      '.kpi-bar{height:8px;background:#fff;border-radius:4px;overflow:hidden;margin:6px 0;border:1px solid #D9E2F0}'+
+      '.kpi-fill{height:100%;background:linear-gradient(90deg,#16A34A,#22C55E)}.kpi-behind .kpi-fill{background:linear-gradient(90deg,#E5484D,#F87171)}'+
+      '.kpi-sub{font-size:11.5px;color:#374151;margin-top:4px}'+
+      '.metric-row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}'+
+      '.metric-card{flex:0 0 280px;background:#fff;padding:10px 14px;border-radius:12px;border:1px solid #E6ECF6}'+
+      '.metric-label{font-size:10.5px;color:#5A6478;text-transform:uppercase;font-weight:700}'+
+      '.metric-value{font-size:18px;font-weight:900;color:#111A2E;margin:2px 0}.metric-sub{font-size:11px;color:#374151}'+
+      '.manual-note{background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:12px 16px;margin:18px 0}'+
+      '@media print{body{background:#fff;padding:8mm;font-size:10px}.toolbar{display:none}table.rpt{font-size:9px;page-break-inside:avoid}.kpi-card{page-break-inside:avoid}h2{page-break-after:avoid;background:#fff;border-left:3px solid #3257E6}h4{page-break-after:avoid}.manual-note{page-break-inside:avoid}}'+
+      '</style></head><body>'+
+      '<div class="toolbar"><h1>📊 Báo cáo họp giao ban tuần — Marketing Doscom</h1>'+
+      '<span class="subtitle">'+esc(dateLabel)+' · so kỳ '+esc(prevLabel)+' · Xuất lúc '+esc(data.generatedAt)+'</span>'+
+      '<span style="margin-left:auto"></span><button class="btn btn-primary" onclick="window.print()">🖨 In / Lưu PDF</button>'+
+      '<button class="btn btn-secondary" onclick="window.close()">Đóng</button></div>'+
+      '<div class="meta"><b>Khoảng báo cáo:</b> '+esc(dateLabel)+' · <b>Kỳ so sánh:</b> '+esc(prevLabel)+
+      ' · <b>Nguồn:</b> FB Ads + Google Ads (Windsor.ai) + Pancake POS · <b>Lợi nhuận</b> = DT − VAT 10% − Ad spend (match) − Giá nhập × SL bán.</div>'+
+      '<h2>1. Hiệu suất Kinh doanh</h2>'+s1aKpi+s1b+s1c+s1d+
+      '<h2>2. Dữ liệu – Hiệu suất</h2>'+s2a+s2b+s2c+
+      '<h2>3. Nội dung &amp; Sáng tạo (creative proxy: CTR · CVR)</h2>'+s3+
+      '<h2>4. Quảng cáo &amp; Chiến dịch</h2>'+s4a+s4b+
+      (data.nomaHtml||"")+
+      '<p style="text-align:center;color:#94A3B8;font-size:10px;margin-top:30px">CRM Doscom · crm-doscom.pages.dev · Báo cáo tự sinh từ data '+esc(data.generatedAt)+'</p>'+
+      '</body></html>';
+  }
+
+  // Xuất báo cáo theo khoảng ĐANG CHỌN trên bộ lọc (mở app mặc định = toàn kỳ).
   function exportWeekly(){
-    var saved={start:range.start,end:range.end};
-    var wk=presetRange('last-week');
-    range={start:(wk.start<MIN?MIN:wk.start),end:wk.end};
-    var fb=fbSpend(), gg=ggSpend(), tot=fb+gg, rev=pkRevenue(), orders=pkOrders();
-    var cir=rev>0?(tot/rev*100):0;
-    var staff=SOURCES.map(function(s){ var sp=staffSpend(s), rv=srcRevenue(s.key), od=srcOrders(s.key); return {label:s.label,sp:sp,rv:rv,od:od,roas:sp>0?rv/sp:null}; });
-    var nomaUrl='/api/noma911/stats?from='+range.start+'&to='+range.end;
+    var rs=range.start, re=range.end;
+    if(!rs||!re){ alert('Chọn khoảng thời gian báo cáo.'); return; }
+    if(rs>re){ alert('Ngày bắt đầu phải ≤ ngày kết thúc.'); return; }
+    var nomaUrl='/api/noma911/stats?from='+rs+'&to='+re;
     fetch(nomaUrl,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}).then(function(N){
-      range=saved; // khôi phục view
-      var rowsHtml=staff.map(function(x){ return '<tr><td>'+x.label+'</td><td class="n">'+(x.sp>0?vnd(x.sp):'—')+'</td><td class="n">'+vnd(x.rv)+'</td><td class="n">'+(x.roas!=null?x.roas.toFixed(2)+'×':'—')+'</td><td class="n">'+num(x.od)+'</td></tr>'; }).join('');
-      var nomaHtml='';
-      if(N&&N.summary){
-        var cb=(N.by_combo||[]).slice().sort(function(a,b){return b.orders-a.orders;});
-        var totO=N.summary.orders||0, comboO=cb.reduce(function(t,c){return t+(c.combo!=='le-911'?c.orders:0);},0);
-        nomaHtml='<h2>Noma911 — đơn đăng ký landing</h2><p>Tổng <b>'+num(totO)+'</b> đơn · tỉ lệ combo <b>'+(totO?(comboO/totO*100).toFixed(1):0)+'%</b> · đã giao '+num((N.actual||{}).orders_delivered)+' (chốt '+((N.actual||{}).conversion_rate||0)+'%)</p><table><thead><tr><th>Combo</th><th class="n">Đơn</th><th class="n">% tổng</th><th class="n">DT đăng ký</th></tr></thead><tbody>'+cb.map(function(c){return '<tr><td>'+(c.combo_label||c.combo)+'</td><td class="n">'+num(c.orders)+'</td><td class="n">'+(totO?(c.orders/totO*100).toFixed(1):0)+'%</td><td class="n">'+vnd(c.revenue)+'</td></tr>';}).join('')+'</tbody></table>';
-      }
-      var html='<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><title>Báo cáo tuần — Doscom ('+wk.start+' → '+wk.end+')</title>'+
-        '<style>@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap");'+
-        'body{font-family:Nunito,system-ui,sans-serif;color:#111A2E;max-width:900px;margin:24px auto;padding:0 20px;font-size:14px}'+
-        'h1{font-size:24px;margin:0 0 2px;color:#2440C4}h2{font-size:16px;margin:22px 0 8px;border-left:4px solid #3257E6;padding-left:9px}'+
-        '.sub{color:#5A6478;font-weight:600;margin:0 0 18px}'+
-        '.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}'+
-        '.k{border:1px solid #E6ECF6;border-radius:10px;padding:11px}.k .l{font-size:11px;color:#5A6478;font-weight:700}.k .v{font-size:18px;font-weight:800;margin-top:3px}'+
-        'table{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}th,td{padding:7px 9px;border-bottom:1px solid #E6ECF6;text-align:left}th{font-size:11px;text-transform:uppercase;color:#5A6478}.n{text-align:right;font-variant-numeric:tabular-nums}'+
-        '.foot{margin-top:24px;color:#94A3B8;font-size:11px}'+
-        '@media print{.noprint{display:none}body{margin:0}}'+
-        '.noprint{position:fixed;top:14px;right:14px}.pbtn{background:#2440C4;color:#fff;border:0;border-radius:9px;padding:9px 15px;font-weight:800;cursor:pointer;font-family:Nunito}</style></head><body>'+
-        '<div class="noprint"><button class="pbtn" onclick="window.print()">🖨️ In / Lưu PDF</button></div>'+
-        '<h1>Báo cáo tuần — Doscom Ads</h1>'+
-        '<p class="sub">Tuần trước: '+wk.start+' → '+wk.end+' · số liệu thật từ dashboard</p>'+
-        '<div class="kpis"><div class="k"><div class="l">Chi tiêu QC</div><div class="v">'+vnd(tot)+'</div></div>'+
-        '<div class="k"><div class="l">Doanh thu Pancake</div><div class="v">'+vnd(rev)+'</div></div>'+
-        '<div class="k"><div class="l">CIR</div><div class="v">'+cir.toFixed(1)+'%</div></div>'+
-        '<div class="k"><div class="l">Tổng đơn</div><div class="v">'+num(orders)+'</div></div></div>'+
-        '<h2>Theo nhân sự / nguồn</h2><table><thead><tr><th>Nguồn</th><th class="n">Chi phí QC</th><th class="n">Doanh thu</th><th class="n">ROAS</th><th class="n">Đơn</th></tr></thead><tbody>'+rowsHtml+'</tbody></table>'+
-        nomaHtml+
-        '<p class="foot">Xuất từ CRM Doscom · crm-doscom.pages.dev</p>'+
-        '<script>setTimeout(function(){window.print()},600)<\/script></body></html>';
-      var w=window.open('','_blank');
-      if(w){ w.document.open(); w.document.write(html); w.document.close(); }
-      else { alert('Trình duyệt chặn cửa sổ bật lên — hãy cho phép pop-up để xuất báo cáo.'); }
+      try{
+        var data=buildWeeklyReportData(rs,re);
+        data.nomaHtml=buildNomaReportHtml(N);
+        var html=renderWeeklyReportHtml(data);
+        var w=window.open('','_blank');
+        if(w){ w.document.open(); w.document.write(html); w.document.close(); }
+        else { alert('Trình duyệt chặn cửa sổ bật lên — hãy cho phép pop-up để xuất báo cáo.'); }
+      }catch(e){ console.error(e); alert('Lỗi khi tạo báo cáo: '+(e.message||e)); }
     });
   }
   document.getElementById('btnExport').addEventListener('click',exportWeekly);
@@ -555,13 +1054,110 @@
       .then(function(r){return r.ok?r.json():null;}).then(renderNoma).catch(function(){renderNoma(null);});
   }
 
+  // ===== AGENT PHÂN TÍCH FB ADS — gọi /api/agent-fb-ai (Claude Haiku) =====
+  (function(){
+    var AG_MODES=[
+      {k:'audit_account',  label:'Audit tài khoản'},
+      {k:'analyze_metrics',label:'Phân tích chỉ số'},
+      {k:'audit_funnel',   label:'Phân tích funnel'},
+      {k:'staff_overview', label:'Tổng quan nhân sự'},
+      {k:'ask',            label:'Hỏi tự do'}
+    ];
+    var agMode='audit_account', agBusy=false;
+    var elModes=document.getElementById('ag-modes');
+    var elRun=document.getElementById('ag-run'), elRefresh=document.getElementById('ag-refresh');
+    var elStaffWrap=document.getElementById('ag-staff-wrap'), elQWrap=document.getElementById('ag-q-wrap');
+    var elMeta=document.getElementById('ag-meta'), elResult=document.getElementById('ag-result');
+    if(!elModes) return;
+
+    function renderModes(){
+      elModes.innerHTML=AG_MODES.map(function(m){ return '<button class="ag-mode'+(m.k===agMode?' on':'')+'" data-mode="'+m.k+'">'+m.label+'</button>'; }).join('');
+      elStaffWrap.style.display = agMode==='staff_overview'?'flex':'none';
+      elQWrap.style.display = agMode==='ask'?'block':'none';
+    }
+    elModes.addEventListener('click',function(e){ var b=e.target.closest('[data-mode]'); if(!b)return; agMode=b.getAttribute('data-mode'); renderModes(); });
+    renderModes();
+
+    // markdown → html (gọn: heading, bold/italic/code, list, bảng)
+    function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function inlineMd(s){ return esc(s).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/(^|[^*])\*([^*]+)\*/g,'$1<i>$2</i>').replace(/`([^`]+)`/g,'<code>$1</code>'); }
+    function mdToHtml(md){
+      if(!md) return '';
+      var lines=String(md).split(/\r?\n/), html='', inUl=false, inOl=false, tbuf=[];
+      function closeLists(){ if(inUl){html+='</ul>';inUl=false;} if(inOl){html+='</ol>';inOl=false;} }
+      function flushTable(){ if(tbuf.length<2){ tbuf=[]; return; }
+        html+='<table class="ag-tbl"><thead><tr>'+tbuf[0].map(function(c){return '<th>'+inlineMd(c)+'</th>';}).join('')+'</tr></thead><tbody>';
+        for(var i=2;i<tbuf.length;i++){ html+='<tr>'+tbuf[i].map(function(c){return '<td>'+inlineMd(c)+'</td>';}).join('')+'</tr>'; }
+        html+='</tbody></table>'; tbuf=[];
+      }
+      lines.forEach(function(ln){
+        var t=ln.trim();
+        if(/^\|.*\|$/.test(t)){ closeLists(); tbuf.push(t.replace(/^\||\|$/g,'').split('|').map(function(x){return x.trim();})); return; }
+        if(tbuf.length){ flushTable(); }
+        if(/^#{1,6}\s/.test(t)){ closeLists(); var lvl=Math.min(t.match(/^#+/)[0].length+2,6); html+='<h'+lvl+' class="ag-h">'+inlineMd(t.replace(/^#+\s/,''))+'</h'+lvl+'>'; return; }
+        if(/^[-*]\s/.test(t)){ if(inOl){html+='</ol>';inOl=false;} if(!inUl){html+='<ul>';inUl=true;} html+='<li>'+inlineMd(t.replace(/^[-*]\s/,''))+'</li>'; return; }
+        if(/^\d+\.\s/.test(t)){ if(inUl){html+='</ul>';inUl=false;} if(!inOl){html+='<ol>';inOl=true;} html+='<li>'+inlineMd(t.replace(/^\d+\.\s/,''))+'</li>'; return; }
+        if(t===''){ closeLists(); return; }
+        closeLists(); html+='<p>'+inlineMd(t)+'</p>';
+      });
+      if(tbuf.length) flushTable();
+      closeLists();
+      return html;
+    }
+
+    function setBusy(b){ agBusy=b; elRun.disabled=b; elRefresh.disabled=b;
+      elRun.textContent=b?'⏳ Đang phân tích…':'⚡ Chạy phân tích'; }
+
+    function runAgent(force){
+      if(agBusy) return;
+      var body={ mode:agMode, group:document.getElementById('ag-group').value, time_preset:document.getElementById('ag-time').value, model:'big' };
+      if(agMode==='staff_overview') body.staff=document.getElementById('ag-staff').value;
+      if(agMode==='ask'){ var q=(document.getElementById('ag-q').value||'').trim(); if(!q){ elResult.innerHTML='<span style="color:var(--danger)">Nhập câu hỏi trước khi chạy.</span>'; return; } body.question=q; }
+      if(force) body.force_refresh=true;
+      setBusy(true);
+      elMeta.innerHTML='';
+      elResult.innerHTML='<span class="ag-spin">⏳ Đang gọi AI phân tích… (thường 10–30 giây)</span>';
+      fetch('/api/agent-fb-ai',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
+        .then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
+        .then(function(res){
+          setBusy(false);
+          var j=res.j||{};
+          if(res.status!==200 || j.error){
+            var hint = (res.status===401)?' (endpoint đang yêu cầu đăng nhập)':'';
+            var dbg = j.claude_debug?(' · '+(j.claude_debug.has_anthropic_key?'có key':'CHƯA set ANTHROPIC_API_KEY')):'';
+            elResult.innerHTML='<span style="color:var(--danger)">⚠️ Lỗi: '+esc(j.error||('HTTP '+res.status))+hint+dbg+'</span>';
+            return;
+          }
+          var meta=[];
+          meta.push('<span class="pill">Model: '+esc(j.model||'—')+'</span>');
+          meta.push('<span class="pill">Nhóm: '+esc(j.group_label||j.group||'—')+'</span>');
+          if(j.comparison_range) meta.push('<span class="pill">So kỳ: '+esc(j.comparison_range.start||'')+'→'+esc(j.comparison_range.end||'')+'</span>');
+          if(j.cached) meta.push('<span class="pill" style="color:var(--warn)">⚡ Cache '+esc(j.cached_at||'')+'</span>');
+          if(j.claude_used) meta.push('<span class="pill" style="color:var(--success)">Claude ✓</span>');
+          elMeta.innerHTML=meta.join('');
+          var out='';
+          if(j.parsed_json && typeof j.parsed_json==='object'){
+            out=mdToHtml(j.response && !/^\s*[\{\[]/.test(j.response) ? j.response : '')
+              + '<div class="ag-json">'+esc(JSON.stringify(j.parsed_json,null,2))+'</div>';
+          } else {
+            out=mdToHtml(j.response||'(không có nội dung)');
+          }
+          elResult.innerHTML=out||'(không có nội dung)';
+        })
+        .catch(function(err){ setBusy(false); elResult.innerHTML='<span style="color:var(--danger)">⚠️ Lỗi mạng: '+esc(err.message||err)+'</span>'; });
+    }
+    elRun.addEventListener('click',function(){ runAgent(false); });
+    elRefresh.addEventListener('click',function(){ runAgent(true); });
+  })();
+
   fetch('./data/dashboard-data.json',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
     D=d;
     // tìm min/max ngày từ total_orders_by_date
     var dd=Object.keys(((D.revenue||{}).total_orders_by_date)||{}); dd.sort();
     MIN=dd[0]||'2026-01-01'; MAX=dd[dd.length-1]||MIN;
-    document.getElementById('dt-start').min=MIN; document.getElementById('dt-start').max=MAX;
-    document.getElementById('dt-end').min=MIN; document.getElementById('dt-end').max=MAX;
+    var DMAX=(TODAY>MAX?TODAY:MAX); // cho phép chọn tới hôm nay thật, kể cả khi data chưa có
+    document.getElementById('dt-start').min=MIN; document.getElementById('dt-start').max=DMAX;
+    document.getElementById('dt-end').min=MIN; document.getElementById('dt-end').max=DMAX;
     var gen=(D.generated_at)||((D.revenue||{}).generated_at)||'';
     document.getElementById('fresh').innerHTML='<span class="pulse"></span>'+(gen?('cập nhật '+gen):'');
     document.getElementById('foot-fresh').textContent=gen?('cập nhật '+gen):'';

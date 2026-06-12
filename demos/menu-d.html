@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Demo D — Hub thẻ · CRM Doscom</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  :root{--primary:#3257E6;--primary-700:#2440C4;--violet:#8B5CF6;--accent:#F59E0B;--green:#16A34A;--teal:#14B8A6;--sky:#0EA5E9;--pink:#F472B6;--bg:#F5F7FB;--surface:#fff;--surface-2:#FBFCFE;--text:#111A2E;--text-2:#5A6478;--muted:#EEF2FA;--border:#E6ECF6;--warn:#E08600;--radius:18px;--t:.2s cubic-bezier(.4,0,.2,1);--shadow:0 6px 18px -8px rgba(50,87,230,.18);--shadow-lg:0 22px 44px -22px rgba(50,87,230,.30);--font:'Nunito',system-ui,sans-serif}
+  *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;background-image:radial-gradient(1100px 460px at 100% -8%,rgba(91,141,239,.10),transparent 60%),radial-gradient(820px 400px at -8% 0%,rgba(139,92,246,.06),transparent 55%)}
+  .demo-bar{position:fixed;top:0;left:0;right:0;height:38px;background:#111A2E;color:#fff;display:flex;align-items:center;gap:14px;padding:0 16px;font-size:12.5px;font-weight:700;z-index:99}.demo-bar a{color:#9DB6FF;text-decoration:none;font-weight:800}.demo-bar b{color:#fff}
+  .app{display:grid;grid-template-columns:228px 1fr;min-height:100vh;padding-top:38px}
+  .sidebar{padding:20px 14px;display:flex;flex-direction:column;gap:3px;position:sticky;top:38px;height:calc(100vh - 38px);overflow-y:auto;background:linear-gradient(180deg,var(--surface),var(--surface-2));border-right:1px solid var(--border)}
+  .brand{display:flex;align-items:center;gap:11px;padding:6px 8px 16px}.brand-mark{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:19px;background:linear-gradient(140deg,var(--primary),var(--violet))}.brand b{font-size:16px;font-weight:800;line-height:1.1}.brand span{display:block;font-size:11px;color:var(--text-2)}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:11px;color:var(--text-2);font-weight:700;font-size:13.4px;cursor:pointer;border:0;background:none;width:100%;text-align:left;font-family:var(--font);transition:var(--t)}
+  .nav-item .ni{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--muted);color:var(--text-2);flex:none}.nav-item .ni svg{width:15px;height:15px}.nav-item:hover{background:var(--muted);color:var(--text)}.nav-item.active{background:linear-gradient(135deg,var(--primary),var(--primary-700));color:#fff}.nav-item.active .ni{background:rgba(255,255,255,.18);color:#fff}
+  .main{min-width:0}.topbar{display:flex;align-items:center;gap:12px;padding:14px 28px;position:sticky;top:38px;z-index:6;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}.topbar h1{font-size:18px;margin:0;font-weight:800}.spacer{flex:1}.seg b{background:var(--muted);color:var(--primary);padding:7px 13px;border-radius:9px;font-size:12.5px;font-weight:800}.btn{border:0;border-radius:10px;padding:8px 13px;font-weight:800;font-size:12.5px;color:#fff;background:linear-gradient(135deg,var(--accent),#D97706);font-family:var(--font)}
+  .content{padding:24px 28px 60px;max-width:1320px}.view{display:none}.view.active{display:block;animation:vi .25s}@keyframes vi{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+  .hero h2{font-size:24px;font-weight:800;margin:0 0 3px}.hero p{margin:0 0 20px;color:var(--text-2);font-size:13.5px}
+  .hub{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .card{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);cursor:pointer;transition:var(--t)}
+  .card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+  .card .ic{width:50px;height:50px;border-radius:14px;display:grid;place-items:center;color:#fff;margin-bottom:13px}.card .ic svg{width:24px;height:24px}
+  .card h3{font-size:16px;font-weight:800;margin:0 0 4px}.card p{font-size:12.5px;color:var(--text-2);margin:0;line-height:1.5}
+  .card .go{position:absolute;top:18px;right:18px;color:var(--text-2);opacity:.5;transition:var(--t)}.card:hover .go{opacity:1;transform:translateX(3px)}
+  .tag{display:inline-block;margin-top:11px;font-size:10.5px;font-weight:800;padding:2px 9px;border-radius:999px}.tag.on{background:color-mix(in srgb,var(--green) 15%,transparent);color:var(--green)}.tag.soon{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:17px;box-shadow:var(--shadow)}.kpi .l{font-size:12px;color:var(--text-2);font-weight:700}.kpi .v{font-size:23px;font-weight:800;margin:6px 0 0}
+  .bento{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.mod{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px}.mod h3{font-size:14.5px;margin:0 0 10px;font-weight:800}.ph{height:160px;border-radius:12px;background:repeating-linear-gradient(135deg,var(--muted),var(--muted) 12px,var(--surface-2) 12px,var(--surface-2) 24px);display:grid;place-items:center;color:var(--text-2);font-weight:700;font-size:12.5px}
+  .back{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--surface);color:var(--text-2);font-family:var(--font);font-weight:800;font-size:12.5px;padding:7px 12px;border-radius:10px;cursor:pointer;margin-bottom:14px}
+  .coming{display:flex;flex-direction:column;align-items:center;text-align:center;gap:13px;padding:60px 24px;background:var(--surface);border:2px dashed var(--border);border-radius:var(--radius)}.coming-ic{width:66px;height:66px;border-radius:19px;display:grid;place-items:center;color:#fff;background:linear-gradient(140deg,var(--primary),var(--violet))}.coming-ic svg{width:30px;height:30px}.coming h3{margin:0;font-size:18px;font-weight:800}.coming p{max-width:440px;color:var(--text-2);margin:0;font-size:13.5px;line-height:1.6}.wip{font-size:11px;font-weight:800;background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn);padding:4px 13px;border-radius:999px}
+</style></head>
+<body>
+<div class="demo-bar"><b>DEMO D · Hub thẻ lớn</b> — bấm thẻ hoặc menu để vào module · <a href="menu-a.html">→ A</a> <a href="menu-b.html">→ B</a> <a href="menu-c.html">→ C</a></div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">D</div><div><b>CRM Doscom</b><span>Tổng quan vận hành</span></div></div>
+    <button class="nav-item active" data-v="home"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg></span>Trang chủ</button>
+    <button class="nav-item" data-v="dashboard"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>Tổng quan Dashboard</button>
+    <button class="nav-item" data-v="fb"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M9 2h6M8 13h.01M16 13h.01M9 17h6"/></svg></span>Agent Facebook Ads</button>
+    <button class="nav-item" data-v="gg"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg></span>Agent Google Ads</button>
+    <button class="nav-item" data-v="ads"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-5v12L3 14zM11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></span>Tạo Ads tự động</button>
+    <button class="nav-item" data-v="geo"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></span>GEO Monitor</button>
+    <button class="nav-item" data-v="landing"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>Landing Builder</button>
+    <button class="nav-item" data-v="kho"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span>Kho tổng Doscom</button>
+  </aside>
+  <div class="main">
+    <header class="topbar"><h1 id="title">Trang chủ</h1><div class="spacer"></div><div class="seg" id="flt" style="display:none"><b>30 ngày ▾</b></div></header>
+    <main class="content">
+      <div class="view active" id="v-home">
+        <div class="hero"><h2>Chào mừng tới CRM Doscom 👋</h2><p>Chọn một module để bắt đầu</p></div>
+        <div class="hub" id="hub"></div>
+      </div>
+      <div class="view" id="v-dashboard">
+        <button class="back" onclick="show('home')">← Trang chủ</button>
+        <div class="hero"><h2>Toàn cảnh vận hành</h2><p>Số liệu thật · kỳ 30 ngày gần nhất</p></div>
+        <div class="kpis"><div class="kpi"><div class="l">Tổng chi tiêu QC</div><div class="v">1,16 tỷ₫</div></div><div class="kpi"><div class="l">Doanh thu Pancake</div><div class="v">3,82 tỷ₫</div></div><div class="kpi"><div class="l">CIR</div><div class="v">30,4%</div></div><div class="kpi"><div class="l">Tổng đơn</div><div class="v">8.214</div></div></div>
+        <div class="bento"><div class="mod"><h3>Chi tiêu theo kênh</h3><div class="ph">biểu đồ donut</div></div><div class="mod"><h3>Doanh thu theo nguồn</h3><div class="ph">biểu đồ cột</div></div></div>
+      </div>
+      <div class="view" id="v-fb"><button class="back" onclick="show('home')">← Trang chủ</button><div class="hero"><h2>Agent phân tích Facebook Ads</h2><p>AI Claude Haiku</p></div><div class="mod"><h3>Chế độ phân tích</h3><div class="ph">khung agent</div></div></div>
+      <div class="view" id="v-gg"></div><div class="view" id="v-ads"></div><div class="view" id="v-geo"></div><div class="view" id="v-landing"></div><div class="view" id="v-kho"></div>
+    </main>
+  </div>
+</div>
+<script>
+  var TT={home:'Trang chủ',dashboard:'Tổng quan Dashboard',fb:'Agent Facebook Ads',gg:'Agent Google Ads',ads:'Tạo Ads tự động',geo:'GEO Monitor',landing:'Landing Builder',kho:'Kho tổng Doscom'};
+  var CARDS=[
+    {v:'dashboard',t:'Tổng quan Dashboard',d:'KPI, doanh thu, lợi nhuận, theo nhân sự.',c:'#3257E6',on:1,ic:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'},
+    {v:'fb',t:'Agent Facebook Ads',d:'AI audit & phân tích hiệu suất FB Ads.',c:'#8B5CF6',on:1,ic:'<rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M9 2h6M8 13h.01M16 13h.01M9 17h6"/>'},
+    {v:'gg',t:'Agent Google Ads',d:'Phân tích keyword/banner Google Ads.',c:'#16A34A',on:0,ic:'<path d="M3 3v18h18M7 14l4-4 3 3 5-6"/>'},
+    {v:'ads',t:'Tạo Ads tự động',d:'Sinh & đăng campaign theo mẫu.',c:'#F59E0B',on:0,ic:'<path d="M3 11l18-5v12L3 14zM11.6 16.8a3 3 0 1 1-5.8-1.6"/>'},
+    {v:'geo',t:'GEO Monitor',d:'Theo dõi thứ hạng GEO/SEO, đối thủ.',c:'#0EA5E9',on:0,ic:'<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>'},
+    {v:'landing',t:'Landing Builder',d:'Dựng landing kéo-thả, xuất bản nhanh.',c:'#F472B6',on:0,ic:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>'},
+    {v:'kho',t:'Kho tổng Doscom',d:'Tồn kho, nhập-xuất, giá vốn.',c:'#14B8A6',on:0,ic:'<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>'}
+  ];
+  document.getElementById('hub').innerHTML=CARDS.map(function(k){return '<div class="card" data-v="'+k.v+'"><span class="go"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg></span><div class="ic" style="background:linear-gradient(140deg,'+k.c+','+k.c+'cc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'+k.ic+'</svg></div><h3>'+k.t+'</h3><p>'+k.d+'</p><span class="tag '+(k.on?'on':'soon')+'">'+(k.on?'● đang chạy':'sắp có')+'</span></div>';}).join('');
+  var DESC={gg:'Phân tích keyword/banner/category Google Ads bằng AI.',ads:'Tự sinh & đăng campaign theo mẫu, gợi ý ngân sách.',geo:'Theo dõi thứ hạng GEO/SEO, đối thủ, nội dung.',landing:'Dựng landing page kéo-thả, xuất bản nhanh.',kho:'Tồn kho, nhập-xuất, định giá vốn toàn Doscom.'};
+  function coming(v){return '<button class="back" onclick="show(\'home\')">← Trang chủ</button><div class="hero"><h2>'+TT[v]+'</h2></div><div class="coming"><div class="coming-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4"/></svg></div><h3>Đang phát triển</h3><p>'+DESC[v]+'</p><span class="wip">sắp có</span></div>';}
+  ['gg','ads','geo','landing','kho'].forEach(function(v){document.getElementById('v-'+v).innerHTML=coming(v);});
+  var items=document.querySelectorAll('.nav-item'),views=document.querySelectorAll('.view');
+  function show(v){items.forEach(function(b){b.classList.toggle('active',b.dataset.v===v);});views.forEach(function(e){e.classList.toggle('active',e.id==='v-'+v);});document.getElementById('title').textContent=TT[v];document.getElementById('flt').style.display=(v==='dashboard'||v==='fb')?'flex':'none';window.scrollTo(0,0);}
+  items.forEach(function(b){b.addEventListener('click',function(){show(b.dataset.v);});});
+  document.getElementById('hub').addEventListener('click',function(e){var c=e.target.closest('.card');if(c)show(c.dataset.v);});
+  show('home');
+</script>
+</body></html>

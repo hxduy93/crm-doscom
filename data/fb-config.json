@@ -1,0 +1,61 @@
+{
+  "_note": "Config tháng cho FB Ads agent. UI edit qua agent-facebook-doscom.html (đầu trang). Backend đọc qua /api/fb-config (KV) — file này là DEFAULT khi KV rỗng.",
+  "_registry_help": "account_to_groups = SỔ ĐĂNG KÝ tài khoản QC Facebook (single source of truth). Đây là NƠI DUY NHẤT khai báo tkqc — cả script fetch (scripts/fetch_fb_ads.py) lẫn backend đều đọc từ đây. Khi đổi agency/đổi tkqc: làm theo docs/SWITCH-AD-ACCOUNTS.md (chỉ sửa file này + chạy validate). Mỗi account: name (tên hiển thị), staff (DUY|PHUONG_NAM), groups (subset MAY_DO|CAMERA_VIDEO_CALL|GHI_AM|NOMA — 1 account chạy nhiều SP thì liệt kê nhiều group), active (true=fetch, false=ngừng fetch nhưng giữ lịch sử).",
+  "kpi_revenue_monthly_vnd": 1000000000,
+  "account_to_groups": {
+    "1449385949897024": {
+      "name": "CÔNG TY TNHH DOSCOM HOLDINGS - Công nghệ nâng tầm cuộc sống",
+      "staff": "DUY",
+      "groups": ["CAMERA_VIDEO_CALL", "GHI_AM"],
+      "active": true,
+      "products_note": "DA8.1 (camera video call) + DR1 (ghi âm)"
+    },
+    "927390616363424": {
+      "name": "Doscom - Công nghệ nâng tầm cuộc sống",
+      "staff": "DUY",
+      "groups": ["MAY_DO"],
+      "active": true,
+      "products_note": "D1 (máy dò)"
+    },
+    "1655506672244826": {
+      "name": "CÔNG TY TNHH DOSCOM HOLDINGS - Noma Việt Nam",
+      "staff": "DUY",
+      "groups": ["NOMA"],
+      "active": true,
+      "products_note": "Noma chăm sóc xe"
+    },
+    "764394829882083": {
+      "name": "Doscom - Noma.vn - Giải Pháp Chăm Sóc Xe Hơi Toàn Diện",
+      "staff": "PHUONG_NAM",
+      "groups": ["NOMA"],
+      "active": true,
+      "products_note": "Noma 911"
+    },
+    "906015559004892": {
+      "name": "Doscom Mart",
+      "staff": "PHUONG_NAM",
+      "groups": ["MAY_DO"],
+      "active": true,
+      "products_note": "D1 (máy dò) — LOANED to AI_AGENT từ 2026-05-29",
+      "loaned_to_staff": "AI_AGENT",
+      "loaned_from_date": "2026-05-29"
+    },
+    "1416634670476226": {
+      "name": "CÔNG TY TNHH DOSCOM HOLDINGS - Doscom Mart",
+      "staff": "PHUONG_NAM",
+      "groups": [],
+      "active": true,
+      "products_note": "Chưa chạy QC"
+    },
+    "1418124406240173": {
+      "name": "DA8.1 mới (PN, chưa chạy)",
+      "staff": "PHUONG_NAM",
+      "groups": ["CAMERA_VIDEO_CALL"],
+      "active": true,
+      "products_note": "DA8.1 (camera video call) — account mới chuẩn bị chạy"
+    }
+  },
+  "_note_906": "Account 906015559004892 (DoscomMart) — spend trước 2026-05-29 tính cho PHUONG_NAM (lịch sử giữ nguyên); từ 2026-05-29 trở đi spend tính cho AI_AGENT (xem fb-ads-auto-agent/). Logic backend phải check loaned_from_date: spend.date < loaned_from_date → staff = staff cũ; spend.date >= loaned_from_date → staff = loaned_to_staff. Khôi phục: xóa 2 field loaned_to_staff + loaned_from_date, sửa products_note về 'D1 (máy dò)'.",
+  "updated_at": "2026-05-29",
+  "updated_by": "doscom.vietnam@gmail.com (loan account 906 → AI_AGENT từ 2026-05-29)"
+}

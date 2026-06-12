@@ -14,6 +14,11 @@ import os
 import sys
 import urllib.request
 
+try:  # tránh crash khi console Windows không phải UTF-8 (chạy tay trên máy user)
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 # Có thể override bằng biến môi trường DATA_SOURCE_URL
 SRC = os.environ.get(
     "DATA_SOURCE_URL",
@@ -22,11 +27,39 @@ SRC = os.environ.get(
 OUT = os.path.join(os.path.dirname(__file__), "..", "data", "dashboard-data.json")
 TRIM_FIELDS = ["orders_minimal", "web_items_flat"]  # cấp-đơn, không dùng → bỏ cho gọn/an toàn
 
+# Data cho Agent FB Ads — copy NGUYÊN từ repo cũ (raw GitHub, public), không transform.
+FB_DATA_BASE = os.environ.get(
+    "FB_DATA_BASE",
+    "https://raw.githubusercontent.com/hxduy93/facebook-ads-dashboard/main/data",
+)
+FB_FILES = ["fb-ads-data.json", "product-revenue.json", "product-costs.json", "fb-config.json"]
+DATA_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "data"))
+
 
 def fetch_source() -> str:
     req = urllib.request.Request(SRC, headers={"User-Agent": "crm-doscom-refresh"})
     with urllib.request.urlopen(req, timeout=120) as r:
         return r.read().decode("utf-8")
+
+
+def _fetch_bytes(url: str) -> bytes:
+    req = urllib.request.Request(url, headers={"User-Agent": "crm-doscom-refresh"})
+    with urllib.request.urlopen(req, timeout=180) as r:
+        return r.read()
+
+
+def sync_fb_data():
+    """Kéo 4 file data cho Agent FB Ads. Lỗi 1 file không làm hỏng cả run."""
+    for name in FB_FILES:
+        url = f"{FB_DATA_BASE}/{name}"
+        try:
+            raw = _fetch_bytes(url)
+            json.loads(raw.decode("utf-8"))  # validate JSON trước khi ghi
+            with open(os.path.join(DATA_DIR, name), "wb") as fh:
+                fh.write(raw)
+            print(f"[refresh] FB OK -> {name} | {len(raw)} bytes")
+        except Exception as e:
+            print(f"[refresh] FB WARN {name}: {e}", file=sys.stderr)
 
 
 def extract_data_blob(html: str) -> dict:
@@ -70,6 +103,9 @@ def main():
     with open(out_path, "w", encoding="utf-8") as fh:
         json.dump(D, fh, ensure_ascii=False, separators=(",", ":"))
     print("[refresh] OK ->", out_path, "| generated_at=", gen, "|", os.path.getsize(out_path), "bytes")
+
+    print("[refresh] Đồng bộ data Agent FB Ads…")
+    sync_fb_data()
 
 
 if __name__ == "__main__":

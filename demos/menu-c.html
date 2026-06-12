@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Demo C — Tab ngang · CRM Doscom</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  :root{--primary:#3257E6;--primary-700:#2440C4;--violet:#8B5CF6;--accent:#F59E0B;--bg:#F5F7FB;--surface:#fff;--surface-2:#FBFCFE;--text:#111A2E;--text-2:#5A6478;--muted:#EEF2FA;--border:#E6ECF6;--warn:#E08600;--radius:18px;--t:.2s cubic-bezier(.4,0,.2,1);--shadow:0 6px 18px -8px rgba(50,87,230,.18);--font:'Nunito',system-ui,sans-serif}
+  *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;background-image:radial-gradient(1100px 460px at 100% -8%,rgba(91,141,239,.10),transparent 60%)}
+  .demo-bar{position:fixed;top:0;left:0;right:0;height:38px;background:#111A2E;color:#fff;display:flex;align-items:center;gap:14px;padding:0 16px;font-size:12.5px;font-weight:700;z-index:99}.demo-bar a{color:#9DB6FF;text-decoration:none;font-weight:800}.demo-bar b{color:#fff}
+  .topnav{position:sticky;top:38px;z-index:9;display:flex;align-items:center;gap:6px;padding:10px 20px;background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:9px;margin-right:10px}.brand-mark{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:16px;background:linear-gradient(140deg,var(--primary),var(--violet))}.brand b{font-size:15px;font-weight:800}
+  .tab{display:inline-flex;align-items:center;gap:7px;border:0;background:none;font-family:var(--font);font-weight:800;font-size:13px;color:var(--text-2);padding:9px 13px;border-radius:10px;cursor:pointer;transition:var(--t);white-space:nowrap}
+  .tab svg{width:16px;height:16px}.tab:hover{background:var(--muted);color:var(--text)}.tab.active{background:linear-gradient(135deg,var(--primary),var(--primary-700));color:#fff;box-shadow:0 10px 20px -10px var(--primary)}
+  .body{display:grid;grid-template-columns:200px 1fr;min-height:calc(100vh - 92px)}
+  .subnav{padding:18px 12px;border-right:1px solid var(--border);background:linear-gradient(180deg,var(--surface),var(--surface-2));display:flex;flex-direction:column;gap:3px}
+  .subnav .h{font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--text-2);font-weight:800;padding:6px 12px}
+  .sub{text-align:left;border:0;background:none;font-family:var(--font);font-weight:700;font-size:13px;color:var(--text-2);padding:9px 12px;border-radius:10px;cursor:pointer;transition:var(--t)}
+  .sub:hover{background:var(--muted);color:var(--text)}.sub.active{background:var(--muted);color:var(--primary)}
+  .subnav.hide{display:none}
+  .content{padding:22px 28px 60px;max-width:1240px}.view{display:none}.view.active{display:block;animation:vi .25s}@keyframes vi{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+  .topline{display:flex;align-items:center;gap:12px;margin-bottom:14px}.topline h2{font-size:22px;font-weight:800;margin:0}.spacer{flex:1}.seg b{background:var(--muted);color:var(--primary);padding:7px 13px;border-radius:9px;font-size:12.5px;font-weight:800}.btn{border:0;border-radius:10px;padding:8px 13px;font-weight:800;font-size:12.5px;color:#fff;background:linear-gradient(135deg,var(--accent),#D97706);font-family:var(--font)}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:17px;box-shadow:var(--shadow)}.kpi .l{font-size:12px;color:var(--text-2);font-weight:700}.kpi .v{font-size:23px;font-weight:800;margin:6px 0 0}
+  .bento{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.mod{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px}.mod h3{font-size:14.5px;margin:0 0 10px;font-weight:800}
+  .ph{height:160px;border-radius:12px;background:repeating-linear-gradient(135deg,var(--muted),var(--muted) 12px,var(--surface-2) 12px,var(--surface-2) 24px);display:grid;place-items:center;color:var(--text-2);font-weight:700;font-size:12.5px}
+  .coming{display:flex;flex-direction:column;align-items:center;text-align:center;gap:13px;padding:70px 24px;background:var(--surface);border:2px dashed var(--border);border-radius:var(--radius)}.coming-ic{width:66px;height:66px;border-radius:19px;display:grid;place-items:center;color:#fff;background:linear-gradient(140deg,var(--primary),var(--violet))}.coming-ic svg{width:30px;height:30px}.coming h3{margin:0;font-size:18px;font-weight:800}.coming p{max-width:440px;color:var(--text-2);margin:0;font-size:13.5px;line-height:1.6}.wip{font-size:11px;font-weight:800;background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn);padding:4px 13px;border-radius:999px}
+</style></head>
+<body>
+<div class="demo-bar"><b>DEMO C · Tab ngang + cột con</b> — bấm tab trên · <a href="menu-a.html">→ A</a> <a href="menu-b.html">→ B</a> <a href="menu-d.html">→ D</a></div>
+<nav class="topnav">
+  <div class="brand"><div class="brand-mark">D</div><b>CRM Doscom</b></div>
+  <button class="tab active" data-v="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
+  <button class="tab" data-v="fb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M9 2h6M8 13h.01M16 13h.01M9 17h6"/></svg>Agent FB</button>
+  <button class="tab" data-v="gg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg>Agent Google</button>
+  <button class="tab" data-v="ads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-5v12L3 14zM11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>Tạo Ads</button>
+  <button class="tab" data-v="geo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>GEO</button>
+  <button class="tab" data-v="landing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Landing</button>
+  <button class="tab" data-v="kho"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Kho tổng</button>
+</nav>
+<div class="body">
+  <aside class="subnav" id="subnav"><div class="h">Dashboard</div>
+    <button class="sub active">Tổng quan</button><button class="sub">Theo nhân sự</button><button class="sub">Doanh số ngày</button><button class="sub">Lợi nhuận</button><button class="sub">Tỉ lệ combo Noma</button>
+  </aside>
+  <main class="content">
+    <div class="view active" id="v-dashboard">
+      <div class="topline"><h2 id="title">Tổng quan Dashboard</h2><div class="spacer"></div><div class="seg"><b>30 ngày ▾</b></div><button class="btn">📑 Báo cáo tuần</button></div>
+      <div class="kpis"><div class="kpi"><div class="l">Tổng chi tiêu QC</div><div class="v">1,16 tỷ₫</div></div><div class="kpi"><div class="l">Doanh thu Pancake</div><div class="v">3,82 tỷ₫</div></div><div class="kpi"><div class="l">CIR</div><div class="v">30,4%</div></div><div class="kpi"><div class="l">Tổng đơn</div><div class="v">8.214</div></div></div>
+      <div class="bento"><div class="mod"><h3>Chi tiêu theo kênh</h3><div class="ph">biểu đồ donut</div></div><div class="mod"><h3>Doanh thu theo nguồn</h3><div class="ph">biểu đồ cột</div></div></div>
+      <div class="mod"><h3>Doanh số theo ngày</h3><div class="ph">biểu đồ đường/cột</div></div>
+    </div>
+    <div class="view" id="v-fb"><div class="topline"><h2>Agent phân tích Facebook Ads</h2></div><div class="mod"><h3>Chế độ phân tích</h3><div class="ph">khung agent (chip mode + nút Chạy + kết quả)</div></div></div>
+    <div class="view" id="v-gg"></div><div class="view" id="v-ads"></div><div class="view" id="v-geo"></div><div class="view" id="v-landing"></div><div class="view" id="v-kho"></div>
+  </main>
+</div>
+<script>
+  var TT={dashboard:'Tổng quan Dashboard',fb:'Agent Facebook Ads',gg:'Agent Google Ads',ads:'Tạo Ads tự động',geo:'GEO Monitor',landing:'Landing Builder',kho:'Kho tổng Doscom'};
+  var DESC={gg:'Phân tích keyword/banner/category Google Ads bằng AI.',ads:'Tự sinh & đăng campaign theo mẫu, gợi ý ngân sách.',geo:'Theo dõi thứ hạng GEO/SEO, đối thủ, nội dung.',landing:'Dựng landing page kéo-thả, xuất bản nhanh.',kho:'Tồn kho, nhập-xuất, định giá vốn toàn Doscom.'};
+  function coming(v){return '<div class="topline"><h2>'+TT[v]+'</h2></div><div class="coming"><div class="coming-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4"/></svg></div><h3>Đang phát triển</h3><p>'+DESC[v]+'</p><span class="wip">sắp có</span></div>';}
+  ['gg','ads','geo','landing','kho'].forEach(function(v){document.getElementById('v-'+v).innerHTML=coming(v);});
+  var tabs=document.querySelectorAll('.tab'),views=document.querySelectorAll('.view'),subnav=document.getElementById('subnav');
+  function show(v){tabs.forEach(function(b){b.classList.toggle('active',b.dataset.v===v);});views.forEach(function(e){e.classList.toggle('active',e.id==='v-'+v);});subnav.classList.toggle('hide',v!=='dashboard');}
+  tabs.forEach(function(b){b.addEventListener('click',function(){show(b.dataset.v);});});show('dashboard');
+</script>
+</body></html>

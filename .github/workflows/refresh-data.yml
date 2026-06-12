@@ -5,7 +5,8 @@ name: Đọc lại dữ liệu (refresh + deploy)
 on:
   workflow_dispatch:        # nút bấm tay
   schedule:
-    - cron: '20 */3 * * *'  # tự chạy mỗi 3 giờ (lệch sau lúc dashboard cũ cập nhật)
+    # Giờ VN (UTC+7): 9h sáng, 12h trưa, 17h chiều → 02:00, 05:00, 10:00 UTC
+    - cron: '0 2,5,10 * * *'
 
 permissions:
   contents: write           # cho phép commit data mới
@@ -42,11 +43,13 @@ jobs:
             git push
           fi
 
-      - name: Chuẩn bị thư mục deploy sạch (chỉ index.html + data)
+      - name: Chuẩn bị thư mục deploy (index.html + data + demos)
         run: |
           rm -rf dist && mkdir dist
           cp index.html dist/
           cp -r data dist/data
+          if [ -d demos ]; then cp -r demos dist/demos; fi
+          # Functions (functions/) được wrangler tự bundle từ gốc repo → không cần copy.
 
       - name: Deploy lên Cloudflare Pages
         run: npx wrangler@4 pages deploy dist --project-name=crm-doscom --branch=master --commit-dirty=true

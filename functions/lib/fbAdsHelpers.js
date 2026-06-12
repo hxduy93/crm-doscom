@@ -1,0 +1,1219 @@
+// FB Ads Helpers — đọc data từ fb-ads-data.json + Pancake DUY_FB_ADS + PHUONG_NAM_FB_ADS
+// + product-costs.json để tính profit. Compact format → feed vào prompt.
+
+// Sales staff routing FB Ads leads (filter Pancake source_groups).
+// "DUY" = tất cả nguồn tên "DUY -..." (qua saved_filters_id Pancake).
+// "PHUONG_NAM" = tất cả nguồn tên "PHƯƠNG NAM -...".
+// 2 source_groups này là 2 bucket RIÊNG BIỆT trong Pancake → KHÔNG double-count
+// khi cộng (đơn của DUY chốt và đơn của PN chốt là tách biệt).
+export const FB_SALES_GROUPS = ["DUY", "PHUONG_NAM"];
+
+// Map staff key (FB ad config) → Pancake source group key.
+// Dùng khi tính revenue/profit per staff riêng — `computeFbProfitInRange` với
+// `salesGroups: [STAFF_TO_SOURCE_GROUP[staff]]` chỉ lấy đơn của staff đó.
+export const STAFF_TO_SOURCE_GROUP = {
+  DUY: "DUY",
+  PHUONG_NAM: "PHUONG_NAM",
+};
+
+// Active FB groups (chỉ 4 nhóm có order trong 90d):
+export const FB_ACTIVE_GROUPS = ["MAY_DO", "CAMERA_VIDEO_CALL", "GHI_AM", "NOMA"];
+
+// CTR benchmark per nhóm SP — extract từ data/fb-ads-data.json (90d, 7 ad accounts).
+// Update bằng cách chạy lại script PowerShell ./scripts/compute-ctr-benchmark.ps1 (TODO).
+// Last updated: 2026-05-08 (snapshot 2026-05-08 13:24).
+export const CTR_BENCHMARKS = {
+  MAY_DO:            { ctr_all_pct: 1.69, ctr_link_pct: 1.03, link_click_ratio_pct: 61.2, cpl_vnd: 359600 },
+  CAMERA_VIDEO_CALL: { ctr_all_pct: 2.59, ctr_link_pct: 1.63, link_click_ratio_pct: 63.0, cpl_vnd: 269547 },
+  GHI_AM:            { ctr_all_pct: 3.30, ctr_link_pct: 1.98, link_click_ratio_pct: 60.0, cpl_vnd: 227341 },
+  NOMA:              { ctr_all_pct: 1.91, ctr_link_pct: 1.16, link_click_ratio_pct: 61.0, cpl_vnd: 105640 },
+};
+
+// Group label (UI display)
+export const FB_GROUP_LABELS = {
+  ALL:               "Tất cả nhóm SP qua FB",
+  MAY_DO:            "Máy dò (D-series)",
+  CAMERA_VIDEO_CALL: "Camera video call (DA8.1)",
+  GHI_AM:            "Máy ghi âm (DR1)",
+  NOMA:              "NOMA (chăm sóc xe)",
+};
+
+// Classify product name → FB group (chỉ 4 nhóm active)
+export function classifyFbProduct(name) {
+  const n = String(name || "").toLowerCase().trim();
+  if (!n) return "OTHER";
+  if (/noma|a002|tẩy|chà kính|kính xe|chăm sóc xe/i.test(n)) return "NOMA";
+  if (/^da\s*8\.1|da8\.1|da 8\.1|gọi.*2.*chiều|video.*call/i.test(n)) return "CAMERA_VIDEO_CALL";
+  if (/^dr\s*\d|máy\s*ghi\s*âm|ghi âm/i.test(n)) return "GHI_AM";
+  if (/^d\s*\d|máy\s*dò|may do|phát hiện thiết bị|dò\s*nghe lén/i.test(n)) return "MAY_DO";
+  return "OTHER";
+}
+
+// ── SPEND THẬT theo nhóm SP (phân loại theo TÊN CAMPAIGN) ────────────────
+// Giải quyết case "1 ad account chạy NHIỀU sản phẩm": split spend ở mức
+// campaign (classifyFbProduct theo campaign_name) thay vì gán cả account vào
+// 1 nhóm. Cộng spend thật từ fb-ads-data.json (campaign.by_date[date].spend).
+//
+// opts.accountIds  : array string — chỉ tính các account này (vd accounts của
+//                    1 staff). Bỏ trống = tính TẤT CẢ account trong fbAdsJson.
+// opts.accountRanges: { [accountId]: {start,end} } — range riêng cho từng
+//                    account (loan-aware truncation). Bỏ trống = dùng timeRange.
+//
+// Trả: { has_data, by_group:{MAY_DO,...}, total, unclassified }
+//   - total GỒM cả spend không phân loại được (unclassified) — đúng cho P&L
+//     tổng (mọi chi tiêu đều là cost). by_group chỉ gồm 4 nhóm active.
+export function computeFbSpendByGroupInRange(fbAdsJson, timeRange, opts = {}) {
+  const byGroup = {};
+  for (const g of FB_ACTIVE_GROUPS) byGroup[g] = 0;
+  const result = { has_data: false, by_group: byGroup, total: 0, unclassified: 0 };
+  if (!fbAdsJson?.accounts || !timeRange?.start || !timeRange?.end) return result;
+
+  const { start, end } = timeRange;
+  const filter = Array.isArray(opts.accountIds) && opts.accountIds.length
+    ? new Set(opts.accountIds.map(String)) : null;
+  const ranges = opts.accountRanges || null;
+
+  let total = 0, unclassified = 0;
+  for (const acc of fbAdsJson.accounts) {
+    const accId = String(acc.account_id);
+    if (filter && !filter.has(accId)) continue;
+    const r = (ranges && ranges[accId]) || { start, end };
+    if (!r.start || !r.end || r.start > r.end) continue;  // ngoài range hiệu lực (loan)
+    for (const c of (acc.campaigns || [])) {
+      const grp = classifyCampaignToGroup(c.campaign_name);
+      let spend = 0;
+      const bd = c.by_date || {};
+      for (const [date, m] of Object.entries(bd)) {
+        if (date < r.start || date > r.end) continue;
+        spend += Number(m && m.spend) || 0;
+      }
+      if (spend <= 0) continue;
+      total += spend;
+      if (FB_ACTIVE_GROUPS.includes(grp)) byGroup[grp] += spend;
+      else unclassified += spend;
+    }
+  }
+
+  for (const g of FB_ACTIVE_GROUPS) byGroup[g] = Math.round(byGroup[g]);
+  result.has_data = total > 0;
+  result.total = Math.round(total);
+  result.unclassified = Math.round(unclassified);
+  return result;
+}
+
+// ── COMPACT FB INSIGHTS ──────────────────────────────────────────────────
+// fb-ads-data.json có 6 accounts. Aggregate insights theo group nếu có data.
+// Trả về { has_data, accounts[], summary }
+export function compactFbInsights(json, group = "ALL") {
+  if (!json || !Array.isArray(json.accounts)) {
+    return { has_data: false, _note: "fb-ads-data.json missing or wrong shape" };
+  }
+  const accounts = json.accounts.map(acc => ({
+    id: acc.account_id,
+    name: acc.account_name,
+    spend: Number(acc.summary?.spend) || 0,
+    impressions: Number(acc.summary?.impressions) || 0,
+    clicks: Number(acc.summary?.clicks) || 0,
+    leads: Number(acc.summary?.leads) || 0,
+    campaigns_count: (acc.campaigns || []).length,
+  }));
+  const totalSpend = accounts.reduce((s, a) => s + a.spend, 0);
+  const totalImp = accounts.reduce((s, a) => s + a.impressions, 0);
+  const totalClicks = accounts.reduce((s, a) => s + a.clicks, 0);
+  const totalLeads = accounts.reduce((s, a) => s + a.leads, 0);
+  const ctr = totalImp > 0 ? totalClicks / totalImp : 0;
+  const cpl = totalLeads > 0 ? totalSpend / totalLeads : null;
+  return {
+    has_data: totalSpend > 0 || totalLeads > 0,
+    date_range: json.date_range,
+    summary: {
+      spend: totalSpend,
+      impressions: totalImp,
+      clicks: totalClicks,
+      leads: totalLeads,
+      ctr_pct: Math.round(ctr * 10000) / 100,
+      cpl_vnd: cpl,
+    },
+    accounts: accounts.filter(a => a.spend > 0 || a.leads > 0).slice(0, 6),
+    _note: totalSpend === 0 ? "fb-ads-data.json hiện đang rỗng - workflow auto-sync có thể bị lỗi token" : null,
+  };
+}
+
+// ── FB ORDERS từ Pancake (DUY + PHUONG_NAM) ──────────────────────────────
+// Aggregate per group, status delivered (đã giao thành công).
+export function compactFbOrders(productRevenueJson, group = "ALL") {
+  if (!productRevenueJson?.source_groups) return { has_data: false };
+  const groupTotals = {};
+  for (const g of FB_ACTIVE_GROUPS) {
+    groupTotals[g] = { revenue: 0, orders: 0, top_products: [] };
+  }
+  for (const sg of FB_SALES_GROUPS) {
+    const products = productRevenueJson.source_groups[sg]?.products;
+    if (!products) continue;
+    for (const [name, p] of Object.entries(products)) {
+      const orders = Number(p.orders) || 0;
+      const total = Number(p.total) || 0;
+      if (orders <= 0) continue;
+      const grp = classifyFbProduct(name);
+      if (!FB_ACTIVE_GROUPS.includes(grp)) continue;
+      groupTotals[grp].revenue += total;
+      groupTotals[grp].orders += orders;
+      groupTotals[grp].top_products.push({ product: name, orders, revenue: total, source: sg });
+    }
+  }
+  // Filter by group
+  const filterGroups = (group === "ALL") ? FB_ACTIVE_GROUPS : [group];
+  const out = {};
+  for (const g of filterGroups) {
+    if (!groupTotals[g]) continue;
+    const t = groupTotals[g];
+    t.top_products.sort((a, b) => b.revenue - a.revenue);
+    t.top_products = t.top_products.slice(0, 5);
+    t.aov = t.orders > 0 ? Math.round(t.revenue / t.orders) : 0;
+    out[g] = t;
+  }
+  return { has_data: Object.values(out).some(t => t.orders > 0), groups: out };
+}
+
+// ── PROFIT CALC (combine orders + product-costs) ────────────────────────
+// Profit = Revenue - COGS - FB Spend (40% rev) - VAT (10% rev) = Rev × 0.50 - COGS
+const COST_RATIO_FB = 0.40;
+const VAT_RATIO = 0.10;
+
+export function computeFbProfit(productRevenueJson, productCostsJson, group = "ALL") {
+  if (!productRevenueJson?.source_groups || !productCostsJson?.products) {
+    return { has_data: false };
+  }
+  const costs = productCostsJson.products;
+  const groupTotals = {};
+  for (const g of FB_ACTIVE_GROUPS) {
+    groupTotals[g] = { revenue: 0, orders: 0, cogs: 0 };
+  }
+  let totalMissingCost = 0;
+  for (const sg of FB_SALES_GROUPS) {
+    const products = productRevenueJson.source_groups[sg]?.products;
+    if (!products) continue;
+    for (const [name, p] of Object.entries(products)) {
+      const orders = Number(p.orders) || 0;
+      const total = Number(p.total) || 0;
+      if (orders <= 0) continue;
+      const grp = classifyFbProduct(name);
+      if (!FB_ACTIVE_GROUPS.includes(grp)) continue;
+      const costEntry = costs[name.toLowerCase()] ||
+        Object.values(costs).find(c => c.ma_ten_goi?.toLowerCase() === name.toLowerCase());
+      const unitCost = costEntry && costEntry.gia_nhap_vnd ? Number(costEntry.gia_nhap_vnd) : null;
+      groupTotals[grp].revenue += total;
+      groupTotals[grp].orders += orders;
+      if (unitCost !== null) {
+        groupTotals[grp].cogs += unitCost * orders;
+      } else {
+        totalMissingCost++;
+      }
+    }
+  }
+  const filterGroups = (group === "ALL") ? FB_ACTIVE_GROUPS : [group];
+  const out = {};
+  let agg = { revenue: 0, orders: 0, cogs: 0, fb_spend: 0, vat: 0, profit: 0 };
+  for (const g of filterGroups) {
+    const t = groupTotals[g];
+    if (!t || t.orders === 0) continue;
+    const fbSpend = t.revenue * COST_RATIO_FB;
+    const vat = t.revenue * VAT_RATIO;
+    const profit = t.revenue - t.cogs - fbSpend - vat;
+    const margin = t.revenue > 0 ? profit / t.revenue : 0;
+    out[g] = {
+      revenue: Math.round(t.revenue),
+      orders: t.orders,
+      cogs: Math.round(t.cogs),
+      fb_spend_estimated: Math.round(fbSpend),
+      vat: Math.round(vat),
+      profit: Math.round(profit),
+      profit_per_order: t.orders > 0 ? Math.round(profit / t.orders) : 0,
+      margin_pct: Math.round(margin * 1000) / 10,
+      aov: t.orders > 0 ? Math.round(t.revenue / t.orders) : 0,
+    };
+    agg.revenue += t.revenue;
+    agg.orders += t.orders;
+    agg.cogs += t.cogs;
+    agg.fb_spend += fbSpend;
+    agg.vat += vat;
+    agg.profit += profit;
+  }
+  return {
+    has_data: agg.orders > 0,
+    period_days: 90,
+    groups: out,
+    total: {
+      revenue: Math.round(agg.revenue),
+      orders: agg.orders,
+      cogs: Math.round(agg.cogs),
+      fb_spend_estimated: Math.round(agg.fb_spend),
+      vat: Math.round(agg.vat),
+      profit: Math.round(agg.profit),
+      profit_per_order: agg.orders > 0 ? Math.round(agg.profit / agg.orders) : 0,
+      margin_pct: agg.revenue > 0 ? Math.round((agg.profit / agg.revenue) * 1000) / 10 : 0,
+    },
+    products_missing_cost: totalMissingCost,
+    formula_note: "Profit = Revenue - COGS - FB Spend (40%) - VAT (10%). Spend là ƯỚC LƯỢNG, sẽ replace bằng spend thật khi fb-ads-data.json có data.",
+  };
+}
+
+// ── TIME RANGE PRESETS ──────────────────────────────────────────────────
+// VN timezone (UTC+7). Trả về { start, end, label } theo preset.
+export function resolveTimeRange(preset, customStart = null, customEnd = null) {
+  const tzOffsetMs = 7 * 3600 * 1000;
+  const nowVN = new Date(Date.now() + tzOffsetMs);
+  const todayVN = nowVN.toISOString().slice(0, 10);
+
+  function fmt(d) { return d.toISOString().slice(0, 10); }
+  function addDays(date, n) { return new Date(date.getTime() + n * 86400000); }
+
+  const today = new Date(todayVN + "T00:00:00Z");
+  const dayOfWeek = (today.getUTCDay() + 6) % 7;  // 0=Mon, 6=Sun
+
+  switch (preset) {
+    case "today":
+      return { start: todayVN, end: todayVN, label: "Hôm nay" };
+    case "yesterday": {
+      const y = fmt(addDays(today, -1));
+      return { start: y, end: y, label: "Hôm qua" };
+    }
+    case "this_week": {
+      const monday = fmt(addDays(today, -dayOfWeek));
+      return { start: monday, end: todayVN, label: "Tuần này" };
+    }
+    case "last_week": {
+      const lastMon = fmt(addDays(today, -dayOfWeek - 7));
+      const lastSun = fmt(addDays(today, -dayOfWeek - 1));
+      return { start: lastMon, end: lastSun, label: "Tuần trước" };
+    }
+    case "this_month": {
+      const start = todayVN.slice(0, 7) + "-01";
+      return { start, end: todayVN, label: "Tháng này" };
+    }
+    case "last_month": {
+      const y = today.getUTCFullYear();
+      const m = today.getUTCMonth(); // 0-indexed
+      const lastM = m === 0 ? 12 : m;
+      const lastY = m === 0 ? y - 1 : y;
+      const start = `${lastY}-${String(lastM).padStart(2, "0")}-01`;
+      const lastDay = new Date(Date.UTC(lastY, lastM, 0)).getUTCDate();
+      const end = `${lastY}-${String(lastM).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+      return { start, end, label: "Tháng trước" };
+    }
+    case "last_7d":
+      return { start: fmt(addDays(today, -6)), end: todayVN, label: "7 ngày qua" };
+    case "last_30d":
+      return { start: fmt(addDays(today, -29)), end: todayVN, label: "30 ngày qua" };
+    case "last_90d":
+      return { start: fmt(addDays(today, -89)), end: todayVN, label: "90 ngày qua" };
+    case "custom": {
+      if (!customStart || !customEnd) return null;
+      return { start: customStart, end: customEnd, label: "Tùy chỉnh", custom: true };
+    }
+    default:
+      return { start: fmt(addDays(today, -29)), end: todayVN, label: "30 ngày qua (default)" };
+  }
+}
+
+// Trả về khoảng thời gian dùng để so sánh với timeRange hiện tại.
+// Quy tắc: hôm nay/hôm qua → 3 ngày trước đó (làm baseline trung bình).
+// Tuần này/tuần trước → tuần liền kề trước.
+// Tháng này/tháng trước → khoảng cùng độ dài tháng trước.
+// last_Nd/custom → N ngày liền kề trước.
+export function getComparisonRange(timeRange, preset) {
+  if (!timeRange) return null;
+  function fmt(d) { return d.toISOString().slice(0, 10); }
+  function addDays(date, n) { return new Date(date.getTime() + n * 86400000); }
+  const start = new Date(timeRange.start + "T00:00:00Z");
+  const end = new Date(timeRange.end + "T00:00:00Z");
+  const days = Math.round((end - start) / 86400000) + 1;
+
+  switch (preset) {
+    case "today":
+    case "yesterday": {
+      const compEnd = addDays(start, -1);
+      const compStart = addDays(start, -3);
+      return { start: fmt(compStart), end: fmt(compEnd), label: "3 ngày trước đó (baseline)", days: 3 };
+    }
+    case "this_week":
+    case "last_week": {
+      const compEnd = addDays(start, -1);
+      const compStart = addDays(start, -7);
+      return { start: fmt(compStart), end: fmt(compEnd), label: "Tuần liền kề trước", days: 7 };
+    }
+    case "this_month":
+    case "last_month": {
+      const compEnd = addDays(start, -1);
+      const compStart = addDays(start, -days);
+      return { start: fmt(compStart), end: fmt(compEnd), label: `Tháng trước (${days} ngày liền kề)`, days };
+    }
+    case "last_7d":
+    case "last_30d":
+    case "last_90d":
+    case "custom":
+    default: {
+      const compEnd = addDays(start, -1);
+      const compStart = addDays(start, -days);
+      return { start: fmt(compStart), end: fmt(compEnd), label: `${days} ngày trước đó`, days };
+    }
+  }
+}
+
+// Filter orders/revenue by date range — works with Pancake source_groups.products[*].orders_by_date
+//
+// 2026-05-06 fix: thêm `total` field tính TRUE total từ top-level
+// `total_orders_by_date` + `order_revenue_by_status_by_date` (tất cả status,
+// tất cả SP), không bị giới hạn 4 FB_ACTIVE_GROUPS hay 13 SP của PRODUCT_MAPPING.
+export function compactFbOrdersInRange(productRevenueJson, group, timeRange, opts = {}) {
+  if (!productRevenueJson?.source_groups || !timeRange) return { has_data: false };
+  const { start, end } = timeRange;
+  const salesGroups = opts.salesGroups || FB_SALES_GROUPS;
+  const groupTotals = {};
+  for (const g of FB_ACTIVE_GROUPS) {
+    groupTotals[g] = { revenue: 0, orders: 0, top_products: [] };
+  }
+  for (const sg of salesGroups) {
+    const products = productRevenueJson.source_groups[sg]?.products;
+    if (!products) continue;
+    for (const [name, p] of Object.entries(products)) {
+      const grp = classifyFbProduct(name);
+      if (!FB_ACTIVE_GROUPS.includes(grp)) continue;
+      const ordersByDate = p.orders_by_date || {};
+      const revByDate = p.by_date || {};
+      let prodOrders = 0, prodRev = 0;
+      for (const [date, ord] of Object.entries(ordersByDate)) {
+        if (date >= start && date <= end) {
+          prodOrders += Number(ord) || 0;
+          prodRev += Number(revByDate[date]) || 0;
+        }
+      }
+      if (prodOrders > 0) {
+        groupTotals[grp].revenue += prodRev;
+        groupTotals[grp].orders += prodOrders;
+        groupTotals[grp].top_products.push({ product: name, orders: prodOrders, revenue: prodRev, source: sg });
+      }
+    }
+  }
+  const filterGroups = (group === "ALL") ? FB_ACTIVE_GROUPS : [group];
+  const out = {};
+  for (const g of filterGroups) {
+    const t = groupTotals[g];
+    if (!t) continue;
+    t.top_products.sort((a, b) => b.revenue - a.revenue);
+    t.top_products = t.top_products.slice(0, 5);
+    t.aov = t.orders > 0 ? Math.round(t.revenue / t.orders) : 0;
+    out[g] = t;
+  }
+
+  // TRUE totals từ top-level Pancake fields (gộp all status + all SP)
+  let trueRevenue = 0, trueOrders = 0;
+  for (const sg of salesGroups) {
+    const sgData = productRevenueJson.source_groups[sg];
+    if (!sgData) continue;
+    for (const [date, cnt] of Object.entries(sgData.total_orders_by_date || {})) {
+      if (date >= start && date <= end) trueOrders += Number(cnt) || 0;
+    }
+    for (const stMap of Object.values(sgData.order_revenue_by_status_by_date || {})) {
+      for (const [date, rev] of Object.entries(stMap || {})) {
+        if (date >= start && date <= end) trueRevenue += Number(rev) || 0;
+      }
+    }
+  }
+
+  return {
+    has_data: trueOrders > 0,
+    time_range: timeRange,
+    groups: out,
+    total: {
+      revenue: Math.round(trueRevenue),
+      orders: trueOrders,
+      aov: trueOrders > 0 ? Math.round(trueRevenue / trueOrders) : 0,
+    },
+    data_freshness: productRevenueJson.generated_at || null,
+  };
+}
+
+// Compute profit (using product-costs) within time range.
+//
+// IMPORTANT (2026-05-06 fix):
+//   - revenue + orders dùng TOP-LEVEL totals (`total_orders_by_date`,
+//     `order_revenue_by_status_by_date`) gộp TẤT CẢ status + TẤT CẢ SP của
+//     DUY+PHƯƠNG NAM → khớp Pancake POS UI 100%.
+//   - cogs vẫn tính per-product theo PRODUCT_MAPPING (13 SP) vì chỉ có giá
+//     nhập cho 13 SP đó. Đơn ngoài 13 SP không có cogs → margin/profit có
+//     thể hơi over-estimate, có note `cogs_coverage_note` để FE hiển thị.
+//   - Per-group breakdown (groupTotals) vẫn dùng để hiển thị top SP per nhóm
+//     nhưng total dùng top-level.
+export function computeFbProfitInRange(productRevenueJson, productCostsJson, group, timeRange, opts = {}) {
+  if (!productRevenueJson?.source_groups || !productCostsJson?.products || !timeRange) {
+    return { has_data: false };
+  }
+  const { start, end } = timeRange;
+  const costs = productCostsJson.products;
+  const salesGroups = opts.salesGroups || FB_SALES_GROUPS;
+  const inRange = (d) => d >= start && d <= end;
+
+  const unitCostOf = (name) => {
+    const c = costs[name.toLowerCase()] ||
+      Object.values(costs).find(x => x.ma_ten_goi?.toLowerCase() === name.toLowerCase());
+    return c?.gia_nhap_vnd ? Number(c.gia_nhap_vnd) : 0;
+  };
+
+  const newAcc = () => {
+    const groupTotals = {};
+    for (const g of FB_ACTIVE_GROUPS) groupTotals[g] = { revenue: 0, orders: 0, cogs: 0 };
+    return { groupTotals, mappedRevenue: 0, mappedCogs: 0 };
+  };
+
+  // Gom 1 map sản phẩm (name -> {by_date, orders_by_date}) trong range vào acc.
+  const aggProductMap = (productMap, acc) => {
+    for (const [name, p] of Object.entries(productMap || {})) {
+      const grp = classifyFbProduct(name);
+      const unitCost = unitCostOf(name);
+      const ordByDate = p.orders_by_date || {};
+      const revByDate = p.by_date || {};
+      for (const [date, ord] of Object.entries(ordByDate)) {
+        if (!inRange(date)) continue;
+        const orders = Number(ord) || 0;
+        const rev = Number(revByDate[date]) || 0;
+        if (FB_ACTIVE_GROUPS.includes(grp)) {
+          acc.groupTotals[grp].revenue += rev;
+          acc.groupTotals[grp].orders += orders;
+          acc.groupTotals[grp].cogs += unitCost * orders;
+        }
+        acc.mappedRevenue += rev;
+        acc.mappedCogs += unitCost * orders;
+      }
+    }
+  };
+
+  // Order-level TRUE totals cho 1 tập status (statuses=null → tất cả status).
+  // Pancake: order_revenue_by_status_by_date[status][date], total_orders_by_date,
+  // order_count_by_status_by_date[status][date].
+  const trueTotals = (statuses) => {
+    let revenue = 0, orders = 0;
+    for (const sg of salesGroups) {
+      const sgData = productRevenueJson.source_groups[sg];
+      if (!sgData) continue;
+      const rbsbd = sgData.order_revenue_by_status_by_date || {};
+      for (const [st, m] of Object.entries(rbsbd)) {
+        if (statuses && !statuses.includes(st)) continue;
+        for (const [date, v] of Object.entries(m || {})) {
+          if (inRange(date)) revenue += Number(v) || 0;
+        }
+      }
+      if (!statuses) {
+        const obd = sgData.total_orders_by_date || {};
+        for (const [date, c] of Object.entries(obd)) {
+          if (inRange(date)) orders += Number(c) || 0;
+        }
+      } else {
+        const ocs = sgData.order_count_by_status_by_date || {};
+        for (const [st, m] of Object.entries(ocs)) {
+          if (!statuses.includes(st)) continue;
+          for (const [date, c] of Object.entries(m || {})) {
+            if (inRange(date)) orders += Number(c) || 0;
+          }
+        }
+      }
+    }
+    return { revenue, orders };
+  };
+
+  // Mapped (per-product) totals cho 1 tập status. statuses=null → sg.products
+  // (mọi status); ngược lại → gộp sg.products_by_status[st].
+  const mappedTotals = (statuses) => {
+    const acc = newAcc();
+    for (const sg of salesGroups) {
+      const sgData = productRevenueJson.source_groups[sg];
+      if (!sgData) continue;
+      if (!statuses) {
+        aggProductMap(sgData.products, acc);
+      } else {
+        const pbs = sgData.products_by_status || {};
+        for (const st of statuses) aggProductMap(pbs[st], acc);
+      }
+    }
+    return acc;
+  };
+
+  // cpqc THẬT (gồm unclassified) từ opts.spendByGroup (phân loại theo TÊN
+  // CAMPAIGN). DÙNG CHUNG cho cả 2 chỉ số (tiền ads đã chi, không phụ thuộc đơn
+  // giao hay hoàn). Fallback ước lượng 40% × DT trước hoàn nếu thiếu data.
+  const spendByGroup = opts.spendByGroup;
+  const useRealSpend = !!(spendByGroup && spendByGroup.has_data);
+
+  // Dựng 1 bộ chỉ số (groups + total) từ true totals + mapped + cpqc tổng.
+  const buildMetric = (tt, mapped, fbSpendTotal) => {
+    const filterGroups = (group === "ALL") ? FB_ACTIVE_GROUPS : [group];
+    const out = {};
+    for (const g of filterGroups) {
+      const t = mapped.groupTotals[g];
+      if (!t || t.orders === 0) continue;
+      const realSpend = useRealSpend && spendByGroup.by_group ? spendByGroup.by_group[g] : null;
+      const fbSpend = (realSpend != null) ? realSpend : t.revenue * 0.40;
+      const spendSource = (realSpend != null) ? "real_campaign" : "estimated_40pct";
+      const vat = t.revenue * 0.10;
+      const profit = t.revenue - t.cogs - fbSpend - vat;
+      out[g] = {
+        revenue: Math.round(t.revenue),
+        orders: t.orders,
+        cogs: Math.round(t.cogs),
+        fb_spend: Math.round(fbSpend),
+        fb_spend_source: spendSource,
+        fb_spend_estimated: Math.round(fbSpend),  // backward-compat
+        vat: Math.round(vat),
+        profit: Math.round(profit),
+        profit_per_order: t.orders > 0 ? Math.round(profit / t.orders) : 0,
+        margin_pct: t.revenue > 0 ? Math.round((profit / t.revenue) * 1000) / 10 : 0,
+        aov: t.orders > 0 ? Math.round(t.revenue / t.orders) : 0,
+      };
+    }
+    const fbSpendTrue = (fbSpendTotal != null) ? fbSpendTotal : tt.revenue * 0.40;
+    const fbSpendSourceTrue = useRealSpend ? "real_campaign" : "estimated_40pct";
+    const vatTrue = tt.revenue * 0.10;
+    // Scale cogs theo tỷ lệ trueRevenue / mappedRevenue (chỉ mapped SP có giá nhập).
+    const cogsScale = mapped.mappedRevenue > 0 ? tt.revenue / mapped.mappedRevenue : 0;
+    const cogsTrue = mapped.mappedCogs * cogsScale;
+    const profitTrue = tt.revenue - cogsTrue - fbSpendTrue - vatTrue;
+    const cogsCoverage = mapped.mappedRevenue > 0 && tt.revenue > 0
+      ? Math.round((mapped.mappedRevenue / tt.revenue) * 1000) / 10 : 0;
+    return {
+      groups: out,
+      total: {
+        revenue: Math.round(tt.revenue),
+        orders: tt.orders,
+        cogs: Math.round(cogsTrue),
+        fb_spend: Math.round(fbSpendTrue),
+        fb_spend_source: fbSpendSourceTrue,
+        fb_spend_estimated: Math.round(fbSpendTrue),
+        vat: Math.round(vatTrue),
+        profit: Math.round(profitTrue),
+        profit_per_order: tt.orders > 0 ? Math.round(profitTrue / tt.orders) : 0,
+        margin_pct: tt.revenue > 0 ? Math.round((profitTrue / tt.revenue) * 1000) / 10 : 0,
+      },
+      cogs_coverage_pct: cogsCoverage,
+      cogs_coverage_note: cogsCoverage < 95
+        ? `Giá nhập chỉ cover ${cogsCoverage}% doanh thu. Profit là ước lượng (scale theo tỷ lệ).`
+        : null,
+    };
+  };
+
+  // ── TRƯỚC HOÀN (gross, mọi đơn đã lên) — giữ tên cũ total/groups ──
+  const grossTrue = trueTotals(null);
+  const grossMapped = mappedTotals(null);
+  // cpqc tổng dùng chung: spend thật (nếu có) hoặc 40% × DT trước hoàn.
+  const fbSpendTotal = useRealSpend ? spendByGroup.total : grossTrue.revenue * 0.40;
+  const gross = buildMetric(grossTrue, grossMapped, fbSpendTotal);
+
+  // ── THẬT (chỉ đơn delivered = đã giao + thanh toán) ──
+  const realTrue = trueTotals(["delivered"]);
+  const realMapped = mappedTotals(["delivered"]);
+  const real = buildMetric(realTrue, realMapped, fbSpendTotal);
+
+  return {
+    has_data: grossTrue.orders > 0,
+    time_range: timeRange,
+    // TRƯỚC HOÀN (backward-compat)
+    groups: gross.groups,
+    total: gross.total,
+    cogs_coverage_pct: gross.cogs_coverage_pct,
+    cogs_coverage_note: gross.cogs_coverage_note,
+    // THẬT (chỉ đơn đã giao) — đồng bộ doanh thu + giá vốn + VAT + số đơn
+    groups_real: real.groups,
+    total_real: real.total,
+    cogs_coverage_pct_real: real.cogs_coverage_pct,
+    // cpqc dùng chung cho cả hai
+    fb_spend_source: useRealSpend ? "real_campaign" : "estimated_40pct",
+    fb_spend_unclassified: useRealSpend ? spendByGroup.unclassified : null,
+    _profit_note: "total/groups = TRƯỚC HOÀN (mọi đơn đã lên đơn). total_real/groups_real = THẬT (chỉ đơn delivered đã giao+thanh toán; đã loại đơn đang giao/đang hoàn/đã hoàn/hủy khỏi CẢ doanh thu, giá vốn, VAT, số đơn). cpqc (fb_spend) dùng CHUNG cho cả hai vì tiền ads đã chi rồi. Đơn hoàn thu hồi giá vốn (hàng về kho), CHƯA trừ phí ship hoàn.",
+    data_freshness: productRevenueJson.generated_at || null,
+  };
+}
+
+// ── ACCOUNT aggregation từ fb-ads-data.json (theo time range) ──────────
+// Aggregate campaign by_date → account summary cho time range cụ thể.
+export function compactFbAccounts(fbAdsJson, timeRange) {
+  if (!fbAdsJson?.accounts) return { has_data: false, accounts: [] };
+  const tStart = timeRange?.start;
+  const tEnd = timeRange?.end;
+
+  const accounts = fbAdsJson.accounts.map(acc => {
+    let spend = 0, impressions = 0, clicks = 0, leads = 0, conv = 0;
+    let activeCount = 0;
+    for (const c of (acc.campaigns || [])) {
+      const isActive = c.effective_status === "ACTIVE";
+      const byDate = c.by_date || {};
+      let cSpend = 0, cConv = 0;
+      for (const [date, m] of Object.entries(byDate)) {
+        if (tStart && date < tStart) continue;
+        if (tEnd && date > tEnd) continue;
+        cSpend += Number(m.spend) || 0;
+        spend += Number(m.spend) || 0;
+        impressions += Number(m.impressions) || 0;
+        clicks += Number(m.clicks) || 0;
+        leads += Number(m.leads) || 0;
+        cConv += Number(m.complete_registrations) || 0;
+        conv += Number(m.complete_registrations) || 0;
+      }
+      if (isActive || cSpend > 0) activeCount++;
+    }
+    return {
+      id: acc.account_id,
+      name: acc.account_name,
+      spend: Math.round(spend),
+      impressions,
+      clicks,
+      leads,
+      conversions: conv,           // complete_registrations
+      campaigns_count: (acc.campaigns || []).length,
+      active_campaigns: activeCount,
+    };
+  });
+
+  return {
+    has_data: accounts.some(a => a.spend > 0 || a.conversions > 0),
+    accounts,
+    time_range_note: timeRange ? `${timeRange.label} (${timeRange.start} → ${timeRange.end})` : null,
+    data_warning: !accounts.some(a => a.spend > 0)
+      ? "Không có data trong khoảng thời gian này. Có thể: (1) accounts không chạy ads, (2) fetch script chưa có per-day data mới — chạy lại workflow fetch-fb-ads"
+      : null,
+  };
+}
+
+// Trả về list campaigns của 1 account với spend/conversions/CPL trong timeRange.
+// Aggregate từ by_date (filter date in range). Filter chỉ active campaigns by default.
+// "Lượt chuyển đổi" = complete_registrations (theo Doscom track event).
+export function compactFbCampaigns(fbAdsJson, accountId, timeRange, opts = {}) {
+  const { activeOnly = true, comparisonRange = null } = opts;
+  if (!fbAdsJson?.accounts) return { has_data: false, campaigns: [] };
+  const account = fbAdsJson.accounts.find(a => a.account_id === accountId);
+  if (!account) return { has_data: false, campaigns: [], error: "Account not found" };
+
+  const tStart = timeRange?.start;
+  const tEnd = timeRange?.end;
+
+  function aggregateRange(byDate, rStart, rEnd) {
+    let spend = 0, impressions = 0, clicks = 0, leads = 0, completeReg = 0, linkClicks = 0;
+    let days = 0;
+    for (const [date, m] of Object.entries(byDate || {})) {
+      if (rStart && date < rStart) continue;
+      if (rEnd && date > rEnd) continue;
+      spend += Number(m.spend) || 0;
+      impressions += Number(m.impressions) || 0;
+      clicks += Number(m.clicks) || 0;
+      leads += Number(m.leads) || 0;
+      completeReg += Number(m.complete_registrations) || 0;
+      linkClicks += Number(m.link_clicks) || 0;
+      days++;
+    }
+    const conversions = completeReg;
+    const ctr = impressions > 0 ? clicks / impressions : 0;
+    const ctrLink = impressions > 0 ? linkClicks / impressions : 0;
+    const linkClickRatio = clicks > 0 ? linkClicks / clicks : 0;  // % click vào đúng link (vs like/share/profile)
+    const cpc = clicks > 0 ? spend / clicks : 0;
+    const cpcLink = linkClicks > 0 ? spend / linkClicks : 0;
+    const cpa = conversions > 0 ? Math.round(spend / conversions) : null;
+    return {
+      spend: Math.round(spend),
+      impressions, clicks, link_clicks: linkClicks, leads, conversions,
+      ctr: Math.round(ctr * 10000) / 10000,                 // CTR all (any click)
+      ctr_link: Math.round(ctrLink * 10000) / 10000,         // CTR link click (chỉ click link landing)
+      link_click_ratio: Math.round(linkClickRatio * 1000) / 10,  // % link/click (chất lượng click) — pct
+      cpc: Math.round(cpc),
+      cpc_link: Math.round(cpcLink),
+      cpa,
+      days_with_data: days,
+    };
+  }
+
+  function pctDelta(now, prev) {
+    if (prev === null || prev === undefined) return null;
+    if (prev === 0) return now > 0 ? 100 : 0;
+    return Math.round(((now - prev) / prev) * 1000) / 10;
+  }
+
+  const allCampaigns = (account.campaigns || []).map(c => {
+    const byDate = c.by_date || {};
+    const cur = aggregateRange(byDate, tStart, tEnd);
+
+    let comparison = null, deltas = null;
+    if (comparisonRange) {
+      const comp = aggregateRange(byDate, comparisonRange.start, comparisonRange.end);
+      comparison = { ...comp, range: comparisonRange };
+      const curDailySpend = cur.days_with_data > 0 ? cur.spend / cur.days_with_data : 0;
+      const compDailySpend = comp.days_with_data > 0 ? comp.spend / comp.days_with_data : 0;
+      const curDailyConv = cur.days_with_data > 0 ? cur.conversions / cur.days_with_data : 0;
+      const compDailyConv = comp.days_with_data > 0 ? comp.conversions / comp.days_with_data : 0;
+      const curDailyLinkClicks = cur.days_with_data > 0 ? cur.link_clicks / cur.days_with_data : 0;
+      const compDailyLinkClicks = comp.days_with_data > 0 ? comp.link_clicks / comp.days_with_data : 0;
+      deltas = {
+        spend_per_day_pct: pctDelta(curDailySpend, compDailySpend),
+        conv_per_day_pct: pctDelta(curDailyConv, compDailyConv),
+        cpa_pct: (cur.cpa !== null && comp.cpa !== null) ? pctDelta(cur.cpa, comp.cpa) : null,
+        ctr_pct: pctDelta(cur.ctr, comp.ctr),
+        ctr_link_pct: pctDelta(cur.ctr_link, comp.ctr_link),
+        link_clicks_per_day_pct: pctDelta(curDailyLinkClicks, compDailyLinkClicks),
+        link_click_ratio_pct: pctDelta(cur.link_click_ratio, comp.link_click_ratio),
+      };
+    }
+
+    return {
+      id: c.campaign_id,
+      name: c.campaign_name,
+      status: c.status || "UNKNOWN",
+      effective_status: c.effective_status || "UNKNOWN",
+      objective: c.objective || "UNKNOWN",
+      ...cur,
+      comparison,
+      deltas,
+    };
+  });
+
+  // Filter by status — chỉ ACTIVE campaigns (effective_status = "ACTIVE")
+  const filtered = activeOnly
+    ? allCampaigns.filter(c => c.effective_status === "ACTIVE" || c.spend > 0)
+    : allCampaigns;
+
+  filtered.sort((a, b) => b.spend - a.spend);
+  return {
+    has_data: filtered.length > 0,
+    account: { id: account.account_id, name: account.account_name },
+    campaigns: filtered,
+    total_campaigns_in_account: allCampaigns.length,
+    active_campaigns_count: allCampaigns.filter(c => c.effective_status === "ACTIVE").length,
+    time_range: timeRange,
+  };
+}
+
+// ── DAILY TREND (lead per day for trend analysis) ────────────────────────
+export function compactFbDailyTrend(productRevenueJson, days = 30, opts = {}) {
+  if (!productRevenueJson?.source_groups) return { has_data: false };
+  const salesGroups = opts.salesGroups || FB_SALES_GROUPS;
+  const dailyOrders = {};   // date → total orders FB
+  const dailyRevenue = {};  // date → total revenue FB
+  for (const sg of salesGroups) {
+    const products = productRevenueJson.source_groups[sg]?.products;
+    if (!products) continue;
+    for (const [name, p] of Object.entries(products)) {
+      const grp = classifyFbProduct(name);
+      if (!FB_ACTIVE_GROUPS.includes(grp)) continue;
+      const ordersByDate = p.orders_by_date || {};
+      const revByDate = p.by_date || {};
+      for (const [date, ord] of Object.entries(ordersByDate)) {
+        dailyOrders[date] = (dailyOrders[date] || 0) + Number(ord);
+      }
+      for (const [date, rev] of Object.entries(revByDate)) {
+        dailyRevenue[date] = (dailyRevenue[date] || 0) + Number(rev);
+      }
+    }
+  }
+  const sortedDates = Object.keys(dailyOrders).sort().slice(-days);
+  const series = sortedDates.map(d => ({
+    date: d,
+    orders: dailyOrders[d] || 0,
+    revenue: Math.round(dailyRevenue[d] || 0),
+  }));
+  // 7-day avg + week-over-week
+  const last7 = series.slice(-7);
+  const prev7 = series.slice(-14, -7);
+  const last7Orders = last7.reduce((s, x) => s + x.orders, 0);
+  const prev7Orders = prev7.reduce((s, x) => s + x.orders, 0);
+  const last7Rev = last7.reduce((s, x) => s + x.revenue, 0);
+  const prev7Rev = prev7.reduce((s, x) => s + x.revenue, 0);
+  const wowOrders = prev7Orders > 0 ? (last7Orders - prev7Orders) / prev7Orders : 0;
+  const wowRevenue = prev7Rev > 0 ? (last7Rev - prev7Rev) / prev7Rev : 0;
+  return {
+    has_data: series.length > 0,
+    days: series.length,
+    series_last_30d: series,
+    last_7d: { orders: last7Orders, revenue: last7Rev },
+    prev_7d: { orders: prev7Orders, revenue: prev7Rev },
+    wow_orders_pct: Math.round(wowOrders * 1000) / 10,
+    wow_revenue_pct: Math.round(wowRevenue * 1000) / 10,
+  };
+}
+
+// ════════════════════════════════════════════════════════════════
+// UTM ANALYSIS for staff_overview
+// ════════════════════════════════════════════════════════════════
+// Đọc data/lead-to-order.json → by_staff_utm[staff] → filter by date range,
+// tính per-UTM: leads / conv_rate / orders / delivered / revenue / AOV.
+// Sort theo revenue_total desc, cap top 30 để không bloat Claude prompt.
+//
+// staff: "DUY" | "PHUONG_NAM" (key dùng trong agent-fb-ai).
+// dateRange: { start, end } ISO YYYY-MM-DD.
+//
+// Returns null nếu không fetch được data; otherwise:
+//   {
+//     date_range: { start, end, label },
+//     total_utms_in_range: int,
+//     utms: [
+//       { utm, product, leads, orders, delivered, revenue, rev_delivered,
+//         conv_rate_pct, delivered_rate_pct, aov_vnd },
+//       ...
+//     ]
+//   }
+export async function getUtmAnalysisForStaff(env, origin, cookieHeader, staff, dateRange) {
+  // lead-to-order.json dùng "PHƯƠNG NAM" (có dấu, có space) làm key — agent-fb-ai dùng "PHUONG_NAM"
+  const STAFF_KEY_MAP = { DUY: "DUY", PHUONG_NAM: "PHƯƠNG NAM" };
+  const dataKey = STAFF_KEY_MAP[staff] || staff;
+  if (!dateRange?.start || !dateRange?.end) return null;
+
+  let json = null;
+  try {
+    const r = await fetch(new URL("/data/lead-to-order.json", origin).toString(), {
+      headers: { Cookie: cookieHeader || "" },
+    });
+    if (!r.ok) return null;
+    json = await r.json();
+  } catch {
+    return null;
+  }
+
+  const rows = json?.by_staff_utm?.[dataKey];
+  if (!Array.isArray(rows) || !rows.length) return null;
+
+  const isInRange = (d) => d >= dateRange.start && d <= dateRange.end;
+  const sumInRange = (byDate) => {
+    if (!byDate) return 0;
+    let s = 0;
+    for (const d in byDate) if (isInRange(d)) s += (byDate[d] || 0);
+    return s;
+  };
+
+  const filtered = rows
+    .map(r => {
+      const leads     = sumInRange(r.leads_by_date);
+      const orders    = sumInRange(r.orders_total_by_date);
+      const delivered = sumInRange(r.orders_delivered_by_date);
+      const revenue   = sumInRange(r.revenue_total_by_date);
+      const revDel    = sumInRange(r.revenue_delivered_by_date);
+      return {
+        utm: r.utm_campaign,
+        product: r.product,
+        leads, orders, delivered,
+        revenue, rev_delivered: revDel,
+        conv_rate_pct:      leads  > 0 ? Math.round((orders / leads) * 1000) / 10    : 0,
+        delivered_rate_pct: orders > 0 ? Math.round((delivered / orders) * 1000) / 10 : 0,
+        aov_vnd:            delivered > 0 ? Math.round(revDel / delivered)            : 0,
+      };
+    })
+    .filter(r => r.leads > 0 || r.orders > 0)
+    .sort((a, b) => (b.revenue || 0) - (a.revenue || 0));
+
+  return {
+    date_range: { ...dateRange },
+    total_utms_in_range: filtered.length,
+    utms: filtered.slice(0, 30),  // cap 30 để prompt không quá dài
+  };
+}
+
+// ════════════════════════════════════════════════════════════════
+// CVR THRESHOLDS PER PRODUCT — hard-coded SCALE/KEEP/REJECT rule
+// ════════════════════════════════════════════════════════════════
+// Lấy spend + complete_registrations 30d gần nhất per SP từ fb-ads-data.json,
+// kết hợp với gia_ban/gia_nhap từ product-costs.json → tính:
+//   CPL = spend / complete_registrations
+//   P_order = giá_bán × 0.9 − giá_nhập
+//   CVR_break_even = CPL / (P_order × Deliver_assumed)
+//   CVR_scale = 1.5 × CPL / (P_order × Deliver_assumed)  (= cần lãi ≥ 50% chi ads)
+//
+// Phân loại:
+//   - REJECT: actual CVR < CVR_break_even  (lỗ)
+//   - KEEP:   CVR_break_even ≤ actual CVR < CVR_scale  (lãi 0-50% chi ads)
+//   - SCALE:  actual CVR ≥ CVR_scale  (lãi ≥ 50% chi ads)
+//
+// Detect product từ campaign_name (matches Doscom convention):
+//   - "noma\s*911" → Noma 911 (Noma 922 chia sẻ CPL vì bán kèm combo-103)
+//   - "noma\s*922" → Noma 922 (rare standalone)
+//   - "da\s*8\.1" → DA8.1
+//   - "dr\s*1\b" → DR1
+//   - "d1" (không phải "d1 pro") → D1
+//   - + có thể mở rộng SP khác sau
+
+const FB_PRODUCT_DETECT = [
+  { product: "Noma 911", regex: /noma\s*911/i },
+  { product: "Noma 922", regex: /noma\s*922/i },
+  { product: "DA8.1",    regex: /da\s*8\.1/i },
+  { product: "DR1",      regex: /\bdr\s*1\b/i },
+  { product: "D1",       regex: /\bd\s*1\b/i, exclude: /\bd\s*1\s*pro\b/i },
+];
+
+function detectProductFromCampaign(name) {
+  const n = String(name || "");
+  for (const rule of FB_PRODUCT_DETECT) {
+    if (rule.exclude && rule.exclude.test(n)) continue;
+    if (rule.regex.test(n)) return rule.product;
+  }
+  return null;
+}
+
+// Map product (detectProductFromCampaign) → FB group active. Dùng để TÁCH SPEND
+// theo nhóm SP từ TÊN CAMPAIGN — chính xác hơn classifyFbProduct (vốn dành cho
+// tên SP của Pancake, neo ^ nên fail với convention "ngày - SP - mô tả").
+// Khi thêm SP/nhóm mới: thêm rule vào FB_PRODUCT_DETECT + 1 dòng map ở đây.
+export const FB_PRODUCT_TO_GROUP = {
+  "Noma 911": "NOMA",
+  "Noma 922": "NOMA",
+  "DA8.1": "CAMERA_VIDEO_CALL",
+  "DR1": "GHI_AM",
+  "D1": "MAY_DO",
+};
+
+// Phân loại 1 campaign → FB group dựa trên TÊN CAMPAIGN.
+// 1) detectProductFromCampaign (regex \b, khớp "12/4 - D1 - ...") → map group
+// 2) fallback: tên chứa "noma" → NOMA
+// 3) fallback cuối: classifyFbProduct (phòng khi tên SP thuần)
+export function classifyCampaignToGroup(name) {
+  const prod = detectProductFromCampaign(name);
+  if (prod && FB_PRODUCT_TO_GROUP[prod]) return FB_PRODUCT_TO_GROUP[prod];
+  if (/noma/i.test(String(name || ""))) return "NOMA";
+  return classifyFbProduct(name);
+}
+
+// Aggregate spend + complete_registrations per product trong N ngày gần nhất.
+// Returns { "D1": { spend, regs, cpl, n_campaigns }, ... } hoặc {} nếu fail.
+async function aggregateFbCplPerProduct(env, origin, cookieHeader, days = 30) {
+  let fb = null;
+  try {
+    const r = await fetch(new URL("/data/fb-ads-data.json", origin).toString(), {
+      headers: { Cookie: cookieHeader || "" },
+    });
+    if (!r.ok) return {};
+    fb = await r.json();
+  } catch { return {}; }
+
+  if (!fb?.accounts) return {};
+
+  // Window: last N days based on fb data's end date (giữ consistent với data snapshot).
+  const endDateStr = fb?.date_range?.end;
+  if (!endDateStr) return {};
+  const end = new Date(endDateStr + "T00:00:00Z");
+  const start = new Date(end);
+  start.setUTCDate(start.getUTCDate() - (days - 1));
+  const inRange = (dStr) => {
+    const d = new Date(dStr + "T00:00:00Z");
+    return d >= start && d <= end;
+  };
+
+  const agg = {};  // { product: { spend, regs, n_campaigns_seen } }
+  for (const acc of fb.accounts || []) {
+    for (const c of acc.campaigns || []) {
+      const product = detectProductFromCampaign(c.campaign_name || "");
+      if (!product) continue;
+      let sp = 0, regs = 0;
+      const byDate = c.by_date || {};
+      for (const dStr in byDate) {
+        if (!inRange(dStr)) continue;
+        const row = byDate[dStr] || {};
+        sp += Number(row.spend || 0);
+        regs += Number(row.complete_registrations || 0);
+      }
+      if (sp <= 0 && regs <= 0) continue;
+      if (!agg[product]) agg[product] = { spend: 0, regs: 0, n_campaigns: 0 };
+      agg[product].spend += sp;
+      agg[product].regs += regs;
+      agg[product].n_campaigns += 1;
+    }
+  }
+
+  // Compute CPL per product
+  const out = {};
+  for (const product in agg) {
+    const { spend, regs, n_campaigns } = agg[product];
+    out[product] = {
+      spend_vnd: Math.round(spend),
+      complete_registrations: regs,
+      cpl_vnd: regs > 0 ? Math.round(spend / regs) : null,
+      n_campaigns,
+    };
+  }
+  return out;
+}
+
+// Combine CPL + product cost → CVR thresholds per product.
+// Returns { "D1": { cpl_vnd, p_order_vnd, cvr_breakeven_pct, cvr_scale_pct, ... }, ... }
+//
+// Deliver_assumed default 80% (= avg Doscom). Có thể truyền `deliverAssumed`
+// khác (vd 0.7 nếu thực tế thấp hơn) để tính lại threshold.
+//
+// Logic phân tier:
+//   REJECT < cvr_breakeven_pct < KEEP < cvr_scale_pct < SCALE
+//   cvr_breakeven_pct = CPL / (P_order × deliver) × 100
+//   cvr_scale_pct     = 1.5 × CPL / (P_order × deliver) × 100  (lãi ≥ 50% chi ads)
+//
+// Special case: Noma 922 không có campaign riêng → chia sẻ CPL với Noma 911
+// (vì cả 2 bán kèm trong combo-103).
+export async function computeCvrThresholdsPerProduct(env, origin, cookieHeader, opts = {}) {
+  const days = opts.days || 30;
+  const deliver = opts.deliverAssumed || 0.8;
+  const scaleMultiplier = opts.scaleMultiplier || 1.5;  // SCALE khi lãi ≥ 50% chi ads
+
+  const cplMap = await aggregateFbCplPerProduct(env, origin, cookieHeader, days);
+
+  let costsJson = null;
+  try {
+    const r = await fetch(new URL("/data/product-costs.json", origin).toString(), {
+      headers: { Cookie: cookieHeader || "" },
+    });
+    if (r.ok) costsJson = await r.json();
+  } catch { /* ignore */ }
+  const costs = costsJson?.products || {};
+
+  // Find cost entry by ma_ten_goi (case-insensitive)
+  const findCost = (productName) => {
+    const target = productName.toLowerCase().trim();
+    for (const k in costs) {
+      const c = costs[k];
+      if ((c.ma_ten_goi || "").toLowerCase().trim() === target) return c;
+    }
+    return null;
+  };
+
+  const thresholds = {};
+
+  // First pass: products with own CPL data
+  for (const product in cplMap) {
+    const { cpl_vnd, spend_vnd, complete_registrations, n_campaigns } = cplMap[product];
+    const cost = findCost(product);
+    if (!cost?.gia_ban_vnd || !cost?.gia_nhap_vnd) continue;
+    const giaBan = Number(cost.gia_ban_vnd);
+    const giaNhap = Number(cost.gia_nhap_vnd);
+    const pOrder = giaBan * 0.9 - giaNhap;
+    if (pOrder <= 0 || !cpl_vnd) continue;
+    const cvrBreakeven = (cpl_vnd / (pOrder * deliver)) * 100;
+    const cvrScale = scaleMultiplier * (cpl_vnd / (pOrder * deliver)) * 100;
+    thresholds[product] = {
+      cpl_vnd,
+      spend_vnd_last_30d: spend_vnd,
+      complete_registrations_last_30d: complete_registrations,
+      n_campaigns,
+      gia_ban_vnd: giaBan,
+      gia_nhap_vnd: giaNhap,
+      p_order_vnd: Math.round(pOrder),
+      cvr_breakeven_pct: Math.round(cvrBreakeven * 10) / 10,
+      cvr_scale_pct: Math.round(cvrScale * 10) / 10,
+      deliver_assumed_pct: deliver * 100,
+      scale_multiplier: scaleMultiplier,
+    };
+  }
+
+  // Noma 922 chia sẻ CPL với Noma 911 (vì bán kèm combo-103, không có campaign riêng)
+  if (thresholds["Noma 911"] && !thresholds["Noma 922"]) {
+    const cost922 = findCost("Noma 922");
+    if (cost922?.gia_ban_vnd && cost922?.gia_nhap_vnd) {
+      const giaBan = Number(cost922.gia_ban_vnd);
+      const giaNhap = Number(cost922.gia_nhap_vnd);
+      const pOrder = giaBan * 0.9 - giaNhap;
+      const cpl = thresholds["Noma 911"].cpl_vnd;
+      if (pOrder > 0) {
+        thresholds["Noma 922"] = {
+          cpl_vnd: cpl,
+          spend_vnd_last_30d: 0,
+          complete_registrations_last_30d: 0,
+          n_campaigns: 0,
+          shared_cpl_with: "Noma 911 (combo-103 bundle)",
+          gia_ban_vnd: giaBan,
+          gia_nhap_vnd: giaNhap,
+          p_order_vnd: Math.round(pOrder),
+          cvr_breakeven_pct: Math.round((cpl / (pOrder * deliver)) * 1000) / 10,
+          cvr_scale_pct: Math.round((scaleMultiplier * cpl / (pOrder * deliver)) * 1000) / 10,
+          deliver_assumed_pct: deliver * 100,
+          scale_multiplier: scaleMultiplier,
+        };
+      }
+    }
+  }
+
+  return {
+    computed_at: new Date().toISOString(),
+    window_days: days,
+    deliver_assumed_pct: deliver * 100,
+    scale_rule: `SCALE if CVR ≥ ${scaleMultiplier}× break-even (= lãi ≥ ${Math.round((scaleMultiplier - 1) * 100)}% chi ads)`,
+    formula_note: "CVR_breakeven = CPL / (P_order × deliver). P_order = giá_bán × 0.9 − giá_nhập (sau VAT 10%).",
+    thresholds,
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// LOAN-AWARE STAFF ATTRIBUTION
+// Khi 1 account được loan sang staff khác (vd account 906 → AI_AGENT từ
+// 2026-05-29), spend trước loan_date vẫn thuộc owner cũ, spend từ loan_date
+// trở đi thuộc loaned_to_staff. Schema mở rộng trong fb-config.json:
+//   account_to_groups[id] = {
+//     staff: "PHUONG_NAM",          // owner gốc (giữ nguyên cho lịch sử)
+//     groups: [...],
+//     loaned_to_staff: "AI_AGENT",  // optional — ai đang mượn
+//     loaned_from_date: "2026-05-29" // optional — ngày bắt đầu loan (YYYY-MM-DD, inclusive)
+//   }
+
+// Quyết định staff hiệu lực cho 1 account tại 1 ngày cụ thể.
+// date: "YYYY-MM-DD" hoặc null (null = "today VN")
+// Returns: staff string (vd "PHUONG_NAM" hoặc "AI_AGENT")
+export function getEffectiveStaffForAccount(accountInfo, date = null) {
+  if (!accountInfo) return null;
+  const owner = accountInfo.staff || null;
+  if (!accountInfo.loaned_to_staff || !accountInfo.loaned_from_date) return owner;
+  const d = date || new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+  return d >= accountInfo.loaned_from_date ? accountInfo.loaned_to_staff : owner;
+}
+
+// Tính khoảng hiệu lực cho 1 account khi attribute spend cho staff yêu cầu.
+// Returns null nếu account KHÔNG thuộc staff đó trong khoảng timeRange.
+// Returns { start, end, label } đã được truncate theo loan boundary.
+//
+// Cases (loanDate = accountInfo.loaned_from_date, inclusive):
+//   - account không có loan:
+//       owner === staff → effectiveRange = timeRange
+//       owner !== staff → null
+//   - account có loan, staff === owner:
+//       loanDate <= timeRange.start → null (toàn bộ range thuộc loaner)
+//       loanDate > timeRange.end    → effectiveRange = timeRange
+//       else → effectiveRange = [timeRange.start, loanDate - 1 day]
+//   - account có loan, staff === loaned_to_staff:
+//       loanDate > timeRange.end    → null (chưa đến ngày loan)
+//       loanDate <= timeRange.start → effectiveRange = timeRange
+//       else → effectiveRange = [loanDate, timeRange.end]
+//   - account có loan, staff khác cả 2 → null
+export function getEffectiveRangeForStaff(accountInfo, staff, timeRange) {
+  if (!accountInfo || !staff || !timeRange?.start || !timeRange?.end) return null;
+  const owner = accountInfo.staff || null;
+  const loaner = accountInfo.loaned_to_staff || null;
+  const loanDate = accountInfo.loaned_from_date || null;
+  const tStart = timeRange.start;
+  const tEnd = timeRange.end;
+
+  function ymdMinus1(ymd) {
+    const d = new Date(ymd + "T00:00:00Z");
+    return new Date(d.getTime() - 86400000).toISOString().slice(0, 10);
+  }
+
+  if (!loaner || !loanDate) {
+    return owner === staff ? { ...timeRange } : null;
+  }
+  if (staff === owner) {
+    if (loanDate <= tStart) return null;
+    if (loanDate > tEnd) return { ...timeRange };
+    return { start: tStart, end: ymdMinus1(loanDate), label: `${timeRange.label} (trước loan)` };
+  }
+  if (staff === loaner) {
+    if (loanDate > tEnd) return null;
+    if (loanDate <= tStart) return { ...timeRange };
+    return { start: loanDate, end: tEnd, label: `${timeRange.label} (sau loan)` };
+  }
+  return null;
+}
+
+// Helper aggregate: trả về list { id, info, effectiveRange } cho mọi account
+// thuộc về `staff` trong khoảng `timeRange` (đã xét loan).
+export function getAccountsForStaffInRange(fbConfig, staff, timeRange) {
+  const map = fbConfig?.account_to_groups || {};
+  const out = [];
+  for (const [id, info] of Object.entries(map)) {
+    const eff = getEffectiveRangeForStaff(info, staff, timeRange);
+    if (eff) out.push({ id, info, effectiveRange: eff });
+  }
+  return out;
+}
