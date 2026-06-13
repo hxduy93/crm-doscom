@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-13 22:15",
+  "generated_at": "2026-06-13 23:53",
   "source_data_date_range": {
     "start_7d": "2026-06-06",
     "end": "2026-06-12",
@@ -1678,39 +1678,54 @@
         ]
       },
       {
-        "search_term": "bút ghi âm điện máy xanh",
-        "spend_30d": 33397.0,
-        "clicks_30d": 5,
+        "search_term": "thiết bị dò định vị trên xe ô tô",
+        "spend_30d": 47103.0,
+        "clicks_30d": 13,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.1786,
+        "ctr_30d": 0.4643,
         "match_types": [
-          "NEAR_PHRASE"
+          "EXACT"
         ],
         "statuses": [
+          "ADDED"
+        ]
+      },
+      {
+        "search_term": "thiết bị định vị xe máy",
+        "spend_30d": 143832.0,
+        "clicks_30d": 48,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1584,
+        "match_types": [
+          "EXACT"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm mini pin khủng",
+        "spend_30d": 86999.0,
+        "clicks_30d": 12,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.2609,
+        "match_types": [
+          "BROAD",
+          "EXACT"
+        ],
+        "statuses": [
+          "ADDED",
           "NONE"
         ]
       },
       {
-        "search_term": "camera không dây",
-        "spend_30d": 77595.0,
-        "clicks_30d": 21,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1364,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera không dây kết nối điện thoại",
-        "spend_30d": 12631.0,
+        "search_term": "thiết bị định vị gắn xe máy",
+        "spend_30d": 11088.0,
         "clicks_30d": 4,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.1818,
+        "ctr_30d": 0.3636,
         "match_types": [
-          "BROAD"
+          "PHRASE"
         ],
         "statuses": [
           "NONE"
@@ -1727,21 +1742,6 @@
           "PHRASE"
         ],
         "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "máy ghi âm mini pin khủng",
-        "spend_30d": 86999.0,
-        "clicks_30d": 12,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.2609,
-        "match_types": [
-          "BROAD",
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED",
           "NONE"
         ]
       }
@@ -2142,6 +2142,12 @@
       }
     ],
     "match_type_breakdown": {
+      "EXACT": {
+        "spend_30d": 2022747.0,
+        "clicks_30d": 445,
+        "conversions_30d": 3.4,
+        "term_count": 76
+      },
       "BROAD": {
         "spend_30d": 10499713.0,
         "clicks_30d": 1489,
@@ -2165,25 +2171,19 @@
         "clicks_30d": 11,
         "conversions_30d": 0.0,
         "term_count": 4
-      },
-      "EXACT": {
-        "spend_30d": 2022747.0,
-        "clicks_30d": 445,
-        "conversions_30d": 3.4,
-        "term_count": 76
       }
     }
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 24244,
+      "total_unique_placements": 24256,
       "total_spend_30d": 28515738.0
     },
     "network_breakdown": {
       "CONTENT": {
         "spend_30d": 28522305.0,
         "clicks_30d": 17460,
-        "impressions_30d": 1400211,
+        "impressions_30d": 1400212,
         "ctr_30d": 0.0125,
         "cpc_30d": 1634.0,
         "campaign_count": 7
@@ -2201,9 +2201,9 @@
       "WEBSITE": {
         "spend_30d": 28515738.0,
         "clicks_30d": 17458,
-        "impressions_30d": 1347227,
+        "impressions_30d": 1347401,
         "ctr_30d": 0.013,
-        "placement_count": 24244
+        "placement_count": 24256
       }
     },
     "top_waste_placements": [],
