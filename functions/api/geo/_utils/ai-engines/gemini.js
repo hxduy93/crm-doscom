@@ -12,7 +12,10 @@
 // Route qua Cloudflare AI Gateway nếu env.CF_ACCOUNT_ID set (tăng reliability +
 // observability + log). Fallback về generativelanguage.googleapis.com.
 
-const DEFAULT_MODEL = "gemini-3-flash-preview";
+// 2026-06-15 (crm): đổi từ "gemini-3-flash-preview" → "gemini-2.5-flash".
+// Key Gemini của crm KHÔNG có quyền gemini-3-preview (trả 429 quota); 2.5-flash
+// có sẵn + hỗ trợ google_search grounding. Override được qua env GEMINI_MODEL.
+const DEFAULT_MODEL = "gemini-2.5-flash";
 const PRICE_IN_PER_1M  = 0.075;
 const PRICE_OUT_PER_1M = 0.30;
 const GATEWAY_ID = "doscom-erp";
