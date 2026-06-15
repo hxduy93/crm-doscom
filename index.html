@@ -1094,31 +1094,56 @@ function buildWeeklyReportData(rangeStart, rangeEnd) {
   }))
 
   // ── CPA & AOV theo BRAND, CHỈ Facebook Ads (DUY + PHƯƠNG NAM) ──
+  // Tính CẤP ĐƠN (order-level) để KHỚP Pancake: combo lấy ĐỦ giá trị đơn, không "xé" theo SKU.
+  // Noma = (tổng đơn FB order-level) − (Doscom per-product). Doscom ít combo nên per-product ≈ order-level.
   // KHÔNG gộp WEBSITE/Google, ZALO, HOTLINE, Page organic. (Data này không có Shopee/TikTok.)
   const FB_REV_KEYS = ["DUY", "PHUONG_NAM"]
+  const BOOK_ST = ["delivered", "other", "returning"] // đơn đã đặt (booked) — khớp "DT tạm tính"
   const isNomaP = p => /^\s*noma/i.test(p || "")
-  function aggBrandFb(filt, rStart, rEnd) {
+  function fbOrderTotal(rStart, rEnd) { // tổng đơn FB cấp ORDER (mọi SP)
+    let rev = 0, ord = 0
+    FB_REV_KEYS.forEach(k => {
+      const g = revenueGroups[k]; if (!g) return
+      const R = g.order_revenue_by_status_by_date || {}, C = g.order_count_by_status_by_date || {}
+      BOOK_ST.forEach(s => { rev += _sumDateMap(R[s], rStart, rEnd); ord += _sumDateMap(C[s], rStart, rEnd) })
+    })
+    return { rev, ord }
+  }
+  function fbDoscomPP(rStart, rEnd) { // Doscom per-product (booked) + FB ad spend Doscom
     let ad = 0, rev = 0, ord = 0
     FB_REV_KEYS.forEach(k => {
       const buckets = adSpendByStaff[k] || {}
-      Object.entries(buckets).forEach(([prod, b]) => { if (filt(prod)) ad += _sumDateMap(b.by_date, rStart, rEnd) })
-      const g = revenueGroups[k]; if (!g) return
-      const prods = g.products || {}
-      products.forEach(p => {
-        if (!filt(p)) return
-        const pd = prods[p]; if (!pd) return
-        rev += _sumDateMap(pd.by_date, rStart, rEnd)
-        ord += _sumDateMap(pd.orders_by_date, rStart, rEnd)
+      Object.entries(buckets).forEach(([prod, b]) => { if (!isNomaP(prod)) ad += _sumDateMap(b.by_date, rStart, rEnd) })
+      const P = (revenueGroups[k] || {}).products_by_status || {}
+      BOOK_ST.forEach(s => {
+        const ps = P[s] || {}
+        Object.keys(ps).forEach(p => { if (isNomaP(p)) return; rev += _sumDateMap(ps[p].by_date, rStart, rEnd); ord += _sumDateMap(ps[p].orders_by_date, rStart, rEnd) })
       })
     })
-    return { adSpend: ad, revenue: rev, orders: ord, cpa: ord > 0 ? ad / ord : null, aov: ord > 0 ? rev / ord : null }
+    return { ad, rev, ord }
   }
-  const brandLineFb = filt => {
-    const c = aggBrandFb(filt, rangeStart, rangeEnd)
-    const p = aggBrandFb(filt, prevPeriod.start, prevPeriod.end)
-    return { ...c, prev: p, cpaDelta: _pctDelta(c.cpa, p.cpa), aovDelta: _pctDelta(c.aov, p.aov) }
+  function fbNomaAd(rStart, rEnd) { // FB ad spend cho SP Noma
+    let ad = 0
+    FB_REV_KEYS.forEach(k => {
+      const buckets = adSpendByStaff[k] || {}
+      Object.entries(buckets).forEach(([prod, b]) => { if (isNomaP(prod)) ad += _sumDateMap(b.by_date, rStart, rEnd) })
+    })
+    return ad
   }
-  const brandLinesFb = { doscom: brandLineFb(p => !isNomaP(p)), noma: brandLineFb(isNomaP) }
+  function brandPair(rStart, rEnd) {
+    const T = fbOrderTotal(rStart, rEnd), D = fbDoscomPP(rStart, rEnd), nAd = fbNomaAd(rStart, rEnd)
+    const noma = { adSpend: nAd, revenue: Math.max(0, T.rev - D.rev), orders: Math.max(0, T.ord - D.ord) }
+    noma.cpa = noma.orders > 0 ? noma.adSpend / noma.orders : null
+    noma.aov = noma.orders > 0 ? noma.revenue / noma.orders : null
+    const doscom = { adSpend: D.ad, revenue: D.rev, orders: D.ord }
+    doscom.cpa = doscom.orders > 0 ? doscom.adSpend / doscom.orders : null
+    doscom.aov = doscom.orders > 0 ? doscom.revenue / doscom.orders : null
+    return { doscom, noma }
+  }
+  const _blCur = brandPair(rangeStart, rangeEnd)
+  const _blPrev = brandPair(prevPeriod.start, prevPeriod.end)
+  const _mkLine = (c, p) => ({ ...c, prev: p, cpaDelta: _pctDelta(c.cpa, p.cpa), aovDelta: _pctDelta(c.aov, p.aov) })
+  const brandLinesFb = { doscom: _mkLine(_blCur.doscom, _blPrev.doscom), noma: _mkLine(_blCur.noma, _blPrev.noma) }
 
   return {
     range: { start: rangeStart, end: rangeEnd, days: prevPeriod.days },
@@ -1410,7 +1435,7 @@ function renderWeeklyReportHtml(data) {
         </tr>
       </tbody>
     </table>
-    <p class="muted" style="margin-top:-8px">CHỈ tính đơn Facebook Ads (DUY + PHƯƠNG NAM) — KHÔNG gồm Website/Google, Zalo, Hotline, Page organic (và data này không có Shopee/TikTok) · Noma = Noma 911/922/250 · Doscom = các SKU còn lại · CPA = Ad spend FB ÷ đơn · AOV = DT ÷ đơn · ΔCPA ▼ xanh = tốt · ΔAOV ▲ xanh = tốt.</p>
+    <p class="muted" style="margin-top:-8px">CHỈ đơn Facebook Ads (DUY + PHƯƠNG NAM) — KHÔNG gồm Website/Google, Zalo, Hotline, Page organic (data này không có Shopee/TikTok). Tính <b>cấp đơn</b> (combo lấy đủ giá trị đơn, khớp Pancake), Noma = tổng đơn FB − Doscom · CPA = Ad spend FB ÷ đơn · AOV = DT ÷ đơn · ΔCPA ▼ xanh = tốt · ΔAOV ▲ xanh = tốt.</p>
   `
 
   const s2b = `
