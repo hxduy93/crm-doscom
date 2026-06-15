@@ -1093,11 +1093,12 @@ function buildWeeklyReportData(rangeStart, rangeEnd) {
     ...c, underperforming: c.cir != null && avgCir > 0 && c.cir > avgCir * 1.2,
   }))
 
-  // ── CPA & AOV theo BRAND, CHỈ Facebook Ads (DUY + PHƯƠNG NAM) ──
+  // ── CPA & AOV theo BRAND — Facebook (Ads DUY + PHƯƠNG NAM + Page/Messenger organic) ──
   // Tính CẤP ĐƠN (order-level) để KHỚP Pancake: combo lấy ĐỦ giá trị đơn, không "xé" theo SKU.
   // Noma = (tổng đơn FB order-level) − (Doscom per-product). Doscom ít combo nên per-product ≈ order-level.
-  // KHÔNG gộp WEBSITE/Google, ZALO, HOTLINE, Page organic. (Data này không có Shopee/TikTok.)
-  const FB_REV_KEYS = ["DUY", "PHUONG_NAM"]
+  // Gồm: DUY (đã chứa "DUY - Noma911" + messenger qua name_prefix), PHƯƠNG NAM, FB_PAGE (nhắn tin organic qua Page).
+  // KHÔNG gộp WEBSITE/Google, ZALO, HOTLINE. (Data này không có Shopee/TikTok.)
+  const FB_REV_KEYS = ["DUY", "PHUONG_NAM", "FB_PAGE"]
   const BOOK_ST = ["delivered", "other", "returning"] // đơn đã đặt (booked) — khớp "DT tạm tính"
   const isNomaP = p => /^\s*noma/i.test(p || "")
   function fbOrderTotal(rStart, rEnd) { // tổng đơn FB cấp ORDER (mọi SP)
@@ -1418,7 +1419,7 @@ function renderWeeklyReportHtml(data) {
   blTotP.cpa = blTotP.orders > 0 ? blTotP.adSpend / blTotP.orders : null
   blTotP.aov = blTotP.orders > 0 ? blTotP.revenue / blTotP.orders : null
   const brandLinesHtml = `
-    <h4>🏷️ CPA &amp; AOV THEO BRAND — chỉ Facebook Ads (Doscom vs Noma)</h4>
+    <h4>🏷️ CPA &amp; AOV THEO BRAND — Facebook: Ads + Page/Messenger (Doscom vs Noma)</h4>
     <table class="rpt">
       <thead><tr><th>Brand</th><th>Ad spend (FB)</th><th>Đơn</th><th>CPA</th><th>ΔCPA</th><th>AOV</th><th>ΔAOV</th></tr></thead>
       <tbody>
@@ -1435,7 +1436,7 @@ function renderWeeklyReportHtml(data) {
         </tr>
       </tbody>
     </table>
-    <p class="muted" style="margin-top:-8px">CHỈ đơn Facebook Ads (DUY + PHƯƠNG NAM) — KHÔNG gồm Website/Google, Zalo, Hotline, Page organic (data này không có Shopee/TikTok). Tính <b>cấp đơn</b> (combo lấy đủ giá trị đơn, khớp Pancake), Noma = tổng đơn FB − Doscom · CPA = Ad spend FB ÷ đơn · AOV = DT ÷ đơn · ΔCPA ▼ xanh = tốt · ΔAOV ▲ xanh = tốt.</p>
+    <p class="muted" style="margin-top:-8px">Đơn Facebook: <b>DUY + PHƯƠNG NAM</b> (gồm Noma911 + messenger) <b>+ Page/Messenger organic</b> — KHÔNG gồm Website/Google, Zalo, Hotline (data không có Shopee/TikTok). Tính <b>cấp đơn</b> (combo lấy đủ giá trị, khớp Pancake), Noma = tổng đơn FB − Doscom. CPA = Ad spend FB ÷ đơn (Page organic không có spend nên CPA là blended) · AOV = DT ÷ đơn · ΔCPA ▼ xanh = tốt · ΔAOV ▲ xanh = tốt.</p>
   `
 
   const s2b = `
