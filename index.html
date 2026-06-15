@@ -1178,6 +1178,18 @@ function renderWeeklyReportHtml(data) {
   `
 
   // ── SECTION 1.C — Top SP hiệu quả ──
+  const skuTot = (data.topBySku || []).reduce((a, s) => ({ rev: a.rev + (s.revenue || 0), un: a.un + (s.units || 0), ad: a.ad + (s.adSpend || 0), pf: a.pf + (s.profit || 0) }), { rev: 0, un: 0, ad: 0, pf: 0 })
+  const s1cTotalRow = data.topBySku.length ? `
+        <tr class="total">
+          <td class="lbl">TỔNG</td>
+          <td class="num">${fmtV(skuTot.rev)}</td>
+          <td class="num">${fmtN(skuTot.un)}</td>
+          <td class="num">${fmtV(skuTot.ad)}</td>
+          <td class="num ${skuTot.pf >= 0 ? 'pos' : 'neg'}">${fmtV(skuTot.pf)}</td>
+          <td class="num">${fmtP(skuTot.rev > 0 ? skuTot.pf / skuTot.rev * 100 : null)}</td>
+          <td class="num">${fmtP(skuTot.rev > 0 ? skuTot.ad / skuTot.rev * 100 : null)}</td>
+          <td class="num">—</td>
+        </tr>` : ""
   const s1c = `
     <h4>⭐ TOP 5 SKU HIỆU QUẢ NHẤT (xếp theo lợi nhuận)</h4>
     <table class="rpt">
@@ -1198,11 +1210,23 @@ function renderWeeklyReportHtml(data) {
             <td class="num">${s.roi == null ? "—" : s.roi.toFixed(2) + "x"}</td>
           </tr>
         `).join("") || '<tr><td colspan="8" class="muted">Không có data.</td></tr>'}
+        ${s1cTotalRow}
       </tbody>
     </table>
   `
 
   // ── SECTION 1.D — SP khó bán ──
+  const hardTot = (data.hardToSell || []).reduce((a, s) => ({ ad: a.ad + (s.adSpend || 0), rev: a.rev + (s.revenue || 0), un: a.un + (s.units || 0), od: a.od + (s.orders || 0), pf: a.pf + (s.profit || 0) }), { ad: 0, rev: 0, un: 0, od: 0, pf: 0 })
+  const s1dTotalRow = data.hardToSell.length ? `
+        <tr class="total">
+          <td class="lbl">TỔNG</td>
+          <td class="num">${fmtV(hardTot.ad)}</td>
+          <td class="num">${fmtV(hardTot.rev)}</td>
+          <td class="num">${fmtN(hardTot.un)}</td>
+          <td class="num">${fmtN(hardTot.od)}</td>
+          <td class="num neg">${fmtP(hardTot.rev > 0 ? hardTot.ad / hardTot.rev * 100 : null)}</td>
+          <td class="num ${hardTot.pf >= 0 ? 'pos' : 'neg'}">${fmtV(hardTot.pf)}</td>
+        </tr>` : ""
   const s1d = `
     <h4>⚠ SKU KHÓ BÁN (spend > 100k nhưng 0 đơn hoặc CIR > 100%)</h4>
     <table class="rpt">
@@ -1222,11 +1246,13 @@ function renderWeeklyReportHtml(data) {
             <td class="num ${s.profit >= 0 ? 'pos' : 'neg'}">${fmtV(s.profit)}</td>
           </tr>
         `).join("") || '<tr><td colspan="7" class="muted">Không có SKU khó bán đáng kể.</td></tr>'}
+        ${s1dTotalRow}
       </tbody>
     </table>
   `
 
   // ── SECTION 2.A — Channel performance ──
+  const chTot = (data.channels || []).reduce((a, c) => ({ sp: a.sp + (c.totalSpendInclUnmatch || 0), dt: a.dt + (c.revPending || 0), od: a.od + (c.ordersFinal || 0), pf: a.pf + (c.profit || 0) }), { sp: 0, dt: 0, od: 0, pf: 0 })
   const s2a = `
     <h4>🎯 HIỆU SUẤT THEO KÊNH (so với kỳ trước ${esc(prevLabel)})</h4>
     <table class="rpt">
@@ -1253,6 +1279,19 @@ function renderWeeklyReportHtml(data) {
             <td class="num ${c.profit >= 0 ? 'pos' : 'neg'}">${fmtV(c.profit)}</td>
           </tr>
         `).join("")}
+        <tr class="total">
+          <td class="lbl">TỔNG</td>
+          <td class="num">${fmtV(chTot.sp)}</td>
+          <td class="num">—</td>
+          <td class="num">${fmtV(chTot.dt)}</td>
+          <td class="num">—</td>
+          <td class="num">${fmtN(chTot.od)}</td>
+          <td class="num">${fmtP(chTot.dt > 0 ? chTot.sp / chTot.dt * 100 : null)}</td>
+          <td class="num">—</td>
+          <td class="num">—</td>
+          <td class="num">—</td>
+          <td class="num ${chTot.pf >= 0 ? 'pos' : 'neg'}">${fmtV(chTot.pf)}</td>
+        </tr>
       </tbody>
     </table>
     <p class="muted" style="margin-top:-8px">
@@ -1264,6 +1303,56 @@ function renderWeeklyReportHtml(data) {
   // ── SECTION 2.B — CPA + AOV trung bình ──
   const cpaCur = data.cpaAvg.cur, cpaPrev = data.cpaAvg.prev
   const aov = data.aovAvg
+
+  // CPA & AOV tách theo BRAND (Doscom vs Noma) — từ skuList: Ad spend FB + đơn/DT Pancake
+  const blIsNoma = p => /^\s*noma/i.test(p || "")
+  const blAgg = (filt, prev) => {
+    let ad = 0, rev = 0, ord = 0
+    const list = data.skuList || []
+    list.forEach(s => {
+      if (!filt(s.product)) return
+      const o = prev ? (s.prev || {}) : s
+      ad += o.adSpend || 0; rev += o.revenue || 0; ord += o.orders || 0
+    })
+    return { adSpend: ad, revenue: rev, orders: ord, cpa: ord > 0 ? ad / ord : null, aov: ord > 0 ? rev / ord : null }
+  }
+  const blPctd = (c, p) => (p === 0 || p == null) ? (c > 0 ? null : 0) : (c - p) / Math.abs(p) * 100
+  const blRow = (name, filt) => {
+    const c = blAgg(filt, false), p = blAgg(filt, true)
+    return `<tr>
+      <td class="lbl">${name}</td>
+      <td class="num">${fmtV(c.adSpend)}</td>
+      <td class="num">${fmtN(c.orders)}</td>
+      <td class="num">${c.cpa == null ? "—" : fmtV(c.cpa)}</td>
+      <td class="num">${fmtDeltaNeg(blPctd(c.cpa, p.cpa))}</td>
+      <td class="num">${c.aov == null ? "—" : fmtV(c.aov)}</td>
+      <td class="num">${fmtDelta(blPctd(c.aov, p.aov))}</td>
+    </tr>`
+  }
+  const brandLinesHtml = `
+    <h4>🏷️ CPA &amp; AOV THEO BRAND (Doscom vs Noma)</h4>
+    <table class="rpt">
+      <thead><tr><th>Brand</th><th>Ad spend (FB)</th><th>Đơn</th><th>CPA</th><th>ΔCPA</th><th>AOV</th><th>ΔAOV</th></tr></thead>
+      <tbody>
+        ${blRow("Doscom", p => !blIsNoma(p))}
+        ${blRow("Noma", blIsNoma)}
+        ${(() => {
+          const c = blAgg(() => true, false), p = blAgg(() => true, true)
+          return `<tr class="total">
+            <td class="lbl">TỔNG</td>
+            <td class="num">${fmtV(c.adSpend)}</td>
+            <td class="num">${fmtN(c.orders)}</td>
+            <td class="num">${c.cpa == null ? "—" : fmtV(c.cpa)}</td>
+            <td class="num">${fmtDeltaNeg(blPctd(c.cpa, p.cpa))}</td>
+            <td class="num">${c.aov == null ? "—" : fmtV(c.aov)}</td>
+            <td class="num">${fmtDelta(blPctd(c.aov, p.aov))}</td>
+          </tr>`
+        })()}
+      </tbody>
+    </table>
+    <p class="muted" style="margin-top:-8px">Noma = Noma 911/922/250 · Doscom = các SKU còn lại · CPA = Ad spend FB ÷ đơn (Pancake) · AOV = DT sản phẩm ÷ đơn · ΔCPA ▼ xanh = giảm = tốt · ΔAOV ▲ xanh = tăng = tốt.</p>
+  `
+
   const s2b = `
     <div class="metric-row">
       <div class="metric-card">
@@ -1278,6 +1367,7 @@ function renderWeeklyReportHtml(data) {
       </div>
     </div>
     <p class="muted" style="margin-top:-8px">AOV = Tổng DT chốt (delivered) ÷ Tổng đơn chốt · AOV tăng (▲ xanh) = tốt.</p>
+    ${brandLinesHtml}
   `
 
   // ── SECTION 2.C — Campaign lỗ / vượt ngân sách ──
