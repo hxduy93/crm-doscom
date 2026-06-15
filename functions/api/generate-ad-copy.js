@@ -4,16 +4,15 @@
 //    Nếu rỗng → AI KHÔNG tự ý bịa KM. Chỉ giữ dòng Bảo hành cố định.
 // Response: { variants: [...] }
 //
-// Powered by Cloudflare Workers AI (Llama 3.3 70B) — native Cloudflare, free tier,
-// không cần API key, không bị region block.
-//
-// YÊU CẦU: Cloudflare Pages binding tên "AI" đã được kích hoạt
-// (Settings → Functions → Bindings → Add binding → Workers AI → name: AI).
+// 2026-06-15 (crm): đổi từ Cloudflare Workers AI (Llama 3.3 70B — hay trả JSON hỏng)
+// sang Anthropic Claude Haiku 4.5 qua Cloudflare AI Gateway 'doscom-erp' (JSON ổn định,
+// nhanh). Tái dùng pattern callClaudeViaGateway của agent FB/Google.
+// CẦN env: ANTHROPIC_API_KEY (secret) + CF_ACCOUNT_ID (var) — crm đã có sẵn.
 
 import { getProduct } from "../lib/product-catalog.js";
 import { SYSTEM_PROMPT, buildUserPrompt } from "../lib/ad-prompts.js";
 
-const CF_AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+const CLAUDE_MODEL = "claude-haiku-4-5";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -22,12 +21,46 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+// Gọi Claude qua Cloudflare AI Gateway (giữ observability gateway 'doscom-erp').
+// System prompt cache_control ephemeral → bấm lại nhiều mẫu cùng SP → cache hit.
+async function callClaudeViaGateway(env, systemPrompt, userPrompt) {
+  if (!env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY chưa set trong Cloudflare env");
+  if (!env.CF_ACCOUNT_ID) throw new Error("CF_ACCOUNT_ID chưa set trong Cloudflare env");
+
+  const url = `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/doscom-erp/anthropic/v1/messages`;
+  const r = await fetch(url, {
+    method: "POST",
+    headers: {
+      "x-api-key": env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: 4096,
+      temperature: 0.9,
+      system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: userPrompt }],
+    }),
+    signal: AbortSignal.timeout(60000),
+  });
+
+  if (!r.ok) {
+    const errText = await r.text().catch(() => "");
+    throw new Error(`Claude API ${r.status}: ${errText.slice(0, 300)}`);
+  }
+  const data = await r.json();
+  const textBlock = (data.content || []).find(b => b.type === "text");
+  if (!textBlock?.text) throw new Error("Claude trả empty content");
+  return textBlock.text;
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  if (!env.AI) {
+  if (!env.ANTHROPIC_API_KEY || !env.CF_ACCOUNT_ID) {
     return jsonResponse({
-      error: "Thiếu Workers AI binding. Vào Cloudflare Pages → Settings → Functions → Bindings → Add binding → Workers AI → name: AI.",
+      error: "Thiếu cấu hình Claude: cần ANTHROPIC_API_KEY (secret) + CF_ACCOUNT_ID (var) trên Cloudflare Pages.",
     }, 500);
   }
 
@@ -47,44 +80,16 @@ export async function onRequestPost(context) {
 
   const userPrompt = buildUserPrompt({ product, format, formatLabel, cta, notes, promotion });
 
-  let aiResult;
+  let textOut;
   try {
-    aiResult = await env.AI.run(CF_AI_MODEL, {
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.9,
-      top_p: 0.95,
-      max_tokens: 4096,
-      response_format: { type: "json_object" },
-    }, { gateway: { id: "doscom-erp" } });
+    textOut = await callClaudeViaGateway(env, SYSTEM_PROMPT, userPrompt);
   } catch (err) {
     return jsonResponse({
-      error: "Workers AI lỗi: " + (err?.message || String(err)),
+      error: "Claude lỗi: " + (err?.message || String(err)),
     }, 502);
   }
 
-  // Workers AI trả về { response: "..." } hoặc object đã parse tùy model
-  let textOut;
-  if (typeof aiResult === "string") {
-    textOut = aiResult;
-  } else if (aiResult?.response) {
-    textOut = typeof aiResult.response === "string"
-      ? aiResult.response
-      : JSON.stringify(aiResult.response);
-  } else if (aiResult?.result) {
-    textOut = typeof aiResult.result === "string"
-      ? aiResult.result
-      : JSON.stringify(aiResult.result);
-  } else {
-    return jsonResponse({
-      error: "Workers AI không trả về nội dung.",
-      debug: aiResult,
-    }, 502);
-  }
-
-  // Thử parse JSON; nếu model kèm text thừa, cố gắng extract block JSON
+  // Parse JSON; nếu model kèm text thừa, cố gắng extract block JSON đầu tiên.
   let parsed;
   try {
     parsed = JSON.parse(textOut);
@@ -93,25 +98,16 @@ export async function onRequestPost(context) {
     if (match) {
       try {
         parsed = JSON.parse(match[0]);
-      } catch (err2) {
-        return jsonResponse({
-          error: "Workers AI trả JSON không hợp lệ.",
-          raw: textOut.slice(0, 500),
-        }, 502);
+      } catch {
+        return jsonResponse({ error: "Claude trả JSON không hợp lệ.", raw: textOut.slice(0, 500) }, 502);
       }
     } else {
-      return jsonResponse({
-        error: "Workers AI trả JSON không hợp lệ.",
-        raw: textOut.slice(0, 500),
-      }, 502);
+      return jsonResponse({ error: "Claude trả JSON không hợp lệ.", raw: textOut.slice(0, 500) }, 502);
     }
   }
 
   if (!Array.isArray(parsed.variants) || parsed.variants.length === 0) {
-    return jsonResponse({
-      error: "Workers AI không trả variants hợp lệ.",
-      raw: parsed,
-    }, 502);
+    return jsonResponse({ error: "Claude không trả variants hợp lệ.", raw: parsed }, 502);
   }
 
   // Truncate to enforce FB limits (safety net)
@@ -126,10 +122,10 @@ export async function onRequestPost(context) {
 
   return jsonResponse({
     ok: true,
-    model: CF_AI_MODEL,
+    model: CLAUDE_MODEL,
     product: productKey,
     variants: parsed.variants,
   });
 }
 
-// Các method khác GET/POST sẽ tự động trả 405 bởi Cloudflare Pages Functions
+// Các method khác GET sẽ tự động trả 405 bởi Cloudflare Pages Functions
