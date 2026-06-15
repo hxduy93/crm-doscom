@@ -440,7 +440,7 @@
     ['ads-creator','landing','warehouse'].forEach(function(v){ var el=document.getElementById('view-'+v); if(el) el.innerHTML=comingHtml(v); });
     // GEO Monitor: nạp trang standalone vào iframe lần đầu mở (lazy)
     (function(){ var loaded=false; var navGeo=document.querySelector('.sidebar .nav-item[data-view="geo"]');
-      if(navGeo) navGeo.addEventListener('click',function(){ if(loaded)return; var f=document.getElementById('geo-frame'); if(f){ f.src='/agent-geo-doscom.html'; loaded=true; } }); })();
+      if(navGeo) navGeo.addEventListener('click',function(){ if(loaded)return; var f=document.getElementById('geo-frame'); if(f){ f.src='/agent-geo-doscom'; loaded=true; } }); })();
 
     var navItems=Array.prototype.slice.call(document.querySelectorAll('.sidebar .nav-item[data-view]'));
     var views=Array.prototype.slice.call(document.querySelectorAll('.view'));
