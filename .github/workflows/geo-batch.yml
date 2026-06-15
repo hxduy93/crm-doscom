@@ -1,0 +1,52 @@
+name: GEO Monitor — batch processor (CRM)
+
+# Port từ facebookadsallinone. Endpoint /api/geo/* của CRM đang MỞ (không có
+# _middleware) → không cần X-Test-Token. Cần các secret GEO trên Cloudflare Pages
+# (OPENAI_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY…) thì run-batch mới query được.
+# Cost ~ 30 query × 3 engine × 1 run/ngày × ~$0.0135 ≈ $1.2/ngày.
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # 30 phút/tick, idempotent
+  workflow_dispatch:
+
+concurrency:
+  group: geo-batch
+  cancel-in-progress: false
+
+jobs:
+  batch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Create daily jobs (idempotent)
+        run: |
+          echo "::group::Create daily jobs"
+          HTTP_CODE=$(curl -s -o /tmp/jobs.json -w "%{http_code}" \
+            -X POST 'https://crm-doscom.pages.dev/api/geo/jobs' \
+            -H "Content-Type: application/json" \
+            -d '{"runs_per_query": 1}')
+          echo "HTTP $HTTP_CODE"; cat /tmp/jobs.json; echo ""
+          if [ "$HTTP_CODE" -ge 400 ]; then echo "::error::jobs failed (HTTP $HTTP_CODE)"; exit 1; fi
+          echo "::endgroup::"
+
+      - name: Process batch (6 jobs)
+        run: |
+          echo "::group::Process batch"
+          HTTP_CODE=$(curl -s -o /tmp/batch.json -w "%{http_code}" \
+            -X POST 'https://crm-doscom.pages.dev/api/geo/run-batch' \
+            -H "Content-Type: application/json" \
+            -d '{"limit": 6}')
+          echo "HTTP $HTTP_CODE"; cat /tmp/batch.json; echo ""
+          if [ "$HTTP_CODE" -ge 400 ]; then echo "::error::batch failed (HTTP $HTTP_CODE)"; exit 1; fi
+          echo "::endgroup::"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## GEO Monitor batch summary" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat /tmp/jobs.json 2>/dev/null || echo "no jobs output" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat /tmp/batch.json 2>/dev/null || echo "no batch output" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

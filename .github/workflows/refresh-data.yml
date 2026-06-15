@@ -49,6 +49,10 @@ jobs:
           cp index.html dist/
           cp -r data dist/data
           if [ -d demos ]; then cp -r demos dist/demos; fi
+          # Trang standalone (nhúng iframe trong CRM) — phải copy thủ công.
+          for page in agent-geo-doscom.html; do
+            if [ -f "$page" ]; then cp "$page" dist/; fi
+          done
           # Functions (functions/) được wrangler tự bundle từ gốc repo → không cần copy.
 
       - name: Deploy lên Cloudflare Pages

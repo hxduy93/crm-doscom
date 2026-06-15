@@ -42,6 +42,14 @@ GOOGLE_FILES = [
     "google-ads-ads.json",
     "google-ads-placement.json",
 ]
+# Data cho GEO Monitor — đối thủ + radar (cùng base raw GitHub). Cập nhật chậm,
+# kéo về cho tươi; bản thật được push từ máy local (scraping) vào repo cũ.
+GEO_FILES = [
+    "competitor_baseline.json",
+    "competitor_snapshots.json",
+    "radar-baseline.json",
+    "radar-latest.json",
+]
 DATA_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "data"))
 
 
@@ -79,6 +87,11 @@ def sync_fb_data():
 def sync_google_data():
     """Kéo data cho Agent Google Ads."""
     _sync_files(GOOGLE_FILES, "GG")
+
+
+def sync_geo_data():
+    """Kéo data cho GEO Monitor (đối thủ + radar)."""
+    _sync_files(GEO_FILES, "GEO")
 
 
 def extract_data_blob(html: str) -> dict:
@@ -128,6 +141,9 @@ def main():
 
     print("[refresh] Đồng bộ data Agent Google Ads…")
     sync_google_data()
+
+    print("[refresh] Đồng bộ data GEO Monitor…")
+    sync_geo_data()
 
 
 if __name__ == "__main__":
