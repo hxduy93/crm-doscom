@@ -84,6 +84,9 @@
       <button onclick="window.resetStaleDrafting()" class="px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-sm font-medium transition" title="Reset các article kẹt ở status drafting (do Worker bị kill giữa chừng) về failed để regen lại">
         🔧 Reset stale
       </button>
+      <button id="run-cron-btn" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition" title="Tạo job hôm nay (nếu chưa) rồi chạy HẾT job đang chờ qua ChatGPT + Gemini — không cần đợi cron 30 phút">
+        ▶ Chạy cron ngay
+      </button>
       <button id="refresh-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
         Refresh
@@ -657,6 +660,41 @@ document.getElementById("days-filter").addEventListener("change", e => {
 });
 
 document.getElementById("refresh-btn").addEventListener("click", () => loadAll());
+
+// ▶ Chạy cron ngay — tạo job hôm nay (idempotent) rồi loop run-batch tới khi hết job.
+async function runCronNow() {
+  const btn = document.getElementById("run-cron-btn");
+  const status = document.getElementById("status-text");
+  if (btn.disabled) return;
+  if (!confirm("Chạy cron ngay: tạo job hôm nay (nếu chưa) rồi xử lý HẾT job đang chờ qua ChatGPT + Gemini.\n\nMỗi câu ChatGPT ~$0.027 (Gemini gần như free) → quét đủ 30 câu ≈ $0.8.\n\nTiếp tục?")) return;
+  const orig = btn.textContent;
+  btn.disabled = true;
+  try {
+    btn.textContent = "⏳ Tạo job…";
+    await fetch("/api/geo/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ runs_per_query: 1 }) });
+    let done = 0, failed = 0, cost = 0, iter = 0;
+    const MAX_ITER = 30; // an toàn: tối đa 30×6 = 180 job/lần bấm
+    while (iter < MAX_ITER) {
+      iter++;
+      btn.textContent = `⏳ Đang quét… (${done})`;
+      const r = await fetch("/api/geo/run-batch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ limit: 6 }) });
+      const j = await r.json().catch(() => ({}));
+      if (!j || !j.processed) break; // processed=0 → hết job đang chờ
+      const s = j.summary || {};
+      done += s.done || 0; failed += s.failed || 0; cost += s.total_cost_usd || 0;
+      status.textContent = `Đang quét cron… ${done} job xong, ${failed} lỗi · $${cost.toFixed(3)}`;
+    }
+    status.textContent = `✅ Cron xong: ${done} job xử lý, ${failed} lỗi · chi phí $${cost.toFixed(3)}`;
+    await loadAll();
+    if (typeof loadAIUsage === "function") loadAIUsage();
+  } catch (err) {
+    status.innerHTML = `<span class="text-red-600">Lỗi cron: ${escapeHtml(err.message || String(err))}</span>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
+document.getElementById("run-cron-btn").addEventListener("click", runCronNow);
 
 document.getElementById("filter-engine").addEventListener("change", e => {
   currentEngine = e.target.value;
