@@ -1093,12 +1093,40 @@ function buildWeeklyReportData(rangeStart, rangeEnd) {
     ...c, underperforming: c.cir != null && avgCir > 0 && c.cir > avgCir * 1.2,
   }))
 
+  // ── CPA & AOV theo BRAND, CHỈ Facebook Ads (DUY + PHƯƠNG NAM) ──
+  // KHÔNG gộp WEBSITE/Google, ZALO, HOTLINE, Page organic. (Data này không có Shopee/TikTok.)
+  const FB_REV_KEYS = ["DUY", "PHUONG_NAM"]
+  const isNomaP = p => /^\s*noma/i.test(p || "")
+  function aggBrandFb(filt, rStart, rEnd) {
+    let ad = 0, rev = 0, ord = 0
+    FB_REV_KEYS.forEach(k => {
+      const buckets = adSpendByStaff[k] || {}
+      Object.entries(buckets).forEach(([prod, b]) => { if (filt(prod)) ad += _sumDateMap(b.by_date, rStart, rEnd) })
+      const g = revenueGroups[k]; if (!g) return
+      const prods = g.products || {}
+      products.forEach(p => {
+        if (!filt(p)) return
+        const pd = prods[p]; if (!pd) return
+        rev += _sumDateMap(pd.by_date, rStart, rEnd)
+        ord += _sumDateMap(pd.orders_by_date, rStart, rEnd)
+      })
+    })
+    return { adSpend: ad, revenue: rev, orders: ord, cpa: ord > 0 ? ad / ord : null, aov: ord > 0 ? rev / ord : null }
+  }
+  const brandLineFb = filt => {
+    const c = aggBrandFb(filt, rangeStart, rangeEnd)
+    const p = aggBrandFb(filt, prevPeriod.start, prevPeriod.end)
+    return { ...c, prev: p, cpaDelta: _pctDelta(c.cpa, p.cpa), aovDelta: _pctDelta(c.aov, p.aov) }
+  }
+  const brandLinesFb = { doscom: brandLineFb(p => !isNomaP(p)), noma: brandLineFb(isNomaP) }
+
   return {
     range: { start: rangeStart, end: rangeEnd, days: prevPeriod.days },
     prevRange: prevPeriod,
     weeks,
     kpi,
     skuList,
+    brandLinesFb,
     topSpike, topDrop, topBySku, hardToSell,
     channels: channelRanking,
     cpaAvg: { cur: isFinite(cpaTotalCur) ? cpaTotalCur : null, prev: isFinite(cpaTotalPrev) ? cpaTotalPrev : null, delta: _pctDelta(cpaTotalCur, cpaTotalPrev) },
@@ -1341,53 +1369,48 @@ function renderWeeklyReportHtml(data) {
   const cpaCur = data.cpaAvg.cur, cpaPrev = data.cpaAvg.prev
   const aov = data.aovAvg
 
-  // CPA & AOV tách theo BRAND (Doscom vs Noma) — từ skuList: Ad spend FB + đơn/DT Pancake
-  const blIsNoma = p => /^\s*noma/i.test(p || "")
-  const blAgg = (filt, prev) => {
-    let ad = 0, rev = 0, ord = 0
-    const list = data.skuList || []
-    list.forEach(s => {
-      if (!filt(s.product)) return
-      const o = prev ? (s.prev || {}) : s
-      ad += o.adSpend || 0; rev += o.revenue || 0; ord += o.orders || 0
-    })
-    return { adSpend: ad, revenue: rev, orders: ord, cpa: ord > 0 ? ad / ord : null, aov: ord > 0 ? rev / ord : null }
-  }
+  // CPA & AOV tách theo BRAND — CHỈ Facebook Ads (DUY + PHƯƠNG NAM). Tính sẵn ở buildWeeklyReportData.
   const blPctd = (c, p) => (p === 0 || p == null) ? (c > 0 ? null : 0) : (c - p) / Math.abs(p) * 100
-  const blRow = (name, filt) => {
-    const c = blAgg(filt, false), p = blAgg(filt, true)
+  const blRowFb = (name, L) => {
+    L = L || {}
     return `<tr>
       <td class="lbl">${name}</td>
-      <td class="num">${fmtV(c.adSpend)}</td>
-      <td class="num">${fmtN(c.orders)}</td>
-      <td class="num">${c.cpa == null ? "—" : fmtV(c.cpa)}</td>
-      <td class="num">${fmtDeltaNeg(blPctd(c.cpa, p.cpa))}</td>
-      <td class="num">${c.aov == null ? "—" : fmtV(c.aov)}</td>
-      <td class="num">${fmtDelta(blPctd(c.aov, p.aov))}</td>
+      <td class="num">${fmtV(L.adSpend)}</td>
+      <td class="num">${fmtN(L.orders)}</td>
+      <td class="num">${L.cpa == null ? "—" : fmtV(L.cpa)}</td>
+      <td class="num">${fmtDeltaNeg(L.cpaDelta)}</td>
+      <td class="num">${L.aov == null ? "—" : fmtV(L.aov)}</td>
+      <td class="num">${fmtDelta(L.aovDelta)}</td>
     </tr>`
   }
+  const BL = data.brandLinesFb || { doscom: {}, noma: {} }
+  const blDoc = BL.doscom || {}, blNoma = BL.noma || {}
+  const blDocP = blDoc.prev || {}, blNomaP = blNoma.prev || {}
+  const blTotC = { adSpend: (blDoc.adSpend || 0) + (blNoma.adSpend || 0), revenue: (blDoc.revenue || 0) + (blNoma.revenue || 0), orders: (blDoc.orders || 0) + (blNoma.orders || 0) }
+  blTotC.cpa = blTotC.orders > 0 ? blTotC.adSpend / blTotC.orders : null
+  blTotC.aov = blTotC.orders > 0 ? blTotC.revenue / blTotC.orders : null
+  const blTotP = { adSpend: (blDocP.adSpend || 0) + (blNomaP.adSpend || 0), revenue: (blDocP.revenue || 0) + (blNomaP.revenue || 0), orders: (blDocP.orders || 0) + (blNomaP.orders || 0) }
+  blTotP.cpa = blTotP.orders > 0 ? blTotP.adSpend / blTotP.orders : null
+  blTotP.aov = blTotP.orders > 0 ? blTotP.revenue / blTotP.orders : null
   const brandLinesHtml = `
-    <h4>🏷️ CPA &amp; AOV THEO BRAND (Doscom vs Noma)</h4>
+    <h4>🏷️ CPA &amp; AOV THEO BRAND — chỉ Facebook Ads (Doscom vs Noma)</h4>
     <table class="rpt">
       <thead><tr><th>Brand</th><th>Ad spend (FB)</th><th>Đơn</th><th>CPA</th><th>ΔCPA</th><th>AOV</th><th>ΔAOV</th></tr></thead>
       <tbody>
-        ${blRow("Doscom", p => !blIsNoma(p))}
-        ${blRow("Noma", blIsNoma)}
-        ${(() => {
-          const c = blAgg(() => true, false), p = blAgg(() => true, true)
-          return `<tr class="total">
-            <td class="lbl">TỔNG</td>
-            <td class="num">${fmtV(c.adSpend)}</td>
-            <td class="num">${fmtN(c.orders)}</td>
-            <td class="num">${c.cpa == null ? "—" : fmtV(c.cpa)}</td>
-            <td class="num">${fmtDeltaNeg(blPctd(c.cpa, p.cpa))}</td>
-            <td class="num">${c.aov == null ? "—" : fmtV(c.aov)}</td>
-            <td class="num">${fmtDelta(blPctd(c.aov, p.aov))}</td>
-          </tr>`
-        })()}
+        ${blRowFb("Doscom", blDoc)}
+        ${blRowFb("Noma", blNoma)}
+        <tr class="total">
+          <td class="lbl">TỔNG</td>
+          <td class="num">${fmtV(blTotC.adSpend)}</td>
+          <td class="num">${fmtN(blTotC.orders)}</td>
+          <td class="num">${blTotC.cpa == null ? "—" : fmtV(blTotC.cpa)}</td>
+          <td class="num">${fmtDeltaNeg(blPctd(blTotC.cpa, blTotP.cpa))}</td>
+          <td class="num">${blTotC.aov == null ? "—" : fmtV(blTotC.aov)}</td>
+          <td class="num">${fmtDelta(blPctd(blTotC.aov, blTotP.aov))}</td>
+        </tr>
       </tbody>
     </table>
-    <p class="muted" style="margin-top:-8px">Noma = Noma 911/922/250 · Doscom = các SKU còn lại · CPA = Ad spend FB ÷ đơn (Pancake) · AOV = DT sản phẩm ÷ đơn · ΔCPA ▼ xanh = giảm = tốt · ΔAOV ▲ xanh = tăng = tốt.</p>
+    <p class="muted" style="margin-top:-8px">CHỈ tính đơn Facebook Ads (DUY + PHƯƠNG NAM) — KHÔNG gồm Website/Google, Zalo, Hotline, Page organic (và data này không có Shopee/TikTok) · Noma = Noma 911/922/250 · Doscom = các SKU còn lại · CPA = Ad spend FB ÷ đơn · AOV = DT ÷ đơn · ΔCPA ▼ xanh = tốt · ΔAOV ▲ xanh = tốt.</p>
   `
 
   const s2b = `
