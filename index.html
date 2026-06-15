@@ -1111,6 +1111,43 @@ function buildWeeklyReportData(rangeStart, rangeEnd) {
   }
 }
 
+// Noma911 — tỉ lệ combo + đơn đăng ký landing (đọc /api/noma911/stats). N = response JSON.
+function buildNomaReportHtml(N) {
+  if (!N || !N.summary) return ""
+  const fmtV = n => Math.round(Number(n || 0)).toLocaleString("vi-VN") + "₫"
+  const fmtN = n => Math.round(Number(n || 0)).toLocaleString("vi-VN")
+  const cb = [...(N.by_combo || [])].sort((a, b) => b.orders - a.orders)
+  const totO = N.summary.orders || 0
+  const comboO = cb.reduce((t, c) => t + (c.combo !== "le-911" ? c.orders : 0), 0)
+  const comboRev = cb.reduce((t, c) => t + (c.combo !== "le-911" ? (c.revenue || 0) : 0), 0)
+  const comboPct = totO ? (comboO / totO * 100) : 0
+  const totRev = cb.reduce((t, c) => t + (c.revenue || 0), 0)
+  const a = N.actual || {}
+  return `
+    <h2>3. Noma911 — Tỉ lệ combo</h2>
+    <div class="metric-row">
+      <div class="metric-card">
+        <div class="metric-label">Tỉ lệ đơn combo</div>
+        <div class="metric-value">${comboPct.toFixed(1)}%</div>
+        <div class="metric-sub">${fmtN(comboO)} đơn combo / ${fmtN(totO)} tổng đơn ĐK · DT combo ${fmtV(comboRev)}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Đơn đăng ký (lead)</div>
+        <div class="metric-value">${fmtN(totO)}</div>
+        <div class="metric-sub">Đã giao (POS) ${fmtN(a.orders_delivered)} đơn · chốt ${a.conversion_rate || 0}%</div>
+      </div>
+    </div>
+    <table class="rpt">
+      <thead><tr><th>Combo</th><th class="num">Đơn ĐK</th><th class="num">% tổng</th><th class="num">DT đăng ký</th></tr></thead>
+      <tbody>
+        ${cb.map(c => `<tr><td class="lbl">${c.combo_label || c.combo}</td><td class="num">${fmtN(c.orders)}</td><td class="num">${totO ? (c.orders / totO * 100).toFixed(1) : 0}%</td><td class="num">${fmtV(c.revenue)}</td></tr>`).join("") || '<tr><td colspan="4" class="muted">Chưa có đơn đăng ký trong kỳ.</td></tr>'}
+        ${cb.length ? `<tr class="total"><td class="lbl">TỔNG</td><td class="num">${fmtN(totO)}</td><td class="num">100%</td><td class="num">${fmtV(totRev)}</td></tr>` : ""}
+      </tbody>
+    </table>
+    <p class="muted" style="margin-top:-8px">Combo = mọi loại trừ "1 chai lẻ" (le-911) · Đơn ĐK = lead điền form landing (chưa phải đơn chốt POS) · DT đăng ký = giá combo × số đơn.</p>
+  `
+}
+
 function renderWeeklyReportHtml(data) {
   // Round trước format → tránh decimal vi-VN (16.843.618,417₫) bị đọc nhầm "tỷ"
   const fmtV = n => Math.round(Number(n || 0)).toLocaleString("vi-VN") + "₫"
@@ -1599,6 +1636,8 @@ function renderWeeklyReportHtml(data) {
   ${s2b}
   ${s2c}
 
+  ${data.nomaHtml || ""}
+
   <p style="text-align:center;color:#9ca3af;font-size:10px;margin-top:30px">
     Doscom ERP · facebookadsallinone.pages.dev · Báo cáo tự sinh từ data ${esc(data.generatedAt)}
   </p>
@@ -1612,7 +1651,7 @@ function ExportReportButton({ dateRange }) {
   // Khi date range global đổi, đồng bộ default cho modal
   React.useEffect(() => { setExportRange(dateRange) }, [dateRange.start, dateRange.end])
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!exportRange.start || !exportRange.end) {
       alert("Chọn khoảng thời gian báo cáo")
       return
@@ -1621,20 +1660,30 @@ function ExportReportButton({ dateRange }) {
       alert("Ngày bắt đầu phải ≤ ngày kết thúc")
       return
     }
+    // Mở popup NGAY trong click handler (tránh bị chặn pop-up sau await)
+    const w = window.open("", "_blank")
+    if (!w) {
+      alert("Popup bị chặn. Cho phép pop-up cho site này để xem báo cáo.")
+      return
+    }
     try {
+      w.document.write('<!doctype html><meta charset="utf-8"><body style="font-family:system-ui,Arial;padding:24px;color:#374151">Đang tạo báo cáo tuần…</body>')
       const data = buildWeeklyReportData(exportRange.start, exportRange.end)
+      // Noma911: fetch tỉ lệ combo (tuỳ chọn — lỗi thì báo cáo vẫn ra, chỉ thiếu mục này)
+      let N = null
+      try {
+        const r = await fetch(`/api/noma911/stats?from=${exportRange.start}&to=${exportRange.end}`, { cache: "no-store" })
+        if (r.ok) N = await r.json()
+      } catch (e) { /* noma optional */ }
+      data.nomaHtml = buildNomaReportHtml(N)
       const html = renderWeeklyReportHtml(data)
-      const w = window.open("", "_blank")
-      if (!w) {
-        alert("Popup bị chặn. Cho phép pop-up cho site này để xem báo cáo.")
-        return
-      }
       w.document.open()
       w.document.write(html)
       w.document.close()
       setOpen(false)
     } catch (e) {
       console.error(e)
+      try { w.close() } catch (e2) { /* ignore */ }
       alert("Lỗi khi tạo báo cáo: " + (e.message || e))
     }
   }
