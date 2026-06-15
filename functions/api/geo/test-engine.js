@@ -7,7 +7,7 @@
 // Auth: tự động qua functions/_middleware.js (Google OAuth session cookie).
 //       Mở trực tiếp trong browser sau khi đã login dashboard.
 //
-// Trả về kết quả 3 AI engine (chatgpt + gemini + meta_ai) chạy song song,
+// Trả về kết quả 2 AI engine (chatgpt + gemini) chạy song song,
 // kèm brand detection (Doscom/NOMA mentions, position, sentiment).
 // Dùng để debug Phase 2 trước khi build chunked cron + dashboard tab.
 
@@ -91,7 +91,7 @@ export async function onRequestGet(context) {
   const qid = url.searchParams.get("query_id");
   if (!q && !qid) {
     return jsonResponse({
-      info: "GEO test-engine — chạy 1 query qua 3 AI engine (chatgpt + gemini + meta_ai).",
+      info: "GEO test-engine — chạy 1 query qua 2 AI engine (chatgpt + gemini).",
       usage: {
         get_by_text: "/api/geo/test-engine?q=máy+dò+camera+ẩn+nào+tốt",
         get_by_id:   "/api/geo/test-engine?query_id=q_dos_001",

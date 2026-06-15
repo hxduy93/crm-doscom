@@ -25,7 +25,6 @@
   .engine-chip  { display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; font-family: monospace; }
   .engine-chatgpt { background: #d1fae5; color: #065f46; }
   .engine-gemini  { background: #dbeafe; color: #1e40af; }
-  .engine-meta_ai { background: #ede9fe; color: #5b21b6; }
   .skeleton { background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; height: 1.5rem; border-radius: 4px; }
   @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
   details[open] summary .triangle { transform: rotate(90deg); }
@@ -72,7 +71,7 @@
     <div>
       <h1 class="text-2xl font-bold text-gray-900">GEO Monitor — AI Share-of-Voice</h1>
       <p class="text-sm text-gray-500 mt-1">
-        Theo dõi brand Doscom + NOMA trên ChatGPT, Gemini, Meta AI · <span id="status-text">Đang tải…</span>
+        Theo dõi brand Doscom + NOMA trên ChatGPT, Gemini · <span id="status-text">Đang tải…</span>
       </p>
     </div>
     <div id="header-actions" class="flex gap-2 items-center">
@@ -155,7 +154,6 @@
       <div class="flex gap-3 text-xs">
         <label class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded" style="background:#10b981"></span>ChatGPT</label>
         <label class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded" style="background:#3b82f6"></span>Gemini</label>
-        <label class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded" style="background:#8b5cf6"></span>Meta AI</label>
       </div>
     </div>
     <div class="relative" style="height:300px"><canvas id="trend-chart"></canvas></div>
@@ -189,7 +187,6 @@
           <option value="">Mọi engine</option>
           <option value="chatgpt">ChatGPT</option>
           <option value="gemini">Gemini</option>
-          <option value="meta_ai">Meta AI</option>
         </select>
         <select id="filter-mention" class="px-2 py-1 rounded border border-gray-300 text-xs">
           <option value="">Tất cả</option>
@@ -458,8 +455,8 @@ function renderTrendChart(dailySov, brand = currentTrendBrand) {
 
   // Group by day, then by engine
   const days = [...new Set(dailySov.map(d => d.day))].sort();
-  const engines = ["chatgpt", "gemini", "meta_ai"];
-  const colors = { chatgpt: "#10b981", gemini: "#3b82f6", meta_ai: "#8b5cf6" };
+  const engines = ["chatgpt", "gemini"];
+  const colors = { chatgpt: "#10b981", gemini: "#3b82f6" };
 
   const datasets = engines.map(eng => {
     // Lưu run/mention từng điểm để tooltip hiện "X% (hits/runs)" + tô mờ điểm mẫu nhỏ

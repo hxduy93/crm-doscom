@@ -1,16 +1,15 @@
-// Dispatcher cho 3 AI engine: chatgpt, gemini, meta_ai (Workers AI proxy).
+// Dispatcher cho 2 AI engine: chatgpt, gemini.
+// (Đã BỎ meta_ai — Llama giả lập không phản ánh Meta AI thật, không có web search/citation.)
 
-import { queryOpenAI }    from "./openai.js";
-import { queryGemini }    from "./gemini.js";
-import { queryWorkersAI } from "./workers-ai.js";
+import { queryOpenAI } from "./openai.js";
+import { queryGemini } from "./gemini.js";
 
-export const ENGINES = ["chatgpt", "gemini", "meta_ai"];
+export const ENGINES = ["chatgpt", "gemini"];
 
 export async function queryEngine(engine, query, env) {
   switch (engine) {
     case "chatgpt": return queryOpenAI(query, env);
     case "gemini":  return queryGemini(query, env);
-    case "meta_ai": return queryWorkersAI(query, env);
     default: throw new Error(`Unknown engine: ${engine}`);
   }
 }
