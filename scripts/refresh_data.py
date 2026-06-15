@@ -33,6 +33,15 @@ FB_DATA_BASE = os.environ.get(
     "https://raw.githubusercontent.com/hxduy93/facebook-ads-dashboard/main/data",
 )
 FB_FILES = ["fb-ads-data.json", "product-revenue.json", "product-costs.json", "fb-config.json"]
+
+# Data cho Agent Google Ads — copy NGUYÊN từ repo cũ (cùng base raw GitHub).
+GOOGLE_FILES = [
+    "google-ads-context.json",
+    "google-ads-spend.json",
+    "google-ads-search-terms.json",
+    "google-ads-ads.json",
+    "google-ads-placement.json",
+]
 DATA_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "data"))
 
 
@@ -48,18 +57,28 @@ def _fetch_bytes(url: str) -> bytes:
         return r.read()
 
 
-def sync_fb_data():
-    """Kéo 4 file data cho Agent FB Ads. Lỗi 1 file không làm hỏng cả run."""
-    for name in FB_FILES:
+def _sync_files(files, tag):
+    """Kéo danh sách file data từ FB_DATA_BASE. Lỗi 1 file không làm hỏng cả run."""
+    for name in files:
         url = f"{FB_DATA_BASE}/{name}"
         try:
             raw = _fetch_bytes(url)
             json.loads(raw.decode("utf-8"))  # validate JSON trước khi ghi
             with open(os.path.join(DATA_DIR, name), "wb") as fh:
                 fh.write(raw)
-            print(f"[refresh] FB OK -> {name} | {len(raw)} bytes")
+            print(f"[refresh] {tag} OK -> {name} | {len(raw)} bytes")
         except Exception as e:
-            print(f"[refresh] FB WARN {name}: {e}", file=sys.stderr)
+            print(f"[refresh] {tag} WARN {name}: {e}", file=sys.stderr)
+
+
+def sync_fb_data():
+    """Kéo data cho Agent FB Ads."""
+    _sync_files(FB_FILES, "FB")
+
+
+def sync_google_data():
+    """Kéo data cho Agent Google Ads."""
+    _sync_files(GOOGLE_FILES, "GG")
 
 
 def extract_data_blob(html: str) -> dict:
@@ -106,6 +125,9 @@ def main():
 
     print("[refresh] Đồng bộ data Agent FB Ads…")
     sync_fb_data()
+
+    print("[refresh] Đồng bộ data Agent Google Ads…")
+    sync_google_data()
 
 
 if __name__ == "__main__":

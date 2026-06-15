@@ -372,7 +372,47 @@
       </section>
       </div><!-- /view-agent-fb -->
 
-      <div class="view" id="view-agent-gg"></div>
+      <div class="view" id="view-agent-gg">
+        <div class="hero"><h2>Agent phân tích Google Ads</h2><p>AI (Claude Haiku) đọc dữ liệu Google Ads (chi tiêu, từ khoá, search term, banner GDN) + doanh thu Pancake để audit tài khoản, đề xuất từ khoá / tiêu đề / banner và trả lời câu hỏi.</p></div>
+      <section class="mod wide" style="margin-bottom:16px" id="sec-agent-gg">
+        <div class="mod-h"><div class="t"><i style="background:#22A565"></i><h3>Agent phân tích Google Ads</h3></div><span class="s">AI (Claude Haiku) · audit tài khoản · từ khoá · tiêu đề · banner GDN · phân tích tổng hợp · hỏi tự do</span></div>
+        <div class="mod-b">
+          <div class="ag-modes" id="gg-modes"></div>
+          <div class="ag-controls">
+            <label>Kỳ
+              <select class="dt" id="gg-time">
+                <option value="last_7d">7 ngày qua</option>
+                <option value="last_30d" selected>30 ngày qua</option>
+                <option value="last_90d">90 ngày qua</option>
+                <option value="this_week">Tuần này</option>
+                <option value="last_week">Tuần trước</option>
+                <option value="this_month">Tháng này</option>
+                <option value="last_month">Tháng trước</option>
+                <option value="yesterday">Hôm qua</option>
+              </select>
+            </label>
+            <label>Nhóm SP
+              <select class="dt" id="gg-group">
+                <option value="ALL" selected>Tất cả nhóm</option>
+                <option value="MAY_DO">Máy dò</option>
+                <option value="CAMERA_VIDEO_CALL">Camera video call (DA8.1)</option>
+                <option value="CAMERA_4G">Camera 4G</option>
+                <option value="CAMERA_WIFI">Camera WiFi</option>
+                <option value="GHI_AM">Máy ghi âm</option>
+                <option value="DINH_VI">Định vị</option>
+                <option value="CHONG_GHI_AM">Chống ghi âm</option>
+                <option value="NOMA">NOMA (chăm sóc xe)</option>
+              </select>
+            </label>
+            <button class="ag-btn" id="gg-run">⚡ Chạy phân tích</button>
+            <button class="ag-btn ghost" id="gg-refresh" title="Bỏ qua cache, gọi Claude mới">↻ Làm mới</button>
+          </div>
+          <div id="gg-q-wrap" style="display:none"><textarea class="ag-q" id="gg-q" placeholder="Nhập câu hỏi về hiệu suất Google Ads… (vd: Từ khoá nào lỗ nên cắt? Nhóm nào CPC cao bất thường? Nên thêm từ khoá gì?)"></textarea></div>
+          <div class="ag-meta" id="gg-meta"></div>
+          <div class="ag-result" id="gg-result">Chọn chế độ phân tích, kỳ thời gian, nhóm SP rồi bấm <b>⚡ Chạy phân tích</b>. Kết quả do AI (Claude Haiku) tạo từ dữ liệu Google Ads + Pancake.</div>
+        </div>
+      </section>
+      </div><!-- /view-agent-gg -->
       <div class="view" id="view-ads-creator"></div>
       <div class="view" id="view-geo"></div>
       <div class="view" id="view-landing"></div>
@@ -395,7 +435,7 @@
     function comingHtml(v){ return '<div class="hero"><h2>'+TITLES[v]+'</h2><p>Module sắp được chuyển sang CRM</p></div>'+
       '<div class="coming"><div class="coming-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg></div>'+
       '<h3>Đang phát triển</h3><p>'+(DESC[v]||'')+'</p><span class="wip">sắp có</span></div>'; }
-    ['agent-gg','ads-creator','geo','landing','warehouse'].forEach(function(v){ var el=document.getElementById('view-'+v); if(el) el.innerHTML=comingHtml(v); });
+    ['ads-creator','geo','landing','warehouse'].forEach(function(v){ var el=document.getElementById('view-'+v); if(el) el.innerHTML=comingHtml(v); });
 
     var navItems=Array.prototype.slice.call(document.querySelectorAll('.sidebar .nav-item[data-view]'));
     var views=Array.prototype.slice.call(document.querySelectorAll('.view'));
@@ -849,7 +889,20 @@
       return Object.assign(c,{prev:p,cpaDelta:_pctDelta(c.cpa,p.cpa),aovDelta:_pctDelta(c.aov,p.aov)}); }
     var productLines={doscom:lineObj(function(p){return !isNoma(p);}),noma:lineObj(isNoma)};
 
-    return {range:{start:rangeStart,end:rangeEnd,days:prevPeriod.days},prevRange:prevPeriod,weeks:weeks,kpi:kpi,skuList:skuList,productLines:productLines,
+    // (F) Dự báo chi phí QC kỳ tới — cùng độ dài, ngoại suy theo đà tăng chi phí (cur vs prev).
+    // Chặn biên đà tăng trong [-40%,+60%] để 1 kỳ nhiễu không thổi dự báo lệch.
+    var fcDays=prevPeriod.days;
+    var fcPeriodLabel=(fcDays>=6&&fcDays<=8)?"tuần tới":((fcDays>=28&&fcDays<=31)?"tháng tới":"kỳ tới ("+fcDays+" ngày)");
+    // Chỉ TĂNG, không giảm ngân sách: sàn = 0% (ít nhất bằng kỳ này), trần +60%.
+    var clampG=function(g){ if(g==null||!isFinite(g))return 0; return Math.max(0,Math.min(60,g)); };
+    var fcChannels=channelRanking.filter(function(c){ return (c.totalSpendInclUnmatch||0)>0||((c.prev&&c.prev.totalSpendInclUnmatch)||0)>0; })
+      .map(function(c){ var cur=c.totalSpendInclUnmatch||0,g=clampG(c.spendDelta);
+        return {label:c.label,cur:cur,growth:g,forecast:Math.round(cur*(1+g/100)),regs:c.regs||0,cpa:c.cpa}; });
+    var fcCurTotal=fcChannels.reduce(function(s,c){return s+c.cur;},0);
+    var fcTotal=fcChannels.reduce(function(s,c){return s+c.forecast;},0);
+    var forecast={periodLabel:fcPeriodLabel,days:fcDays,channels:fcChannels,curTotal:fcCurTotal,forecastTotal:fcTotal,growthTotal:_pctDelta(fcTotal,fcCurTotal)};
+
+    return {range:{start:rangeStart,end:rangeEnd,days:prevPeriod.days},prevRange:prevPeriod,weeks:weeks,kpi:kpi,skuList:skuList,productLines:productLines,forecast:forecast,
       topSpike:topSpike,topDrop:topDrop,topBySku:topBySku,hardToSell:hardToSell,channels:channelRanking,
       cpaAvg:{cur:isFinite(cpaTotalCur)?cpaTotalCur:null,prev:isFinite(cpaTotalPrev)?cpaTotalPrev:null,delta:_pctDelta(cpaTotalCur,cpaTotalPrev)},
       aovAvg:{cur:aovCur,prev:aovPrev,delta:_pctDelta(aovCur,aovPrev),orders:aovOrdCur},
@@ -862,8 +915,14 @@
     if(!N||!N.summary) return '';
     var cb=(N.by_combo||[]).slice().sort(function(a,b){return b.orders-a.orders;});
     var totO=N.summary.orders||0, comboO=cb.reduce(function(t,c){return t+(c.combo!=='le-911'?c.orders:0);},0), a=N.actual||{};
-    return '<h2>5. Noma911 — đơn đăng ký landing</h2>'+
-      '<p class="muted">Tổng <b>'+num(totO)+'</b> đơn đăng ký (lead) · tỉ lệ combo <b>'+(totO?(comboO/totO*100).toFixed(1):0)+'%</b> · đã giao (POS) '+num(a.orders_delivered)+' đơn (chốt '+(a.conversion_rate||0)+'%)</p>'+
+    var comboRev=cb.reduce(function(t,c){return t+(c.combo!=='le-911'?(c.revenue||0):0);},0);
+    var comboPct=totO?(comboO/totO*100):0;
+    // Chỉ số COMBO TỔNG (gộp mọi loại combo, trừ "1 chai lẻ le-911").
+    var comboCard='<div class="metric-row"><div class="metric-card"><div class="metric-label">Đơn combo (tổng)</div>'+
+      '<div class="metric-value">'+num(comboO)+' đơn</div>'+
+      '<div class="metric-sub">Tỉ lệ combo '+comboPct.toFixed(1)+'% · '+num(totO)+' tổng đơn ĐK · DT combo '+vnd(comboRev)+'</div></div></div>';
+    return comboCard+
+      '<p class="muted">Tổng <b>'+num(totO)+'</b> đơn đăng ký (lead) · tỉ lệ combo <b>'+comboPct.toFixed(1)+'%</b> · đã giao (POS) '+num(a.orders_delivered)+' đơn (chốt '+(a.conversion_rate||0)+'%)</p>'+
       '<table class="rpt"><thead><tr><th>Combo</th><th class="num">Đơn ĐK</th><th class="num">% tổng</th><th class="num">DT đăng ký</th></tr></thead><tbody>'+
       cb.map(function(c){ return '<tr><td class="lbl">'+(c.combo_label||c.combo)+'</td><td class="num">'+num(c.orders)+'</td><td class="num">'+(totO?(c.orders/totO*100).toFixed(1):0)+'%</td><td class="num">'+vnd(c.revenue)+'</td></tr>'; }).join('')+
       '</tbody></table>';
@@ -880,65 +939,66 @@
     var prevLabel=data.prevRange.start+" → "+data.prevRange.end;
     var kpi=data.kpi, kpiColor=kpi.mtd_pct>=100?"kpi-good":kpi.mtd_pct>=70?"kpi-on-track":"kpi-behind";
 
-    var s1aKpi='<div class="kpi-card '+kpiColor+'"><div class="kpi-label">'+esc(kpi.month_label)+' · KPI tháng</div>'+
-      '<div class="kpi-main">'+fmtV(kpi.mtd_revenue)+' / '+fmtV(kpi.kpi_vnd)+'</div>'+
-      '<div class="kpi-bar"><div class="kpi-fill" style="width:'+Math.min(100,kpi.mtd_pct).toFixed(1)+'%"></div></div>'+
-      '<div class="kpi-sub">Đạt <b>'+fmtP(kpi.mtd_pct)+'</b> KPI · MTD '+kpi.day_of_month+'/'+kpi.days_in_month+' ngày · Projected cuối tháng: <b>'+fmtV(kpi.projected_revenue)+'</b> ('+fmtP(kpi.projected_pct)+' KPI)</div></div>';
+    var pctd=function(c,p){ c=Number(c||0);p=Number(p||0); if(p===0)return c>0?null:0; return (c-p)/Math.abs(p)*100; };
 
-    var skuTrendRow=function(s){ return '<tr><td class="lbl">'+esc(s.product)+'</td><td class="num">'+fmtV(s.revenue)+'</td><td class="num muted">'+fmtV(s.prev.revenue)+'</td><td class="num">'+fmtDelta(s.revDelta)+'</td><td class="num">'+fmtN(s.units)+'</td><td class="num">'+fmtDelta(s.unitsDelta)+'</td><td class="num">'+fmtV(s.adSpend)+'</td></tr>'; };
-    var s1b='<div class="grid-2"><div><h4>📈 SKU TĂNG TRƯỞNG ĐỘT BIẾN (top 3 theo DT vs kỳ trước)</h4>'+
-      '<table class="rpt"><thead><tr><th>SKU</th><th>DT kỳ này</th><th>DT kỳ trước</th><th>Δ</th><th>SL</th><th>ΔSL</th><th>Spend</th></tr></thead>'+
-      '<tbody>'+(data.topSpike.map(skuTrendRow).join("")||'<tr><td colspan="7" class="muted">Không có SP nào tăng trong kỳ.</td></tr>')+'</tbody></table></div>'+
-      '<div><h4>📉 SKU GIẢM MẠNH NHẤT (top 3)</h4>'+
-      '<table class="rpt"><thead><tr><th>SKU</th><th>DT kỳ này</th><th>DT kỳ trước</th><th>Δ</th><th>SL</th><th>ΔSL</th><th>Spend</th></tr></thead>'+
-      '<tbody>'+(data.topDrop.map(skuTrendRow).join("")||'<tr><td colspan="7" class="muted">Không có SP nào giảm trong kỳ.</td></tr>')+'</tbody></table></div></div>';
+    // 1. Chi phí & doanh số 2 kênh (FB + Google) — theo bộ lọc
+    var chAct=data.channels.filter(function(c){ return (c.totalSpendInclUnmatch||0)>0||(c.revPending||0)>0; });
+    var tSp=0,tRv=0,tOd=0,tPf=0; data.channels.forEach(function(c){ tSp+=c.totalSpendInclUnmatch||0; tRv+=c.revPending||0; tOd+=c.ordersFinal||0; tPf+=c.profit||0; });
+    var sec1='<h2>1. Chi phí &amp; doanh số 2 kênh (Facebook &amp; Google)</h2>'+
+      '<table class="rpt"><thead><tr><th>Kênh</th><th>Chi phí</th><th>Doanh thu</th><th>Đơn</th><th>CIR</th><th>Lợi nhuận</th></tr></thead><tbody>'+
+      chAct.map(function(c){ return '<tr><td class="lbl">'+esc(c.label)+'</td><td class="num">'+fmtV(c.totalSpendInclUnmatch)+'</td><td class="num">'+fmtV(c.revPending)+'</td><td class="num">'+fmtN(c.ordersFinal)+'</td><td class="num">'+fmtP(c.cir)+'</td><td class="num '+(c.profit>=0?'pos':'neg')+'">'+fmtV(c.profit)+'</td></tr>'; }).join("")+
+      '<tr class="total"><td class="lbl">TỔNG</td><td class="num">'+fmtV(tSp)+'</td><td class="num">'+fmtV(tRv)+'</td><td class="num">'+fmtN(tOd)+'</td><td class="num">'+fmtP(tRv>0?tSp/tRv*100:null)+'</td><td class="num '+(tPf>=0?'pos':'neg')+'">'+fmtV(tPf)+'</td></tr>'+
+      '</tbody></table><p class="muted">DT = tạm tính mọi trạng thái · CIR = chi phí ÷ DT (≤ 40% là tốt) · LN = DT − VAT 10% − chi phí − giá vốn.</p>';
 
-    var s1c='<h4>⭐ TOP 5 SKU HIỆU QUẢ NHẤT (xếp theo lợi nhuận)</h4>'+
-      '<table class="rpt"><thead><tr><th>SKU</th><th>Doanh thu</th><th>SL bán</th><th>Ad spend</th><th>Lợi nhuận</th><th>Biên LN</th><th>CIR</th><th>ROI (LN/Spend)</th></tr></thead><tbody>'+
-      (data.topBySku.map(function(s){ return '<tr><td class="lbl">'+esc(s.product)+'</td><td class="num">'+fmtV(s.revenue)+'</td><td class="num">'+fmtN(s.units)+'</td><td class="num">'+fmtV(s.adSpend)+'</td><td class="num '+(s.profit>=0?'pos':'neg')+'">'+fmtV(s.profit)+'</td><td class="num">'+fmtP(s.margin)+'</td><td class="num">'+fmtP(s.cir)+'</td><td class="num">'+(s.roi==null?"—":s.roi.toFixed(2)+"x")+'</td></tr>'; }).join("")||'<tr><td colspan="8" class="muted">Không có data.</td></tr>')+'</tbody></table>';
+    // 2. Lợi nhuận ước tính theo sản phẩm
+    var sec2='<h2>2. Lợi nhuận ước tính theo sản phẩm</h2>'+
+      '<table class="rpt"><thead><tr><th>SKU</th><th>Doanh thu</th><th>Lợi nhuận</th><th>Biên LN</th><th>CIR</th></tr></thead><tbody>'+
+      (data.topBySku.map(function(s){ return '<tr><td class="lbl">'+esc(s.product)+'</td><td class="num">'+fmtV(s.revenue)+'</td><td class="num '+(s.profit>=0?'pos':'neg')+'">'+fmtV(s.profit)+'</td><td class="num">'+fmtP(s.margin)+'</td><td class="num">'+fmtP(s.cir)+'</td></tr>'; }).join("")||'<tr><td colspan="5" class="muted">Không có data.</td></tr>')+
+      '</tbody></table><p class="muted">Top sản phẩm theo lợi nhuận ước tính trong kỳ.</p>';
 
-    var s1d='<h4>⚠ SKU KHÓ BÁN (spend &gt; 100k nhưng 0 đơn hoặc CIR &gt; 100%)</h4>'+
-      '<table class="rpt"><thead><tr><th>SKU</th><th>Ad spend</th><th>Doanh thu</th><th>SL bán</th><th>Đơn</th><th>CIR</th><th>Lợi nhuận</th></tr></thead><tbody>'+
-      (data.hardToSell.map(function(s){ return '<tr><td class="lbl">'+esc(s.product)+'</td><td class="num">'+fmtV(s.adSpend)+'</td><td class="num">'+fmtV(s.revenue)+'</td><td class="num">'+fmtN(s.units)+'</td><td class="num">'+fmtN(s.orders)+'</td><td class="num neg">'+fmtP(s.cir)+'</td><td class="num '+(s.profit>=0?'pos':'neg')+'">'+fmtV(s.profit)+'</td></tr>'; }).join("")||'<tr><td colspan="7" class="muted">Không có SKU khó bán đáng kể.</td></tr>')+'</tbody></table>';
+    // 3. So sánh tăng trưởng vs cùng kỳ trước
+    var pSp=0,pRv=0,pOd=0,pPf=0; data.channels.forEach(function(c){ var o=c.prev||{}; pSp+=o.totalSpendInclUnmatch||0; pRv+=o.revPending||0; pOd+=o.ordersFinal||0; pPf+=o.profit||0; });
+    var growRow=function(label,cur,prev,fmt,neg){ var d=pctd(cur,prev); return '<tr><td class="lbl">'+label+'</td><td class="num">'+fmt(cur)+'</td><td class="num muted">'+fmt(prev)+'</td><td class="num">'+(neg?fmtDeltaNeg(d):fmtDelta(d))+'</td></tr>'; };
+    var sec3='<h2>3. So sánh tăng trưởng vs cùng kỳ trước ('+esc(prevLabel)+')</h2>'+
+      '<table class="rpt"><thead><tr><th>Chỉ tiêu</th><th>Kỳ này</th><th>Kỳ trước</th><th>Δ</th></tr></thead><tbody>'+
+      growRow('Doanh thu',tRv,pRv,fmtV,false)+
+      growRow('Chi phí QC',tSp,pSp,fmtV,false)+
+      growRow('Đơn chốt',tOd,pOd,fmtN,false)+
+      growRow('Lợi nhuận',tPf,pPf,fmtV,false)+
+      growRow('AOV (đơn TB)',data.aovAvg.cur||0,data.aovAvg.prev||0,fmtV,false)+
+      '</tbody></table><p class="muted">▲ xanh = tăng (tốt cho DT/đơn/LN/AOV). Chi phí tăng chỉ tốt khi DT/LN tăng tương ứng.</p>';
 
-    var s2a='<h4>🎯 HIỆU SUẤT THEO KÊNH (so với kỳ trước '+esc(prevLabel)+')</h4>'+
-      '<table class="rpt"><thead><tr><th>Kênh</th><th>Spend (Σ)</th><th>ΔSpend</th><th>DT tạm tính</th><th>ΔDT</th><th>Đơn (deliv)</th><th>CIR</th><th>Conv/Click</th><th>CPA</th><th>ΔCPA</th><th>Lợi nhuận</th></tr></thead><tbody>'+
-      data.channels.map(function(c){ return '<tr '+(c.underperforming?'class="row-warn"':'')+'><td class="lbl">'+esc(c.label)+(c.underperforming?' <span class="badge-warn">⚠ CIR cao</span>':'')+'</td><td class="num">'+fmtV(c.totalSpendInclUnmatch)+'</td><td class="num">'+fmtDelta(c.spendDelta)+'</td><td class="num">'+fmtV(c.revPending)+'</td><td class="num">'+fmtDelta(c.revDelta)+'</td><td class="num">'+fmtN(c.ordersFinal)+'</td><td class="num">'+fmtP(c.cir)+'</td><td class="num">'+fmtP(c.convRate)+'</td><td class="num">'+(c.cpa==null?"—":fmtV(c.cpa))+'</td><td class="num">'+fmtDeltaNeg(c.cpaDelta)+'</td><td class="num '+(c.profit>=0?'pos':'neg')+'">'+fmtV(c.profit)+'</td></tr>'; }).join("")+
-      '</tbody></table><p class="muted" style="margin-top:-8px">Conv/Click = tỉ lệ chuyển đổi FB Ads (chỉ kênh có spend FB) · ΔCPA: ▼ xanh = giảm CPA = tốt · ⚠ CIR cao = CIR &gt; 1.2× trung bình các kênh.</p>';
+    // 4. AOV & tỉ lệ combo Noma911 (nomaHtml đã gồm chỉ số combo tổng + bảng combo)
+    var sec4='<h2>4. AOV &amp; tỉ lệ combo Noma911</h2>'+
+      '<div class="metric-row"><div class="metric-card"><div class="metric-label">AOV toàn công ty</div><div class="metric-value">'+(data.aovAvg.cur==null?"—":fmtV(data.aovAvg.cur))+'</div><div class="metric-sub">Kỳ trước '+(data.aovAvg.prev==null?"—":fmtV(data.aovAvg.prev))+' · '+fmtDelta(data.aovAvg.delta)+' · '+fmtN(data.aovAvg.orders)+' đơn chốt</div></div></div>'+
+      (data.nomaHtml||'<p class="muted">Chưa có dữ liệu Noma911 cho kỳ này.</p>');
 
-    var s2b='<div class="metric-row"><div class="metric-card"><div class="metric-label">CPA trung bình FB Ads (DUY + PN)</div><div class="metric-value">'+(data.cpaAvg.cur==null?"—":fmtV(data.cpaAvg.cur))+'</div><div class="metric-sub">Kỳ trước: '+(data.cpaAvg.prev==null?"—":fmtV(data.cpaAvg.prev))+' · '+fmtDeltaNeg(data.cpaAvg.delta)+'</div></div>'+
-      '<div class="metric-card"><div class="metric-label">AOV — Giá trị đơn TB toàn công ty</div><div class="metric-value">'+(data.aovAvg.cur==null?"—":fmtV(data.aovAvg.cur))+'</div><div class="metric-sub">Kỳ trước: '+(data.aovAvg.prev==null?"—":fmtV(data.aovAvg.prev))+' · '+fmtDelta(data.aovAvg.delta)+' · '+fmtN(data.aovAvg.orders)+' đơn chốt</div></div></div>'+
-      '<p class="muted" style="margin-top:-8px">AOV = Tổng DT chốt (delivered) ÷ Tổng đơn chốt · AOV tăng (▲ xanh) = tốt.</p>'+
-      (function(){ var PL=data.productLines||{}; var lineRow=function(name,L){ if(!L)return"";
-          return '<tr><td class="lbl">'+name+'</td><td class="num">'+fmtV(L.adSpend)+'</td><td class="num">'+fmtN(L.orders)+'</td><td class="num">'+fmtV(L.revenue)+'</td><td class="num">'+(L.cpa==null?"—":fmtV(L.cpa))+'</td><td class="num">'+fmtDeltaNeg(L.cpaDelta)+'</td><td class="num">'+(L.aov==null?"—":fmtV(L.aov))+'</td><td class="num">'+fmtDelta(L.aovDelta)+'</td></tr>'; };
-        return '<h4>📦 CPA &amp; AOV THEO DÒNG SẢN PHẨM (Doscom vs Noma)</h4>'+
-          '<table class="rpt"><thead><tr><th>Dòng SP</th><th>Ad spend (FB)</th><th>Đơn</th><th>Doanh thu</th><th>CPA</th><th>ΔCPA</th><th>AOV</th><th>ΔAOV</th></tr></thead><tbody>'+
-          lineRow("Doscom",PL.doscom)+lineRow("Noma",PL.noma)+'</tbody></table>'+
-          '<p class="muted" style="margin-top:-8px">CPA = Ad spend FB ÷ đơn (Pancake) · AOV = Doanh thu ÷ đơn · Noma = Noma 911/922/250, Doscom = các SKU còn lại · ΔCPA ▼ xanh = tốt, ΔAOV ▲ xanh = tốt.</p>'; })();
+    // 5. Mặt hàng bán tốt & có dấu hiệu tăng trưởng
+    var sec5='<h2>5. Mặt hàng bán tốt &amp; có dấu hiệu tăng trưởng</h2>'+
+      '<table class="rpt"><thead><tr><th>SKU</th><th>DT kỳ này</th><th>DT kỳ trước</th><th>Δ DT</th><th>SL</th></tr></thead><tbody>'+
+      (data.topSpike.map(function(s){ return '<tr><td class="lbl">'+esc(s.product)+'</td><td class="num">'+fmtV(s.revenue)+'</td><td class="num muted">'+fmtV(s.prev.revenue)+'</td><td class="num">'+fmtDelta(s.revDelta)+'</td><td class="num">'+fmtN(s.units)+'</td></tr>'; }).join("")||'<tr><td colspan="5" class="muted">Không có SP nào tăng trong kỳ.</td></tr>')+
+      '</tbody></table>';
 
-    var campRowFmt=function(c){ return '<tr><td class="lbl" style="max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(c.name)+'"><span class="staff-chip staff-'+esc(c.staff)+'">'+esc(c.staff)+'</span> '+esc(c.name)+'</td><td class="num">'+fmtV(c.spend)+'</td><td class="num">'+fmtN(c.impressions)+'</td><td class="num">'+fmtN(c.clicks)+'</td><td class="num">'+fmtP(c.ctr)+'</td><td class="num">'+fmtN(c.regs)+'</td><td class="num">'+(c.cpa==null?"—":fmtV(c.cpa))+'</td></tr>'; };
-    var s2c='<h4>🚨 CAMPAIGN LỖ / VƯỢT NGÂN SÁCH (spend &gt; 1.2× trung bình, 0 đơn hoặc CPA &gt; 250k)</h4>'+
-      '<table class="rpt"><thead><tr><th>Campaign</th><th>Spend</th><th>Impr</th><th>Clicks</th><th>CTR</th><th>Conv</th><th>CPA</th></tr></thead><tbody>'+(data.campaigns.overspend.map(campRowFmt).join("")||'<tr><td colspan="7" class="muted">Không có campaign vượt ngưỡng.</td></tr>')+'</tbody></table>';
+    // 6. Creative đang hoạt động tốt (CTR cao)
+    var sec6='<h2>6. Creative đang hoạt động tốt (CTR cao)</h2>'+
+      '<table class="rpt"><thead><tr><th>Campaign</th><th>Spend</th><th>CTR</th><th>Conv</th><th>CPA</th></tr></thead><tbody>'+
+      (data.campaigns.topCtr.slice(0,5).map(function(c){ return '<tr><td class="lbl" style="max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(c.name)+'"><span class="staff-chip staff-'+esc(c.staff)+'">'+esc(c.staff)+'</span> '+esc(c.name)+'</td><td class="num">'+fmtV(c.spend)+'</td><td class="num pos">'+fmtP(c.ctr)+'</td><td class="num">'+fmtN(c.regs)+'</td><td class="num">'+(c.cpa==null?"—":fmtV(c.cpa))+'</td></tr>'; }).join("")||'<tr><td colspan="5" class="muted">Không có data.</td></tr>')+
+      '</tbody></table>';
 
-    var s3='<div class="grid-2"><div><h4>🏆 TOP 5 CAMPAIGN CTR CAO NHẤT (creative tốt)</h4>'+
-      '<table class="rpt"><thead><tr><th>Campaign</th><th>Spend</th><th>Impr</th><th>Clicks</th><th>CTR</th><th>Conv</th><th>CPA</th></tr></thead><tbody>'+(data.campaigns.topCtr.map(campRowFmt).join("")||'<tr><td colspan="7" class="muted">Không có data.</td></tr>')+'</tbody></table></div>'+
-      '<div><h4>📉 BOTTOM 5 CAMPAIGN CTR (creative cần làm mới)</h4>'+
-      '<table class="rpt"><thead><tr><th>Campaign</th><th>Spend</th><th>Impr</th><th>Clicks</th><th>CTR</th><th>Conv</th><th>CPA</th></tr></thead><tbody>'+(data.campaigns.bottomCtr.map(campRowFmt).join("")||'<tr><td colspan="7" class="muted">Không có data.</td></tr>')+'</tbody></table></div></div>'+
-      '<h4>🎯 TOP 5 CAMPAIGN CVR CAO NHẤT (conversion rate từ click)</h4>'+
-      '<table class="rpt"><thead><tr><th>Campaign</th><th>Spend</th><th>Clicks</th><th>Conv</th><th>CVR (Conv/Click)</th><th>CPA</th></tr></thead><tbody>'+
-      (data.campaigns.topCvr.map(function(c){ return '<tr><td class="lbl" style="max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(c.name)+'"><span class="staff-chip staff-'+esc(c.staff)+'">'+esc(c.staff)+'</span> '+esc(c.name)+'</td><td class="num">'+fmtV(c.spend)+'</td><td class="num">'+fmtN(c.clicks)+'</td><td class="num">'+fmtN(c.regs)+'</td><td class="num pos">'+fmtP(c.convRate)+'</td><td class="num">'+(c.cpa==null?"—":fmtV(c.cpa))+'</td></tr>'; }).join("")||'<tr><td colspan="6" class="muted">Không có data.</td></tr>')+'</tbody></table>';
+    // (6) Dự kiến chi phí quảng cáo kỳ tới — #7 yêu cầu user
+    var fc=data.forecast||{channels:[],periodLabel:"kỳ tới"};
+    var fmtPct=function(n){ if(n==null||!isFinite(n))return"—"; return (n>0?"+":"")+Number(n).toFixed(1)+"%"; };
+    var s6fc='<h2>7. Dự kiến chi phí quảng cáo '+esc(fc.periodLabel)+'</h2>'+
+      '<p class="muted">Định hướng <b>tăng trưởng, không giảm ngân sách</b>: mỗi kênh dự kiến <b>ít nhất bằng</b> kỳ này, tối đa +60% theo đà tăng (kỳ này so kỳ trước). Áp cho '+fc.days+' ngày tới, cùng độ dài kỳ đang chọn. Đây là ƯỚC TÍNH định hướng ngân sách, không phải cam kết.</p>'+
+      '<table class="rpt"><thead><tr><th>Kênh</th><th>Chi phí kỳ này</th><th>Đà áp dụng</th><th>Dự kiến '+esc(fc.periodLabel)+'</th></tr></thead><tbody>'+
+      (fc.channels||[]).map(function(c){ return '<tr><td class="lbl">'+esc(c.label)+'</td><td class="num">'+fmtV(c.cur)+'</td><td class="num">'+fmtPct(c.growth)+'</td><td class="num">'+fmtV(c.forecast)+'</td></tr>'; }).join("")+
+      '<tr class="total"><td class="lbl">TỔNG DỰ KIẾN</td><td class="num">'+fmtV(fc.curTotal)+'</td><td class="num">'+fmtPct(fc.growthTotal)+'</td><td class="num">'+fmtV(fc.forecastTotal)+'</td></tr>'+
+      '</tbody></table>';
 
-    var totalBudget=data.budgetBySku.reduce(function(s,x){return s+x.spend;},0);
-    var s4a='<h4>💰 NGÂN SÁCH FB ADS THEO SẢN PHẨM</h4>'+
-      '<table class="rpt"><thead><tr><th>SKU</th><th>Spend</th><th>% Tổng</th><th>Conv (đơn)</th><th>CPA</th><th>ROI (LN/Spend)</th></tr></thead><tbody>'+
-      data.budgetBySku.map(function(b){ var sku=data.skuList.find(function(s){return s.product===b.product;})||{}; return '<tr><td class="lbl">'+esc(b.product)+'</td><td class="num">'+fmtV(b.spend)+'</td><td class="num">'+fmtP(b.share)+'</td><td class="num">'+fmtN(sku.orders)+'</td><td class="num">'+(sku.cpa==null?"—":fmtV(sku.cpa))+'</td><td class="num">'+(sku.roi==null?"—":sku.roi.toFixed(2)+"x")+'</td></tr>'; }).join("")+
-      '<tr class="total"><td class="lbl">TỔNG FB ADS</td><td class="num">'+fmtV(totalBudget)+'</td><td class="num">100.0%</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr></tbody></table>';
-
-    var s4b=data.googleCategories.length?('<h4>🔍 NGÂN SÁCH GOOGLE ADS THEO CATEGORY (Match vs Unmatch 14 SP)</h4>'+
-      '<table class="rpt"><thead><tr><th>Category</th><th>Spend</th><th>% Tổng Google</th><th>Khớp 14 SP?</th></tr></thead><tbody>'+
-      data.googleCategories.map(function(g){ var total=data.googleSplit.match+data.googleSplit.unmatch; return '<tr><td class="lbl">'+esc(g.category)+'</td><td class="num">'+fmtV(g.spend)+'</td><td class="num">'+fmtP(total>0?g.spend/total*100:0)+'</td><td class="num">'+(g.matched?'<span class="badge-ok">✓ Match</span>':'<span class="badge-warn">⚠ Unmatch</span>')+'</td></tr>'; }).join("")+
-      '<tr class="total"><td class="lbl">TỔNG</td><td class="num">'+fmtV(data.googleSplit.match+data.googleSplit.unmatch)+'</td><td class="num">100%</td><td class="num">Match: '+fmtV(data.googleSplit.match)+' · Unmatch: '+fmtV(data.googleSplit.unmatch)+'</td></tr></tbody></table>'+
-      '<p class="muted"><b>Match</b> = MAYDO/DINHVI/GHIAM/CAMCALL… khớp 14 PROFIT_PRODUCTS, tính vào profit attribution WEBSITE.<br><b>Unmatch</b> = SP ngoài 14 SKU (razor, sim…), Pancake không track riêng → profit attribution phần này chưa chính xác.</p>'):"";
+    // (7) AI nhận xét hiệu quả & đề xuất cải thiện — #8 yêu cầu user (data.aiHtml dựng sẵn ở exportWeekly)
+    var s7ai='<h2>8. AI nhận xét hiệu quả &amp; đề xuất cải thiện</h2>'+
+      '<p class="muted">Phân tích tự động bằng Claude (Haiku) dựa trên toàn bộ số liệu báo cáo phía trên. Mang tính tham khảo — quyết định cuối thuộc về người vận hành.</p>'+
+      (data.aiHtml||'<p class="muted">Chưa có phân tích AI cho báo cáo này.</p>');
 
     return '<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8">'+
       '<title>Báo cáo họp giao ban '+esc(data.range.start)+' → '+esc(data.range.end)+'</title>'+
@@ -976,6 +1036,11 @@
       '.metric-label{font-size:10.5px;color:#5A6478;text-transform:uppercase;font-weight:700}'+
       '.metric-value{font-size:18px;font-weight:900;color:#111A2E;margin:2px 0}.metric-sub{font-size:11px;color:#374151}'+
       '.manual-note{background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:12px 16px;margin:18px 0}'+
+      '.ai-box{background:#fff;border:1px solid #E6ECF6;border-radius:12px;padding:14px 18px;font-size:12px;line-height:1.6;color:#1F2937}'+
+      '.ai-box .ai-h{font-size:13.5px;color:#2440C4;margin:14px 0 6px;border-left:3px solid #3257E6;padding-left:8px;font-weight:800}'+
+      '.ai-box h4{font-size:12.5px;margin:10px 0 4px;color:#374151}.ai-box h5{font-size:11.5px;margin:8px 0 3px;color:#5A6478}'+
+      '.ai-box ul{margin:4px 0 8px;padding-left:20px}.ai-box li{margin:2px 0}.ai-box p{margin:6px 0}'+
+      '.ai-box code{background:#F3F6FC;padding:1px 4px;border-radius:4px}.ai-box strong{color:#111A2E}'+
       '@media print{body{background:#fff;padding:8mm;font-size:10px}.toolbar{display:none}table.rpt{font-size:9px;page-break-inside:avoid}.kpi-card{page-break-inside:avoid}h2{page-break-after:avoid;background:#fff;border-left:3px solid #3257E6}h4{page-break-after:avoid}.manual-note{page-break-inside:avoid}}'+
       '</style></head><body>'+
       '<div class="toolbar"><h1>📊 Báo cáo họp giao ban tuần — Marketing Doscom</h1>'+
@@ -983,14 +1048,61 @@
       '<span style="margin-left:auto"></span><button class="btn btn-primary" onclick="window.print()">🖨 In / Lưu PDF</button>'+
       '<button class="btn btn-secondary" onclick="window.close()">Đóng</button></div>'+
       '<div class="meta"><b>Khoảng báo cáo:</b> '+esc(dateLabel)+' · <b>Kỳ so sánh:</b> '+esc(prevLabel)+
+      ' · <b>KPI '+esc(kpi.month_label)+':</b> '+fmtV(kpi.mtd_revenue)+' / '+fmtV(kpi.kpi_vnd)+' ('+fmtP(kpi.mtd_pct)+', dự phóng cuối tháng '+fmtV(kpi.projected_revenue)+')'+
       ' · <b>Nguồn:</b> FB Ads + Google Ads (Windsor.ai) + Pancake POS · <b>Lợi nhuận</b> = DT − VAT 10% − Ad spend (match) − Giá nhập × SL bán.</div>'+
-      '<h2>1. Hiệu suất Kinh doanh</h2>'+s1aKpi+s1b+s1c+s1d+
-      '<h2>2. Dữ liệu – Hiệu suất</h2>'+s2a+s2b+s2c+
-      '<h2>3. Nội dung &amp; Sáng tạo (creative proxy: CTR · CVR)</h2>'+s3+
-      '<h2>4. Quảng cáo &amp; Chiến dịch</h2>'+s4a+s4b+
-      (data.nomaHtml||"")+
+      sec1+sec2+sec3+sec4+sec5+sec6+s6fc+s7ai+
       '<p style="text-align:center;color:#94A3B8;font-size:10px;margin-top:30px">CRM Doscom · crm-doscom.pages.dev · Báo cáo tự sinh từ data '+esc(data.generatedAt)+'</p>'+
       '</body></html>';
+  }
+
+  // ── AI nhận xét (#8) ──────────────────────────────────────────────────
+  // Rút gọn số liệu báo cáo thành payload nhỏ gửi Claude (tránh prompt phình to).
+  function buildAiPayload(data){
+    var r1=function(n){return Math.round(Number(n||0));};
+    var slimCh=function(c){ return {kenh:c.label,spend:r1(c.totalSpendInclUnmatch),spendDelta:c.spendDelta,dt:r1(c.revPending),dtDelta:c.revDelta,don:c.ordersFinal,cir:c.cir,cpa:c.cpa==null?null:r1(c.cpa),cpaDelta:c.cpaDelta,loiNhuan:r1(c.profit)}; };
+    return {
+      range:data.range, prevRange:data.prevRange,
+      kpi:{thang:data.kpi.month_label,mtd:r1(data.kpi.mtd_revenue),kpi:data.kpi.kpi_vnd,datPct:data.kpi.mtd_pct,duPhongCuoiThang:r1(data.kpi.projected_revenue)},
+      kenh:(data.channels||[]).map(slimCh),
+      cpaTrungBinh:data.cpaAvg, aov:data.aovAvg,
+      topTangTruong:(data.topSpike||[]).map(function(s){return {sp:s.product,dt:r1(s.revenue),tangPct:s.revDelta};}),
+      topGiam:(data.topDrop||[]).map(function(s){return {sp:s.product,dt:r1(s.revenue),giamPct:s.revDelta};}),
+      topLoiNhuan:(data.topBySku||[]).map(function(s){return {sp:s.product,loiNhuan:r1(s.profit),bienPct:s.margin,cir:s.cir};}),
+      khoBan:(data.hardToSell||[]).map(function(s){return {sp:s.product,spend:r1(s.adSpend),cir:s.cir,don:s.orders};}),
+      dongSP:data.productLines,
+      creativeTot:(data.campaigns.topCtr||[]).slice(0,5).map(function(c){return {ten:c.name,staff:c.staff,ctr:c.ctr,cpa:c.cpa==null?null:r1(c.cpa)};}),
+      creativeYeu:(data.campaigns.bottomCtr||[]).slice(0,3).map(function(c){return {ten:c.name,staff:c.staff,ctr:c.ctr};}),
+      campaignLo:(data.campaigns.overspend||[]).slice(0,5).map(function(c){return {ten:c.name,staff:c.staff,spend:r1(c.spend),cpa:c.cpa==null?null:r1(c.cpa)};}),
+      duBaoChiPhi:data.forecast
+    };
+  }
+  function escHtmlR(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  // Markdown tối giản → HTML (heading, bold, code, bullet/numbered list).
+  function mdToHtml(md){
+    var lines=String(md||"").split(/\r?\n/),out=[],inUl=false;
+    var inline=function(t){ return escHtmlR(t).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>'); };
+    var closeUl=function(){ if(inUl){out.push('</ul>');inUl=false;} };
+    lines.forEach(function(ln){
+      var l=ln.replace(/\s+$/,'');
+      if(/^\s*#{4,}\s+/.test(l)){closeUl();out.push('<h5>'+inline(l.replace(/^\s*#+\s+/,''))+'</h5>');}
+      else if(/^\s*###\s+/.test(l)){closeUl();out.push('<h4>'+inline(l.replace(/^\s*#+\s+/,''))+'</h4>');}
+      else if(/^\s*#{1,2}\s+/.test(l)){closeUl();out.push('<h3 class="ai-h">'+inline(l.replace(/^\s*#+\s+/,''))+'</h3>');}
+      else if(/^\s*[-*]\s+/.test(l)){ if(!inUl){out.push('<ul>');inUl=true;} out.push('<li>'+inline(l.replace(/^\s*[-*]\s+/,''))+'</li>'); }
+      else if(/^\s*\d+[.)]\s+/.test(l)){ if(!inUl){out.push('<ul>');inUl=true;} out.push('<li>'+inline(l.replace(/^\s*\d+[.)]\s+/,''))+'</li>'); }
+      else if(l.trim()===''){ closeUl(); }
+      else { closeUl(); out.push('<p>'+inline(l)+'</p>'); }
+    });
+    closeUl();
+    return out.join('');
+  }
+  function buildAiHtml(res){
+    if(!res||res.ok===false||!res.analysis){
+      var err=(res&&res.error)||'AI chưa khả dụng.';
+      var nc=res&&res.need_credit;
+      return '<div class="manual-note"><b>⚠ Chưa tạo được phân tích AI.</b><br>'+escHtmlR(err)+
+        (nc?'<br>→ Nạp credit tại console.anthropic.com → Plans &amp; Billing (tối thiểu ~$5), rồi xuất lại báo cáo.':'')+'</div>';
+    }
+    return '<div class="ai-box">'+mdToHtml(res.analysis)+'</div>';
   }
 
   // Xuất báo cáo theo khoảng ĐANG CHỌN trên bộ lọc (mở app mặc định = toàn kỳ).
@@ -998,16 +1110,29 @@
     var rs=range.start, re=range.end;
     if(!rs||!re){ alert('Chọn khoảng thời gian báo cáo.'); return; }
     if(rs>re){ alert('Ngày bắt đầu phải ≤ ngày kết thúc.'); return; }
-    var nomaUrl='/api/noma911/stats?from='+rs+'&to='+re;
-    fetch(nomaUrl,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}).then(function(N){
+    var btn=document.getElementById('btnExport'); var oldTxt=btn?btn.textContent:'';
+    if(btn){ btn.disabled=true; btn.textContent='Đang tạo báo cáo…'; }
+    var data;
+    try{ data=buildWeeklyReportData(rs,re); }
+    catch(e){ console.error(e); alert('Lỗi tạo dữ liệu báo cáo: '+(e.message||e)); if(btn){btn.disabled=false;btn.textContent=oldTxt;} return; }
+
+    var nomaP=fetch('/api/noma911/stats?from='+rs+'&to='+re,{cache:'no-store'})
+      .then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
+    if(btn) btn.textContent='Đang phân tích AI…';
+    var aiP=fetch('/api/weekly-ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(buildAiPayload(data))})
+      .then(function(r){return r.json().catch(function(){return {ok:false,error:'Phản hồi AI không hợp lệ.'};});})
+      .catch(function(e){return {ok:false,error:'Không gọi được API AI: '+String(e&&e.message||e)};});
+
+    Promise.all([nomaP,aiP]).then(function(arr){
       try{
-        var data=buildWeeklyReportData(rs,re);
-        data.nomaHtml=buildNomaReportHtml(N);
+        data.nomaHtml=buildNomaReportHtml(arr[0]);
+        data.aiHtml=buildAiHtml(arr[1]);
         var html=renderWeeklyReportHtml(data);
         var w=window.open('','_blank');
         if(w){ w.document.open(); w.document.write(html); w.document.close(); }
         else { alert('Trình duyệt chặn cửa sổ bật lên — hãy cho phép pop-up để xuất báo cáo.'); }
       }catch(e){ console.error(e); alert('Lỗi khi tạo báo cáo: '+(e.message||e)); }
+      finally{ if(btn){btn.disabled=false;btn.textContent=oldTxt;} }
     });
   }
   document.getElementById('btnExport').addEventListener('click',exportWeekly);
@@ -1137,6 +1262,125 @@
           elMeta.innerHTML=meta.join('');
           var out='';
           if(j.parsed_json && typeof j.parsed_json==='object'){
+            out=mdToHtml(j.response && !/^\s*[\{\[]/.test(j.response) ? j.response : '')
+              + '<div class="ag-json">'+esc(JSON.stringify(j.parsed_json,null,2))+'</div>';
+          } else {
+            out=mdToHtml(j.response||'(không có nội dung)');
+          }
+          elResult.innerHTML=out||'(không có nội dung)';
+        })
+        .catch(function(err){ setBusy(false); elResult.innerHTML='<span style="color:var(--danger)">⚠️ Lỗi mạng: '+esc(err.message||err)+'</span>'; });
+    }
+    elRun.addEventListener('click',function(){ runAgent(false); });
+    elRefresh.addEventListener('click',function(){ runAgent(true); });
+  })();
+
+  // ===== AGENT PHÂN TÍCH GOOGLE ADS — gọi /api/agent-google-ai (Claude Haiku) =====
+  (function(){
+    var GG_MODES=[
+      {k:'analyze_combined', label:'Phân tích tổng hợp'},
+      {k:'audit_account',    label:'Audit tài khoản'},
+      {k:'audit_keyword',    label:'Audit từ khoá'},
+      {k:'suggest_keyword',  label:'Đề xuất từ khoá'},
+      {k:'audit_headline',   label:'Audit tiêu đề'},
+      {k:'audit_gdn',        label:'Audit GDN/Banner'},
+      {k:'ask',              label:'Hỏi tự do'}
+    ];
+    var ggMode='analyze_combined', ggBusy=false;
+    var elModes=document.getElementById('gg-modes');
+    var elRun=document.getElementById('gg-run'), elRefresh=document.getElementById('gg-refresh');
+    var elQWrap=document.getElementById('gg-q-wrap');
+    var elMeta=document.getElementById('gg-meta'), elResult=document.getElementById('gg-result');
+    if(!elModes) return;
+
+    function renderModes(){
+      elModes.innerHTML=GG_MODES.map(function(m){ return '<button class="ag-mode'+(m.k===ggMode?' on':'')+'" data-mode="'+m.k+'">'+m.label+'</button>'; }).join('');
+      elQWrap.style.display = ggMode==='ask'?'block':'none';
+    }
+    elModes.addEventListener('click',function(e){ var b=e.target.closest('[data-mode]'); if(!b)return; ggMode=b.getAttribute('data-mode'); renderModes(); });
+    renderModes();
+
+    // Kỳ thời gian (preset) → {start,end,label} dùng ngày thật của trình duyệt (giờ VN)
+    function pad(n){ return (n<10?'0':'')+n; }
+    function fmt(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+    function addDays(d,n){ var x=new Date(d); x.setDate(x.getDate()+n); return x; }
+    function resolveGgRange(preset){
+      var now=new Date(), start=new Date(now), end=new Date(now), label='30 ngày qua', dow;
+      switch(preset){
+        case 'last_7d':  start=addDays(now,-6);  label='7 ngày qua'; break;
+        case 'last_30d': start=addDays(now,-29); label='30 ngày qua'; break;
+        case 'last_90d': start=addDays(now,-89); label='90 ngày qua'; break;
+        case 'yesterday': start=addDays(now,-1); end=addDays(now,-1); label='Hôm qua'; break;
+        case 'this_week': dow=(now.getDay()+6)%7; start=addDays(now,-dow); label='Tuần này'; break;
+        case 'last_week': dow=(now.getDay()+6)%7; end=addDays(now,-dow-1); start=addDays(end,-6); label='Tuần trước'; break;
+        case 'this_month': start=new Date(now.getFullYear(),now.getMonth(),1); label='Tháng này'; break;
+        case 'last_month': start=new Date(now.getFullYear(),now.getMonth()-1,1); end=new Date(now.getFullYear(),now.getMonth(),0); label='Tháng trước'; break;
+        default: start=addDays(now,-29);
+      }
+      return { start:fmt(start), end:fmt(end), label:label };
+    }
+
+    // markdown → html (gọn: heading, bold/italic/code, list, bảng)
+    function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function inlineMd(s){ return esc(s).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/(^|[^*])\*([^*]+)\*/g,'$1<i>$2</i>').replace(/`([^`]+)`/g,'<code>$1</code>'); }
+    function mdToHtml(md){
+      if(!md) return '';
+      var lines=String(md).split(/\r?\n/), html='', inUl=false, inOl=false, tbuf=[];
+      function closeLists(){ if(inUl){html+='</ul>';inUl=false;} if(inOl){html+='</ol>';inOl=false;} }
+      function flushTable(){ if(tbuf.length<2){ tbuf=[]; return; }
+        html+='<table class="ag-tbl"><thead><tr>'+tbuf[0].map(function(c){return '<th>'+inlineMd(c)+'</th>';}).join('')+'</tr></thead><tbody>';
+        for(var i=2;i<tbuf.length;i++){ html+='<tr>'+tbuf[i].map(function(c){return '<td>'+inlineMd(c)+'</td>';}).join('')+'</tr>'; }
+        html+='</tbody></table>'; tbuf=[];
+      }
+      lines.forEach(function(ln){
+        var t=ln.trim();
+        if(/^\|.*\|$/.test(t)){ closeLists(); tbuf.push(t.replace(/^\||\|$/g,'').split('|').map(function(x){return x.trim();})); return; }
+        if(tbuf.length){ flushTable(); }
+        if(/^#{1,6}\s/.test(t)){ closeLists(); var lvl=Math.min(t.match(/^#+/)[0].length+2,6); html+='<h'+lvl+' class="ag-h">'+inlineMd(t.replace(/^#+\s/,''))+'</h'+lvl+'>'; return; }
+        if(/^[-*]\s/.test(t)){ if(inOl){html+='</ol>';inOl=false;} if(!inUl){html+='<ul>';inUl=true;} html+='<li>'+inlineMd(t.replace(/^[-*]\s/,''))+'</li>'; return; }
+        if(/^\d+\.\s/.test(t)){ if(inUl){html+='</ul>';inUl=false;} if(!inOl){html+='<ol>';inOl=true;} html+='<li>'+inlineMd(t.replace(/^\d+\.\s/,''))+'</li>'; return; }
+        if(t===''){ closeLists(); return; }
+        closeLists(); html+='<p>'+inlineMd(t)+'</p>';
+      });
+      if(tbuf.length) flushTable();
+      closeLists();
+      return html;
+    }
+
+    function setBusy(b){ ggBusy=b; elRun.disabled=b; elRefresh.disabled=b;
+      elRun.textContent=b?'⏳ Đang phân tích…':'⚡ Chạy phân tích'; }
+
+    function runAgent(force){
+      if(ggBusy) return;
+      var group=document.getElementById('gg-group').value;
+      var range=resolveGgRange(document.getElementById('gg-time').value);
+      var body={ mode:ggMode, context:{ product_group:group, time_range:{ start:range.start, end:range.end, label:range.label } } };
+      if(ggMode==='ask'){ var q=(document.getElementById('gg-q').value||'').trim(); if(!q){ elResult.innerHTML='<span style="color:var(--danger)">Nhập câu hỏi trước khi chạy.</span>'; return; } body.question=q; }
+      if(force) body.force_refresh=true;
+      setBusy(true);
+      elMeta.innerHTML='';
+      elResult.innerHTML='<span class="ag-spin">⏳ Đang gọi AI phân tích… (Phân tích tổng hợp có thể mất 30–60 giây)</span>';
+      fetch('/api/agent-google-ai',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
+        .then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
+        .then(function(res){
+          setBusy(false);
+          var j=res.j||{};
+          if(res.status!==200 || j.error){
+            var hint = (res.status===401)?' (endpoint đang yêu cầu đăng nhập)':'';
+            var dbg = j.claude_debug?(' · '+(j.claude_debug.has_anthropic_key?'có key':'CHƯA set ANTHROPIC_API_KEY')):'';
+            elResult.innerHTML='<span style="color:var(--danger)">⚠️ Lỗi: '+esc(j.error||('HTTP '+res.status))+hint+dbg+'</span>';
+            return;
+          }
+          var meta=[];
+          meta.push('<span class="pill">Model: '+esc(j.model||'—')+'</span>');
+          meta.push('<span class="pill">Nhóm: '+esc(j.group_label||j.group||'—')+'</span>');
+          meta.push('<span class="pill">Kỳ: '+esc(range.label)+'</span>');
+          if(j.cached) meta.push('<span class="pill" style="color:var(--warn)">⚡ Cache '+esc(j.cached_at||'')+'</span>');
+          if(j.fallback_used) meta.push('<span class="pill" style="color:var(--warn)">↘ Fallback Llama</span>');
+          if(j.claude_used) meta.push('<span class="pill" style="color:var(--success)">Claude ✓</span>');
+          elMeta.innerHTML=meta.join('');
+          var out='';
+          if(j.parsed_json && typeof j.parsed_json==='object' && !j.parsed_json._parse_error){
             out=mdToHtml(j.response && !/^\s*[\{\[]/.test(j.response) ? j.response : '')
               + '<div class="ag-json">'+esc(JSON.stringify(j.parsed_json,null,2))+'</div>';
           } else {
