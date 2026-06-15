@@ -889,20 +889,35 @@
       return Object.assign(c,{prev:p,cpaDelta:_pctDelta(c.cpa,p.cpa),aovDelta:_pctDelta(c.aov,p.aov)}); }
     var productLines={doscom:lineObj(function(p){return !isNoma(p);}),noma:lineObj(isNoma)};
 
-    // (F) Dự báo chi phí QC kỳ tới — cùng độ dài, ngoại suy theo đà tăng chi phí (cur vs prev).
-    // Chặn biên đà tăng trong [-40%,+60%] để 1 kỳ nhiễu không thổi dự báo lệch.
-    var fcDays=prevPeriod.days;
-    var fcPeriodLabel=(fcDays>=6&&fcDays<=8)?"tuần tới":((fcDays>=28&&fcDays<=31)?"tháng tới":"kỳ tới ("+fcDays+" ngày)");
-    // Chỉ TĂNG, không giảm ngân sách: sàn = 0% (ít nhất bằng kỳ này), trần +60%.
-    var clampG=function(g){ if(g==null||!isFinite(g))return 0; return Math.max(0,Math.min(60,g)); };
-    var fcChannels=channelRanking.filter(function(c){ return (c.totalSpendInclUnmatch||0)>0||((c.prev&&c.prev.totalSpendInclUnmatch)||0)>0; })
-      .map(function(c){ var cur=c.totalSpendInclUnmatch||0,g=clampG(c.spendDelta);
-        return {label:c.label,cur:cur,growth:g,forecast:Math.round(cur*(1+g/100)),regs:c.regs||0,cpa:c.cpa}; });
-    var fcCurTotal=fcChannels.reduce(function(s,c){return s+c.cur;},0);
-    var fcTotal=fcChannels.reduce(function(s,c){return s+c.forecast;},0);
-    var forecast={periodLabel:fcPeriodLabel,days:fcDays,channels:fcChannels,curTotal:fcCurTotal,forecastTotal:fcTotal,growthTotal:_pctDelta(fcTotal,fcCurTotal)};
+    // CPA & AOV theo BRAND — Facebook (Ads DUY+PN + Page/Messenger organic), tính CẤP ĐƠN khớp Pancake.
+    // Noma = (tổng đơn FB order-level) − (Doscom per-product). Combo lấy đủ giá trị đơn (không xé theo SKU).
+    var FB_REV_KEYS=["DUY","PHUONG_NAM","FB_PAGE"];
+    var BOOK_ST=["delivered","other","returning"];
+    var isNomaP=function(p){ return /^\s*noma/i.test(p||""); };
+    function fbOrderTotal(rStart,rEnd){ var rev=0,ord=0;
+      FB_REV_KEYS.forEach(function(k){ var g=revenueGroups[k]; if(!g)return; var R=g.order_revenue_by_status_by_date||{},C=g.order_count_by_status_by_date||{};
+        BOOK_ST.forEach(function(s){ rev+=_sumDateMap(R[s],rStart,rEnd); ord+=_sumDateMap(C[s],rStart,rEnd); }); });
+      return {rev:rev,ord:ord}; }
+    function fbDoscomPP(rStart,rEnd){ var ad=0,rev=0,ord=0;
+      FB_REV_KEYS.forEach(function(k){ var buckets=adSpendByStaff[k]||{};
+        Object.keys(buckets).forEach(function(prod){ if(!isNomaP(prod)) ad+=_sumDateMap((buckets[prod]||{}).by_date,rStart,rEnd); });
+        var P=(revenueGroups[k]||{}).products_by_status||{};
+        BOOK_ST.forEach(function(s){ var ps=P[s]||{}; Object.keys(ps).forEach(function(p){ if(isNomaP(p))return; rev+=_sumDateMap(ps[p].by_date,rStart,rEnd); ord+=_sumDateMap(ps[p].orders_by_date,rStart,rEnd); }); }); });
+      return {ad:ad,rev:rev,ord:ord}; }
+    function fbNomaAd(rStart,rEnd){ var ad=0;
+      FB_REV_KEYS.forEach(function(k){ var buckets=adSpendByStaff[k]||{}; Object.keys(buckets).forEach(function(prod){ if(isNomaP(prod)) ad+=_sumDateMap((buckets[prod]||{}).by_date,rStart,rEnd); }); });
+      return ad; }
+    function brandPair(rStart,rEnd){ var T=fbOrderTotal(rStart,rEnd),Dd=fbDoscomPP(rStart,rEnd),nAd=fbNomaAd(rStart,rEnd);
+      var noma={adSpend:nAd,revenue:Math.max(0,T.rev-Dd.rev),orders:Math.max(0,T.ord-Dd.ord)};
+      noma.cpa=noma.orders>0?noma.adSpend/noma.orders:null; noma.aov=noma.orders>0?noma.revenue/noma.orders:null;
+      var doscom={adSpend:Dd.ad,revenue:Dd.rev,orders:Dd.ord};
+      doscom.cpa=doscom.orders>0?doscom.adSpend/doscom.orders:null; doscom.aov=doscom.orders>0?doscom.revenue/doscom.orders:null;
+      return {doscom:doscom,noma:noma}; }
+    var _blCur=brandPair(rangeStart,rangeEnd), _blPrev=brandPair(prevPeriod.start,prevPeriod.end);
+    var _mkLine=function(c,p){ return Object.assign({},c,{prev:p,cpaDelta:_pctDelta(c.cpa,p.cpa),aovDelta:_pctDelta(c.aov,p.aov)}); };
+    var brandLinesFb={doscom:_mkLine(_blCur.doscom,_blPrev.doscom),noma:_mkLine(_blCur.noma,_blPrev.noma)};
 
-    return {range:{start:rangeStart,end:rangeEnd,days:prevPeriod.days},prevRange:prevPeriod,weeks:weeks,kpi:kpi,skuList:skuList,productLines:productLines,forecast:forecast,
+    return {range:{start:rangeStart,end:rangeEnd,days:prevPeriod.days},prevRange:prevPeriod,weeks:weeks,kpi:kpi,skuList:skuList,productLines:productLines,brandLinesFb:brandLinesFb,
       topSpike:topSpike,topDrop:topDrop,topBySku:topBySku,hardToSell:hardToSell,channels:channelRanking,
       cpaAvg:{cur:isFinite(cpaTotalCur)?cpaTotalCur:null,prev:isFinite(cpaTotalPrev)?cpaTotalPrev:null,delta:_pctDelta(cpaTotalCur,cpaTotalPrev)},
       aovAvg:{cur:aovCur,prev:aovPrev,delta:_pctDelta(aovCur,aovPrev),orders:aovOrdCur},
@@ -917,15 +932,15 @@
     var totO=N.summary.orders||0, comboO=cb.reduce(function(t,c){return t+(c.combo!=='le-911'?c.orders:0);},0), a=N.actual||{};
     var comboRev=cb.reduce(function(t,c){return t+(c.combo!=='le-911'?(c.revenue||0):0);},0);
     var comboPct=totO?(comboO/totO*100):0;
-    // Chỉ số COMBO TỔNG (gộp mọi loại combo, trừ "1 chai lẻ le-911").
-    var comboCard='<div class="metric-row"><div class="metric-card"><div class="metric-label">Đơn combo (tổng)</div>'+
-      '<div class="metric-value">'+num(comboO)+' đơn</div>'+
-      '<div class="metric-sub">Tỉ lệ combo '+comboPct.toFixed(1)+'% · '+num(totO)+' tổng đơn ĐK · DT combo '+vnd(comboRev)+'</div></div></div>';
-    return comboCard+
-      '<p class="muted">Tổng <b>'+num(totO)+'</b> đơn đăng ký (lead) · tỉ lệ combo <b>'+comboPct.toFixed(1)+'%</b> · đã giao (POS) '+num(a.orders_delivered)+' đơn (chốt '+(a.conversion_rate||0)+'%)</p>'+
+    var totRev=cb.reduce(function(t,c){return t+(c.revenue||0);},0);
+    return '<h2>3. Noma911 — Tỉ lệ combo</h2>'+
+      '<div class="metric-row"><div class="metric-card"><div class="metric-label">Tỉ lệ đơn combo</div><div class="metric-value">'+comboPct.toFixed(1)+'%</div><div class="metric-sub">'+num(comboO)+' đơn combo / '+num(totO)+' tổng đơn ĐK · DT combo '+vnd(comboRev)+'</div></div>'+
+      '<div class="metric-card"><div class="metric-label">Đơn đăng ký (lead)</div><div class="metric-value">'+num(totO)+'</div><div class="metric-sub">Đã giao (POS) '+num(a.orders_delivered)+' đơn · chốt '+(a.conversion_rate||0)+'%</div></div></div>'+
       '<table class="rpt"><thead><tr><th>Combo</th><th class="num">Đơn ĐK</th><th class="num">% tổng</th><th class="num">DT đăng ký</th></tr></thead><tbody>'+
-      cb.map(function(c){ return '<tr><td class="lbl">'+(c.combo_label||c.combo)+'</td><td class="num">'+num(c.orders)+'</td><td class="num">'+(totO?(c.orders/totO*100).toFixed(1):0)+'%</td><td class="num">'+vnd(c.revenue)+'</td></tr>'; }).join('')+
-      '</tbody></table>';
+      (cb.map(function(c){ return '<tr><td class="lbl">'+(c.combo_label||c.combo)+'</td><td class="num">'+num(c.orders)+'</td><td class="num">'+(totO?(c.orders/totO*100).toFixed(1):0)+'%</td><td class="num">'+vnd(c.revenue)+'</td></tr>'; }).join('')||'<tr><td colspan="4" class="muted">Chưa có đơn đăng ký trong kỳ.</td></tr>')+
+      (cb.length?'<tr class="total"><td class="lbl">TỔNG</td><td class="num">'+num(totO)+'</td><td class="num">100%</td><td class="num">'+vnd(totRev)+'</td></tr>':'')+
+      '</tbody></table>'+
+      '<p class="muted">Combo = mọi loại trừ "1 chai lẻ" (le-911) · Đơn ĐK = lead điền form landing (chưa phải đơn chốt POS) · DT đăng ký = giá combo × số đơn.</p>';
   }
 
   function renderWeeklyReportHtml(data){
@@ -941,64 +956,59 @@
 
     var pctd=function(c,p){ c=Number(c||0);p=Number(p||0); if(p===0)return c>0?null:0; return (c-p)/Math.abs(p)*100; };
 
-    // 1. Chi phí & doanh số 2 kênh (FB + Google) — theo bộ lọc
-    var chAct=data.channels.filter(function(c){ return (c.totalSpendInclUnmatch||0)>0||(c.revPending||0)>0; });
-    var tSp=0,tRv=0,tOd=0,tPf=0; data.channels.forEach(function(c){ tSp+=c.totalSpendInclUnmatch||0; tRv+=c.revPending||0; tOd+=c.ordersFinal||0; tPf+=c.profit||0; });
-    var sec1='<h2>1. Chi phí &amp; doanh số 2 kênh (Facebook &amp; Google)</h2>'+
-      '<table class="rpt"><thead><tr><th>Kênh</th><th>Chi phí</th><th>Doanh thu</th><th>Đơn</th><th>CIR</th><th>Lợi nhuận</th></tr></thead><tbody>'+
-      chAct.map(function(c){ return '<tr><td class="lbl">'+esc(c.label)+'</td><td class="num">'+fmtV(c.totalSpendInclUnmatch)+'</td><td class="num">'+fmtV(c.revPending)+'</td><td class="num">'+fmtN(c.ordersFinal)+'</td><td class="num">'+fmtP(c.cir)+'</td><td class="num '+(c.profit>=0?'pos':'neg')+'">'+fmtV(c.profit)+'</td></tr>'; }).join("")+
-      '<tr class="total"><td class="lbl">TỔNG</td><td class="num">'+fmtV(tSp)+'</td><td class="num">'+fmtV(tRv)+'</td><td class="num">'+fmtN(tOd)+'</td><td class="num">'+fmtP(tRv>0?tSp/tRv*100:null)+'</td><td class="num '+(tPf>=0?'pos':'neg')+'">'+fmtV(tPf)+'</td></tr>'+
-      '</tbody></table><p class="muted">DT = tạm tính mọi trạng thái · CIR = chi phí ÷ DT (≤ 40% là tốt) · LN = DT − VAT 10% − chi phí − giá vốn.</p>';
+    // ── 1. Hiệu suất Kinh doanh ──
+    var s1aKpi='<div class="kpi-card '+kpiColor+'"><div class="kpi-label">'+esc(kpi.month_label)+' · KPI tháng</div>'+
+      '<div class="kpi-main">'+fmtV(kpi.mtd_revenue)+' / '+fmtV(kpi.kpi_vnd)+'</div>'+
+      '<div class="kpi-bar"><div class="kpi-fill" style="width:'+Math.min(100,kpi.mtd_pct).toFixed(1)+'%"></div></div>'+
+      '<div class="kpi-sub">Đạt <b>'+fmtP(kpi.mtd_pct)+'</b> KPI · MTD '+kpi.day_of_month+'/'+kpi.days_in_month+' ngày · Dự phóng cuối tháng: <b>'+fmtV(kpi.projected_revenue)+'</b> ('+fmtP(kpi.projected_pct)+' KPI)</div></div>';
 
-    // 2. Lợi nhuận ước tính theo sản phẩm
-    var sec2='<h2>2. Lợi nhuận ước tính theo sản phẩm</h2>'+
-      '<table class="rpt"><thead><tr><th>SKU</th><th>Doanh thu</th><th>Lợi nhuận</th><th>Biên LN</th><th>CIR</th></tr></thead><tbody>'+
-      (data.topBySku.map(function(s){ return '<tr><td class="lbl">'+esc(s.product)+'</td><td class="num">'+fmtV(s.revenue)+'</td><td class="num '+(s.profit>=0?'pos':'neg')+'">'+fmtV(s.profit)+'</td><td class="num">'+fmtP(s.margin)+'</td><td class="num">'+fmtP(s.cir)+'</td></tr>'; }).join("")||'<tr><td colspan="5" class="muted">Không có data.</td></tr>')+
-      '</tbody></table><p class="muted">Top sản phẩm theo lợi nhuận ước tính trong kỳ.</p>';
+    var skuTrendRow=function(s){ return '<tr><td class="lbl">'+esc(s.product)+'</td><td class="num">'+fmtV(s.revenue)+'</td><td class="num muted">'+fmtV(s.prev.revenue)+'</td><td class="num">'+fmtDelta(s.revDelta)+'</td><td class="num">'+fmtN(s.units)+'</td><td class="num">'+fmtDelta(s.unitsDelta)+'</td><td class="num">'+fmtV(s.adSpend)+'</td></tr>'; };
+    var s1b='<div class="grid-2"><div><h4>📈 SKU TĂNG TRƯỞNG ĐỘT BIẾN (top 3 theo DT vs kỳ trước)</h4>'+
+      '<table class="rpt"><thead><tr><th>SKU</th><th>DT kỳ này</th><th>DT kỳ trước</th><th>Δ</th><th>SL</th><th>ΔSL</th><th>Spend</th></tr></thead>'+
+      '<tbody>'+(data.topSpike.map(skuTrendRow).join("")||'<tr><td colspan="7" class="muted">Không có SP nào tăng trong kỳ.</td></tr>')+'</tbody></table></div>'+
+      '<div><h4>📉 SKU GIẢM MẠNH NHẤT (top 3)</h4>'+
+      '<table class="rpt"><thead><tr><th>SKU</th><th>DT kỳ này</th><th>DT kỳ trước</th><th>Δ</th><th>SL</th><th>ΔSL</th><th>Spend</th></tr></thead>'+
+      '<tbody>'+(data.topDrop.map(skuTrendRow).join("")||'<tr><td colspan="7" class="muted">Không có SP nào giảm trong kỳ.</td></tr>')+'</tbody></table></div></div>';
 
-    // 3. So sánh tăng trưởng vs cùng kỳ trước
-    var pSp=0,pRv=0,pOd=0,pPf=0; data.channels.forEach(function(c){ var o=c.prev||{}; pSp+=o.totalSpendInclUnmatch||0; pRv+=o.revPending||0; pOd+=o.ordersFinal||0; pPf+=o.profit||0; });
-    var growRow=function(label,cur,prev,fmt,neg){ var d=pctd(cur,prev); return '<tr><td class="lbl">'+label+'</td><td class="num">'+fmt(cur)+'</td><td class="num muted">'+fmt(prev)+'</td><td class="num">'+(neg?fmtDeltaNeg(d):fmtDelta(d))+'</td></tr>'; };
-    var sec3='<h2>3. So sánh tăng trưởng vs cùng kỳ trước ('+esc(prevLabel)+')</h2>'+
-      '<table class="rpt"><thead><tr><th>Chỉ tiêu</th><th>Kỳ này</th><th>Kỳ trước</th><th>Δ</th></tr></thead><tbody>'+
-      growRow('Doanh thu',tRv,pRv,fmtV,false)+
-      growRow('Chi phí QC',tSp,pSp,fmtV,false)+
-      growRow('Đơn chốt',tOd,pOd,fmtN,false)+
-      growRow('Lợi nhuận',tPf,pPf,fmtV,false)+
-      growRow('AOV (đơn TB)',data.aovAvg.cur||0,data.aovAvg.prev||0,fmtV,false)+
-      '</tbody></table><p class="muted">▲ xanh = tăng (tốt cho DT/đơn/LN/AOV). Chi phí tăng chỉ tốt khi DT/LN tăng tương ứng.</p>';
+    var skuTot=(data.topBySku||[]).reduce(function(a,s){return {rev:a.rev+(s.revenue||0),un:a.un+(s.units||0),ad:a.ad+(s.adSpend||0),pf:a.pf+(s.profit||0)};},{rev:0,un:0,ad:0,pf:0});
+    var s1cTotal=data.topBySku.length?'<tr class="total"><td class="lbl">TỔNG</td><td class="num">'+fmtV(skuTot.rev)+'</td><td class="num">'+fmtN(skuTot.un)+'</td><td class="num">'+fmtV(skuTot.ad)+'</td><td class="num '+(skuTot.pf>=0?'pos':'neg')+'">'+fmtV(skuTot.pf)+'</td><td class="num">'+fmtP(skuTot.rev>0?skuTot.pf/skuTot.rev*100:null)+'</td><td class="num">'+fmtP(skuTot.rev>0?skuTot.ad/skuTot.rev*100:null)+'</td><td class="num">—</td></tr>':'';
+    var s1c='<h4>⭐ TOP 5 SKU HIỆU QUẢ NHẤT (xếp theo lợi nhuận)</h4>'+
+      '<table class="rpt"><thead><tr><th>SKU</th><th>Doanh thu</th><th>SL bán</th><th>Ad spend</th><th>Lợi nhuận</th><th>Biên LN</th><th>CIR</th><th>ROI (LN/Spend)</th></tr></thead><tbody>'+
+      (data.topBySku.map(function(s){ return '<tr><td class="lbl">'+esc(s.product)+'</td><td class="num">'+fmtV(s.revenue)+'</td><td class="num">'+fmtN(s.units)+'</td><td class="num">'+fmtV(s.adSpend)+'</td><td class="num '+(s.profit>=0?'pos':'neg')+'">'+fmtV(s.profit)+'</td><td class="num">'+fmtP(s.margin)+'</td><td class="num">'+fmtP(s.cir)+'</td><td class="num">'+(s.roi==null?"—":s.roi.toFixed(2)+"x")+'</td></tr>'; }).join("")||'<tr><td colspan="8" class="muted">Không có data.</td></tr>')+s1cTotal+'</tbody></table>';
 
-    // 4. AOV & tỉ lệ combo Noma911 (nomaHtml đã gồm chỉ số combo tổng + bảng combo)
-    var sec4='<h2>4. AOV &amp; tỉ lệ combo Noma911</h2>'+
-      '<div class="metric-row"><div class="metric-card"><div class="metric-label">AOV toàn công ty</div><div class="metric-value">'+(data.aovAvg.cur==null?"—":fmtV(data.aovAvg.cur))+'</div><div class="metric-sub">Kỳ trước '+(data.aovAvg.prev==null?"—":fmtV(data.aovAvg.prev))+' · '+fmtDelta(data.aovAvg.delta)+' · '+fmtN(data.aovAvg.orders)+' đơn chốt</div></div></div>'+
-      (data.nomaHtml||'<p class="muted">Chưa có dữ liệu Noma911 cho kỳ này.</p>');
+    var hardTot=(data.hardToSell||[]).reduce(function(a,s){return {ad:a.ad+(s.adSpend||0),rev:a.rev+(s.revenue||0),un:a.un+(s.units||0),od:a.od+(s.orders||0),pf:a.pf+(s.profit||0)};},{ad:0,rev:0,un:0,od:0,pf:0});
+    var s1dTotal=data.hardToSell.length?'<tr class="total"><td class="lbl">TỔNG</td><td class="num">'+fmtV(hardTot.ad)+'</td><td class="num">'+fmtV(hardTot.rev)+'</td><td class="num">'+fmtN(hardTot.un)+'</td><td class="num">'+fmtN(hardTot.od)+'</td><td class="num neg">'+fmtP(hardTot.rev>0?hardTot.ad/hardTot.rev*100:null)+'</td><td class="num '+(hardTot.pf>=0?'pos':'neg')+'">'+fmtV(hardTot.pf)+'</td></tr>':'';
+    var s1d='<h4>⚠ SKU KHÓ BÁN (spend &gt; 100k nhưng 0 đơn hoặc CIR &gt; 100%)</h4>'+
+      '<table class="rpt"><thead><tr><th>SKU</th><th>Ad spend</th><th>Doanh thu</th><th>SL bán</th><th>Đơn</th><th>CIR</th><th>Lợi nhuận</th></tr></thead><tbody>'+
+      (data.hardToSell.map(function(s){ return '<tr><td class="lbl">'+esc(s.product)+'</td><td class="num">'+fmtV(s.adSpend)+'</td><td class="num">'+fmtV(s.revenue)+'</td><td class="num">'+fmtN(s.units)+'</td><td class="num">'+fmtN(s.orders)+'</td><td class="num neg">'+fmtP(s.cir)+'</td><td class="num '+(s.profit>=0?'pos':'neg')+'">'+fmtV(s.profit)+'</td></tr>'; }).join("")||'<tr><td colspan="7" class="muted">Không có SKU khó bán đáng kể.</td></tr>')+s1dTotal+'</tbody></table>';
 
-    // 5. Mặt hàng bán tốt & có dấu hiệu tăng trưởng
-    var sec5='<h2>5. Mặt hàng bán tốt &amp; có dấu hiệu tăng trưởng</h2>'+
-      '<table class="rpt"><thead><tr><th>SKU</th><th>DT kỳ này</th><th>DT kỳ trước</th><th>Δ DT</th><th>SL</th></tr></thead><tbody>'+
-      (data.topSpike.map(function(s){ return '<tr><td class="lbl">'+esc(s.product)+'</td><td class="num">'+fmtV(s.revenue)+'</td><td class="num muted">'+fmtV(s.prev.revenue)+'</td><td class="num">'+fmtDelta(s.revDelta)+'</td><td class="num">'+fmtN(s.units)+'</td></tr>'; }).join("")||'<tr><td colspan="5" class="muted">Không có SP nào tăng trong kỳ.</td></tr>')+
-      '</tbody></table>';
+    // ── 2. Dữ liệu – Hiệu suất ──
+    var chTot=(data.channels||[]).reduce(function(a,c){return {sp:a.sp+(c.totalSpendInclUnmatch||0),dt:a.dt+(c.revPending||0),od:a.od+(c.ordersFinal||0),pf:a.pf+(c.profit||0)};},{sp:0,dt:0,od:0,pf:0});
+    var s2a='<h4>🎯 HIỆU SUẤT THEO KÊNH (so với kỳ trước '+esc(prevLabel)+')</h4>'+
+      '<table class="rpt"><thead><tr><th>Kênh</th><th>Spend (Σ)</th><th>ΔSpend</th><th>DT tạm tính</th><th>ΔDT</th><th>Đơn (deliv)</th><th>CIR</th><th>Conv/Click</th><th>CPA</th><th>ΔCPA</th><th>Lợi nhuận</th></tr></thead><tbody>'+
+      data.channels.map(function(c){ return '<tr '+(c.underperforming?'class="row-warn"':'')+'><td class="lbl">'+esc(c.label)+(c.underperforming?' <span class="badge-warn">⚠ CIR cao</span>':'')+'</td><td class="num">'+fmtV(c.totalSpendInclUnmatch)+'</td><td class="num">'+fmtDelta(c.spendDelta)+'</td><td class="num">'+fmtV(c.revPending)+'</td><td class="num">'+fmtDelta(c.revDelta)+'</td><td class="num">'+fmtN(c.ordersFinal)+'</td><td class="num">'+fmtP(c.cir)+'</td><td class="num">'+fmtP(c.convRate)+'</td><td class="num">'+(c.cpa==null?"—":fmtV(c.cpa))+'</td><td class="num">'+fmtDeltaNeg(c.cpaDelta)+'</td><td class="num '+(c.profit>=0?'pos':'neg')+'">'+fmtV(c.profit)+'</td></tr>'; }).join("")+
+      '<tr class="total"><td class="lbl">TỔNG</td><td class="num">'+fmtV(chTot.sp)+'</td><td class="num">—</td><td class="num">'+fmtV(chTot.dt)+'</td><td class="num">—</td><td class="num">'+fmtN(chTot.od)+'</td><td class="num">'+fmtP(chTot.dt>0?chTot.sp/chTot.dt*100:null)+'</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num '+(chTot.pf>=0?'pos':'neg')+'">'+fmtV(chTot.pf)+'</td></tr>'+
+      '</tbody></table><p class="muted" style="margin-top:-8px">Conv/Click = tỉ lệ chuyển đổi FB Ads (chỉ kênh có spend FB) · ΔCPA: ▼ xanh = giảm CPA = tốt · ⚠ CIR cao = CIR &gt; 1.2× trung bình các kênh.</p>';
 
-    // 6. Creative đang hoạt động tốt (CTR cao)
-    var sec6='<h2>6. Creative đang hoạt động tốt (CTR cao)</h2>'+
-      '<table class="rpt"><thead><tr><th>Campaign</th><th>Spend</th><th>CTR</th><th>Conv</th><th>CPA</th></tr></thead><tbody>'+
-      (data.campaigns.topCtr.slice(0,5).map(function(c){ return '<tr><td class="lbl" style="max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(c.name)+'"><span class="staff-chip staff-'+esc(c.staff)+'">'+esc(c.staff)+'</span> '+esc(c.name)+'</td><td class="num">'+fmtV(c.spend)+'</td><td class="num pos">'+fmtP(c.ctr)+'</td><td class="num">'+fmtN(c.regs)+'</td><td class="num">'+(c.cpa==null?"—":fmtV(c.cpa))+'</td></tr>'; }).join("")||'<tr><td colspan="5" class="muted">Không có data.</td></tr>')+
-      '</tbody></table>';
+    // CPA & AOV trung bình + bảng brand FB-only (order-level)
+    var BL=data.brandLinesFb||{doscom:{},noma:{}};
+    var blDoc=BL.doscom||{},blNoma=BL.noma||{},blDocP=blDoc.prev||{},blNomaP=blNoma.prev||{};
+    var blTotC={adSpend:(blDoc.adSpend||0)+(blNoma.adSpend||0),revenue:(blDoc.revenue||0)+(blNoma.revenue||0),orders:(blDoc.orders||0)+(blNoma.orders||0)};
+    blTotC.cpa=blTotC.orders>0?blTotC.adSpend/blTotC.orders:null; blTotC.aov=blTotC.orders>0?blTotC.revenue/blTotC.orders:null;
+    var blTotP={adSpend:(blDocP.adSpend||0)+(blNomaP.adSpend||0),revenue:(blDocP.revenue||0)+(blNomaP.revenue||0),orders:(blDocP.orders||0)+(blNomaP.orders||0)};
+    blTotP.cpa=blTotP.orders>0?blTotP.adSpend/blTotP.orders:null; blTotP.aov=blTotP.orders>0?blTotP.revenue/blTotP.orders:null;
+    var blRowFb=function(name,L){ L=L||{}; return '<tr><td class="lbl">'+name+'</td><td class="num">'+fmtV(L.adSpend)+'</td><td class="num">'+fmtN(L.orders)+'</td><td class="num">'+(L.cpa==null?"—":fmtV(L.cpa))+'</td><td class="num">'+fmtDeltaNeg(L.cpaDelta)+'</td><td class="num">'+(L.aov==null?"—":fmtV(L.aov))+'</td><td class="num">'+fmtDelta(L.aovDelta)+'</td></tr>'; };
+    var s2b='<div class="metric-row"><div class="metric-card"><div class="metric-label">CPA trung bình FB Ads (DUY + PN)</div><div class="metric-value">'+(data.cpaAvg.cur==null?"—":fmtV(data.cpaAvg.cur))+'</div><div class="metric-sub">Kỳ trước: '+(data.cpaAvg.prev==null?"—":fmtV(data.cpaAvg.prev))+' · '+fmtDeltaNeg(data.cpaAvg.delta)+'</div></div>'+
+      '<div class="metric-card"><div class="metric-label">AOV — Giá trị đơn TB toàn công ty</div><div class="metric-value">'+(data.aovAvg.cur==null?"—":fmtV(data.aovAvg.cur))+'</div><div class="metric-sub">Kỳ trước: '+(data.aovAvg.prev==null?"—":fmtV(data.aovAvg.prev))+' · '+fmtDelta(data.aovAvg.delta)+' · '+fmtN(data.aovAvg.orders)+' đơn chốt</div></div></div>'+
+      '<h4>🏷️ CPA &amp; AOV THEO BRAND — Facebook: Ads + Page/Messenger (Doscom vs Noma)</h4>'+
+      '<table class="rpt"><thead><tr><th>Brand</th><th>Ad spend (FB)</th><th>Đơn</th><th>CPA</th><th>ΔCPA</th><th>AOV</th><th>ΔAOV</th></tr></thead><tbody>'+
+      blRowFb("Doscom",blDoc)+blRowFb("Noma",blNoma)+
+      '<tr class="total"><td class="lbl">TỔNG</td><td class="num">'+fmtV(blTotC.adSpend)+'</td><td class="num">'+fmtN(blTotC.orders)+'</td><td class="num">'+(blTotC.cpa==null?"—":fmtV(blTotC.cpa))+'</td><td class="num">'+fmtDeltaNeg(pctd(blTotC.cpa,blTotP.cpa))+'</td><td class="num">'+(blTotC.aov==null?"—":fmtV(blTotC.aov))+'</td><td class="num">'+fmtDelta(pctd(blTotC.aov,blTotP.aov))+'</td></tr>'+
+      '</tbody></table><p class="muted" style="margin-top:-8px">Đơn Facebook: <b>DUY + PHƯƠNG NAM</b> (gồm Noma911 + messenger) <b>+ Page/Messenger organic</b> — KHÔNG gồm Website/Google, Zalo, Hotline (data không có Shopee/TikTok). Tính <b>cấp đơn</b> (combo lấy đủ giá trị, khớp Pancake), Noma = tổng đơn FB − Doscom. CPA = Ad spend FB ÷ đơn (Page organic không spend → CPA blended) · AOV = DT ÷ đơn.</p>';
 
-    // (6) Dự kiến chi phí quảng cáo kỳ tới — #7 yêu cầu user
-    var fc=data.forecast||{channels:[],periodLabel:"kỳ tới"};
-    var fmtPct=function(n){ if(n==null||!isFinite(n))return"—"; return (n>0?"+":"")+Number(n).toFixed(1)+"%"; };
-    var s6fc='<h2>7. Dự kiến chi phí quảng cáo '+esc(fc.periodLabel)+'</h2>'+
-      '<p class="muted">Định hướng <b>tăng trưởng, không giảm ngân sách</b>: mỗi kênh dự kiến <b>ít nhất bằng</b> kỳ này, tối đa +60% theo đà tăng (kỳ này so kỳ trước). Áp cho '+fc.days+' ngày tới, cùng độ dài kỳ đang chọn. Đây là ƯỚC TÍNH định hướng ngân sách, không phải cam kết.</p>'+
-      '<table class="rpt"><thead><tr><th>Kênh</th><th>Chi phí kỳ này</th><th>Đà áp dụng</th><th>Dự kiến '+esc(fc.periodLabel)+'</th></tr></thead><tbody>'+
-      (fc.channels||[]).map(function(c){ return '<tr><td class="lbl">'+esc(c.label)+'</td><td class="num">'+fmtV(c.cur)+'</td><td class="num">'+fmtPct(c.growth)+'</td><td class="num">'+fmtV(c.forecast)+'</td></tr>'; }).join("")+
-      '<tr class="total"><td class="lbl">TỔNG DỰ KIẾN</td><td class="num">'+fmtV(fc.curTotal)+'</td><td class="num">'+fmtPct(fc.growthTotal)+'</td><td class="num">'+fmtV(fc.forecastTotal)+'</td></tr>'+
-      '</tbody></table>';
-
-    // (7) AI nhận xét hiệu quả & đề xuất cải thiện — #8 yêu cầu user (data.aiHtml dựng sẵn ở exportWeekly)
-    var s7ai='<h2>8. AI nhận xét hiệu quả &amp; đề xuất cải thiện</h2>'+
-      '<p class="muted">Phân tích tự động bằng Claude (Haiku) dựa trên toàn bộ số liệu báo cáo phía trên. Mang tính tham khảo — quyết định cuối thuộc về người vận hành.</p>'+
-      (data.aiHtml||'<p class="muted">Chưa có phân tích AI cho báo cáo này.</p>');
+    var campRowFmt=function(c){ return '<tr><td class="lbl" style="max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(c.name)+'"><span class="staff-chip staff-'+esc(c.staff)+'">'+esc(c.staff)+'</span> '+esc(c.name)+'</td><td class="num">'+fmtV(c.spend)+'</td><td class="num">'+fmtN(c.impressions)+'</td><td class="num">'+fmtN(c.clicks)+'</td><td class="num">'+fmtP(c.ctr)+'</td><td class="num">'+fmtN(c.regs)+'</td><td class="num">'+(c.cpa==null?"—":fmtV(c.cpa))+'</td></tr>'; };
+    var s2c='<h4>🚨 CAMPAIGN LỖ / VƯỢT NGÂN SÁCH (spend &gt; 1.2× trung bình, 0 đơn hoặc CPA &gt; 250k)</h4>'+
+      '<table class="rpt"><thead><tr><th>Campaign</th><th>Spend</th><th>Impr</th><th>Clicks</th><th>CTR</th><th>Conv</th><th>CPA</th></tr></thead><tbody>'+(data.campaigns.overspend.map(campRowFmt).join("")||'<tr><td colspan="7" class="muted">Không có campaign vượt ngưỡng.</td></tr>')+'</tbody></table>';
 
     return '<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8">'+
       '<title>Báo cáo họp giao ban '+esc(data.range.start)+' → '+esc(data.range.end)+'</title>'+
@@ -1048,9 +1058,10 @@
       '<span style="margin-left:auto"></span><button class="btn btn-primary" onclick="window.print()">🖨 In / Lưu PDF</button>'+
       '<button class="btn btn-secondary" onclick="window.close()">Đóng</button></div>'+
       '<div class="meta"><b>Khoảng báo cáo:</b> '+esc(dateLabel)+' · <b>Kỳ so sánh:</b> '+esc(prevLabel)+
-      ' · <b>KPI '+esc(kpi.month_label)+':</b> '+fmtV(kpi.mtd_revenue)+' / '+fmtV(kpi.kpi_vnd)+' ('+fmtP(kpi.mtd_pct)+', dự phóng cuối tháng '+fmtV(kpi.projected_revenue)+')'+
       ' · <b>Nguồn:</b> FB Ads + Google Ads (Windsor.ai) + Pancake POS · <b>Lợi nhuận</b> = DT − VAT 10% − Ad spend (match) − Giá nhập × SL bán.</div>'+
-      sec1+sec2+sec3+sec4+sec5+sec6+s6fc+s7ai+
+      '<h2>1. Hiệu suất Kinh doanh</h2>'+s1aKpi+s1b+s1c+s1d+
+      '<h2>2. Dữ liệu – Hiệu suất</h2>'+s2a+s2b+s2c+
+      (data.nomaHtml||"")+
       '<p style="text-align:center;color:#94A3B8;font-size:10px;margin-top:30px">CRM Doscom · crm-doscom.pages.dev · Báo cáo tự sinh từ data '+esc(data.generatedAt)+'</p>'+
       '</body></html>';
   }
@@ -1116,24 +1127,18 @@
     try{ data=buildWeeklyReportData(rs,re); }
     catch(e){ console.error(e); alert('Lỗi tạo dữ liệu báo cáo: '+(e.message||e)); if(btn){btn.disabled=false;btn.textContent=oldTxt;} return; }
 
-    var nomaP=fetch('/api/noma911/stats?from='+rs+'&to='+re,{cache:'no-store'})
-      .then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
-    if(btn) btn.textContent='Đang phân tích AI…';
-    var aiP=fetch('/api/weekly-ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(buildAiPayload(data))})
-      .then(function(r){return r.json().catch(function(){return {ok:false,error:'Phản hồi AI không hợp lệ.'};});})
-      .catch(function(e){return {ok:false,error:'Không gọi được API AI: '+String(e&&e.message||e)};});
-
-    Promise.all([nomaP,aiP]).then(function(arr){
-      try{
-        data.nomaHtml=buildNomaReportHtml(arr[0]);
-        data.aiHtml=buildAiHtml(arr[1]);
-        var html=renderWeeklyReportHtml(data);
-        var w=window.open('','_blank');
-        if(w){ w.document.open(); w.document.write(html); w.document.close(); }
-        else { alert('Trình duyệt chặn cửa sổ bật lên — hãy cho phép pop-up để xuất báo cáo.'); }
-      }catch(e){ console.error(e); alert('Lỗi khi tạo báo cáo: '+(e.message||e)); }
-      finally{ if(btn){btn.disabled=false;btn.textContent=oldTxt;} }
-    });
+    fetch('/api/noma911/stats?from='+rs+'&to='+re,{cache:'no-store'})
+      .then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
+      .then(function(N){
+        try{
+          data.nomaHtml=buildNomaReportHtml(N);
+          var html=renderWeeklyReportHtml(data);
+          var w=window.open('','_blank');
+          if(w){ w.document.open(); w.document.write(html); w.document.close(); }
+          else { alert('Trình duyệt chặn cửa sổ bật lên — hãy cho phép pop-up để xuất báo cáo.'); }
+        }catch(e){ console.error(e); alert('Lỗi khi tạo báo cáo: '+(e.message||e)); }
+        finally{ if(btn){btn.disabled=false;btn.textContent=oldTxt;} }
+      });
   }
   document.getElementById('btnExport').addEventListener('click',exportWeekly);
 
