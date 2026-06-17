@@ -121,6 +121,24 @@ function AdsCreatorPanel() {
   const [showBuyingInfo, setShowBuyingInfo] = useState(false)
   const [showBillingInfo, setShowBillingInfo] = useState(false)
 
+  // ══════════ CHẾ ĐỘ TỰ ĐỘNG TỪ FOLDER (bulk: 1 folder = 1 campaign, mỗi video = 1 ad) ══════════
+  // Tách RIÊNG khỏi state thủ công ở trên — không ảnh hưởng luồng tạo tay.
+  const [mode, setMode] = useState("auto") // "auto" | "manual"
+  // Template Noma cố định (override được trên UI). KHÔNG đụng PRODUCTS của luồng thủ công.
+  const [autoAccount, setAutoAccount] = useState("act_1418124406240173")
+  const [autoPage, setAutoPage] = useState("61583378284313")
+  const [autoPixel, setAutoPixel] = useState("24397685376567889")
+  const [autoCopyProduct, setAutoCopyProduct] = useState("Noma 911") // SP trong catalog để AI viết caption
+  const [autoLink, setAutoLink] = useState("https://www.noma.io.vn/nm911d")
+  const [autoBudget, setAutoBudget] = useState("200000")
+  const [autoCta, setAutoCta] = useState("ORDER_NOW")
+  const [autoAgeMin, setAutoAgeMin] = useState(30)
+  const [autoAgeMax, setAutoAgeMax] = useState(60)
+  const [autoGroups, setAutoGroups] = useState([]) // [{ product, files:[File] }]
+  const [autoBusy, setAutoBusy] = useState(false)
+  const [autoLog, setAutoLog] = useState([]) // dòng tiến trình
+  const [autoResults, setAutoResults] = useState([]) // [{ product, ok, campaign_id?, ads_created?, ads_manager_url?, error? }]
+
   const PRODUCTS = {
     "D1":        { pixel: "283066540825683", page: "102966349378081", account: "act_927390616363424", pixelName: "D1 CHUẨN" },
     "DR1":       { pixel: "317565188066584", page: "102966349378081", account: "act_927390616363424", pixelName: "DR1" },
@@ -605,6 +623,128 @@ function AdsCreatorPanel() {
     }
   }
 
+  // ══════════ HANDLERS CHẾ ĐỘ TỰ ĐỘNG ══════════
+  // Quét folder: gom video theo folder cha trực tiếp = 1 sản phẩm = 1 campaign.
+  const handleAutoFolderSelect = (e) => {
+    const files = Array.from(e.target.files || [])
+    const vids = files.filter(f =>
+      /\.(mp4|mov|m4v|avi|mkv|webm)$/i.test(f.name) || (f.type || "").startsWith("video")
+    )
+    const byFolder = {}
+    for (const f of vids) {
+      const rel = f.webkitRelativePath || f.name
+      const parts = rel.split("/")
+      const folder = parts.length > 1 ? parts[parts.length - 2] : "(gốc)"
+      ;(byFolder[folder] = byFolder[folder] || []).push(f)
+    }
+    setAutoGroups(Object.entries(byFolder).map(([product, fs]) => ({ product, files: fs })))
+    setAutoResults([])
+    setAutoLog([])
+  }
+
+  const autoTotalVideos = autoGroups.reduce((n, g) => n + g.files.length, 0)
+  const pushLog = (line) => setAutoLog(curr => [...curr, line])
+
+  const handleAutoRun = async () => {
+    if (autoBusy || autoGroups.length === 0) return
+    setAutoBusy(true); setAutoResults([]); setAutoLog([])
+    const today = new Date().toISOString().slice(0, 10)
+    const results = []
+    try {
+      for (const g of autoGroups) {
+        pushLog(`▶ Sản phẩm "${g.product}" — ${g.files.length} video`)
+        const adsArr = []
+        try {
+          for (let i = 0; i < g.files.length; i++) {
+            const file = g.files[i]
+            const baseName = file.name.replace(/\.[^.]+$/, "")
+            // 1) AI viết caption
+            pushLog(`  • [${file.name}] AI viết caption...`)
+            let headline = g.product, adCopy = baseName
+            try {
+              const r = await fetch("/api/generate-ad-copy", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  product: autoCopyProduct,
+                  format: "OUTCOME_SALES",
+                  formatLabel: "Doanh số",
+                  cta: autoCta,
+                  notes: `Tên video: ${baseName} | Nhóm sản phẩm: ${g.product}`,
+                  promotion: "",
+                }),
+              })
+              const d = await r.json()
+              if (r.ok && d.variants && d.variants[0]) {
+                headline = d.variants[0].headline || g.product
+                adCopy = d.variants[0].primary_text || baseName
+              } else {
+                pushLog(`    ⚠ caption lỗi (${d.error || r.status}) → tạm dùng tên file`)
+              }
+            } catch (err) {
+              pushLog(`    ⚠ caption lỗi: ${err.message} → tạm dùng tên file`)
+            }
+            // 2) Upload video lên FB
+            pushLog(`  • [${file.name}] upload lên FB (đợi xử lý)...`)
+            const fd = new FormData()
+            fd.append("file", file, file.name)
+            fd.append("account_id", autoAccount)
+            fd.append("kind", "video")
+            const ur = await fetch("/api/fb-upload-media", { method: "POST", body: fd })
+            const ud = await ur.json()
+            if (!ur.ok || !ud.ok) throw new Error(`upload "${file.name}" [${ud.step || "?"}]: ${ud.error || ur.status}`)
+            adsArr.push({
+              ad_name: `${g.product} - ${baseName}`,
+              headline, ad_copy: adCopy, cta: autoCta, link: autoLink,
+              url_tags: "", video_id: ud.video_id, thumbnail_url: ud.thumbnail_url,
+            })
+            pushLog(`    ✓ video ${i + 1}/${g.files.length} xong`)
+          }
+          // 3) Tạo campaign cho cả nhóm (1 campaign → 1 adset → nhiều ad)
+          pushLog(`  • Tạo campaign "${g.product}" với ${adsArr.length} quảng cáo...`)
+          const config = {
+            campaign_name: `${g.product} - Doanh số - ${today}`,
+            adset_name: `${g.product} - AdSet - ${today}`,
+            objective: "OUTCOME_SALES",
+            buying_type: "AUCTION",
+            account_id: autoAccount,
+            page_id: autoPage,
+            pixel_id: autoPixel,
+            optimization_goal: "OFFSITE_CONVERSIONS",
+            destination_type: "WEBSITE",
+            billing_event: "IMPRESSIONS",
+            promoted_event: "COMPLETE_REGISTRATION",
+            pacing_type: "standard",
+            launch_status: "PAUSED",
+            budget_level: "adset",
+            budget_type: "daily",
+            budget_amount: Number(autoBudget),
+            targeting: {
+              geo_locations: { countries: ["VN"] },
+              age_min: Number(autoAgeMin) || 18,
+              age_max: Number(autoAgeMax) || 65,
+            },
+            ads: adsArr,
+          }
+          const fd2 = new FormData()
+          fd2.append("config", JSON.stringify(config))
+          const cr = await fetch("/api/create-campaign", { method: "POST", body: fd2 })
+          const cd = await cr.json()
+          if (!cr.ok || !cd.success) throw new Error(`[${cd.step || "?"}] ${cd.error || "lỗi tạo camp"}`)
+          pushLog(`  ✓ Xong campaign "${g.product}" (PAUSED)`)
+          results.push({ product: g.product, ok: true, campaign_id: cd.campaign_id, ads_created: (cd.ads || []).length, ads_manager_url: cd.ads_manager_url })
+        } catch (err) {
+          pushLog(`  ✗ "${g.product}" lỗi: ${err.message}`)
+          results.push({ product: g.product, ok: false, error: err.message })
+        }
+        setAutoResults([...results])
+      }
+      pushLog(`■ Hoàn tất: ${results.filter(r => r.ok).length}/${results.length} campaign tạo thành công.`)
+    } finally {
+      setAutoBusy(false)
+    }
+  }
+
   // Initialize defaults
   React.useEffect(() => { handleProductChange("D1") }, [])
 
@@ -626,6 +766,129 @@ function AdsCreatorPanel() {
         <p className="text-blue-100 text-sm mt-1">Cấu hình theo đúng cấu trúc: Chiến dịch → Nhóm quảng cáo → Quảng cáo</p>
       </div>
 
+      {/* ═══════════════ CHỌN CHẾ ĐỘ ═══════════════ */}
+      <div className="flex gap-2">
+        <button onClick={() => setMode("auto")} className={"px-4 py-2.5 rounded-lg text-sm font-bold transition " + (mode === "auto" ? "bg-indigo-600 text-white shadow" : "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50")}>⚡ Tự động từ folder</button>
+        <button onClick={() => setMode("manual")} className={"px-4 py-2.5 rounded-lg text-sm font-bold transition " + (mode === "manual" ? "bg-indigo-600 text-white shadow" : "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50")}>✍️ Thủ công (từng quảng cáo)</button>
+      </div>
+
+      {/* ═══════════════ CHẾ ĐỘ TỰ ĐỘNG ═══════════════ */}
+      {mode === "auto" && (
+        <div className="space-y-5">
+          {/* Template Noma */}
+          <div className="bg-white rounded-xl border-2 border-indigo-200 p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-4 pb-3 border-b-2 border-indigo-500">
+              <div className="w-10 h-10 rounded-full bg-indigo-500 text-white flex items-center justify-center font-bold text-lg">⚡</div>
+              <div>
+                <h3 className="text-base font-bold text-indigo-900">Tự động từ folder video</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Chọn folder sản phẩm → mỗi video thành 1 quảng cáo, gom vào 1 chiến dịch. AI tự viết caption.</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 mb-4">
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Mục tiêu: Doanh số (Sales)</span>
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200">Sự kiện: Hoàn tất đăng ký</span>
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Tạo ở PAUSED (duyệt rồi bật)</span>
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gray-50 text-gray-600 border border-gray-200">VN · 1 folder = 1 campaign</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Tài khoản QC</label>
+                <input className={inputClass} value={autoAccount} onChange={e => setAutoAccount(e.target.value)} />
+              </div>
+              <div>
+                <label className={labelClass}>Page ID</label>
+                <input className={inputClass} value={autoPage} onChange={e => setAutoPage(e.target.value)} />
+              </div>
+              <div>
+                <label className={labelClass}>Pixel ID</label>
+                <input className={inputClass} value={autoPixel} onChange={e => setAutoPixel(e.target.value)} />
+              </div>
+              <div>
+                <label className={labelClass}>SP danh mục (để AI viết caption)</label>
+                <select className={selectClass} value={autoCopyProduct} onChange={e => setAutoCopyProduct(e.target.value)}>
+                  {Object.keys(PRODUCTS).map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className={labelClass}>Link đích</label>
+                <input className={inputClass} value={autoLink} onChange={e => setAutoLink(e.target.value)} />
+              </div>
+              <div>
+                <label className={labelClass}>Ngân sách/ngày (VND)</label>
+                <input className={inputClass} type="number" value={autoBudget} onChange={e => setAutoBudget(e.target.value)} />
+              </div>
+              <div>
+                <label className={labelClass}>Nút CTA</label>
+                <select className={selectClass} value={autoCta} onChange={e => setAutoCta(e.target.value)}>
+                  <option value="ORDER_NOW">Đặt hàng</option>
+                  <option value="SHOP_NOW">Mua ngay</option>
+                  <option value="LEARN_MORE">Tìm hiểu thêm</option>
+                  <option value="SIGN_UP">Đăng ký</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Tuổi từ</label>
+                <input className={inputClass} type="number" value={autoAgeMin} onChange={e => setAutoAgeMin(e.target.value)} />
+              </div>
+              <div>
+                <label className={labelClass}>Tuổi đến</label>
+                <input className={inputClass} type="number" value={autoAgeMax} onChange={e => setAutoAgeMax(e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          {/* Chọn folder + chạy */}
+          <div className="bg-white rounded-xl border-2 border-gray-200 p-5 shadow-sm">
+            <label className={labelClass}>Chọn folder sản phẩm (chứa video)</label>
+            <input type="file" multiple webkitdirectory="" directory="" onChange={handleAutoFolderSelect}
+              className="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-semibold hover:file:bg-indigo-100" />
+            <p className="text-xs text-gray-400 mt-1.5">Mẹo: chọn folder cha chứa nhiều folder con (mỗi con = 1 sản phẩm) để tạo nhiều campaign cùng lúc. Video nên &lt; ~30MB (giới hạn upload qua cloud).</p>
+
+            {autoGroups.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <p className="text-xs font-semibold text-gray-600">Tìm thấy {autoTotalVideos} video trong {autoGroups.length} sản phẩm:</p>
+                {autoGroups.map(g => (
+                  <div key={g.product} className="border border-gray-200 rounded-lg p-3">
+                    <p className="text-sm font-bold text-gray-800">📁 {g.product} <span className="font-normal text-gray-400">— {g.files.length} video → 1 campaign</span></p>
+                    <p className="text-[11px] text-gray-500 mt-1 truncate">{g.files.map(f => f.name).join(", ")}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button onClick={handleAutoRun} disabled={autoBusy || autoGroups.length === 0}
+              className={"mt-4 w-full py-3 rounded-lg text-sm font-bold text-white " + (autoBusy || autoGroups.length === 0 ? "bg-gray-300 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700")}>
+              {autoBusy ? "Đang chạy, đừng đóng tab..." : `⚡ Tạo ${autoGroups.length || ""} campaign tự động (${autoTotalVideos} video)`}
+            </button>
+          </div>
+
+          {/* Tiến trình + kết quả */}
+          {(autoLog.length > 0 || autoResults.length > 0) && (
+            <div className="bg-gray-900 rounded-xl p-4 shadow-sm">
+              <p className="text-xs font-bold text-gray-300 uppercase mb-2">Tiến trình</p>
+              <pre className="text-[11px] whitespace-pre-wrap text-green-300 max-h-72 overflow-auto" style={{fontFamily:"ui-monospace,monospace"}}>{autoLog.join("\n")}</pre>
+              {autoResults.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {autoResults.map((r, i) => (
+                    <div key={i} className={"rounded-lg p-2.5 text-xs " + (r.ok ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200")}>
+                      {r.ok ? (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-green-800 font-semibold">✓ {r.product} — {r.ads_created} quảng cáo (PAUSED)</span>
+                          {r.ads_manager_url && <a href={r.ads_manager_url} target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold whitespace-nowrap">Mở Ads Manager →</a>}
+                        </div>
+                      ) : (
+                        <span className="text-red-700">✗ {r.product}: {r.error}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {mode === "manual" && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* LEFT 2 COLUMNS — Main form (stacked sections) */}
         <div className="lg:col-span-2 space-y-6">
@@ -1483,6 +1746,7 @@ function AdsCreatorPanel() {
         </div>
 
       </div>
+      )}
     </div>
   )
 }
