@@ -43,6 +43,14 @@ const DOSCOM_COUNTRIES = [
   { code: "FR", name: "Pháp" },
 ]
 
+// Giờ VN (UTC+7) theo định dạng input datetime-local: "YYYY-MM-DDTHH:MM".
+// (Bị bỏ sót khi copy panel từ dashboard cũ → thiếu hàm này khiến trang trắng.)
+function nowVnDatetime() {
+  const d = new Date(Date.now() + 7 * 3600 * 1000); // dời sang giờ VN rồi đọc theo UTC
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+}
+
 // ===== AdsCreatorPanel — COPY Y NGUYÊN từ facebookadsallinone/index.html (dòng 3284-4725) =====
 function AdsCreatorPanel() {
   // ── Product ──
