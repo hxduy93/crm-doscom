@@ -1,0 +1,40 @@
+name: Deploy lên Cloudflare Pages
+
+# Tự động deploy MỖI KHI push code lên master (không cần cron, không cần bấm tay).
+# Cũng chạy tay được qua tab Actions → Run workflow.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Chuẩn bị thư mục deploy (index.html + data + demos + trang standalone)
+        run: |
+          rm -rf dist && mkdir dist
+          cp index.html dist/
+          cp -r data dist/data
+          if [ -d demos ]; then cp -r demos dist/demos; fi
+          # Trang standalone (nhúng iframe trong CRM) — phải copy thủ công.
+          for page in agent-geo-doscom.html ads-creator.html; do
+            if [ -f "$page" ]; then cp "$page" dist/; fi
+          done
+          # Functions (functions/) được wrangler tự bundle từ gốc repo → không cần copy.
+
+      - name: Deploy lên Cloudflare Pages
+        run: npx wrangler@4 pages deploy dist --project-name=crm-doscom --branch=master --commit-dirty=true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: cffb0c35f8c649872436b2087a64b7bc
