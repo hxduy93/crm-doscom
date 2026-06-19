@@ -1,0 +1,1009 @@
+{
+  "generated_at": "2026-06-19 11:09",
+  "period": {
+    "start": "2026-05-15",
+    "end": "2026-06-13"
+  },
+  "model": "claude-opus-4-8",
+  "version": "2.1",
+  "ga_account": {
+    "id": "477-705-2298",
+    "name": "MHDI"
+  },
+  "score": 70,
+  "grade": "C",
+  "score_breakdown": [
+    {
+      "dimension": "Conversion tracking",
+      "score": 5,
+      "max": 5,
+      "status": "OK",
+      "note": "Website revenue 30d 172,215,500d (75 don) > spend 63,708,856d"
+    },
+    {
+      "dimension": "Campaign structure",
+      "score": 4,
+      "max": 5,
+      "status": "OK",
+      "note": "19 campaign, 7 category active, OTHER spend ~0"
+    },
+    {
+      "dimension": "Keyword health",
+      "score": 5,
+      "max": 5,
+      "status": "OK",
+      "note": "Mix EXACT/PHRASE/BROAD du; CTR Search network 13.7% > 5%"
+    },
+    {
+      "dimension": "Negative keyword hygiene",
+      "score": 1,
+      "max": 5,
+      "status": "CRITICAL",
+      "note": "15 search term spend ~1,428,610d/30d, 0 conv, chua add negative (>10 item)"
+    },
+    {
+      "dimension": "Ad copy / RSA",
+      "score": 3,
+      "max": 5,
+      "status": "DATA_GAP",
+      "note": "RSA headline text khong expose; format chi tach DISPLAY_BANNER vs OTHER"
+    },
+    {
+      "dimension": "GDN banner health",
+      "score": 4,
+      "max": 5,
+      "status": "OK",
+      "note": "worst_performing_banners & money_pit_ads rong; chi 320x50.gif CTR 0.28% can review"
+    },
+    {
+      "dimension": "GDN placement hygiene",
+      "score": 3,
+      "max": 5,
+      "status": "WARN",
+      "note": "15 placement GDN lottery/news CTR <0.5% dot ~1,335,377d/30d (chua exclude)"
+    },
+    {
+      "dimension": "Impression share",
+      "score": 3,
+      "max": 5,
+      "status": "DATA_GAP",
+      "note": "Windsor chua xuat impression_share — can fetch de cham"
+    },
+    {
+      "dimension": "Spend efficiency (ROAS)",
+      "score": 4,
+      "max": 5,
+      "status": "WARN",
+      "note": "ROAS 2.7x — duoi target 3x mot chut (2-3x band)"
+    },
+    {
+      "dimension": "Trend momentum",
+      "score": 3,
+      "max": 5,
+      "status": "OK",
+      "note": "Phan lon category flat/+nhe (CAM_4G +7%, MAYDO +5%); CHONG_GHI_AM -18.6%; khong co spike"
+    }
+  ],
+  "headline": "ROAS 2.7x sat target — cat GDN rac, dồn budget sang Search CTR cao",
+  "verdict": "ROAS 2.7x sat target 3x (chi 64tr ra 172tr revenue Website, 75 don). Search rat khoe (CTR 13-18%) nhung GDN CONTENT an ~nua spend voi CTR 1.26% va 15 term ~1.4tr chua add negative. Co hoi ro: cat ~2.8tr GDN rac + negative gap, dồn sang 3 Search campaign CTR cao dang underspend (TB Dò Nghe Lén 18.3%, TB Chống Ghi Âm 16.7%, Cam mini).",
+  "top_actions": [
+    {
+      "category": "KEYWORD",
+      "priority": 1,
+      "action": "Add negative 'camera năng lượng mặt trời' (+ 'camera nlmt sim 4g', 'cameras') vào camp 'Search - Cam mini' & 'Search - Sim 4G'",
+      "reason": "Spend 191,566d/30d, 0 conv, match BROAD, status NONE. Cam mini/Sim 4G ban camera wifi/4G — khong ban tam NLMT.",
+      "estimated_saving_vnd": 300000,
+      "risk": "low",
+      "time_cost": "5 phut"
+    },
+    {
+      "category": "CREATIVE",
+      "priority": 2,
+      "action": "Review/A-B banner 320x50.gif (ad_id 752128818630) camp 'RMK - chống ghi âm'",
+      "reason": "CTR 0.28% vs 300x250.gif 1.07% & 300x600.gif 1.12% cung camp. Spend 207k/30d hieu qua thap nhat.",
+      "estimated_saving_vnd": 150000,
+      "risk": "low",
+      "time_cost": "15 phut"
+    },
+    {
+      "category": "BUDGET",
+      "priority": 3,
+      "action": "Cap max CPC camp 'Search - Sim 4G' ~6.0k",
+      "reason": "CPC 7d tang +31.4% (5.5k->7.3k) ma clicks/conv khong tang — bid war dot tien.",
+      "estimated_saving_vnd": 800000,
+      "risk": "medium",
+      "time_cost": "10 phut"
+    },
+    {
+      "category": "PLACEMENT",
+      "priority": 4,
+      "action": "Exclude 15 placement GDN lottery/news (xsmn.mobi, dantri.com.vn, www.24h.com.vn, giavang.org, phatnguoi.com...)",
+      "reason": "CTR <0.5%, audience sai. Tong spend ~1,335,377d/30d tren GDN CONTENT (CTR network 1.26% vs Search 13.65%).",
+      "estimated_saving_vnd": 1335377,
+      "risk": "low",
+      "time_cost": "15 phut"
+    },
+    {
+      "category": "TREND",
+      "priority": 5,
+      "action": "Tang budget camp 'Search - TB Dò Nghe Lén' +25% (dồn tu placement cut)",
+      "reason": "CTR 18.3% cao nhat account, spend chi 3.29tr/30d — underspend tren keyword chat luong cao.",
+      "estimated_saving_vnd": 0,
+      "risk": "low",
+      "time_cost": "5 phut"
+    }
+  ],
+  "budget_reallocation": {
+    "headline": "Cat ~2,763,987d tu GDN rac + negative gap, dồn sang 3 Search campaign CTR cao dang underspend.",
+    "increase": [
+      {
+        "campaign": "8/5/2025 Search - TB Dò Nghe Lén",
+        "category": "MAY_DO",
+        "channel": "SEARCH",
+        "spend_30d": 3289087,
+        "ctr_30d": 0.1829,
+        "cpc_30d": 3772,
+        "suggest_pct": 25,
+        "reason": "CTR 18.3% cao nhat account, spend chi 3.29tr/30d — dang bo lo demand. Tang +25% de capture them click chat luong."
+      },
+      {
+        "campaign": "8/5/2025 Search - TB Chống Ghi Âm",
+        "category": "CHONG_GHI_AM",
+        "channel": "SEARCH",
+        "spend_30d": 1223223,
+        "ctr_30d": 0.1669,
+        "cpc_30d": 3426,
+        "suggest_pct": 30,
+        "reason": "CTR 16.7% + CPC re nhat (3.4k) nhung spend thap nhat (1.22tr) va trend -12%. Re ma hieu qua — tang +30%."
+      },
+      {
+        "campaign": "8/5/2025 Search - Cam mini",
+        "category": "CAMERA_WIFI",
+        "channel": "SEARCH",
+        "spend_30d": 10483276,
+        "ctr_30d": 0.1052,
+        "cpc_30d": 7686,
+        "suggest_pct": 15,
+        "reason": "Serve term 'camera' (14 conv — top converter) + 'camera ip' (5 conv); CTR trend +41% tuan qua. Tang +15% nhung canh CPC 7.7k dang cao."
+      }
+    ],
+    "reactivate": [
+      {
+        "campaign": "8/5/2025 Search - TBĐV GPS",
+        "category": "DINH_VI",
+        "channel": "SEARCH",
+        "spend_30d": 4322546,
+        "ctr_30d": 0.1362,
+        "note": "CTR 13.6% nhung spend_7d = 0 (da tat ~7 ngay). Co conv tu 'thiet bi dinh vi xe may'. Verify ly do tat — neu vo tinh thi bat lai."
+      }
+    ],
+    "decrease": [
+      {
+        "what": "15 GDN placement lottery/news (xsmn.mobi, dantri, 24h, giavang, phatnguoi...)",
+        "spend_30d": 1335377,
+        "reason": "CTR <0.5% — audience xem xo so/tu vi/bong da, khong phai khach mua thiet bi. Exclude toan bo.",
+        "action": "EXCLUDE_PLACEMENT"
+      },
+      {
+        "what": "Negative keyword gap (15 term)",
+        "spend_30d": 1428610,
+        "reason": "Spend ~0 conv, chua add negative — gom brand doi thu (imou/fpt), tu sai intent (NLMT, nghe len).",
+        "action": "ADD_NEGATIVE"
+      },
+      {
+        "what": "Cap bid 'Search - Sim 4G'",
+        "spend_30d": 6053045,
+        "reason": "CPC 7d +31% (5.5k->7.3k) ma khong them conv — cap max CPC de chan bid war.",
+        "action": "CAP_CPC"
+      }
+    ],
+    "freed_budget_30d": 2763987
+  },
+  "search_term_deep_dive": {
+    "top_converting": [
+      {
+        "search_term": "camera",
+        "conversions_30d": 14.0,
+        "spend_30d": 3342293,
+        "match_types": [
+          "BROAD"
+        ]
+      },
+      {
+        "search_term": "camera ip",
+        "conversions_30d": 5.0,
+        "spend_30d": 837062,
+        "match_types": [
+          "BROAD"
+        ]
+      },
+      {
+        "search_term": "camera quan sát",
+        "conversions_30d": 2.0,
+        "spend_30d": 280852,
+        "match_types": [
+          "BROAD"
+        ]
+      },
+      {
+        "search_term": "doscom",
+        "conversions_30d": 2.0,
+        "spend_30d": 110958,
+        "match_types": [
+          "BROAD"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm chính hãng",
+        "conversions_30d": 1.5,
+        "spend_30d": 37152,
+        "match_types": [
+          "PHRASE"
+        ]
+      }
+    ],
+    "top_waste": [
+      {
+        "search_term": "camera năng lượng mặt trời",
+        "spend_30d": 191566,
+        "clicks_30d": 25,
+        "match_types": [
+          "BROAD"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ]
+      },
+      {
+        "search_term": "thiết bị định vị",
+        "spend_30d": 190920,
+        "clicks_30d": 45,
+        "match_types": [
+          "EXACT"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TBĐV GPS"
+        ]
+      },
+      {
+        "search_term": "camera mini",
+        "spend_30d": 131728,
+        "clicks_30d": 35,
+        "match_types": [
+          "BROAD",
+          "EXACT"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ]
+      },
+      {
+        "search_term": "thiết bị ghi âm",
+        "spend_30d": 129214,
+        "clicks_30d": 20,
+        "match_types": [
+          "EXACT"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
+        "search_term": "camera năng lượng mặt trời sim 4g",
+        "spend_30d": 109829,
+        "clicks_30d": 17,
+        "match_types": [
+          "BROAD",
+          "PHRASE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ]
+      }
+    ],
+    "negative_gap": [
+      {
+        "search_term": "camera năng lượng mặt trời",
+        "spend_30d": 191566,
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ]
+      },
+      {
+        "search_term": "camera mini",
+        "spend_30d": 131728,
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ]
+      },
+      {
+        "search_term": "camera năng lượng mặt trời sim 4g",
+        "spend_30d": 109829,
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ]
+      },
+      {
+        "search_term": "thiết bị ghi âm bí mật",
+        "spend_30d": 101459,
+        "campaigns": [
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
+        "search_term": "định vị xe",
+        "spend_30d": 95349,
+        "campaigns": [
+          "8/5/2025 Search - TBĐV GPS"
+        ]
+      },
+      {
+        "search_term": "máy nghe lén",
+        "spend_30d": 93752,
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - TB Chống Ghi Âm",
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
+        "search_term": "máy dò định vị trên xe ô tô",
+        "spend_30d": 93651,
+        "campaigns": [
+          "8/5/2025 Search - TB Dò Nghe Lén",
+          "8/5/2025 Search - TBĐV GPS"
+        ]
+      },
+      {
+        "search_term": "máy nghe lén từ xa",
+        "spend_30d": 87631,
+        "campaigns": [
+          "8/5/2025 Search - TB Chống Ghi Âm",
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
+        "search_term": "camera doscom",
+        "spend_30d": 87009,
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm fpt",
+        "spend_30d": 81272,
+        "campaigns": [
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
+        "search_term": "cameras",
+        "spend_30d": 77141,
+        "campaigns": [
+          "8/5/2025 Search - Cam mini"
+        ]
+      },
+      {
+        "search_term": "máy phá sóng ghi âm",
+        "spend_30d": 75081,
+        "campaigns": [
+          "8/5/2025 Search - TB Chống Ghi Âm"
+        ]
+      },
+      {
+        "search_term": "camera imou",
+        "spend_30d": 72302,
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ]
+      },
+      {
+        "search_term": "mua máy ghi âm ở hà nội",
+        "spend_30d": 67082,
+        "campaigns": [
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
+        "search_term": "xem camera",
+        "spend_30d": 63758,
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ]
+      }
+    ]
+  },
+  "placement_banner_deep_dive": {
+    "network_breakdown_summary": "SEARCH: spend 35,404,241d, CTR 13.7% | CONTENT(GDN): spend 28,309,710d, CTR 1.26% — GDN an ~nua spend nhung CTR chi 1/10 Search.",
+    "top_waste_placements": [
+      {
+        "placement": "xsmn.mobi",
+        "spend_30d": 212303,
+        "ctr_30d": 0.0041,
+        "clicks_30d": 158
+      },
+      {
+        "placement": "icdn.24h.com.vn/upload/1-2025/images/2025-01-22/html5_banner_thuong_1737514797_519/1737514797_index.html",
+        "spend_30d": 205055,
+        "ctr_30d": 0.0022,
+        "clicks_30d": 53
+      },
+      {
+        "placement": "dantri.com.vn",
+        "spend_30d": 201554,
+        "ctr_30d": 0.0018,
+        "clicks_30d": 60
+      },
+      {
+        "placement": "www.24h.com.vn",
+        "spend_30d": 99303,
+        "ctr_30d": 0.0017,
+        "clicks_30d": 26
+      },
+      {
+        "placement": "xsmn.mobi/xsmb-xo-so-mien-bac.html",
+        "spend_30d": 89724,
+        "ctr_30d": 0.0045,
+        "clicks_30d": 65
+      },
+      {
+        "placement": "giavang.org/the-gioi",
+        "spend_30d": 88587,
+        "ctr_30d": 0.0021,
+        "clicks_30d": 26
+      },
+      {
+        "placement": "phatnguoi.com",
+        "spend_30d": 72590,
+        "ctr_30d": 0.0038,
+        "clicks_30d": 26
+      },
+      {
+        "placement": "cdn.24h.com.vn",
+        "spend_30d": 59228,
+        "ctr_30d": 0.0021,
+        "clicks_30d": 15
+      },
+      {
+        "placement": "rongbachkim.net",
+        "spend_30d": 57106,
+        "ctr_30d": 0.0042,
+        "clicks_30d": 43
+      },
+      {
+        "placement": "www.xemlicham.com",
+        "spend_30d": 51354,
+        "ctr_30d": 0.0044,
+        "clicks_30d": 21
+      }
+    ],
+    "worst_banners": [
+      {
+        "ad_id": "752128818630",
+        "ad_name": "320x50.gif",
+        "campaign": "RMK - chống ghi âm",
+        "ctr_30d": 0.0028,
+        "spend_30d": 206789
+      },
+      {
+        "ad_id": "752128818633",
+        "ad_name": "728x90.gif",
+        "campaign": "RMK - chống ghi âm",
+        "ctr_30d": 0.0041,
+        "spend_30d": 147909
+      },
+      {
+        "ad_id": "752128818621",
+        "ad_name": "160x600.gif",
+        "campaign": "RMK - chống ghi âm",
+        "ctr_30d": 0.003,
+        "spend_30d": 11068
+      }
+    ]
+  },
+  "action_export": {
+    "remove_placements": [
+      {
+        "placement": "xsmn.mobi",
+        "spend_30d": 212303,
+        "ctr_30d": 0.0041,
+        "clicks_30d": 158
+      },
+      {
+        "placement": "icdn.24h.com.vn/upload/1-2025/images/2025-01-22/html5_banner_thuong_1737514797_519/1737514797_index.html",
+        "spend_30d": 205055,
+        "ctr_30d": 0.0022,
+        "clicks_30d": 53
+      },
+      {
+        "placement": "dantri.com.vn",
+        "spend_30d": 201554,
+        "ctr_30d": 0.0018,
+        "clicks_30d": 60
+      },
+      {
+        "placement": "www.24h.com.vn",
+        "spend_30d": 99303,
+        "ctr_30d": 0.0017,
+        "clicks_30d": 26
+      },
+      {
+        "placement": "xsmn.mobi/xsmb-xo-so-mien-bac.html",
+        "spend_30d": 89724,
+        "ctr_30d": 0.0045,
+        "clicks_30d": 65
+      },
+      {
+        "placement": "giavang.org/the-gioi",
+        "spend_30d": 88587,
+        "ctr_30d": 0.0021,
+        "clicks_30d": 26
+      },
+      {
+        "placement": "phatnguoi.com",
+        "spend_30d": 72590,
+        "ctr_30d": 0.0038,
+        "clicks_30d": 26
+      },
+      {
+        "placement": "cdn.24h.com.vn",
+        "spend_30d": 59228,
+        "ctr_30d": 0.0021,
+        "clicks_30d": 15
+      },
+      {
+        "placement": "rongbachkim.net",
+        "spend_30d": 57106,
+        "ctr_30d": 0.0042,
+        "clicks_30d": 43
+      },
+      {
+        "placement": "www.xemlicham.com",
+        "spend_30d": 51354,
+        "ctr_30d": 0.0044,
+        "clicks_30d": 21
+      },
+      {
+        "placement": "xskt.com.vn",
+        "spend_30d": 46089,
+        "ctr_30d": 0.0035,
+        "clicks_30d": 18
+      },
+      {
+        "placement": "home.vn",
+        "spend_30d": 45394,
+        "ctr_30d": 0.0046,
+        "clicks_30d": 19
+      },
+      {
+        "placement": "xskt.com.vn/xsmn",
+        "spend_30d": 38993,
+        "ctr_30d": 0.0034,
+        "clicks_30d": 16
+      },
+      {
+        "placement": "giacaphe.com/gia-ca-phe-noi-dia",
+        "spend_30d": 34378,
+        "ctr_30d": 0.0029,
+        "clicks_30d": 14
+      },
+      {
+        "placement": "docnhanh.vn",
+        "spend_30d": 33719,
+        "ctr_30d": 0.0031,
+        "clicks_30d": 12
+      }
+    ],
+    "remove_banners": [
+      {
+        "ad_id": "752128818630",
+        "ad_name": "320x50.gif",
+        "campaign": "RMK - chống ghi âm",
+        "ctr_30d": 0.0028,
+        "spend_30d": 206789
+      },
+      {
+        "ad_id": "752128818633",
+        "ad_name": "728x90.gif",
+        "campaign": "RMK - chống ghi âm",
+        "ctr_30d": 0.0041,
+        "spend_30d": 147909
+      },
+      {
+        "ad_id": "752128818621",
+        "ad_name": "160x600.gif",
+        "campaign": "RMK - chống ghi âm",
+        "ctr_30d": 0.003,
+        "spend_30d": 11068
+      }
+    ],
+    "keywords_increase_budget": [
+      {
+        "search_term": "camera",
+        "conversions_30d": 14.0,
+        "spend_30d": 3342293,
+        "match_types": [
+          "BROAD"
+        ]
+      },
+      {
+        "search_term": "camera ip",
+        "conversions_30d": 5.0,
+        "spend_30d": 837062,
+        "match_types": [
+          "BROAD"
+        ]
+      },
+      {
+        "search_term": "camera quan sát",
+        "conversions_30d": 2.0,
+        "spend_30d": 280852,
+        "match_types": [
+          "BROAD"
+        ]
+      },
+      {
+        "search_term": "doscom",
+        "conversions_30d": 2.0,
+        "spend_30d": 110958,
+        "match_types": [
+          "BROAD"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm chính hãng",
+        "conversions_30d": 1.5,
+        "spend_30d": 37152,
+        "match_types": [
+          "PHRASE"
+        ]
+      },
+      {
+        "search_term": "thiết bị dò định vị trên xe ô tô",
+        "conversions_30d": 1.0,
+        "spend_30d": 43105,
+        "match_types": [
+          "EXACT"
+        ]
+      },
+      {
+        "search_term": "thiết bị định vị xe máy",
+        "conversions_30d": 1.0,
+        "spend_30d": 138110,
+        "match_types": [
+          "EXACT"
+        ]
+      },
+      {
+        "search_term": "thiết bị định vị gắn xe máy",
+        "conversions_30d": 1.0,
+        "spend_30d": 11088,
+        "match_types": [
+          "PHRASE"
+        ]
+      },
+      {
+        "search_term": "định vị chống trộm xe máy",
+        "conversions_30d": 1.0,
+        "spend_30d": 3176,
+        "match_types": [
+          "NEAR_PHRASE"
+        ]
+      },
+      {
+        "search_term": "định vị gắn xe máy",
+        "conversions_30d": 1.0,
+        "spend_30d": 15483,
+        "match_types": [
+          "NEAR_PHRASE"
+        ]
+      }
+    ],
+    "campaigns_increase_budget": [
+      {
+        "campaign": "8/5/2025 Search - TB Dò Nghe Lén",
+        "category": "MAY_DO",
+        "spend_30d": 3289087,
+        "ctr_30d": 0.1829,
+        "suggest_pct": 25,
+        "reason": "CTR 18.3% cao nhat account, spend chi 3.29tr/30d — dang bo lo demand. Tang +25% de capture them click chat luong."
+      },
+      {
+        "campaign": "8/5/2025 Search - TB Chống Ghi Âm",
+        "category": "CHONG_GHI_AM",
+        "spend_30d": 1223223,
+        "ctr_30d": 0.1669,
+        "suggest_pct": 30,
+        "reason": "CTR 16.7% + CPC re nhat (3.4k) nhung spend thap nhat (1.22tr) va trend -12%. Re ma hieu qua — tang +30%."
+      },
+      {
+        "campaign": "8/5/2025 Search - Cam mini",
+        "category": "CAMERA_WIFI",
+        "spend_30d": 10483276,
+        "ctr_30d": 0.1052,
+        "suggest_pct": 15,
+        "reason": "Serve term 'camera' (14 conv — top converter) + 'camera ip' (5 conv); CTR trend +41% tuan qua. Tang +15% nhung canh CPC 7.7k dang cao."
+      },
+      {
+        "campaign": "8/5/2025 Search - TBĐV GPS",
+        "category": "DINH_VI",
+        "spend_30d": 4322546,
+        "ctr_30d": 0.1362,
+        "suggest_pct": "REACTIVATE",
+        "reason": "CTR 13.6% nhung spend_7d = 0 (da tat ~7 ngay). Co conv tu 'thiet bi dinh vi xe may'. Verify ly do tat — neu vo tinh thi bat lai."
+      }
+    ],
+    "keywords_remove": [
+      {
+        "search_term": "camera năng lượng mặt trời",
+        "spend_30d": 191566,
+        "clicks_30d": 25,
+        "match_types": [
+          "BROAD"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ],
+        "recommendation": "CẮT keyword + thêm Negative — sai intent/đối thủ, 0 đơn"
+      },
+      {
+        "search_term": "thiết bị định vị",
+        "spend_30d": 190920,
+        "clicks_30d": 45,
+        "match_types": [
+          "EXACT"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TBĐV GPS"
+        ],
+        "recommendation": "GIỮ keyword — chưa ra đơn 30d nhưng đúng sản phẩm → xem lại Landing page / giá"
+      },
+      {
+        "search_term": "camera mini",
+        "spend_30d": 131728,
+        "clicks_30d": 35,
+        "match_types": [
+          "BROAD",
+          "EXACT"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ],
+        "recommendation": "GIỮ keyword — chưa ra đơn 30d nhưng đúng sản phẩm → xem lại Landing page / giá"
+      },
+      {
+        "search_term": "thiết bị ghi âm",
+        "spend_30d": 129214,
+        "clicks_30d": 20,
+        "match_types": [
+          "EXACT"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Ghi Âm"
+        ],
+        "recommendation": "GIỮ keyword — chưa ra đơn 30d nhưng đúng sản phẩm → xem lại Landing page / giá"
+      },
+      {
+        "search_term": "camera năng lượng mặt trời sim 4g",
+        "spend_30d": 109829,
+        "clicks_30d": 17,
+        "match_types": [
+          "BROAD",
+          "PHRASE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ],
+        "recommendation": "CẮT keyword + thêm Negative — sai intent/đối thủ, 0 đơn"
+      },
+      {
+        "search_term": "mua máy ghi âm",
+        "spend_30d": 108946,
+        "clicks_30d": 15,
+        "match_types": [
+          "EXACT"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Ghi Âm"
+        ],
+        "recommendation": "GIỮ keyword — chưa ra đơn 30d nhưng đúng sản phẩm → xem lại Landing page / giá"
+      },
+      {
+        "search_term": "thiết bị ghi âm bí mật",
+        "spend_30d": 101459,
+        "clicks_30d": 12,
+        "match_types": [
+          "PHRASE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Ghi Âm"
+        ],
+        "recommendation": "CẮT keyword + thêm Negative — sai intent/đối thủ, 0 đơn"
+      }
+    ],
+    "negative_phrases": [
+      {
+        "search_term": "camera năng lượng mặt trời",
+        "spend_30d": 191566,
+        "match_types": [
+          "BROAD"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ]
+      },
+      {
+        "search_term": "camera mini",
+        "spend_30d": 131728,
+        "match_types": [
+          "BROAD",
+          "EXACT"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ]
+      },
+      {
+        "search_term": "camera năng lượng mặt trời sim 4g",
+        "spend_30d": 109829,
+        "match_types": [
+          "BROAD",
+          "PHRASE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ]
+      },
+      {
+        "search_term": "thiết bị ghi âm bí mật",
+        "spend_30d": 101459,
+        "match_types": [
+          "PHRASE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
+        "search_term": "định vị xe",
+        "spend_30d": 95349,
+        "match_types": [
+          "NEAR_PHRASE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TBĐV GPS"
+        ]
+      },
+      {
+        "search_term": "máy nghe lén",
+        "spend_30d": 93752,
+        "match_types": [
+          "BROAD",
+          "NEAR_PHRASE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - TB Chống Ghi Âm",
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
+        "search_term": "máy dò định vị trên xe ô tô",
+        "spend_30d": 93651,
+        "match_types": [
+          "NEAR_PHRASE",
+          "PHRASE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Dò Nghe Lén",
+          "8/5/2025 Search - TBĐV GPS"
+        ]
+      },
+      {
+        "search_term": "máy nghe lén từ xa",
+        "spend_30d": 87631,
+        "match_types": [
+          "BROAD",
+          "NEAR_PHRASE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Chống Ghi Âm",
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm fpt",
+        "spend_30d": 81272,
+        "match_types": [
+          "PHRASE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
+        "search_term": "cameras",
+        "spend_30d": 77141,
+        "match_types": [
+          "BROAD"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - Cam mini"
+        ]
+      },
+      {
+        "search_term": "máy phá sóng ghi âm",
+        "spend_30d": 75081,
+        "match_types": [
+          "BROAD",
+          "NEAR_PHRASE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Chống Ghi Âm"
+        ]
+      },
+      {
+        "search_term": "camera imou",
+        "spend_30d": 72302,
+        "match_types": [
+          "BROAD"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ]
+      },
+      {
+        "search_term": "mua máy ghi âm ở hà nội",
+        "spend_30d": 67082,
+        "match_types": [
+          "NEAR_PHRASE",
+          "PHRASE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
+        "search_term": "xem camera",
+        "spend_30d": 63758,
+        "match_types": [
+          "BROAD"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ]
+      }
+    ]
+  },
+  "pause_candidates": [],
+  "warnings": [
+    "CPC spike camp 'Search - Sim 4G': 7d +31.4% (5.5k -> 7.3k VND) — bid war.",
+    "CPC camp 'Search - TB Ghi Âm' 6.3k cao + 7d +14.7%; GHI_AM CPC trung binh 4.7k dat nhat.",
+    "Camp 'Search - TBĐV GPS' & 'RMK - Camera Gọi 2 chiều' spend_7d = 0 — verify co phai tat co y.",
+    "GDN CONTENT network: spend 28,309,710d nhung CTR chi 1.26% — keo blended ROAS xuong."
+  ],
+  "evidence": [
+    "Spend 30d 63,708,856d · clicks 23,867 · ROAS proxy 2.7x (target 3x).",
+    "Website revenue 30d 172,215,500d / 75 don (Website+Zalo OA+Hotline).",
+    "38/3989 unique term co conv (~1%); top 'camera' 14 conv.",
+    "SEARCH CTR 13.7% vs CONTENT/GDN 1.26%.",
+    "15 placement CTR <0.5% (~1,335,377d) + 15 negative gap (~1,428,610d) = ~2,763,987d/30d co the cat."
+  ]
+}
