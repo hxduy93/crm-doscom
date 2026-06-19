@@ -1438,9 +1438,12 @@
 <script>
 (function(){
   var R=null;
+  var GLBL={ALL:'Tất cả nhóm',MAY_DO:'Máy dò',CAMERA_VIDEO_CALL:'Camera video call',CAMERA_4G:'Camera 4G',CAMERA_WIFI:'Camera WiFi',GHI_AM:'Máy ghi âm',DINH_VI:'Định vị',CHONG_GHI_AM:'Chống ghi âm',NOMA:'NOMA',OTHER:'Khác'};
   function v(n){ return (Math.round(Number(n)||0)).toLocaleString('vi-VN')+'đ'; }
   function e(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function p(n){ return ((Number(n)||0)*100).toFixed(2)+'%'; }
+  function curGroup(){ var s=document.getElementById('gg-group'); return (s&&s.value)||'ALL'; }
+  function bucket(){ var d=R||{}; var bg=d.action_export_by_group||{}; var g=curGroup(); return bg[g]||bg.ALL||d.action_export||{}; }
 
   function load(){
     var body=document.getElementById('gg-action-body'); if(!body) return;
@@ -1451,29 +1454,36 @@
   }
 
   function render(){
-    var d=R||{}, body=document.getElementById('gg-action-body');
-    var ax=d.action_export||{}, br=d.budget_reallocation||{};
-    var ge=document.getElementById('gg-ar-genat'); if(ge) ge.textContent=d.generated_at||'—';
-    var rm=(ax.remove_placements||[]).length+(ax.remove_banners||[]).length;
+    var d=R||{}, body=document.getElementById('gg-action-body'); if(!body) return;
+    var g=curGroup(), b=bucket();
+    var ge=document.getElementById('gg-ar-genat'); if(ge) ge.textContent=(d.generated_at||'—')+' · nhóm: '+(GLBL[g]||g);
+    var rm=(b.remove_placements||[]).length+(b.remove_banners||[]).length;
     var chip=function(bg,fg,t){ return '<span style="padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;background:'+bg+';color:'+fg+'">'+t+'</span>'; };
     var chips=[
+      chip('#e0e7ff','#3730a3','🎯 '+(GLBL[g]||g)),
       chip('#fee2e2','#991b1b','🗑 Loại bỏ: '+rm+' placement/banner'),
-      chip('#fee2e2','#991b1b','🚫 Negative: '+(ax.negative_phrases||[]).length+' cụm từ'),
-      chip('#fef3c7','#92400e','⛔ Từ khoá rác: '+(ax.keywords_remove||[]).length),
-      chip('#dcfce7','#166534','📈 Tăng budget: '+(ax.campaigns_increase_budget||[]).length+' campaign'),
-      chip('#dcfce7','#166534','⭐ Từ khoá tốt: '+(ax.keywords_increase_budget||[]).length),
-      chip('#dbeafe','#1e40af','💰 Giải phóng ~'+v(br.freed_budget_30d)+'/30d')
+      chip('#fef3c7','#92400e','⛔ Từ khoá loại bỏ: '+(b.keywords_remove||[]).length),
+      chip('#fee2e2','#991b1b','🚫 Negative: '+(b.negative_phrases||[]).length+' cụm từ'),
+      chip('#dcfce7','#166534','➕ Từ khoá thêm mới: '+(b.keywords_add_new||[]).length),
+      chip('#dcfce7','#166534','📈 Tăng budget: '+(b.campaigns_increase_budget||[]).length+' campaign'),
+      chip('#dbeafe','#1e40af','💰 Giải phóng ~'+v(b.freed_budget_30d)+'/30d')
     ].join(' ');
-    var incRows=(ax.campaigns_increase_budget||[]).map(function(c){
-      return '<tr><td>'+e(c.campaign)+'</td><td style="text-align:center">'+e(c.category)+'</td><td style="text-align:right">'+v(c.spend_30d)+'</td><td style="text-align:center">'+p(c.ctr_30d)+'</td><td style="text-align:center;font-weight:700;color:#16a34a">'+(c.suggest_pct==='REACTIVATE'?'↻ Bật lại':'+'+c.suggest_pct+'%')+'</td><td style="font-size:11.5px;color:var(--muted,#6b7280)">'+e(c.reason)+'</td></tr>';
-    }).join('');
     var th='style="background:#f0fdf4;color:#166534;text-align:left;padding:6px 9px;border:1px solid #d1fae5;font-size:11px;text-transform:uppercase"';
+    var incRows=(b.campaigns_increase_budget||[]).map(function(c){
+      return '<tr><td>'+e(c.campaign)+'</td><td style="text-align:center">'+e(GLBL[c.category]||c.category||'')+'</td><td style="text-align:right">'+v(c.spend_30d)+'</td><td style="text-align:center">'+p(c.ctr_30d)+'</td><td style="text-align:center;font-weight:700;color:#16a34a">'+(c.suggest_pct==='REACTIVATE'?'↻ Bật lại':'+'+c.suggest_pct+'%')+'</td><td style="font-size:11.5px;color:var(--muted,#6b7280)">'+e(c.reason)+'</td></tr>';
+    }).join('');
+    var addRows=(b.keywords_add_new||[]).slice(0,8).map(function(k){
+      return '<tr><td>'+e(k.search_term)+'</td><td style="text-align:center;color:#16a34a;font-weight:600">'+k.conversions_30d+'</td><td style="text-align:right">'+v(k.spend_30d)+'</td><td style="text-align:center">'+e((k.match_types||[]).join(', '))+'</td></tr>';
+    }).join('');
+    var empty=(rm+ (b.keywords_remove||[]).length + (b.negative_phrases||[]).length + (b.keywords_add_new||[]).length + (b.campaigns_increase_budget||[]).length)===0;
     body.innerHTML=
       '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">'+chips+'</div>'+
-      (br.headline?'<div style="padding:10px 14px;background:#ecfdf5;border-left:3px solid #16a34a;border-radius:8px;font-size:13px;color:#065f46;margin-bottom:12px">💡 '+e(br.headline)+'</div>':'')+
-      (incRows?'<div style="font-weight:700;color:#166534;margin-bottom:6px">📈 Campaign nên tăng ngân sách</div>'+
-        '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th '+th+'>Campaign</th><th '+th+'>Nhóm</th><th '+th+'>Spend 30d</th><th '+th+'>CTR</th><th '+th+'>Đề xuất</th><th '+th+'>Lý do</th></tr></thead><tbody>'+incRows+'</tbody></table></div>':'')+
-      '<div style="margin-top:10px;font-size:11.5px;color:var(--muted,#9ca3af)">Bấm <b>📥 Xuất báo cáo hành động</b> ở góc phải để tải file HTML đầy đủ (mở bằng trình duyệt, Ctrl+P để in/PDF).</div>';
+      (empty?'<div style="padding:16px;color:var(--muted,#9ca3af)">Nhóm <b>'+e(GLBL[g]||g)+'</b> hiện chưa có hành động cần làm (theo ngưỡng). Chọn nhóm khác hoặc "Tất cả nhóm".</div>':
+        ((incRows?'<div style="font-weight:700;color:#166534;margin:4px 0 6px">📈 Campaign nên tăng ngân sách</div>'+
+          '<div style="overflow-x:auto;margin-bottom:14px"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th '+th+'>Campaign</th><th '+th+'>Nhóm</th><th '+th+'>Spend 30d</th><th '+th+'>CTR</th><th '+th+'>Đề xuất</th><th '+th+'>Lý do</th></tr></thead><tbody>'+incRows+'</tbody></table></div>':'')+
+         (addRows?'<div style="font-weight:700;color:#166534;margin:4px 0 6px">➕ Từ khoá nên thêm mới (đã có đơn, chưa là keyword)</div>'+
+          '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th '+th+'>Từ khoá</th><th '+th+'>Conv 30d</th><th '+th+'>Spend 30d</th><th '+th+'>Match</th></tr></thead><tbody>'+addRows+'</tbody></table></div>':'')+
+         '<div style="margin-top:10px;font-size:11.5px;color:var(--muted,#9ca3af)">Đây là tóm tắt. Bấm <b>📥 Xuất báo cáo hành động</b> để tải file đầy đủ 6 mục cho nhóm <b>'+e(GLBL[g]||g)+'</b>.</div>'));
   }
 
   function sec(title,icon,color,headers,rows){
@@ -1484,43 +1494,45 @@
 
   function exportReport(){
     if(!R){ alert('Báo cáo chưa tải xong, thử lại sau giây lát.'); return; }
-    var d=R, ax=d.action_export||{}, br=d.budget_reallocation||{};
-    var rmPl=(ax.remove_placements||[]).map(function(x){ return '<tr><td>'+e(x.placement)+'</td><td style="text-align:right">'+v(x.spend_30d)+'</td><td style="text-align:center">'+p(x.ctr_30d)+'</td><td style="text-align:center">'+x.clicks_30d+'</td></tr>'; });
-    var rmBn=(ax.remove_banners||[]).map(function(b){ return '<tr><td>'+e(b.ad_name)+' <span style="color:#9ca3af">(ad_id '+e(b.ad_id)+')</span></td><td style="text-align:right">'+v(b.spend_30d)+'</td><td style="text-align:center">'+p(b.ctr_30d)+'</td><td>'+e(b.campaign)+'</td></tr>'; });
-    var kwInc=(ax.keywords_increase_budget||[]).map(function(k){ return '<tr><td>'+e(k.search_term)+'</td><td style="text-align:center">'+k.conversions_30d+'</td><td style="text-align:right">'+v(k.spend_30d)+'</td><td style="text-align:center">'+e((k.match_types||[]).join(', '))+'</td></tr>'; });
-    var cmpInc=(ax.campaigns_increase_budget||[]).map(function(c){ return '<tr><td>'+e(c.campaign)+'</td><td style="text-align:center">'+e(c.category)+'</td><td style="text-align:right">'+v(c.spend_30d)+'</td><td style="text-align:center">'+p(c.ctr_30d)+'</td><td style="text-align:center;color:#16a34a;font-weight:600">'+(c.suggest_pct==='REACTIVATE'?'↻ Bật lại':'+'+c.suggest_pct+'%')+'</td><td style="font-size:11.5px">'+e(c.reason)+'</td></tr>'; });
-    var kwRm=(ax.keywords_remove||[]).map(function(k){ var keep=/GIỮ/.test(k.recommendation||''); return '<tr><td>'+e(k.search_term)+'</td><td style="text-align:right">'+v(k.spend_30d)+'</td><td style="text-align:center">'+k.clicks_30d+'</td><td style="color:'+(keep?'#15803d':'#b91c1c')+';font-size:11.5px">'+e(k.recommendation||'')+'</td></tr>'; });
-    var neg=(ax.negative_phrases||[]).map(function(n){ return '<tr><td>'+e(n.search_term)+'</td><td style="text-align:right">'+v(n.spend_30d)+'</td><td>'+e((n.campaigns||[]).join(' · '))+'</td></tr>'; });
+    var d=R, g=curGroup(), b=bucket();
+    var rmPl=(b.remove_placements||[]).map(function(x){ return '<tr><td>'+e(x.placement)+'</td><td style="text-align:right">'+v(x.spend_30d)+'</td><td style="text-align:center">'+p(x.ctr_30d)+'</td><td style="text-align:center">'+x.clicks_30d+'</td></tr>'; });
+    var rmBn=(b.remove_banners||[]).map(function(x){ return '<tr><td>'+e(x.ad_name)+' <span style="color:#9ca3af">(ad_id '+e(x.ad_id)+')</span></td><td style="text-align:right">'+v(x.spend_30d)+'</td><td style="text-align:center">'+p(x.ctr_30d)+'</td><td>'+e(x.campaign)+'</td></tr>'; });
+    var addNew=(b.keywords_add_new||[]).map(function(k){ return '<tr><td>'+e(k.search_term)+'</td><td style="text-align:center">'+k.conversions_30d+'</td><td style="text-align:right">'+v(k.spend_30d)+'</td><td style="text-align:center">'+e((k.match_types||[]).join(', '))+'</td></tr>'; });
+    var cmpInc=(b.campaigns_increase_budget||[]).map(function(c){ return '<tr><td>'+e(c.campaign)+'</td><td style="text-align:center">'+e(GLBL[c.category]||c.category||'')+'</td><td style="text-align:right">'+v(c.spend_30d)+'</td><td style="text-align:center">'+p(c.ctr_30d)+'</td><td style="text-align:center;color:#16a34a;font-weight:600">'+(c.suggest_pct==='REACTIVATE'?'↻ Bật lại':'+'+c.suggest_pct+'%')+'</td><td style="font-size:11.5px">'+e(c.reason)+'</td></tr>'; });
+    var kwRm=(b.keywords_remove||[]).map(function(k){ var keep=/GIỮ/.test(k.recommendation||''); return '<tr><td>'+e(k.search_term)+'</td><td style="text-align:right">'+v(k.spend_30d)+'</td><td style="text-align:center">'+k.clicks_30d+'</td><td style="color:'+(keep?'#15803d':'#b91c1c')+';font-size:11.5px">'+e(k.recommendation||'')+'</td></tr>'; });
+    var neg=(b.negative_phrases||[]).map(function(n){ return '<tr><td>'+e(n.search_term)+'</td><td style="text-align:right">'+v(n.spend_30d)+'</td><td style="text-align:center">'+e((n.match_types||[]).join(', '))+'</td></tr>'; });
     var sections=[
-      sec('Phần cần loại bỏ — Placement GDN','🗑','#b91c1c',['Placement','Spend 30d','CTR','Clicks'],rmPl),
-      sec('Phần cần loại bỏ — Banner','🗑','#b91c1c',['Banner','Spend 30d','CTR','Campaign'],rmBn),
-      sec('Từ khoá cần TĂNG ngân sách','⭐','#15803d',['Từ khoá','Conv 30d','Spend 30d','Match'],kwInc),
+      sec('Placement GDN cần LOẠI BỎ','🗑','#b91c1c',['Placement','Spend 30d','CTR','Clicks'],rmPl),
+      sec('Banner cần LOẠI BỎ','🗑','#b91c1c',['Banner','Spend 30d','CTR','Campaign'],rmBn),
+      sec('Từ khoá cần THÊM MỚI (đã có đơn, chưa là keyword)','➕','#15803d',['Từ khoá','Conv 30d','Spend 30d','Match'],addNew),
       sec('Campaign cần TĂNG ngân sách','📈','#15803d',['Campaign','Nhóm','Spend 30d','CTR','Đề xuất','Lý do'],cmpInc),
-      sec('Từ khoá cần LOẠI BỎ (search term rác)','⛔','#b45309',['Từ khoá','Spend 30d','Clicks','Khuyến nghị'],kwRm),
-      sec('Cụm từ khoá cần LOẠI BỎ (add Negative keyword)','🚫','#b91c1c',['Cụm từ','Spend 30d','Campaign'],neg)
+      sec('Từ khoá cần LOẠI BỎ','⛔','#b45309',['Từ khoá','Spend 30d','Clicks','Khuyến nghị'],kwRm),
+      sec('Cụm từ khoá cần LOẠI BỎ (add Negative keyword)','🚫','#b91c1c',['Cụm từ','Spend 30d','Match'],neg)
     ].join('\n');
-    var ga=d.ga_account||{}, per=d.period||{};
-    var html='<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><title>Báo cáo hành động Google Ads — '+e(d.generated_at||'')+'</title>'+
+    var ga=d.ga_account||{}, per=d.period||{}, glabel=GLBL[g]||g;
+    var html='<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><title>Báo cáo hành động Google Ads — '+e(glabel)+' — '+e(d.generated_at||'')+'</title>'+
       '<style>body{font-family:Nunito,Segoe UI,Arial,sans-serif;max-width:1000px;margin:0 auto;padding:24px;color:#1f2937;font-size:13px}'+
       'h1{font-size:20px;margin-bottom:4px}h2{font-size:15px;margin:22px 0 8px;padding-bottom:4px;border-bottom:2px solid #e5e7eb}'+
       'table{width:100%;border-collapse:collapse;margin-bottom:8px}th,td{border:1px solid #e5e7eb;padding:6px 9px;text-align:left;vertical-align:top}'+
       'th{background:#f9fafb;font-size:11.5px;text-transform:uppercase;color:#6b7280}tr:nth-child(even){background:#fafafa}'+
       '.meta{color:#6b7280;font-size:12px;margin-bottom:16px}.summary{background:#ecfdf5;border-left:4px solid #16a34a;padding:12px 16px;border-radius:6px;margin:14px 0;color:#065f46}'+
       '@media print{.noprint{display:none}}</style></head><body>'+
-      '<h1>📥 Báo cáo hành động Google Ads — Doscom</h1>'+
-      '<div class="meta">Account '+e(ga.name||'MHDI')+' ('+e(ga.id||'')+') · Kỳ '+e(per.start||'')+' → '+e(per.end||'')+' · Tạo lúc '+e(d.generated_at||'')+' · Score '+e(d.score)+'/100 ('+e(d.grade)+')</div>'+
-      (br.headline?'<div class="summary">💡 <b>Định hướng ngân sách:</b> '+e(br.headline)+'<br>💰 Có thể giải phóng ~<b>'+v(br.freed_budget_30d)+'</b>/30 ngày để dồn sang Search CTR cao.</div>':'')+
+      '<h1>📥 Báo cáo hành động Google Ads — '+e(glabel)+'</h1>'+
+      '<div class="meta">Account '+e(ga.name||'MHDI')+' ('+e(ga.id||'')+') · Nhóm SP: <b>'+e(glabel)+'</b> · Kỳ '+e(per.start||'')+' → '+e(per.end||'')+' · Tạo lúc '+e(d.generated_at||'')+'</div>'+
+      '<div class="summary">💰 Nhóm này có thể giải phóng ~<b>'+v(b.freed_budget_30d)+'</b>/30 ngày từ việc loại bỏ placement/từ khoá rác — dồn sang campaign/từ khoá tốt bên dưới.</div>'+
       sections+
-      '<p style="margin-top:30px;color:#9ca3af;font-size:11px">⚠ Khuyến nghị read-only — người chạy ads tự quyết định trước khi áp lên account. Số liệu 30 ngày từ Google Ads context '+e(d.generated_at||'')+'.</p>'+
+      '<p style="margin-top:30px;color:#9ca3af;font-size:11px">⚠ Khuyến nghị read-only — người chạy ads tự quyết định trước khi áp lên account. Số liệu 30 ngày, lọc theo nhóm '+e(glabel)+', từ Google Ads context '+e(d.generated_at||'')+'.</p>'+
       '</body></html>';
     var blob=new Blob([html],{type:'text/html;charset=utf-8'});
     var url=URL.createObjectURL(blob); var a=document.createElement('a');
-    a.href=url; a.download='bao-cao-hanh-dong-google-ads-'+((d.generated_at||'').slice(0,10)||'latest')+'.html';
+    a.href=url; a.download='bao-cao-hanh-dong-google-ads-'+g+'-'+((d.generated_at||'').slice(0,10)||'latest')+'.html';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(function(){ URL.revokeObjectURL(url); },1000);
   }
 
   var btn=document.getElementById('gg-export-btn'); if(btn) btn.addEventListener('click',exportReport);
+  var sel=document.getElementById('gg-group'); if(sel) sel.addEventListener('change',function(){ if(R) render(); });
+  ['gg-run','gg-refresh'].forEach(function(id){ var el=document.getElementById(id); if(el) el.addEventListener('click',function(){ if(R) setTimeout(render,50); }); });
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',load); else load();
 })();
 </script>

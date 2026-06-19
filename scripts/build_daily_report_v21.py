@@ -14,10 +14,23 @@ from datetime import datetime, timezone, timedelta
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 CTX = os.path.join(ROOT, "data", "google-ads-context.json")
+ST_FILE = os.path.join(ROOT, "data", "google-ads-search-terms.json")
+PL_FILE = os.path.join(ROOT, "data", "google-ads-placement.json")
 OUT = os.path.join(ROOT, "data", "google-ads-daily-report.json")
 
 with open(CTX, encoding="utf-8") as f:
     c = json.load(f)
+
+# term_aggregates / placement_aggregates: co `campaigns` -> gan category cho tung tu khoa & placement
+def _load_agg(path, key):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f).get(key, {})
+    except Exception:
+        return {}
+
+TERM_AGG = _load_agg(ST_FILE, "term_aggregates")
+PL_AGG = _load_agg(PL_FILE, "placement_aggregates")
 
 VN = timezone(timedelta(hours=7))
 now = datetime.now(VN)
@@ -289,6 +302,110 @@ action_export = {
     ],
 }
 
+# ---------- action_export_by_group: bao cao hanh dong LOC THEO NHOM SP ----------
+# Tinh tu term_aggregates + placement_aggregates (deu co `campaigns`) -> gan category.
+camp2cat = {name: v.get("category") for name, v in percamp.items()}
+
+def cats_of(camp_list):
+    return sorted({camp2cat.get(c) for c in (camp_list or []) if camp2cat.get(c)})
+
+_th = c.get("thresholds_used", {})
+TERM_WASTE_MIN = _th.get("term_waste_min_spend", 100000)
+NEG_MIN = _th.get("neg_gap_min_spend", 50000)
+PL_MIN = 30000  # nguong spend toi thieu de flag placement GDN rac
+
+GROUP_KEYS = ["MAY_DO", "CAMERA_VIDEO_CALL", "CAMERA_4G", "CAMERA_WIFI",
+              "GHI_AM", "DINH_VI", "CHONG_GHI_AM", "NOMA"]
+all_cats = set(GROUP_KEYS) | {v for v in camp2cat.values() if v}
+
+# --- 1 lan duyet term_aggregates: phan 3 nhom (them moi / loai bo / negative) ---
+add_new_all, kw_remove_all, neg_all = [], [], []
+for term, t in TERM_AGG.items():
+    spend = t.get("spend_30d", 0) or 0
+    conv = t.get("conversions_30d", 0) or 0
+    statuses = t.get("statuses", [])
+    cats = cats_of(t.get("campaigns", []))
+    tl = term.lower()
+    base = {"search_term": term, "spend_30d": vnd(spend), "clicks_30d": t.get("clicks_30d", 0),
+            "conversions_30d": round(conv, 2), "match_types": t.get("match_types", []), "categories": cats}
+    if conv >= 1 and "ADDED" not in statuses and "EXCLUDED" not in statuses and "doscom" not in tl:
+        add_new_all.append(base)                       # da convert nhung chua la keyword -> THEM MOI
+    elif "ADDED" in statuses and conv == 0 and spend >= TERM_WASTE_MIN:
+        is_core = term in CORE_TERMS
+        base["recommendation"] = ("GIỮ keyword — chưa ra đơn 30d nhưng đúng sản phẩm → xem lại Landing page / giá"
+                                  if is_core else "CẮT keyword + thêm Negative — sai intent/đối thủ, 0 đơn")
+        kw_remove_all.append(base)                     # keyword ADDED, 0 don, spend cao -> LOAI BO
+    elif conv == 0 and "ADDED" not in statuses and "EXCLUDED" not in statuses and spend >= NEG_MIN and "doscom" not in tl:
+        neg_all.append(base)                           # search query chua chan, 0 don -> NEGATIVE
+
+add_new_all.sort(key=lambda x: (-x["conversions_30d"], -x["spend_30d"]))
+kw_remove_all.sort(key=lambda x: -x["spend_30d"])
+neg_all.sort(key=lambda x: -x["spend_30d"])
+
+# --- placements GDN low-CTR ---
+rm_pl_all = []
+for pl, pd in PL_AGG.items():
+    if pd.get("ad_network_type") != "CONTENT":
+        continue
+    ctr = pd.get("ctr_30d", 0) or 0
+    sp = pd.get("spend_30d", 0) or 0
+    if ctr < 0.005 and sp >= PL_MIN:
+        rm_pl_all.append({"placement": pl, "spend_30d": vnd(sp), "ctr_30d": round(ctr, 4),
+                          "clicks_30d": pd.get("clicks_30d", 0), "categories": cats_of(pd.get("campaigns", []))})
+rm_pl_all.sort(key=lambda x: -x["spend_30d"])
+
+# --- banners low CTR ---
+rm_bn_all = []
+for b in banners:
+    if b["ctr_30d"] < 0.005:
+        cat = camp2cat.get(b["campaign"])
+        rm_bn_all.append({"ad_id": b["ad_id"], "ad_name": b["ad_name"], "campaign": b["campaign"],
+                          "ctr_30d": round(b["ctr_30d"], 4), "spend_30d": vnd(b["spend_30d"]),
+                          "categories": [cat] if cat else []})
+
+# --- campaigns can tang ngan sach (rule chung: Search CTR cao / re-activate) ---
+camp_inc_all = []
+for name, v in percamp.items():
+    if v.get("channel") != "SEARCH":
+        continue
+    ctr = v.get("ctr_30d", 0) or 0
+    sp = v.get("spend_30d", 0) or 0
+    sp7 = v.get("spend_7d", 0) or 0
+    cat = v.get("category")
+    if sp <= 0:
+        continue
+    cats = [cat] if cat else []
+    if sp7 == 0 and ctr >= 0.08:
+        camp_inc_all.append({"campaign": name, "category": cat, "spend_30d": vnd(sp), "ctr_30d": round(ctr, 4),
+                             "suggest_pct": "REACTIVATE", "categories": cats,
+                             "reason": f"CTR {ctr*100:.1f}% nhưng spend 7d = 0 (đã tắt) — xem lại, bật lại nếu vô tình tắt."})
+    elif ctr >= 0.10:
+        pct = 30 if ctr >= 0.16 else 25 if ctr >= 0.13 else 15
+        camp_inc_all.append({"campaign": name, "category": cat, "spend_30d": vnd(sp), "ctr_30d": round(ctr, 4),
+                             "suggest_pct": pct, "categories": cats,
+                             "reason": f"Search CTR {ctr*100:.1f}% cao, intent tốt — tăng +{pct}% để bắt thêm nhu cầu."})
+camp_inc_all.sort(key=lambda x: -x["ctr_30d"])
+
+def _in(item, g):
+    return g == "ALL" or g in (item.get("categories") or [])
+
+def _freed(g):
+    return (sum(x["spend_30d"] for x in rm_pl_all if _in(x, g))
+            + sum(x["spend_30d"] for x in neg_all if _in(x, g))
+            + sum(x["spend_30d"] for x in kw_remove_all if _in(x, g) and "CẮT" in x.get("recommendation", "")))
+
+action_export_by_group = {}
+for g in (["ALL"] + sorted(all_cats)):
+    action_export_by_group[g] = {
+        "remove_placements": [x for x in rm_pl_all if _in(x, g)][:30],
+        "remove_banners": [x for x in rm_bn_all if _in(x, g)],
+        "keywords_add_new": [x for x in add_new_all if _in(x, g)][:30],
+        "campaigns_increase_budget": [x for x in camp_inc_all if _in(x, g)],
+        "keywords_remove": [x for x in kw_remove_all if _in(x, g)][:30],
+        "negative_phrases": [x for x in neg_all if _in(x, g)][:40],
+        "freed_budget_30d": vnd(_freed(g)),
+    }
+
 warnings = [
     "CPC spike camp 'Search - Sim 4G': 7d +31.4% (5.5k -> 7.3k VND) — bid war.",
     "CPC camp 'Search - TB Ghi Âm' 6.3k cao + 7d +14.7%; GHI_AM CPC trung binh 4.7k dat nhat.",
@@ -325,6 +442,7 @@ report = {
     "search_term_deep_dive": search_term_deep_dive,
     "placement_banner_deep_dive": placement_banner_deep_dive,
     "action_export": action_export,
+    "action_export_by_group": action_export_by_group,
     "pause_candidates": [],
     "warnings": warnings,
     "evidence": evidence,
@@ -350,3 +468,9 @@ print("remove_placements:", len(action_export["remove_placements"]),
       "| negative_phrases:", len(action_export["negative_phrases"]),
       "| campaigns_inc:", len(action_export["campaigns_increase_budget"]),
       "| kw_inc:", len(action_export["keywords_increase_budget"]))
+print("--- action_export_by_group ---")
+for g, ax in action_export_by_group.items():
+    print(f"  {g:18s} pl:{len(ax['remove_placements']):2d} bn:{len(ax['remove_banners'])} "
+          f"add:{len(ax['keywords_add_new']):2d} inc:{len(ax['campaigns_increase_budget'])} "
+          f"rm:{len(ax['keywords_remove']):2d} neg:{len(ax['negative_phrases']):2d} "
+          f"freed:{ax['freed_budget_30d']:,}d")
