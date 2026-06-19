@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-19 21:23",
+  "generated_at": "2026-06-19 23:58",
   "source_data_date_range": {
     "start_7d": "2026-06-12",
     "end": "2026-06-18",
@@ -1661,32 +1661,6 @@
         ]
       },
       {
-        "search_term": "camera không dây",
-        "spend_30d": 92976.0,
-        "clicks_30d": 24,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1481,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera không dây kết nối điện thoại",
-        "spend_30d": 10419.0,
-        "clicks_30d": 3,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1429,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
         "search_term": "máy ghi âm mini kết nối điện thoại",
         "spend_30d": 96148.0,
         "clicks_30d": 14,
@@ -1710,6 +1684,32 @@
           "BROAD",
           "NEAR_PHRASE",
           "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera không dây",
+        "spend_30d": 92976.0,
+        "clicks_30d": 24,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1481,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera không dây kết nối điện thoại",
+        "spend_30d": 10419.0,
+        "clicks_30d": 3,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1429,
+        "match_types": [
+          "BROAD"
         ],
         "statuses": [
           "NONE"
@@ -2121,6 +2121,12 @@
       }
     ],
     "match_type_breakdown": {
+      "EXACT": {
+        "spend_30d": 1850123.0,
+        "clicks_30d": 395,
+        "conversions_30d": 3.4,
+        "term_count": 78
+      },
       "NEAR_PHRASE": {
         "spend_30d": 4346449.0,
         "clicks_30d": 1017,
@@ -2144,25 +2150,19 @@
         "clicks_30d": 9,
         "conversions_30d": 0.0,
         "term_count": 2
-      },
-      "EXACT": {
-        "spend_30d": 1850123.0,
-        "clicks_30d": 395,
-        "conversions_30d": 3.4,
-        "term_count": 78
       }
     }
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 23679,
-      "total_spend_30d": 27687033.0
+      "total_unique_placements": 23682,
+      "total_spend_30d": 27682344.0
     },
     "network_breakdown": {
       "CONTENT": {
-        "spend_30d": 27693607.0,
-        "clicks_30d": 17256,
-        "impressions_30d": 1328669,
+        "spend_30d": 27688919.0,
+        "clicks_30d": 17252,
+        "impressions_30d": 1328665,
         "ctr_30d": 0.013,
         "cpc_30d": 1605.0,
         "campaign_count": 7
@@ -2178,11 +2178,11 @@
     },
     "placement_type_breakdown": {
       "WEBSITE": {
-        "spend_30d": 27687033.0,
-        "clicks_30d": 17254,
-        "impressions_30d": 1280208,
+        "spend_30d": 27682344.0,
+        "clicks_30d": 17250,
+        "impressions_30d": 1280240,
         "ctr_30d": 0.0135,
-        "placement_count": 23679
+        "placement_count": 23682
       }
     },
     "top_waste_placements": [],
