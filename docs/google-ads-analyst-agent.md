@@ -239,9 +239,43 @@ Save vào `data/google-ads-daily-report.json`:
   "warnings": [ "..." ],
   "evidence": [ "..." ],
 
-  "raw_markdown": "# Báo cáo Google Ads..."
+  "raw_markdown": "# Báo cáo Google Ads...",
+
+  "budget_reallocation": { ... },
+  "action_export": { ... }
 }
 ```
+
+### 3.1. Bổ sung v2.1 — `budget_reallocation` + `action_export` (BẮT BUỘC)
+
+> Thêm 21/06/2026. Hai khối này nuôi nút **"📥 Xuất báo cáo hành động"** trên `agent-google-doscom.html`. **Luôn phải xuất 2 khối này**, nếu không button sẽ trống.
+
+**`budget_reallocation`** — trả lời "nên dồn ngân sách vào đâu":
+```json
+{
+  "headline": "1 câu định hướng",
+  "freed_budget_30d": 2763987,          // tổng tiền cắt được từ waste (placement + negative gap)
+  "increase":   [ {"campaign","category","channel","spend_30d","ctr_30d","cpc_30d","suggest_pct","reason"} ],
+  "reactivate": [ {"campaign","category","channel","spend_30d","ctr_30d","note"} ],   // camp spend_7d=0 đáng bật lại
+  "decrease":   [ {"what","spend_30d","reason","action"} ]   // action: EXCLUDE_PLACEMENT|ADD_NEGATIVE|CAP_CPC
+}
+```
+Quy tắc chọn `increase`: Search campaign CTR cao + có conversion + đang underspend (spend thấp so với CTR). KHÔNG tăng campaign CTR thấp/ROAS xấu.
+
+**`action_export`** — đúng 6 list cho file xuất (chỉ việc-cần-làm):
+```json
+{
+  "remove_placements":        [ {"placement","spend_30d","ctr_30d","clicks_30d"} ],   // GDN low-CTR cần exclude
+  "remove_banners":           [ {"ad_id","ad_name","campaign","ctr_30d","spend_30d"} ], // banner CTR < 0.5%
+  "keywords_increase_budget": [ {"search_term","conversions_30d","spend_30d","match_types"} ], // term ≥1 conv → scale
+  "campaigns_increase_budget":[ {"campaign","category","spend_30d","ctr_30d","suggest_pct","reason"} ],
+  "keywords_remove":          [ {"search_term","spend_30d","clicks_30d","match_types","campaigns","recommendation"} ],
+  "negative_phrases":         [ {"search_term","spend_30d","match_types","campaigns"} ]  // = negative_keyword_gap, BỎ brand-own
+}
+```
+**Cảnh báo chất lượng**: `keywords_remove` chứa cả từ khoá LÕI (status ADDED, đúng sản phẩm) chưa ra đơn — KHÔNG khuyên cắt, mà set `recommendation` = "GIỮ keyword — xem lại Landing page". Chỉ từ khoá sai intent/đối thủ (status NONE) mới "CẮT + thêm Negative". `negative_phrases` phải LOẠI từ khoá brand-own (chứa "doscom").
+
+> Có thể sinh nhanh 2 khối này bằng baseline deterministic: `python scripts/build_daily_report_v21.py` (đọc context.json → ghi report.json đúng schema v2.1), rồi tự tinh chỉnh verdict/markdown nếu cần.
 
 ---
 

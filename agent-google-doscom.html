@@ -146,6 +146,13 @@ body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;backgr
 .time-btn{padding:6px 12px;border:1px solid #fbbf24;background:white;border-radius:5px;cursor:pointer;font-size:12.5px;font-weight:500;color:#92400e;transition:all 0.15s}
 .time-btn:hover{background:#fef3c7}
 .time-btn.active{background:#d97706;color:white;border-color:#d97706}
+.ar-chip{padding:6px 12px;border-radius:20px;font-size:12px;font-weight:500}
+.ar-chip b{font-weight:700}
+.ar-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.ar-table th{background:#f0fdf4;color:#166534;text-align:left;padding:6px 9px;border:1px solid #d1fae5;font-size:11px;text-transform:uppercase}
+.ar-table td{padding:6px 9px;border:1px solid #e5e7eb;vertical-align:top}
+.ar-table tr:nth-child(even){background:#fafafa}
+#btn-export-actions:disabled{background:#9ca3af;border-color:#9ca3af;cursor:not-allowed}
 .custom-range{display:none;gap:6px;align-items:center;margin-left:8px}
 .custom-range.show{display:flex}
 .custom-range input{padding:5px 8px;border:1px solid #fbbf24;border-radius:4px;font-size:12.5px}
@@ -175,6 +182,17 @@ body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;backgr
       <a href="/" class="nav-back">← Dashboard chính</a> &nbsp;|&nbsp;
       <a href="/inventory.html" class="nav-back">📦 Kho tổng</a>
     </div>
+  </div>
+
+  <!-- 📥 BÁO CÁO HÀNH ĐỘNG — đọc data/google-ads-daily-report.json (agent daily) -->
+  <div class="section" id="action-report-section" style="background:#f0fdf4;border-color:#bbf7d0">
+    <h2 style="border-color:#bbf7d0;color:#166534;margin-bottom:6px">📥 Báo cáo hành động — Tối ưu ngân sách
+      <span style="float:right">
+        <button id="btn-export-actions" onclick="exportActionReport()" style="padding:6px 14px;font-size:12.5px;border:1px solid #16a34a;background:#16a34a;color:white;border-radius:6px;cursor:pointer;font-weight:600" title="Xuất file HTML chỉ gồm việc cần làm: loại bỏ + tăng ngân sách">📥 Xuất báo cáo hành động</button>
+      </span>
+    </h2>
+    <div style="font-size:11.5px;color:#6b7280;margin-bottom:10px">Tổng hợp từ báo cáo AI daily (<span id="ar-genat">—</span>) · chỉ liệt kê việc cần làm: <strong>loại bỏ</strong> placement/banner/từ khoá rác &amp; <strong>tăng ngân sách</strong> campaign/từ khoá tốt.</div>
+    <div id="action-report-body"><div style="padding:20px;color:#9ca3af">Đang tải báo cáo hành động...</div></div>
   </div>
 
   <!-- BỘ LỌC CHUNG: Thời gian + Nhóm SP — áp dụng cho Card chấm điểm + Chart + Bảng lợi nhuận -->
@@ -1467,9 +1485,146 @@ function renderGAOverview(d, fetchedAt, cached) {
   body.innerHTML = cardsHtml + lpHtml + barsHtml + fetchedNote;
 }
 
+// ────────────────────────────────────────────────────────────
+//  BÁO CÁO HÀNH ĐỘNG — đọc google-ads-daily-report.json (agent daily)
+// ────────────────────────────────────────────────────────────
+let __actionReport = null;
+const arVND = (n) => (Math.round(Number(n) || 0)).toLocaleString('vi-VN') + 'đ';
+const arEsc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const arPct = (n) => (Number(n || 0) * 100).toFixed(2) + '%';
+
+async function loadActionReport() {
+  const body = document.getElementById('action-report-body');
+  try {
+    const r = await fetch('data/google-ads-daily-report.json?v=' + Date.now());
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    __actionReport = await r.json();
+  } catch (e) {
+    body.innerHTML = `<div style="padding:16px;color:#dc2626">Không tải được báo cáo: ${arEsc(e.message)}. Agent daily chưa chạy?</div>`;
+    document.getElementById('btn-export-actions').disabled = true;
+    return;
+  }
+  renderActionReport();
+}
+
+function renderActionReport() {
+  const d = __actionReport || {};
+  const body = document.getElementById('action-report-body');
+  document.getElementById('ar-genat').textContent = d.generated_at || '—';
+  const ax = d.action_export || {};
+  const br = d.budget_reallocation || {};
+  const removeCount = (ax.remove_placements || []).length + (ax.remove_banners || []).length;
+  const incCount = (ax.campaigns_increase_budget || []).length;
+  const negCount = (ax.negative_phrases || []).length;
+  const kwRemove = (ax.keywords_remove || []).length;
+  const kwInc = (ax.keywords_increase_budget || []).length;
+
+  const incRows = (ax.campaigns_increase_budget || []).map(c =>
+    `<tr><td>${arEsc(c.campaign)}</td><td style="text-align:center">${arEsc(c.category)}</td>
+      <td style="text-align:right">${arVND(c.spend_30d)}</td>
+      <td style="text-align:center">${arPct(c.ctr_30d)}</td>
+      <td style="text-align:center;font-weight:600;color:#16a34a">${c.suggest_pct === 'REACTIVATE' ? '↻ Bật lại' : '+' + c.suggest_pct + '%'}</td>
+      <td style="font-size:11.5px;color:#6b7280">${arEsc(c.reason)}</td></tr>`).join('');
+
+  body.innerHTML = `
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px">
+      <div class="ar-chip" style="background:#fee2e2;color:#991b1b">🗑 Loại bỏ: <b>${removeCount}</b> placement/banner</div>
+      <div class="ar-chip" style="background:#fee2e2;color:#991b1b">🚫 Negative: <b>${negCount}</b> cụm từ</div>
+      <div class="ar-chip" style="background:#fef3c7;color:#92400e">⛔ Từ khoá rác: <b>${kwRemove}</b></div>
+      <div class="ar-chip" style="background:#dcfce7;color:#166534">📈 Tăng budget: <b>${incCount}</b> campaign</div>
+      <div class="ar-chip" style="background:#dcfce7;color:#166534">⭐ Từ khoá tốt: <b>${kwInc}</b></div>
+      <div class="ar-chip" style="background:#dbeafe;color:#1e40af">💰 Giải phóng ~<b>${arVND(br.freed_budget_30d)}</b>/30d</div>
+    </div>
+    ${br.headline ? `<div style="padding:10px 14px;background:#ecfdf5;border-left:3px solid #16a34a;border-radius:6px;font-size:13px;color:#065f46;margin-bottom:12px">💡 ${arEsc(br.headline)}</div>` : ''}
+    ${incRows ? `<div style="font-weight:600;color:#166534;margin-bottom:6px">📈 Campaign nên tăng ngân sách</div>
+    <div style="overflow-x:auto"><table class="ar-table">
+      <thead><tr><th>Campaign</th><th>Nhóm</th><th>Spend 30d</th><th>CTR</th><th>Đề xuất</th><th>Lý do</th></tr></thead>
+      <tbody>${incRows}</tbody></table></div>` : ''}
+    <div style="margin-top:10px;font-size:11.5px;color:#9ca3af">Bấm <strong>📥 Xuất báo cáo hành động</strong> ở góc phải để tải file HTML đầy đủ (mở bằng trình duyệt, Ctrl+P để in/PDF).</div>
+  `;
+}
+
+function arSection(title, icon, color, headers, rows) {
+  if (!rows.length) return `<h2 style="color:${color}">${icon} ${title} <span style="font-weight:400;color:#9ca3af;font-size:13px">(không có)</span></h2>`;
+  return `<h2 style="color:${color}">${icon} ${title} <span style="font-weight:400;color:#9ca3af;font-size:13px">(${rows.length})</span></h2>
+    <table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
+}
+
+function exportActionReport() {
+  if (!__actionReport) { alert('Báo cáo chưa tải xong, thử lại sau giây lát.'); return; }
+  const d = __actionReport;
+  const ax = d.action_export || {};
+  const br = d.budget_reallocation || {};
+
+  // 1. Phần cần loại bỏ — placement + banner
+  const rmPl = (ax.remove_placements || []).map(p =>
+    `<tr><td>${arEsc(p.placement)}</td><td style="text-align:right">${arVND(p.spend_30d)}</td><td style="text-align:center">${arPct(p.ctr_30d)}</td><td style="text-align:center">${p.clicks_30d}</td></tr>`);
+  const rmBn = (ax.remove_banners || []).map(b =>
+    `<tr><td>${arEsc(b.ad_name)} <span style="color:#9ca3af">(ad_id ${arEsc(b.ad_id)})</span></td><td style="text-align:right">${arVND(b.spend_30d)}</td><td style="text-align:center">${arPct(b.ctr_30d)}</td><td>${arEsc(b.campaign)}</td></tr>`);
+
+  // 2. Từ khoá cần tăng ngân sách
+  const kwInc = (ax.keywords_increase_budget || []).map(k =>
+    `<tr><td>${arEsc(k.search_term)}</td><td style="text-align:center">${k.conversions_30d}</td><td style="text-align:right">${arVND(k.spend_30d)}</td><td style="text-align:center">${arEsc((k.match_types||[]).join(', '))}</td></tr>`);
+
+  // 3. Campaign cần tăng ngân sách
+  const cmpInc = (ax.campaigns_increase_budget || []).map(c =>
+    `<tr><td>${arEsc(c.campaign)}</td><td style="text-align:center">${arEsc(c.category)}</td><td style="text-align:right">${arVND(c.spend_30d)}</td><td style="text-align:center">${arPct(c.ctr_30d)}</td><td style="text-align:center;color:#16a34a;font-weight:600">${c.suggest_pct === 'REACTIVATE' ? '↻ Bật lại' : '+' + c.suggest_pct + '%'}</td><td style="font-size:11.5px">${arEsc(c.reason)}</td></tr>`);
+
+  // 4. Từ khoá cần loại bỏ (search term rác) — kèm khuyến nghị (giữ core / cắt)
+  const kwRm = (ax.keywords_remove || []).map(k => {
+    const keep = /GIỮ/.test(k.recommendation || '');
+    return `<tr><td>${arEsc(k.search_term)}</td><td style="text-align:right">${arVND(k.spend_30d)}</td><td style="text-align:center">${k.clicks_30d}</td><td style="color:${keep ? '#15803d' : '#b91c1c'};font-size:11.5px">${arEsc(k.recommendation || '')}</td></tr>`;
+  });
+
+  // 5. Cụm từ khoá cần loại bỏ (negative keyword)
+  const neg = (ax.negative_phrases || []).map(n =>
+    `<tr><td>${arEsc(n.search_term)}</td><td style="text-align:right">${arVND(n.spend_30d)}</td><td>${arEsc((n.campaigns||[]).join(' · '))}</td></tr>`);
+
+  const sections = [
+    arSection('Phần cần loại bỏ — Placement GDN', '🗑', '#b91c1c', ['Placement', 'Spend 30d', 'CTR', 'Clicks'], rmPl),
+    arSection('Phần cần loại bỏ — Banner', '🗑', '#b91c1c', ['Banner', 'Spend 30d', 'CTR', 'Campaign'], rmBn),
+    arSection('Từ khoá cần TĂNG ngân sách', '⭐', '#15803d', ['Từ khoá', 'Conv 30d', 'Spend 30d', 'Match'], kwInc),
+    arSection('Campaign cần TĂNG ngân sách', '📈', '#15803d', ['Campaign', 'Nhóm', 'Spend 30d', 'CTR', 'Đề xuất', 'Lý do'], cmpInc),
+    arSection('Từ khoá cần LOẠI BỎ (search term rác)', '⛔', '#b45309', ['Từ khoá', 'Spend 30d', 'Clicks', 'Khuyến nghị'], kwRm),
+    arSection('Cụm từ khoá cần LOẠI BỎ (add Negative keyword)', '🚫', '#b91c1c', ['Cụm từ', 'Spend 30d', 'Campaign'], neg),
+  ].join('\n');
+
+  const html = `<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8">
+<title>Báo cáo hành động Google Ads — ${arEsc(d.generated_at || '')}</title>
+<style>
+  body{font-family:'Segoe UI',Arial,sans-serif;max-width:1000px;margin:0 auto;padding:24px;color:#1f2937;font-size:13px}
+  h1{font-size:20px;margin-bottom:4px}
+  h2{font-size:15px;margin:22px 0 8px;padding-bottom:4px;border-bottom:2px solid #e5e7eb}
+  table{width:100%;border-collapse:collapse;margin-bottom:8px}
+  th,td{border:1px solid #e5e7eb;padding:6px 9px;text-align:left;vertical-align:top}
+  th{background:#f9fafb;font-size:11.5px;text-transform:uppercase;color:#6b7280}
+  tr:nth-child(even){background:#fafafa}
+  .meta{color:#6b7280;font-size:12px;margin-bottom:16px}
+  .summary{background:#ecfdf5;border-left:4px solid #16a34a;padding:12px 16px;border-radius:6px;margin:14px 0;color:#065f46}
+  @media print{.noprint{display:none}}
+</style></head><body>
+  <h1>📥 Báo cáo hành động Google Ads — Doscom</h1>
+  <div class="meta">Account ${arEsc((d.ga_account||{}).name || 'MHDI')} (${arEsc((d.ga_account||{}).id || '')}) ·
+    Kỳ ${arEsc((d.period||{}).start || '')} → ${arEsc((d.period||{}).end || '')} ·
+    Tạo lúc ${arEsc(d.generated_at || '')} · Score ${arEsc(d.score)}/${100} (${arEsc(d.grade)})</div>
+  ${br.headline ? `<div class="summary">💡 <strong>Định hướng ngân sách:</strong> ${arEsc(br.headline)}<br>💰 Có thể giải phóng ~<strong>${arVND(br.freed_budget_30d)}</strong>/30 ngày để dồn sang Search CTR cao.</div>` : ''}
+  ${sections}
+  <p style="margin-top:30px;color:#9ca3af;font-size:11px">⚠ Khuyến nghị read-only — người chạy ads tự quyết định trước khi áp lên account. Số liệu 30 ngày từ Google Ads context ${arEsc(d.generated_at || '')}.</p>
+</body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `bao-cao-hanh-dong-google-ads-${(d.generated_at || '').slice(0,10) || 'latest'}.html`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   refreshAll();
   loadGAOverview(false);
+  loadActionReport();
 });
 </script>
 <script src="/hermes-widget.js" defer></script>
