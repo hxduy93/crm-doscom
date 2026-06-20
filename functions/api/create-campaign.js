@@ -99,8 +99,10 @@ function buildTargeting(cfg) {
     age_min: 18,
     age_max: 65,
   };
+  // advantage_audience=0: tôn trọng đúng tuổi/giới tính đã chọn (vd 30-60).
+  // (Bật =1 thì Meta KHÔNG cho giới hạn tuổi tối đa — xung đột với khoảng tuổi.)
   if (!t.targeting_automation) {
-    t.targeting_automation = { advantage_audience: 1 };
+    t.targeting_automation = { advantage_audience: 0 };
   }
   return t;
 }
