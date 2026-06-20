@@ -131,10 +131,11 @@ function AdsCreatorPanel() {
 
   // ══════════ CHẾ ĐỘ TỰ ĐỘNG TỪ FOLDER (bulk: 1 folder = 1 campaign, mỗi video = 1 ad) ══════════
   // Tách RIÊNG khỏi state thủ công ở trên — không ảnh hưởng luồng tạo tay.
-  const [mode, setMode] = useState("auto") // "auto" | "manual"
-  // Template Noma cố định (override được trên UI). KHÔNG đụng PRODUCTS của luồng thủ công.
-  const [autoAccount, setAutoAccount] = useState("act_1418124406240173")
-  const [autoPage, setAutoPage] = useState("61583378284313")
+  const [mode, setMode] = useState("auto") // "auto" | "manual" | "optimize"
+  // Template Noma (override được trên UI). KHÔNG đụng PRODUCTS của luồng thủ công.
+  // Bộ chạy được: TK 927 + page Doscom Việt Nam + pixel Noma 911 (token có quyền).
+  const [autoAccount, setAutoAccount] = useState("act_927390616363424")
+  const [autoPage, setAutoPage] = useState("102966349378081")
   const [autoPixel, setAutoPixel] = useState("24397685376567889")
   const [autoCopyProduct, setAutoCopyProduct] = useState("Noma 911") // SP trong catalog để AI viết caption
   const [autoLink, setAutoLink] = useState("https://www.noma.io.vn/nm911d")
@@ -146,6 +147,17 @@ function AdsCreatorPanel() {
   const [autoBusy, setAutoBusy] = useState(false)
   const [autoLog, setAutoLog] = useState([]) // dòng tiến trình
   const [autoResults, setAutoResults] = useState([]) // [{ product, ok, campaign_id?, ads_created?, ads_manager_url?, error? }]
+
+  // ══════════ CHẾ ĐỘ TỐI ƯU & BẢO VỆ (điều khiển agent tối ưu trên TK 927) ══════════
+  const OPT_ACCOUNT = "927390616363424"
+  const [optCampaigns, setOptCampaigns] = useState([])
+  const [optExcluded, setOptExcluded] = useState([])
+  const [optShadow, setOptShadow] = useState(true)
+  const [optKill, setOptKill] = useState(false)
+  const [optToken, setOptToken] = useState(() => { try { return localStorage.getItem("doscom_opt_token") || "" } catch { return "" } })
+  const [optLoading, setOptLoading] = useState(false)
+  const [optMsg, setOptMsg] = useState("")
+  const [optDecisions, setOptDecisions] = useState([])
 
   const PRODUCTS = {
     "D1":        { pixel: "283066540825683", page: "102966349378081", account: "act_927390616363424", pixelName: "D1 CHUẨN" },
@@ -753,6 +765,48 @@ function AdsCreatorPanel() {
     }
   }
 
+  // ── Handlers chế độ Tối ưu & Bảo vệ ──
+  const loadOptimizer = async () => {
+    setOptLoading(true); setOptMsg("")
+    try {
+      const [cr, kr] = await Promise.all([
+        fetch(`/api/optimizer/campaigns?account=${OPT_ACCOUNT}`),
+        fetch(`/api/optimizer/control?account=${OPT_ACCOUNT}`),
+      ])
+      const cd = await cr.json(); const kd = await kr.json()
+      if (!cr.ok || !cd.ok) throw new Error(cd.error || "Lỗi tải danh sách campaign")
+      setOptCampaigns(cd.campaigns || [])
+      setOptExcluded(Array.isArray(kd.excluded) ? kd.excluded.map(String) : [])
+      setOptShadow(kd.shadow !== false)
+      setOptKill(kd.killswitch === true)
+    } catch (e) { setOptMsg("✗ " + e.message) }
+    finally { setOptLoading(false) }
+  }
+  const toggleExcluded = (id) =>
+    setOptExcluded(curr => curr.includes(id) ? curr.filter(x => x !== id) : [...curr, id])
+  const saveOptimizer = async () => {
+    setOptLoading(true); setOptMsg("")
+    try {
+      try { localStorage.setItem("doscom_opt_token", optToken) } catch (e) {}
+      const r = await fetch(`/api/optimizer/control?account=${OPT_ACCOUNT}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Optimizer-Token": optToken },
+        body: JSON.stringify({ excluded: optExcluded, shadow: optShadow, killswitch: optKill }),
+      })
+      const d = await r.json()
+      if (!r.ok || !d.ok) throw new Error(d.error || "Lỗi lưu")
+      setOptMsg("✓ Đã lưu lúc " + new Date().toLocaleTimeString("vi-VN"))
+    } catch (e) { setOptMsg("✗ " + e.message) }
+    finally { setOptLoading(false) }
+  }
+  const loadOptDecisions = async () => {
+    try {
+      const r = await fetch("/api/optimizer/decisions"); const d = await r.json()
+      setOptDecisions(Array.isArray(d.decisions) ? d.decisions.slice(0, 30) : [])
+    } catch (e) {}
+  }
+  React.useEffect(() => { if (mode === "optimize") { loadOptimizer(); loadOptDecisions() } }, [mode])
+
   // Initialize defaults
   React.useEffect(() => { handleProductChange("D1") }, [])
 
@@ -778,7 +832,81 @@ function AdsCreatorPanel() {
       <div className="flex gap-2">
         <button onClick={() => setMode("auto")} className={"px-4 py-2.5 rounded-lg text-sm font-bold transition " + (mode === "auto" ? "bg-indigo-600 text-white shadow" : "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50")}>⚡ Tự động từ folder</button>
         <button onClick={() => setMode("manual")} className={"px-4 py-2.5 rounded-lg text-sm font-bold transition " + (mode === "manual" ? "bg-indigo-600 text-white shadow" : "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50")}>✍️ Thủ công (từng quảng cáo)</button>
+        <button onClick={() => setMode("optimize")} className={"px-4 py-2.5 rounded-lg text-sm font-bold transition " + (mode === "optimize" ? "bg-indigo-600 text-white shadow" : "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50")}>⚙️ Tối ưu & Bảo vệ</button>
       </div>
+
+      {/* ═══════════════ CHẾ ĐỘ TỐI ƯU & BẢO VỆ ═══════════════ */}
+      {mode === "optimize" && (
+        <div className="space-y-5">
+          <div className="bg-white rounded-xl border-2 border-amber-200 p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-3 pb-3 border-b-2 border-amber-500">
+              <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-lg">⚙️</div>
+              <div>
+                <h3 className="text-base font-bold text-amber-900">Tối ưu tự động & Bảo vệ campaign</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Agent tối ưu chạy trên TK <b>{OPT_ACCOUNT}</b> (4 lần/ngày): tắt camp kém, tăng/giảm ngân sách, nhân nhóm chạy tốt. Tick camp để CẤM agent đụng vào.</p>
+              </div>
+            </div>
+
+            {/* Công tắc */}
+            <div className="flex flex-wrap items-center gap-4 mb-4">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <input type="checkbox" checked={optShadow} onChange={e => setOptShadow(e.target.checked)} className="w-4 h-4" />
+                Shadow mode <span className="text-xs font-normal text-gray-400">(chỉ ghi log, KHÔNG thực thi)</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm font-semibold text-red-700">
+                <input type="checkbox" checked={optKill} onChange={e => setOptKill(e.target.checked)} className="w-4 h-4" />
+                Killswitch <span className="text-xs font-normal text-gray-400">(dừng toàn bộ agent)</span>
+              </label>
+              <button onClick={loadOptimizer} disabled={optLoading} className="ml-auto text-xs font-semibold text-amber-700 underline">↻ Tải lại</button>
+            </div>
+
+            {/* Danh sách campaign + tick bảo vệ */}
+            <label className={labelClass}>Danh sách campaign — tick để KHÔNG cho agent chỉnh sửa</label>
+            <div className="border border-gray-200 rounded-lg max-h-72 overflow-auto divide-y">
+              {optLoading && optCampaigns.length === 0 && <p className="text-xs text-gray-400 p-3">Đang tải...</p>}
+              {!optLoading && optCampaigns.length === 0 && <p className="text-xs text-gray-400 p-3">Chưa có campaign (hoặc chưa cấu hình token FB trên CRM).</p>}
+              {optCampaigns.map(c => (
+                <label key={c.id} className="flex items-center gap-3 p-2.5 hover:bg-amber-50 cursor-pointer text-sm">
+                  <input type="checkbox" checked={optExcluded.includes(String(c.id))} onChange={() => toggleExcluded(String(c.id))} className="w-4 h-4" />
+                  <span className="flex-1 truncate">{c.name}</span>
+                  <span className={"text-[10px] px-2 py-0.5 rounded-full " + (c.effective_status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500")}>{c.effective_status || c.status}</span>
+                  {optExcluded.includes(String(c.id)) && <span className="text-[10px] font-bold text-amber-700">🔒 BẢO VỆ</span>}
+                </label>
+              ))}
+            </div>
+            <p className="text-[11px] text-gray-400 mt-1">{optExcluded.length} campaign được bảo vệ. Camp do agent tạo có tên bắt đầu bằng "[AUTO]".</p>
+
+            {/* Token + lưu */}
+            <div className="mt-4 flex flex-wrap items-end gap-3">
+              <div className="flex-1 min-w-[200px]">
+                <label className={labelClass}>Mã lưu (OPTIMIZER_TOKEN)</label>
+                <input type="password" value={optToken} onChange={e => setOptToken(e.target.value)} className={inputClass} placeholder="Nhập mã đã đặt trên CRM" />
+              </div>
+              <button onClick={saveOptimizer} disabled={optLoading || !optToken} className={"py-2.5 px-6 rounded-lg text-sm font-bold text-white " + (optLoading || !optToken ? "bg-gray-300 cursor-not-allowed" : "bg-amber-600 hover:bg-amber-700")}>Lưu cấu hình</button>
+            </div>
+            {optMsg && <p className={"text-xs mt-2 " + (optMsg.startsWith("✓") ? "text-green-600" : "text-red-600")}>{optMsg}</p>}
+          </div>
+
+          {/* Theo dõi quyết định gần nhất */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-bold text-gray-700">Agent vừa làm gì (quyết định gần nhất)</h4>
+              <button onClick={loadOptDecisions} className="text-xs font-semibold text-blue-600 underline">↻ Tải lại</button>
+            </div>
+            {optDecisions.length === 0 && <p className="text-xs text-gray-400">Chưa có dữ liệu (cần cấu hình OPTIMIZER_WORKER_URL trên CRM + agent đã chạy).</p>}
+            <div className="space-y-1.5 max-h-72 overflow-auto">
+              {optDecisions.map((d, i) => (
+                <div key={i} className="text-[11px] border-b border-gray-100 pb-1.5">
+                  <span className={"font-bold " + (d.executed ? "text-green-700" : "text-gray-400")}>{d.action_type}</span>
+                  <span className="text-gray-500"> · {d.campaign_name || d.campaign_id}</span>
+                  {d.blocked_reason && <span className="text-amber-600"> · {d.blocked_reason}</span>}
+                  {d.reasoning && <div className="text-gray-400 truncate">{d.reasoning}</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ═══════════════ CHẾ ĐỘ TỰ ĐỘNG ═══════════════ */}
       {mode === "auto" && (

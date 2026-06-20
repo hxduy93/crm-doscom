@@ -18,7 +18,11 @@ id = "3efb5b02ea844d67ade8d070547ae707"
 [ai]
 binding = "AI"
 
-# Vars (plaintext). Secret ANTHROPIC_API_KEY set riêng:
-#   npx wrangler pages secret put ANTHROPIC_API_KEY --project-name crm-doscom
+# Vars (plaintext). Secret set riêng qua: npx wrangler pages secret put <NAME> --project-name crm-doscom
+#   - ANTHROPIC_API_KEY  (Claude)
+#   - FB_ACCESS_TOKEN    (Meta token có quyền trên TK 927390616363424 — cho /api/optimizer/* + tạo camp)
+#   - OPTIMIZER_TOKEN    (mật khẩu để LƯU danh sách bảo vệ / shadow / killswitch từ UI)
 [vars]
 CF_ACCOUNT_ID = "cffb0c35f8c649872436b2087a64b7bc"
+# URL Worker agent tối ưu (để UI xem agent vừa làm gì). Điền sau khi deploy Worker.
+OPTIMIZER_WORKER_URL = ""
