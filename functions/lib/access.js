@@ -5,20 +5,26 @@
 // - Access CHƯA bật (không có header email): trả role "open" = full (giữ nguyên giai đoạn public).
 // - Access bật: tra `staff_access` (email → role). admin = mọi account; staff = account có staff trùng.
 //
-// Nguồn quyền: sổ tài khoản + staff_access trong functions/lib/access-config.js
-// (file JS TRONG functions/ — import chắc chắn; fetch asset từ Pages Function không ổn định).
-import { ACCOUNT_TO_GROUPS, STAFF_ACCESS } from "./access-config.js";
+// Sổ tài khoản + phân quyền nhúng TRỰC TIẾP (chắc chắn nhất — không import/fetch).
+// Đồng bộ account_to_groups với data/fb-config.json. Thêm email nhân sự vào STAFF_ACCESS.
+const ACCOUNT_TO_GROUPS = {
+  "1449385949897024": { name: "CÔNG TY TNHH DOSCOM HOLDINGS - Công nghệ nâng tầm cuộc sống", staff: "DUY", active: true },
+  "927390616363424": { name: "Doscom - Công nghệ nâng tầm cuộc sống", staff: "DUY", active: true },
+  "1655506672244826": { name: "CÔNG TY TNHH DOSCOM HOLDINGS - Noma Việt Nam", staff: "DUY", active: true },
+  "764394829882083": { name: "Doscom - Noma.vn - Giải Pháp Chăm Sóc Xe Hơi Toàn Diện", staff: "PHUONG_NAM", active: true },
+  "906015559004892": { name: "Doscom Mart", staff: "PHUONG_NAM", active: true },
+  "1416634670476226": { name: "CÔNG TY TNHH DOSCOM HOLDINGS - Doscom Mart", staff: "PHUONG_NAM", active: true },
+  "1418124406240173": { name: "DA8.1 mới (PN, chưa chạy)", staff: "PHUONG_NAM", active: true },
+};
+const STAFF_ACCESS = {
+  "kinhdoanh.doscom@gmail.com": { role: "admin" },
+  "doscom.vietnam@gmail.com": { role: "admin" },
+  // Thêm email nhân sự: "namphuong@gmail.com": { role: "staff", staff: "PHUONG_NAM" },
+};
 
-async function loadConfig(env) {
-  // account_to_groups: ưu tiên KV (nếu user đã edit qua UI agent), fallback config JS.
-  let kv = null;
-  if (env.INVENTORY) {
-    try { kv = await env.INVENTORY.get("fb_config", { type: "json" }); } catch { /* ignore */ }
-  }
-  return {
-    account_to_groups: (kv && kv.account_to_groups) || ACCOUNT_TO_GROUPS,
-    staff_access: STAFF_ACCESS,
-  };
+async function loadConfig(_env) {
+  // Dùng thẳng config nhúng làm nguồn quyền (không phụ thuộc KV — tránh KV rỗng ghi đè).
+  return { account_to_groups: ACCOUNT_TO_GROUPS, staff_access: STAFF_ACCESS };
 }
 
 function activeAccountIds(conf) {
