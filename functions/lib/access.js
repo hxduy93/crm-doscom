@@ -6,22 +6,19 @@
 // - Access bật: tra `staff_access` (email → role). admin = mọi account; staff = account có staff trùng.
 //
 // Nguồn quyền sở hữu: data/fb-config.json → account_to_groups[acct].staff (sổ đăng ký sẵn có).
+// Import thẳng JSON (esbuild bundle khi deploy) — KHÔNG fetch (Pages Function fetch asset không ổn định).
+import fbConfigDefault from "../../data/fb-config.json";
 
-async function loadConfig(env, origin) {
+async function loadConfig(env) {
   let kv = null;
   if (env.INVENTORY) {
     try { kv = await env.INVENTORY.get("fb_config", { type: "json" }); } catch { /* ignore */ }
   }
-  let file = null;
-  try {
-    const r = await fetch(new URL("/data/fb-config.json", origin).toString());
-    if (r.ok) file = await r.json();
-  } catch { /* ignore */ }
-  const base = file || {};
+  const base = fbConfigDefault || {};
   return {
-    // account_to_groups: ưu tiên KV (user edit qua UI), fallback file
+    // account_to_groups: ưu tiên KV (user edit qua UI), fallback file bundle
     account_to_groups: (kv && kv.account_to_groups) || base.account_to_groups || {},
-    // staff_access: admin quản trong file (deployed) — ưu tiên file để chắc chắn
+    // staff_access: admin quản trong file (deployed)
     staff_access: base.staff_access || (kv && kv.staff_access) || {},
   };
 }
@@ -35,8 +32,7 @@ function activeAccountIds(conf) {
 // Trả { email, role, accounts:[id...], all:bool, conf }.
 export async function getIdentity(context) {
   const { request, env } = context;
-  const origin = new URL(request.url).origin;
-  const conf = await loadConfig(env, origin);
+  const conf = await loadConfig(env);
 
   // 1) Nội bộ (Worker) qua secret dùng chung
   const internal = request.headers.get("X-Internal-Token");
