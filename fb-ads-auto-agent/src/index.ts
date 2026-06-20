@@ -2,11 +2,13 @@ import { runHaikuDecision } from "./agent";
 import { executeDecision, logDecision } from "./actions";
 import { sendImportantNotification } from "./gmail-notifier";
 import {
+  checkCampaignExcluded,
   enforceAccountWhitelist,
   getDailySpendUsd,
   isKillswitchOn,
   recordDailySpend,
 } from "./guardrails";
+import { fetchControl } from "./control";
 import { checkTokenExpiry, fetchCampaignInsights, fetchTodaySpendUsd } from "./meta-api";
 import type { Env, RunContext } from "./types";
 
@@ -62,9 +64,12 @@ export default {
 
 async function runAgentLoop(env: Env) {
   const startedAt = new Date().toISOString();
-  const shadowMode = env.SHADOW_MODE === "true";
+  // Cấu hình điều khiển từ CRM (danh sách bảo vệ + shadow + killswitch).
+  const control = await fetchControl(env);
+  const shadowMode = env.SHADOW_MODE === "true" || control.shadow;
+  const excludedSet = new Set(control.excluded);
 
-  if (await isKillswitchOn(env)) {
+  if ((await isKillswitchOn(env)) || control.killswitch) {
     await env.DB.prepare(
       "INSERT INTO runs (started_at, finished_at, status, ad_account_id) VALUES (?, ?, 'killswitch', ?)"
     )
@@ -107,7 +112,11 @@ async function runAgentLoop(env: Env) {
     });
     await recordDailySpend(env, dailySpendUsd);
 
-    const campaigns = await fetchCampaignInsights(env, 7);
+    const allCampaigns = await fetchCampaignInsights(env, 7);
+    // Bỏ HẲN camp bảo vệ khỏi dữ liệu AI thấy → AI không thể đề xuất gì lên chúng.
+    const campaigns = allCampaigns.filter(
+      (c) => !excludedSet.has(c.campaign_id)
+    );
 
     if (campaigns.length === 0) {
       await finalizeRun(env, runId, "success", {
@@ -126,6 +135,7 @@ async function runAgentLoop(env: Env) {
       started_at: startedAt,
       daily_spend_usd: dailySpendUsd,
       shadow_mode: shadowMode,
+      campaigns,
     };
 
     let executed = 0;
@@ -135,6 +145,15 @@ async function runAgentLoop(env: Env) {
         await logDecision(env, runId, d, {
           executed: false,
           blocked_reason: acctCheck.blocked_reason,
+        });
+        continue;
+      }
+      // Lớp phòng thủ 2: chặn mọi action lên camp bảo vệ.
+      const exCheck = checkCampaignExcluded(d.campaign_id, excludedSet);
+      if (!exCheck.allowed) {
+        await logDecision(env, runId, d, {
+          executed: false,
+          blocked_reason: exCheck.blocked_reason,
         });
         continue;
       }

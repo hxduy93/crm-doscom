@@ -109,6 +109,9 @@ interface MetaInsight {
   action_values?: { action_type: string; value: string }[];
   date_start?: string;
   date_stop?: string;
+  campaign_id?: string;
+  adset_id?: string;
+  ad_id?: string;
 }
 
 function pickConversions(actions?: { action_type: string; value: string }[]): number {
@@ -135,66 +138,86 @@ export async function fetchCampaignInsights(
     ? env.AD_ACCOUNT_ID
     : `act_${env.AD_ACCOUNT_ID}`;
   const usdVnd = Number(env.USD_VND_RATE) || 25400;
+  const datePreset = daysBack <= 7 ? "last_7d" : "last_14d";
 
+  // --- Cấu trúc tài khoản: 3 lời gọi (phân trang), KHÔNG phụ thuộc số lượng ---
   const campaigns = await graphGetAll<MetaCampaign>(
     `/${acct}/campaigns`,
     token,
     {
       fields: "id,name,status,objective,daily_budget,lifetime_budget",
       effective_status: '["ACTIVE","PAUSED"]',
-      limit: "100",
+      limit: "200",
     }
   );
+  const adsetsAll = await graphGetAll<MetaAdset>(`/${acct}/adsets`, token, {
+    fields: "id,name,status,daily_budget,campaign_id",
+    effective_status: '["ACTIVE","PAUSED"]',
+    limit: "200",
+  });
+  const adsAll = await graphGetAll<MetaAd>(`/${acct}/ads`, token, {
+    fields: "id,name,status,adset_id,creative{id}",
+    effective_status: '["ACTIVE","PAUSED"]',
+    limit: "200",
+  });
+
+  // --- Insights gom theo account ở 3 cấp: 3 lời gọi (phân trang) ---
+  // Trước đây mỗi campaign/adset/ad gọi /insights riêng (N+1) → dễ vượt giới hạn
+  // 50 subrequest của Workers Free tier. Giờ tổng cộng cố định 6 lời gọi.
+  const campInsights = await graphGetAll<MetaInsight>(`/${acct}/insights`, token, {
+    fields: "spend,impressions,clicks,ctr,cpc,cpm,actions,action_values,campaign_id",
+    date_preset: datePreset,
+    level: "campaign",
+    limit: "500",
+  });
+  const adsetInsights = await graphGetAll<MetaInsight>(`/${acct}/insights`, token, {
+    fields: "spend,impressions,clicks,ctr,actions,adset_id",
+    date_preset: datePreset,
+    level: "adset",
+    limit: "500",
+  });
+  const adInsights = await graphGetAll<MetaInsight>(`/${acct}/insights`, token, {
+    fields: "spend,impressions,ctr,frequency,actions,ad_id",
+    date_preset: datePreset,
+    level: "ad",
+    limit: "500",
+  });
+
+  const campInsById = new Map<string, MetaInsight>();
+  for (const i of campInsights) if (i.campaign_id) campInsById.set(i.campaign_id, i);
+  const adsetInsById = new Map<string, MetaInsight>();
+  for (const i of adsetInsights) if (i.adset_id) adsetInsById.set(i.adset_id, i);
+  const adInsById = new Map<string, MetaInsight>();
+  for (const i of adInsights) if (i.ad_id) adInsById.set(i.ad_id, i);
+
+  const adsetsByCampaign = new Map<string, MetaAdset[]>();
+  for (const s of adsetsAll) {
+    if (s.status !== "ACTIVE") continue;
+    const arr = adsetsByCampaign.get(s.campaign_id) ?? [];
+    arr.push(s);
+    adsetsByCampaign.set(s.campaign_id, arr);
+  }
+  const adsByAdset = new Map<string, MetaAd[]>();
+  for (const a of adsAll) {
+    if (a.status !== "ACTIVE") continue;
+    const arr = adsByAdset.get(a.adset_id) ?? [];
+    arr.push(a);
+    adsByAdset.set(a.adset_id, arr);
+  }
 
   const out: CampaignInsight[] = [];
   for (const c of campaigns) {
     if (c.status !== "ACTIVE") continue;
 
-    const cInsightArr = await graphGetAll<MetaInsight>(
-      `/${c.id}/insights`,
-      token,
-      {
-        fields:
-          "spend,impressions,clicks,ctr,cpc,cpm,actions,action_values",
-        date_preset: daysBack <= 7 ? "last_7d" : "last_14d",
-        level: "campaign",
-      }
-    );
-    const cIns = cInsightArr[0] ?? {};
-
-    const adsets = await graphGetAll<MetaAdset>(
-      `/${c.id}/adsets`,
-      token,
-      {
-        fields: "id,name,status,daily_budget,campaign_id",
-        limit: "50",
-      }
-    );
+    const cIns = campInsById.get(c.id) ?? {};
 
     const adsetOut: AdsetInsight[] = [];
-    for (const s of adsets) {
-      if (s.status !== "ACTIVE") continue;
-      const sIns =
-        (await graphGetAll<MetaInsight>(`/${s.id}/insights`, token, {
-          fields: "spend,impressions,clicks,ctr,actions",
-          date_preset: daysBack <= 7 ? "last_7d" : "last_14d",
-          level: "adset",
-        }))[0] ?? {};
-
-      const ads = await graphGetAll<MetaAd>(`/${s.id}/ads`, token, {
-        fields: "id,name,status,adset_id,creative{id}",
-        limit: "30",
-      });
+    for (const s of adsetsByCampaign.get(c.id) ?? []) {
+      const sIns = adsetInsById.get(s.id) ?? {};
 
       const adOut: AdInsight[] = [];
-      for (const a of ads) {
-        if (a.status !== "ACTIVE") continue;
-        const aIns =
-          (await graphGetAll<MetaInsight>(`/${a.id}/insights`, token, {
-            fields: "spend,impressions,ctr,frequency,actions",
-            date_preset: daysBack <= 7 ? "last_7d" : "last_14d",
-            level: "ad",
-          }))[0] ?? {};
+      for (const a of adsByAdset.get(s.id) ?? []) {
+        const aIns = adInsById.get(a.id) ?? {};
         const spendVnd = Number(aIns.spend) || 0;
         const spendUsd = spendVnd / usdVnd;
         const conv = pickConversions(aIns.actions);
@@ -281,6 +304,19 @@ export async function pauseCampaign(env: Env, campaignId: string) {
   return graphPost<{ success: boolean }>(`/${campaignId}`, env.FB_ACCESS_TOKEN, {
     status: "PAUSED",
   });
+}
+
+// Nhân bản 1 nhóm QC (kèm các quảng cáo bên trong) để scale nhóm đang chạy tốt.
+// statusActive=true → bản sao chạy ngay; false → tạo ở PAUSED.
+export async function copyAdset(env: Env, adsetId: string, statusActive: boolean) {
+  return graphPost<{ copied_adset_id?: string; ad_object_ids?: unknown }>(
+    `/${adsetId}/copies`,
+    env.FB_ACCESS_TOKEN,
+    {
+      deep_copy: "true",
+      status_option: statusActive ? "ACTIVE" : "PAUSED",
+    }
+  );
 }
 
 export async function pauseAdset(env: Env, adsetId: string) {

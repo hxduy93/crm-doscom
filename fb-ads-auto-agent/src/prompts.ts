@@ -8,7 +8,11 @@ CÁC ACTION ĐƯỢC PHÉP:
 - scale_budget: tăng/giảm daily budget của campaign (delta tối đa ±30%/lần)
 - reallocate: chuyển budget giữa các adset trong cùng 1 campaign (zero-sum)
 - rotate_creative: pause creative bão hòa (frequency cao + CTR giảm) trong adset
+- duplicate_adset: NHÂN BẢN 1 adset đang chạy TỐT để scale (tạo 1 nhóm song song)
 - noop: không action (campaign đang ổn hoặc data chưa đủ)
+
+LƯU Ý QUAN TRỌNG: agent CHỈ được TẮT (pause). TUYỆT ĐỐI KHÔNG đề xuất bật lại
+(resume/active) bất kỳ campaign/adset/ad nào đang tắt.
 
 NGUYÊN TẮC RA QUYẾT ĐỊNH:
 1. Ưu tiên SAFETY: ngần ngại pause sai hơn là để chạy lỗ. Nếu data <50 conversions và <7 ngày, mặc định noop.
@@ -17,6 +21,7 @@ NGUYÊN TẮC RA QUYẾT ĐỊNH:
 4. Scale DOWN khi: ROAS giảm đột ngột >40% trong 2 ngày gần nhất so với 5 ngày trước, hoặc frequency > 3.5.
 5. Reallocate khi: 1 adset trong campaign có CPA tốt hơn 50% so với adset khác cùng campaign.
 6. Rotate creative khi: 1 ad trong adset có frequency > 4 VÀ CTR < median CTR của adset / 2.
+6b. Duplicate_adset khi: 1 adset có ROAS ≥ 2.0 ổn định ≥3 ngày VÀ frequency < 2.5 VÀ daily spend chưa chạm 80% spend cap (nhân nhóm này để scale).
 7. Delta budget mỗi lần: tối đa ±30% so với budget hiện tại.
 8. KHÔNG được đề xuất tăng budget nếu daily spend đã chạm 80% spend cap.
 9. Reasoning PHẢI dẫn số cụ thể (spend, CPA, ROAS, ngày) — không nói chung chung.
@@ -30,12 +35,13 @@ OUTPUT JSON SCHEMA (mảng decisions):
       "campaign_name": "string",
       "adset_id": "string | null",
       "ad_id": "string | null",
-      "action_type": "pause | scale_budget | reallocate | rotate_creative | noop",
+      "action_type": "pause | scale_budget | reallocate | rotate_creative | duplicate_adset | noop",
       "payload": {
         // scale_budget: { "budget_old_usd": number, "budget_new_usd": number }
         // reallocate: { "from_adset_id": "...", "to_adset_id": "...", "from_delta_usd": -X, "to_delta_usd": +X }
         // pause: {} (object đối tượng pause được suy ra từ adset_id/ad_id/campaign_id)
         // rotate_creative: { "creative_id": "..." }
+        // duplicate_adset: {} (cần adset_id của nhóm cần nhân bản)
         // noop: {}
       },
       "reasoning": "Lý do ngắn gọn dưới 200 chữ, có dẫn số.",
@@ -53,14 +59,15 @@ export function buildUserPrompt(
   campaigns: CampaignInsight[],
   dailySpendUsd: number,
   spendCapUsd: number,
-  maxDeltaPct: number
+  maxDeltaPct: number,
+  usdVnd: number
 ): string {
   const compactCampaigns = campaigns.map((c) => ({
     campaign_id: c.campaign_id,
     name: c.campaign_name,
     objective: c.objective,
     daily_budget_usd: c.daily_budget_cents
-      ? +(c.daily_budget_cents / 100).toFixed(2)
+      ? +(c.daily_budget_cents / usdVnd).toFixed(2)
       : null,
     spend_7d_usd: c.spend_usd,
     impressions: c.impressions,
@@ -75,7 +82,7 @@ export function buildUserPrompt(
       adset_id: s.adset_id,
       name: s.adset_name,
       daily_budget_usd: s.daily_budget_cents
-        ? +(s.daily_budget_cents / 100).toFixed(2)
+        ? +(s.daily_budget_cents / usdVnd).toFixed(2)
         : null,
       spend_7d_usd: s.spend_usd,
       ctr_pct: +s.ctr.toFixed(2),

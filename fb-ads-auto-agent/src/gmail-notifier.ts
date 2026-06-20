@@ -35,29 +35,36 @@ export async function sendImportantNotification(
     "Xem chi tiết: query D1 table `decisions` WHERE run_id = " + runId,
   ].join("\n");
 
-  await sendViaGmailSmtp(env, {
+  await sendViaResend(env, {
     subject: `[FB Agent] ${important.length} high-priority action(s) — spend $${dailySpendUsd.toFixed(0)}`,
     textBody: body,
   });
 }
 
-async function sendViaGmailSmtp(env: Env, payload: NotifyPayload): Promise<void> {
-  const r = await fetch("https://api.mailchannels.net/tx/v1/send", {
+async function sendViaResend(env: Env, payload: NotifyPayload): Promise<void> {
+  if (!env.RESEND_API_KEY) {
+    // Fail-LOUD: trước đây MailChannels fail im lặng nên tưởng yên ổn.
+    console.error(
+      `[notify] RESEND_API_KEY chưa cấu hình — KHÔNG gửi được cảnh báo. Subject: ${payload.subject}`
+    );
+    return;
+  }
+  const from = env.NOTIFY_FROM || "onboarding@resend.dev";
+  const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+    },
     body: JSON.stringify({
-      personalizations: [
-        {
-          to: [{ email: env.NOTIFY_EMAIL }],
-        },
-      ],
-      from: { email: env.NOTIFY_EMAIL, name: "FB Ads Auto Agent" },
+      from: `FB Ads Auto Agent <${from}>`,
+      to: [env.NOTIFY_EMAIL],
       subject: payload.subject,
-      content: [{ type: "text/plain", value: payload.textBody }],
+      text: payload.textBody,
     }),
   });
   if (!r.ok) {
     const t = await r.text();
-    console.error(`Notify failed ${r.status}: ${t.slice(0, 300)}`);
+    console.error(`[notify] Resend failed ${r.status}: ${t.slice(0, 300)}`);
   }
 }

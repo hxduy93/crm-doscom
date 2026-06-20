@@ -11,6 +11,14 @@ export interface Env {
   FB_ACCESS_TOKEN: string;
   ANTHROPIC_API_KEY: string;
   GMAIL_APP_PASSWORD: string;
+  // Email cảnh báo qua Resend (https://resend.com). RESEND_API_KEY là secret.
+  // NOTIFY_FROM: địa chỉ gửi đã verify domain trên Resend; nếu trống dùng
+  // onboarding@resend.dev (chỉ gửi được tới chính email chủ tài khoản Resend).
+  RESEND_API_KEY: string;
+  NOTIFY_FROM: string;
+  // URL endpoint điều khiển trên CRM (danh sách bảo vệ + shadow + killswitch).
+  // vd: https://crm-doscom.pages.dev/api/optimizer/control
+  CRM_CONTROL_URL: string;
 }
 
 export interface CampaignInsight {
@@ -65,6 +73,7 @@ export type ActionType =
   | "scale_budget"
   | "reallocate"
   | "rotate_creative"
+  | "duplicate_adset"
   | "noop";
 
 export interface Decision {
@@ -88,4 +97,7 @@ export interface RunContext {
   started_at: string;
   daily_spend_usd: number;
   shadow_mode: boolean;
+  // Số liệu THẬT đọc từ Meta trong run này — guardrail dùng để đối chiếu,
+  // không tin các con số do LLM tự khai trong payload.
+  campaigns?: CampaignInsight[];
 }

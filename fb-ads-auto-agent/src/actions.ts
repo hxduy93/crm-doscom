@@ -1,5 +1,6 @@
 import { checkDecision } from "./guardrails";
 import {
+  copyAdset,
   pauseAd,
   pauseAdset,
   pauseCampaign,
@@ -71,6 +72,15 @@ export async function executeDecision(
           return { executed: false, blocked_reason: "rotate_needs_ad_id" };
         }
         const resp = await pauseAd(env, decision.ad_id);
+        return { executed: true, meta_response: resp };
+      }
+
+      case "duplicate_adset": {
+        if (!decision.adset_id) {
+          return { executed: false, blocked_reason: "duplicate_needs_adset_id" };
+        }
+        // Nhân bản nhóm đang chạy tốt để scale (bản sao chạy ngay).
+        const resp = await copyAdset(env, decision.adset_id, true);
         return { executed: true, meta_response: resp };
       }
 

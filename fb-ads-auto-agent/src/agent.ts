@@ -28,11 +28,13 @@ export async function runHaikuDecision(
 ): Promise<AgentResult> {
   const spendCap = Number(env.DAILY_SPEND_CAP_USD);
   const maxDelta = Number(env.MAX_BUDGET_DELTA_PCT);
+  const usdVnd = Number(env.USD_VND_RATE) || 25400;
   const userPrompt = buildUserPrompt(
     campaigns,
     dailySpendUsd,
     spendCap,
-    maxDelta
+    maxDelta,
+    usdVnd
   );
 
   const r = await fetch("https://api.anthropic.com/v1/messages", {

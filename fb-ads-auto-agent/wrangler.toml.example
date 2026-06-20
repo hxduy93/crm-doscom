@@ -13,20 +13,26 @@ crons = ["0 2,5,8,11 * * *"]
 [vars]
 # === HARD GUARDRAILS — agent KHÔNG được override ===
 # Whitelist: chỉ 1 ad account duy nhất
-# Account 906015559004892 (DoscomMart) — loaned from PHUONG_NAM / MAY_DO group cho AI test từ 2026-05-29
-AD_ACCOUNT_ID = "act_906015559004892"
+# Account 927390616363424 (Doscom - Công nghệ nâng tầm cuộc sống) — agent tạo+tối ưu Noma.
+AD_ACCOUNT_ID = "act_927390616363424"
 # Daily spend cap (USD). Vượt → block mọi action tăng budget
 DAILY_SPEND_CAP_USD = "10"
 # Max % thay đổi budget mỗi campaign mỗi run (e.g. 0.30 = 30%)
 MAX_BUDGET_DELTA_PCT = "0.30"
 # Tỷ giá USD→VND để compute spend cap (FB trả VND, cap tính USD)
 USD_VND_RATE = "25400"
-# Email nhận notification (Gmail MCP service account)
+# Email nhận notification
 NOTIFY_EMAIL = "doscom.vietnam@gmail.com"
+# Địa chỉ GỬI qua Resend. Để trống/đổi thành onboarding@resend.dev nếu chưa
+# verify domain (khi đó chỉ gửi được tới đúng email chủ tài khoản Resend).
+NOTIFY_FROM = "onboarding@resend.dev"
 # Min spend trước khi agent được phép quyết định (tránh decision trên data quá ít)
 MIN_SPEND_PER_CAMPAIGN_USD = "2"
-# Set "true" để chạy SHADOW mode (log decisions, KHÔNG execute) — toggle nóng qua CF dashboard
+# Set "true" để chạy SHADOW mode (log decisions, KHÔNG execute) — toggle nóng qua CF dashboard.
+# Lưu ý: agent CŨNG đọc shadow/killswitch/danh sách bảo vệ từ CRM (CRM_CONTROL_URL) — gộp bằng OR.
 SHADOW_MODE = "false"
+# Endpoint điều khiển trên CRM: danh sách camp bảo vệ + shadow + killswitch (tick chọn trên CRM).
+CRM_CONTROL_URL = "https://crm-doscom.pages.dev/api/optimizer/control"
 
 # === D1 binding ===
 [[d1_databases]]
@@ -42,4 +48,5 @@ id = "REPLACE_WITH_KV_NAMESPACE_ID"
 # === Secrets (set via: wrangler secret put NAME) ===
 # - FB_ACCESS_TOKEN       → Meta access token (System User vĩnh viễn, hoặc User Token 60d)
 # - ANTHROPIC_API_KEY     → Haiku 4.5 API key (sk-ant-…)
+# - RESEND_API_KEY        → Resend API key (re_…) để gửi email cảnh báo
 # (KHÔNG đưa secret vào file này. Đặt riêng bằng `wrangler secret put`)
