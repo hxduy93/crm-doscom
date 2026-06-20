@@ -151,9 +151,9 @@ export function checkCampaignExcluded(
 
 export function enforceAccountWhitelist(
   campaignAccountId: string,
-  env: Env
+  accountId: string
 ): GuardrailResult {
-  const whitelisted = env.AD_ACCOUNT_ID.replace(/^act_/, "");
+  const whitelisted = accountId.replace(/^act_/, "");
   const got = campaignAccountId.replace(/^act_/, "");
   if (whitelisted !== got) {
     return {

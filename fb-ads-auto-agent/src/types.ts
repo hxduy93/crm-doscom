@@ -19,6 +19,13 @@ export interface Env {
   // URL endpoint điều khiển trên CRM (danh sách bảo vệ + shadow + killswitch).
   // vd: https://crm-doscom.pages.dev/api/optimizer/control
   CRM_CONTROL_URL: string;
+  // Đa-tài-khoản: danh sách account dự phòng khi CRM không trả (phẩy). Để trống nếu lấy từ CRM.
+  AD_ACCOUNT_IDS: string;
+  // Secret dùng chung với CRM để Worker được nhận diện nội bộ (= OPTIMIZER_TOKEN của CRM).
+  OPTIMIZER_TOKEN: string;
+  // Service token Cloudflare Access (để gọi CRM khi CRM đã bật Access).
+  CF_ACCESS_CLIENT_ID: string;
+  CF_ACCESS_CLIENT_SECRET: string;
 }
 
 export interface CampaignInsight {

@@ -10,12 +10,23 @@ export interface OptimizerControl {
 
 const EMPTY: OptimizerControl = { excluded: [], shadow: false, killswitch: false };
 
-export async function fetchControl(env: Env): Promise<OptimizerControl> {
+// Header để qua Cloudflare Access (service token) + để CRM nhận diện là Worker nội bộ.
+function authHeaders(env: Env): Record<string, string> {
+  const h: Record<string, string> = {};
+  if (env.OPTIMIZER_TOKEN) h["X-Internal-Token"] = env.OPTIMIZER_TOKEN;
+  if (env.CF_ACCESS_CLIENT_ID) h["CF-Access-Client-Id"] = env.CF_ACCESS_CLIENT_ID;
+  if (env.CF_ACCESS_CLIENT_SECRET) h["CF-Access-Client-Secret"] = env.CF_ACCESS_CLIENT_SECRET;
+  return h;
+}
+
+// Đọc control của 1 tài khoản. Lỗi mạng → rỗng (index.ts gộp shadow/killswitch local bằng OR).
+export async function fetchControl(env: Env, accountId: string): Promise<OptimizerControl> {
   const base = env.CRM_CONTROL_URL;
   if (!base) return EMPTY;
-  const acct = env.AD_ACCOUNT_ID.replace(/^act_/, "");
+  const acct = accountId.replace(/^act_/, "");
   try {
     const r = await fetch(`${base}?account=${acct}`, {
+      headers: authHeaders(env),
       signal: AbortSignal.timeout(8000),
     });
     if (!r.ok) return EMPTY;
@@ -26,7 +37,31 @@ export async function fetchControl(env: Env): Promise<OptimizerControl> {
       killswitch: d.killswitch === true,
     };
   } catch {
-    // Lỗi mạng → trả rỗng (KHÔNG nới lỏng shadow/killswitch local; index.ts gộp bằng OR).
     return EMPTY;
+  }
+}
+
+// Lấy danh sách tài khoản cần tối ưu từ CRM (/api/optimizer/accounts).
+// Fallback: env.AD_ACCOUNT_IDS (phẩy) hoặc env.AD_ACCOUNT_ID (1 tài khoản — tương thích cũ).
+export async function fetchAccounts(env: Env): Promise<string[]> {
+  const fallback = (): string[] => {
+    const list = (env.AD_ACCOUNT_IDS || env.AD_ACCOUNT_ID || "")
+      .split(",")
+      .map((s) => s.trim().replace(/^act_/, ""))
+      .filter(Boolean);
+    return [...new Set(list)];
+  };
+  const base = env.CRM_CONTROL_URL;
+  if (!base) return fallback();
+  // .../api/optimizer/control → .../api/optimizer/accounts
+  const url = base.replace(/\/[^/]*$/, "/accounts");
+  try {
+    const r = await fetch(url, { headers: authHeaders(env), signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return fallback();
+    const d = (await r.json()) as { accounts?: { id: string }[] };
+    const ids = (d.accounts || []).map((a) => String(a.id).replace(/^act_/, "")).filter(Boolean);
+    return ids.length ? [...new Set(ids)] : fallback();
+  } catch {
+    return fallback();
   }
 }

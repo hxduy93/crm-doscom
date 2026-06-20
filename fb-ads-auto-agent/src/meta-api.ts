@@ -131,12 +131,11 @@ function pickRevenue(values?: { action_type: string; value: string }[]): number 
 
 export async function fetchCampaignInsights(
   env: Env,
+  accountId: string,
   daysBack = 7
 ): Promise<CampaignInsight[]> {
   const token = env.FB_ACCESS_TOKEN;
-  const acct = env.AD_ACCOUNT_ID.startsWith("act_")
-    ? env.AD_ACCOUNT_ID
-    : `act_${env.AD_ACCOUNT_ID}`;
+  const acct = accountId.startsWith("act_") ? accountId : `act_${accountId}`;
   const usdVnd = Number(env.USD_VND_RATE) || 25400;
   const datePreset = daysBack <= 7 ? "last_7d" : "last_14d";
 
@@ -280,11 +279,9 @@ export async function fetchCampaignInsights(
   return out;
 }
 
-export async function fetchTodaySpendUsd(env: Env): Promise<number> {
+export async function fetchTodaySpendUsd(env: Env, accountId: string): Promise<number> {
   const token = env.FB_ACCESS_TOKEN;
-  const acct = env.AD_ACCOUNT_ID.startsWith("act_")
-    ? env.AD_ACCOUNT_ID
-    : `act_${env.AD_ACCOUNT_ID}`;
+  const acct = accountId.startsWith("act_") ? accountId : `act_${accountId}`;
   const usdVnd = Number(env.USD_VND_RATE) || 25400;
 
   const ins = await graphGetAll<MetaInsight>(
