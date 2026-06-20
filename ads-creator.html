@@ -148,8 +148,10 @@ function AdsCreatorPanel() {
   const [autoLog, setAutoLog] = useState([]) // dòng tiến trình
   const [autoResults, setAutoResults] = useState([]) // [{ product, ok, campaign_id?, ads_created?, ads_manager_url?, error? }]
 
-  // ══════════ CHẾ ĐỘ TỐI ƯU & BẢO VỆ (điều khiển agent tối ưu trên TK 927) ══════════
-  const OPT_ACCOUNT = "927390616363424"
+  // ══════════ CHẾ ĐỘ TỐI ƯU & BẢO VỆ (đa-tài-khoản, phân quyền theo người đăng nhập) ══════════
+  const [optAccountList, setOptAccountList] = useState([]) // tài khoản được xem
+  const [optAccount, setOptAccount] = useState("")          // tài khoản đang chọn
+  const [optRole, setOptRole] = useState("")
   const [optCampaigns, setOptCampaigns] = useState([])
   const [optExcluded, setOptExcluded] = useState([])
   const [optShadow, setOptShadow] = useState(true)
@@ -766,12 +768,22 @@ function AdsCreatorPanel() {
   }
 
   // ── Handlers chế độ Tối ưu & Bảo vệ ──
+  const loadOptAccounts = async () => {
+    try {
+      const r = await fetch("/api/optimizer/accounts"); const d = await r.json()
+      if (!d.ok) throw new Error(d.error || "Lỗi tải tài khoản")
+      setOptRole(d.role || "")
+      setOptAccountList(d.accounts || [])
+      setOptAccount(curr => curr || ((d.accounts || [])[0] || {}).id || "")
+    } catch (e) { setOptMsg("✗ " + e.message) }
+  }
   const loadOptimizer = async () => {
+    if (!optAccount) return
     setOptLoading(true); setOptMsg("")
     try {
       const [cr, kr] = await Promise.all([
-        fetch(`/api/optimizer/campaigns?account=${OPT_ACCOUNT}`),
-        fetch(`/api/optimizer/control?account=${OPT_ACCOUNT}`),
+        fetch(`/api/optimizer/campaigns?account=${optAccount}`),
+        fetch(`/api/optimizer/control?account=${optAccount}`),
       ])
       const cd = await cr.json(); const kd = await kr.json()
       if (!cr.ok || !cd.ok) throw new Error(cd.error || "Lỗi tải danh sách campaign")
@@ -788,7 +800,7 @@ function AdsCreatorPanel() {
     setOptLoading(true); setOptMsg("")
     try {
       try { localStorage.setItem("doscom_opt_token", optToken) } catch (e) {}
-      const r = await fetch(`/api/optimizer/control?account=${OPT_ACCOUNT}`, {
+      const r = await fetch(`/api/optimizer/control?account=${optAccount}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Optimizer-Token": optToken },
         body: JSON.stringify({ excluded: optExcluded, shadow: optShadow, killswitch: optKill }),
@@ -800,12 +812,16 @@ function AdsCreatorPanel() {
     finally { setOptLoading(false) }
   }
   const loadOptDecisions = async () => {
+    if (!optAccount) return
     try {
-      const r = await fetch("/api/optimizer/decisions"); const d = await r.json()
+      const r = await fetch(`/api/optimizer/decisions?account=${optAccount}`); const d = await r.json()
       setOptDecisions(Array.isArray(d.decisions) ? d.decisions.slice(0, 30) : [])
     } catch (e) {}
   }
-  React.useEffect(() => { if (mode === "optimize") { loadOptimizer(); loadOptDecisions() } }, [mode])
+  // Mở tab → nạp danh sách tài khoản được xem.
+  React.useEffect(() => { if (mode === "optimize") loadOptAccounts() }, [mode])
+  // Đổi tài khoản (hoặc nạp xong) → load camp + control + decisions.
+  React.useEffect(() => { if (mode === "optimize" && optAccount) { loadOptimizer(); loadOptDecisions() } }, [optAccount, mode])
 
   // Initialize defaults
   React.useEffect(() => { handleProductChange("D1") }, [])
@@ -843,8 +859,22 @@ function AdsCreatorPanel() {
               <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-lg">⚙️</div>
               <div>
                 <h3 className="text-base font-bold text-amber-900">Tối ưu tự động & Bảo vệ campaign</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Agent tối ưu chạy trên TK <b>{OPT_ACCOUNT}</b> (4 lần/ngày): tắt camp kém, tăng/giảm ngân sách, nhân nhóm chạy tốt. Tick camp để CẤM agent đụng vào.</p>
+                <p className="text-xs text-gray-500 mt-0.5">Agent tối ưu (4 lần/ngày): tắt camp kém, tăng/giảm ngân sách, nhân nhóm chạy tốt. Tick camp để CẤM agent đụng vào.</p>
               </div>
+            </div>
+
+            {/* Chọn tài khoản (phân quyền theo người đăng nhập) */}
+            <div className="mb-4">
+              <label className={labelClass}>Tài khoản quảng cáo {optRole && <span className="text-gray-400 normal-case">· quyền: {optRole}</span>}</label>
+              {optAccountList.length === 0 ? (
+                <p className="text-xs text-gray-400">Không có tài khoản nào (chưa đăng nhập đúng quyền, hoặc chưa khai trong cấu hình).</p>
+              ) : (
+                <select value={optAccount} onChange={e => setOptAccount(e.target.value)} className={selectClass}>
+                  {optAccountList.map(a => (
+                    <option key={a.id} value={a.id}>{a.name} ({a.id}){a.staff ? ` · ${a.staff}` : ""}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* Công tắc */}

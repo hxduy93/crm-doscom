@@ -2,6 +2,12 @@
   "_note": "Config tháng cho FB Ads agent. UI edit qua agent-facebook-doscom.html (đầu trang). Backend đọc qua /api/fb-config (KV) — file này là DEFAULT khi KV rỗng.",
   "_registry_help": "account_to_groups = SỔ ĐĂNG KÝ tài khoản QC Facebook (single source of truth). Đây là NƠI DUY NHẤT khai báo tkqc — cả script fetch (scripts/fetch_fb_ads.py) lẫn backend đều đọc từ đây. Khi đổi agency/đổi tkqc: làm theo docs/SWITCH-AD-ACCOUNTS.md (chỉ sửa file này + chạy validate). Mỗi account: name (tên hiển thị), staff (DUY|PHUONG_NAM), groups (subset MAY_DO|CAMERA_VIDEO_CALL|GHI_AM|NOMA — 1 account chạy nhiều SP thì liệt kê nhiều group), active (true=fetch, false=ngừng fetch nhưng giữ lịch sử).",
   "kpi_revenue_monthly_vnd": 1000000000,
+  "_staff_access_help": "Phân quyền đăng nhập Cloudflare Access. email (chữ thường) → { role: admin|staff, staff: TÊN khớp account_to_groups }. admin = thấy MỌI tài khoản; staff = chỉ thấy tài khoản có staff trùng. Thêm email nhân sự vào đây (vd Phương Nam).",
+  "staff_access": {
+    "kinhdoanh.doscom@gmail.com": { "role": "admin" },
+    "doscom.vietnam@gmail.com": { "role": "admin" },
+    "EMAIL_NHAN_SU_PHUONG_NAM@gmail.com": { "role": "staff", "staff": "PHUONG_NAM" }
+  },
   "account_to_groups": {
     "1449385949897024": {
       "name": "CÔNG TY TNHH DOSCOM HOLDINGS - Công nghệ nâng tầm cuộc sống",

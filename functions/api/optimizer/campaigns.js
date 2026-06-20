@@ -3,6 +3,8 @@
  * Liệt kê campaign (ACTIVE+PAUSED) của 1 ad account để UI "Tối ưu & Bảo vệ" tick chọn
  * camp không cho agent chỉnh sửa. Dùng env.FB_ACCESS_TOKEN của CRM.
  */
+import { getIdentity, canAccess } from "../../lib/access.js";
+
 const GRAPH = "https://graph.facebook.com/v21.0";
 
 function json(obj, status = 200) {
@@ -19,6 +21,9 @@ export async function onRequestGet(context) {
 
   const acct = String(new URL(request.url).searchParams.get("account") || "").replace(/^act_/, "");
   if (!acct) return json({ ok: false, error: "Thiếu ?account=" }, 400);
+
+  const id = await getIdentity(context);
+  if (!canAccess(id, acct)) return json({ ok: false, error: "Không có quyền trên tài khoản này" }, 403);
 
   try {
     const p = new URLSearchParams({
