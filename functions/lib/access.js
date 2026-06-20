@@ -5,21 +5,19 @@
 // - Access CHƯA bật (không có header email): trả role "open" = full (giữ nguyên giai đoạn public).
 // - Access bật: tra `staff_access` (email → role). admin = mọi account; staff = account có staff trùng.
 //
-// Nguồn quyền sở hữu: data/fb-config.json → account_to_groups[acct].staff (sổ đăng ký sẵn có).
-// Import thẳng JSON (esbuild bundle khi deploy) — KHÔNG fetch (Pages Function fetch asset không ổn định).
-import fbConfigDefault from "../../data/fb-config.json";
+// Nguồn quyền: sổ tài khoản + staff_access trong functions/lib/access-config.js
+// (file JS TRONG functions/ — import chắc chắn; fetch asset từ Pages Function không ổn định).
+import { ACCOUNT_TO_GROUPS, STAFF_ACCESS } from "./access-config.js";
 
 async function loadConfig(env) {
+  // account_to_groups: ưu tiên KV (nếu user đã edit qua UI agent), fallback config JS.
   let kv = null;
   if (env.INVENTORY) {
     try { kv = await env.INVENTORY.get("fb_config", { type: "json" }); } catch { /* ignore */ }
   }
-  const base = fbConfigDefault || {};
   return {
-    // account_to_groups: ưu tiên KV (user edit qua UI), fallback file bundle
-    account_to_groups: (kv && kv.account_to_groups) || base.account_to_groups || {},
-    // staff_access: admin quản trong file (deployed)
-    staff_access: base.staff_access || (kv && kv.staff_access) || {},
+    account_to_groups: (kv && kv.account_to_groups) || ACCOUNT_TO_GROUPS,
+    staff_access: STAFF_ACCESS,
   };
 }
 
