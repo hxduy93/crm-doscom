@@ -90,13 +90,19 @@ function buildPromotedObject(cfg) {
   return po;
 }
 
-// Default targeting — Vietnam 18-65, all genders
+// Default targeting — Vietnam 18-65, all genders.
+// Meta (v21+) BẮT BUỘC khai advantage_audience (1=bật Advantage+ đối tượng, 0=tắt).
+// Mặc định bật 1 nếu caller chưa khai → tránh lỗi "create_adset" thiếu cờ.
 function buildTargeting(cfg) {
-  return cfg.targeting || {
+  const t = cfg.targeting || {
     geo_locations: { countries: ["VN"] },
     age_min: 18,
     age_max: 65,
   };
+  if (!t.targeting_automation) {
+    t.targeting_automation = { advantage_audience: 1 };
+  }
+  return t;
 }
 
 // Normalize any date-ish string → Meta-compatible ISO with VN timezone (+07:00).
