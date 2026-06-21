@@ -1,8 +1,8 @@
 name: Đọc lại dữ liệu (refresh data)
 
-# Kéo dữ liệu mới nhất từ dashboard cũ -> cập nhật data/dashboard-data.json -> commit.
+# Kéo dữ liệu mới nhất từ dashboard cũ -> cập nhật data/dashboard-data.json -> commit -> deploy.
 # Tự chạy 3 lần/ngày (9h / 13h / 17h giờ VN) + bấm tay khi cần (tab Actions -> Run workflow).
-# Sau khi commit + push, workflow "Deploy lên Cloudflare Pages" sẽ TỰ chạy theo push.
+# Tự deploy luôn ở cuối workflow khi dữ liệu đổi (vì push bằng GITHUB_TOKEN không kích hoạt deploy.yml).
 on:
   schedule:
     # Giờ cron của GitHub Actions là UTC. VN = UTC+7.
@@ -33,14 +33,37 @@ jobs:
 
       # Noma911: giờ đọc LIVE từ D1 riêng của CRM qua /api/noma911/stats — không cần fetch ở đây nữa.
 
-      - name: Commit nếu dữ liệu đổi (push sẽ kích hoạt deploy.yml)
+      - name: Commit nếu dữ liệu đổi
+        id: commit
         run: |
           git config user.name "crm-refresh-bot"
           git config user.email "kinhdoanh.doscom@gmail.com"
           git add data/dashboard-data.json
           if git diff --cached --quiet; then
             echo "Không có thay đổi dữ liệu."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "refresh data $(date -u +%Y-%m-%dT%H:%MZ)"
             git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      # Bot đẩy bằng GITHUB_TOKEN nên push KHÔNG kích hoạt deploy.yml (chống lặp vô hạn).
+      # => Tự deploy ngay tại đây khi có dữ liệu mới, để web Cloudflare luôn cập nhật.
+      - name: Chuẩn bị thư mục deploy (chỉ khi dữ liệu đổi)
+        if: steps.commit.outputs.changed == 'true'
+        run: |
+          rm -rf dist && mkdir dist
+          cp index.html dist/
+          cp -r data dist/data
+          if [ -d demos ]; then cp -r demos dist/demos; fi
+          for page in agent-geo-doscom.html ads-creator.html; do
+            if [ -f "$page" ]; then cp "$page" dist/; fi
+          done
+
+      - name: Deploy lên Cloudflare Pages (chỉ khi dữ liệu đổi)
+        if: steps.commit.outputs.changed == 'true'
+        run: npx wrangler@4 pages deploy dist --project-name=crm-doscom --branch=master --commit-dirty=true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: cffb0c35f8c649872436b2087a64b7bc
