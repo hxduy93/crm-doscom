@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-21 16:07",
+  "generated_at": "2026-06-21 18:58",
   "source_data_date_range": {
     "start_7d": "2026-06-14",
     "end": "2026-06-20",
@@ -1598,7 +1598,7 @@
   "search_term_insights": {
     "summary": {
       "total_unique_terms": 3571,
-      "terms_with_conversions": 29,
+      "terms_with_conversions": 30,
       "conv_rate_terms": 0.008,
       "total_spend_30d": 18919536.0
     },
@@ -1670,6 +1670,35 @@
         ]
       },
       {
+        "search_term": "máy ghi âm mini kết nối điện thoại",
+        "spend_30d": 93177.0,
+        "clicks_30d": 12,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.2105,
+        "match_types": [
+          "NEAR_PHRASE",
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "thiết bị ghi âm ghi hình bí mật",
+        "spend_30d": 12355.0,
+        "clicks_30d": 3,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1429,
+        "match_types": [
+          "BROAD",
+          "NEAR_PHRASE",
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
         "search_term": "camera không dây",
         "spend_30d": 97469.0,
         "clicks_30d": 25,
@@ -1703,33 +1732,6 @@
         "ctr_30d": 0.0943,
         "match_types": [
           "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "h6c pro 3mp",
-        "spend_30d": 31277.0,
-        "clicks_30d": 2,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.3333,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "máy ghi âm mini kết nối điện thoại",
-        "spend_30d": 93177.0,
-        "clicks_30d": 12,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.2105,
-        "match_types": [
-          "NEAR_PHRASE",
-          "PHRASE"
         ],
         "statuses": [
           "NONE"
@@ -2125,11 +2127,11 @@
       }
     ],
     "match_type_breakdown": {
-      "BROAD": {
-        "spend_30d": 11234733.0,
-        "clicks_30d": 1421,
-        "conversions_30d": 38.97,
-        "term_count": 2041
+      "EXACT": {
+        "spend_30d": 1673013.0,
+        "clicks_30d": 355,
+        "conversions_30d": 2.0,
+        "term_count": 76
       },
       "NEAR_PHRASE": {
         "spend_30d": 4083485.0,
@@ -2137,17 +2139,17 @@
         "conversions_30d": 6.0,
         "term_count": 912
       },
+      "BROAD": {
+        "spend_30d": 11234733.0,
+        "clicks_30d": 1421,
+        "conversions_30d": 39.97,
+        "term_count": 2041
+      },
       "PHRASE": {
         "spend_30d": 4818544.0,
         "clicks_30d": 936,
         "conversions_30d": 6.08,
         "term_count": 724
-      },
-      "EXACT": {
-        "spend_30d": 1673013.0,
-        "clicks_30d": 355,
-        "conversions_30d": 2.0,
-        "term_count": 76
       },
       "NEAR_EXACT": {
         "spend_30d": 40137.0,
@@ -2159,14 +2161,14 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 22730,
-      "total_spend_30d": 26444127.0
+      "total_unique_placements": 22729,
+      "total_spend_30d": 26434810.0
     },
     "network_breakdown": {
       "CONTENT": {
-        "spend_30d": 26450703.0,
-        "clicks_30d": 16603,
-        "impressions_30d": 1266623,
+        "spend_30d": 26441386.0,
+        "clicks_30d": 16597,
+        "impressions_30d": 1266618,
         "ctr_30d": 0.0131,
         "cpc_30d": 1593.0,
         "campaign_count": 7
@@ -2182,11 +2184,11 @@
     },
     "placement_type_breakdown": {
       "WEBSITE": {
-        "spend_30d": 26444127.0,
-        "clicks_30d": 16601,
-        "impressions_30d": 1221189,
+        "spend_30d": 26434810.0,
+        "clicks_30d": 16595,
+        "impressions_30d": 1221184,
         "ctr_30d": 0.0136,
-        "placement_count": 22730
+        "placement_count": 22729
       }
     },
     "top_waste_placements": [],
@@ -2315,8 +2317,8 @@
     "top_spend_placements": [
       {
         "placement": "xosodaiphat.com/xsmn-xo-so-mien-nam.html",
-        "spend_30d": 922818.0,
-        "clicks_30d": 1686,
+        "spend_30d": 921890.0,
+        "clicks_30d": 1685,
         "ctr_30d": 0.0204,
         "placement_type": "WEBSITE",
         "ad_network_type": "CONTENT"
