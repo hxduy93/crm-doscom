@@ -22,8 +22,9 @@ import { getIdentity, canAccess } from "../lib/access.js";
 
 const FB_API_VERSION = "v20.0";
 const GRAPH = `https://graph.facebook.com/${FB_API_VERSION}`;
-// Ảnh public để Meta lấy preview cho link ad (chỉ để tạo creative test, sẽ xoá ngay).
-const TEST_PICTURE = "https://placehold.co/600x400/png";
+// Ảnh test 320x320 (PNG đặc, base64) — upload thẳng bytes lên Meta để tạo creative
+// test, KHÔNG phụ thuộc URL ngoài (placehold.co từng bị Meta chặn fetch).
+const TEST_IMG_B64 = "iVBORw0KGgoAAAANSUhEUgAAAUAAAAFACAIAAABC8jL9AAACtklEQVR42u3TQQkAAAgEwStjMuNbwg7+hIFJsLCpHuCpSAAGBgwMGBgMDBgYMDBgYDAwYGDAwGBgwMCAgQEDg4EBAwMGBgwMBgYMDBgYDAwYGDAwYGAwMGBgwMCAgcHAgIEBA4OBAQMDBgYMDAYGDAwYGAysAhgYMDBgYDAwYGDAwICBwcCAgQEDg4EBAwMGBgwMBgYMDBgYMDAYGDAwYGAwMGBgwMCAgcHAgIEBAwMGBgMDBgYMDAYGDAwGBgwMGBgwMBgYMDBgYMDAYGDAwICBwcCAgQEDg4EBAwMGBgwMBgYMDBgYMDAYGDAwYGAwMGBgwMCAgcHAgIEBA4OBAQMDBgYDAwYGDAwYGAwMGBgwMBhYBTAwYGDAwGBgwMCAgQEDg4EBAwMGBgMDBgYMDBgYDAwYGDAwYGAwMGBgwMBgYMDAgIEBA4OBAQMDBgYMDAYGDAwYGAwMGBgwMGBgMDBgYMDAYGDAwICBAQODgQEDAwYGDAwGBgwMGBgMDBgYMDBgYDAwYGDAwICBwcCAgQEDg4EBAwMGBgwMBgYMDBgYMDAYGDAwYGAwMGBgwMCAgcHAgIEBA4OBAQMDBgYMDAYGDAwYGDAwGBgwMGBgMDBgYMDAgIHBwICBAQMDBgYDAwYGDAwGBgwMGBgwMBgYMDBgYDCwBGBgwMCAgcHAgIEBAwMGBgMDBgYMDAYGDAwYGDAwGBgwMGBgwMBgYMDAgIHBwICBAQMDBgYDAwYGDAwYGAwMGBgwMBgYMDBgYMDAYGDAwICBwcAqgIEBAwMGBgMDBgYMDBgYDAwYGDAwGBgwMGBgwMBgYMDAgIEBA4OBAQMDNwvJDtHuCYu/UgAAAABJRU5ErkJggg==";
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
@@ -117,6 +118,18 @@ export async function onRequestGet(context) {
     return json({ ok: false, token_owner, error: String(e.message || e) }, 502);
   }
 
+  // Upload 1 ảnh test (bytes) → image_hash, dùng chung cho mọi page của tkqc này.
+  let testHash = null;
+  try {
+    const img = await fbPost(`/act_${acct}/adimages`, { bytes: TEST_IMG_B64 }, token);
+    const imgs = img.images || {};
+    const first = imgs[Object.keys(imgs)[0]];
+    testHash = first && first.hash;
+  } catch (e) {
+    return json({ ok: false, token_owner, account: acct, error: "Không tạo được ảnh test (adimages): " + String(e.message || e) }, 502);
+  }
+  if (!testHash) return json({ ok: false, token_owner, account: acct, error: "adimages không trả image_hash" }, 502);
+
   // Cách 2: thử tạo creative rồi xoá
   const results = [];
   for (const p of pages) {
@@ -129,7 +142,7 @@ export async function onRequestGet(context) {
             link: "https://doscom.vn",
             message: "test quyền page (sẽ xoá)",
             name: "test",
-            picture: TEST_PICTURE,
+            image_hash: testHash,
             call_to_action: { type: "LEARN_MORE", value: { link: "https://doscom.vn" } },
           },
         },
