@@ -33,6 +33,16 @@ jobs:
           done
           # Functions (functions/) được wrangler tự bundle từ gốc repo → không cần copy.
 
+      # Áp migration D1 TRƯỚC khi deploy code (để schema sẵn sàng khi function mới chạy).
+      # best-effort: continue-on-error để token thiếu quyền D1 không chặn deploy code.
+      # Lệnh idempotent — đã áp rồi thì báo "no migrations to apply".
+      - name: Áp migration D1 (best-effort)
+        continue-on-error: true
+        run: npx wrangler@4 d1 migrations apply crm-doscom-db --remote
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: cffb0c35f8c649872436b2087a64b7bc
+
       - name: Deploy lên Cloudflare Pages
         run: npx wrangler@4 pages deploy dist --project-name=crm-doscom --branch=master --commit-dirty=true
         env:

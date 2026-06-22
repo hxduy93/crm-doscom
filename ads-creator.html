@@ -147,6 +147,10 @@ function AdsCreatorPanel() {
   const [autoBusy, setAutoBusy] = useState(false)
   const [autoLog, setAutoLog] = useState([]) // dòng tiến trình
   const [autoResults, setAutoResults] = useState([]) // [{ product, ok, campaign_id?, ads_created?, ads_manager_url?, error? }]
+  // Quét video: sổ filename ĐÃ upload (từ /api/uploaded-videos) để bỏ qua video cũ.
+  const [autoExisting, setAutoExisting] = useState(null) // null = chưa quét | Set(filename)
+  const [autoScanBusy, setAutoScanBusy] = useState(false)
+  const [autoScanMsg, setAutoScanMsg] = useState("")
 
   // ══════════ CHẾ ĐỘ TỐI ƯU & BẢO VỆ (đa-tài-khoản, phân quyền theo người đăng nhập) ══════════
   const [optAccountList, setOptAccountList] = useState([]) // tài khoản được xem
@@ -662,10 +666,39 @@ function AdsCreatorPanel() {
     setAutoGroups(Object.entries(byFolder).map(([product, fs]) => ({ product, files: fs })))
     setAutoResults([])
     setAutoLog([])
+    setAutoExisting(null) // folder đổi → phải quét lại
+    setAutoScanMsg("")
   }
 
   const autoTotalVideos = autoGroups.reduce((n, g) => n + g.files.length, 0)
   const pushLog = (line) => setAutoLog(curr => [...curr, line])
+
+  // Một video là "mới" nếu chưa quét (autoExisting=null → coi tất cả là mới)
+  // hoặc tên file KHÔNG có trong sổ đã upload.
+  const isNewFile = (f) => !autoExisting || !autoExisting.has(f.name)
+  const autoNewVideos = autoGroups.reduce((n, g) => n + g.files.filter(isNewFile).length, 0)
+  const autoExistingCount = autoTotalVideos - autoNewVideos
+
+  // 🔍 Quét: hỏi /api/uploaded-videos xem tài khoản này đã upload file nào → đánh dấu.
+  const handleAutoScan = async () => {
+    if (autoScanBusy || autoGroups.length === 0) return
+    setAutoScanBusy(true); setAutoScanMsg("")
+    try {
+      const r = await fetch(`/api/uploaded-videos?account_id=${encodeURIComponent(autoAccount)}`)
+      const d = await r.json()
+      if (!r.ok || !d.ok) throw new Error(d.error || `HTTP ${r.status}`)
+      const set = new Set((d.files || []).map(String))
+      setAutoExisting(set)
+      const existed = autoGroups.reduce((n, g) => n + g.files.filter(f => set.has(f.name)).length, 0)
+      const fresh = autoTotalVideos - existed
+      setAutoScanMsg(`✓ Quét xong: ${fresh} video MỚI, ${existed} đã có ad. (Tài khoản ${autoAccount})`)
+    } catch (e) {
+      setAutoExisting(null)
+      setAutoScanMsg("✗ Lỗi quét: " + e.message)
+    } finally {
+      setAutoScanBusy(false)
+    }
+  }
 
   const handleAutoRun = async () => {
     if (autoBusy || autoGroups.length === 0) return
@@ -674,11 +707,17 @@ function AdsCreatorPanel() {
     const results = []
     try {
       for (const g of autoGroups) {
-        pushLog(`▶ Sản phẩm "${g.product}" — ${g.files.length} video`)
+        // Chỉ chạy video MỚI (chưa có ad). Đã quét + cả nhóm đều cũ → bỏ qua.
+        const files = g.files.filter(isNewFile)
+        if (files.length === 0) {
+          pushLog(`▶ "${g.product}" — bỏ qua (tất cả video đã có ad)`)
+          continue
+        }
+        pushLog(`▶ Sản phẩm "${g.product}" — ${files.length} video mới`)
         const adsArr = []
         try {
-          for (let i = 0; i < g.files.length; i++) {
-            const file = g.files[i]
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i]
             const baseName = file.name.replace(/\.[^.]+$/, "")
             // 1) AI viết caption
             pushLog(`  • [${file.name}] AI viết caption...`)
@@ -719,8 +758,9 @@ function AdsCreatorPanel() {
               ad_name: `${g.product} - ${baseName}`,
               headline, ad_copy: adCopy, cta: autoCta, link: autoLink,
               url_tags: "", video_id: ud.video_id, thumbnail_url: ud.thumbnail_url,
+              filename: file.name, // để ghi sổ uploaded_videos sau khi tạo ad
             })
-            pushLog(`    ✓ video ${i + 1}/${g.files.length} xong`)
+            pushLog(`    ✓ video ${i + 1}/${files.length} xong`)
           }
           // 3) Tạo campaign cho cả nhóm (1 campaign → 1 adset → nhiều ad)
           pushLog(`  • Tạo campaign "${g.product}" với ${adsArr.length} quảng cáo...`)
@@ -754,6 +794,29 @@ function AdsCreatorPanel() {
           const cd = await cr.json()
           if (!cr.ok || !cd.success) throw new Error(`[${cd.step || "?"}] ${cd.error || "lỗi tạo camp"}`)
           pushLog(`  ✓ Xong campaign "${g.product}" (PAUSED)`)
+          // 4) Ghi sổ video đã upload (để lần quét sau bỏ qua). cd.ads cùng thứ tự adsArr.
+          try {
+            const records = adsArr.map((a, idx) => ({
+              filename: a.filename,
+              video_id: a.video_id,
+              ad_id: (cd.ads && cd.ads[idx]) ? cd.ads[idx].ad_id : null,
+              product: g.product,
+              campaign_id: cd.campaign_id,
+            }))
+            await fetch("/api/uploaded-videos", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "X-Optimizer-Token": optToken },
+              body: JSON.stringify({ account_id: autoAccount, videos: records }),
+            })
+            // Cập nhật sổ tại chỗ để UI phản ánh ngay (không cần quét lại).
+            setAutoExisting(curr => {
+              const next = new Set(curr || [])
+              for (const a of adsArr) next.add(a.filename)
+              return next
+            })
+          } catch (recErr) {
+            pushLog(`    ⚠ tạo ad OK nhưng ghi sổ lỗi: ${recErr.message} (lần quét sau có thể trùng)`)
+          }
           results.push({ product: g.product, ok: true, campaign_id: cd.campaign_id, ads_created: (cd.ads || []).length, ads_manager_url: cd.ads_manager_url })
         } catch (err) {
           pushLog(`  ✗ "${g.product}" lỗi: ${err.message}`)
@@ -1012,20 +1075,54 @@ function AdsCreatorPanel() {
 
             {autoGroups.length > 0 && (
               <div className="mt-4 space-y-2">
-                <p className="text-xs font-semibold text-gray-600">Tìm thấy {autoTotalVideos} video trong {autoGroups.length} sản phẩm:</p>
-                {autoGroups.map(g => (
+                <p className="text-xs font-semibold text-gray-600">
+                  Tìm thấy {autoTotalVideos} video trong {autoGroups.length} sản phẩm
+                  {autoExisting && <span className="text-gray-500"> · <span className="text-green-700 font-bold">{autoNewVideos} mới</span>, {autoExistingCount} đã có ad</span>}:
+                </p>
+                {autoGroups.map(g => {
+                  const newCnt = g.files.filter(isNewFile).length
+                  return (
                   <div key={g.product} className="border border-gray-200 rounded-lg p-3">
-                    <p className="text-sm font-bold text-gray-800">📁 {g.product} <span className="font-normal text-gray-400">— {g.files.length} video → 1 campaign</span></p>
-                    <p className="text-[11px] text-gray-500 mt-1 truncate">{g.files.map(f => f.name).join(", ")}</p>
+                    <p className="text-sm font-bold text-gray-800">📁 {g.product}
+                      <span className="font-normal text-gray-400"> — {g.files.length} video → 1 campaign</span>
+                      {autoExisting && <span className={"ml-2 text-[11px] font-bold " + (newCnt > 0 ? "text-green-700" : "text-gray-400")}>({newCnt} mới)</span>}
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {g.files.map(f => {
+                        const isNew = isNewFile(f)
+                        return (
+                          <span key={f.name}
+                            className={"text-[11px] px-2 py-0.5 rounded-full border " +
+                              (!autoExisting ? "bg-gray-50 text-gray-600 border-gray-200"
+                                : isNew ? "bg-green-50 text-green-700 border-green-300"
+                                : "bg-gray-100 text-gray-400 border-gray-200 line-through")}>
+                            {autoExisting && (isNew ? "🆕 " : "✓ ")}{f.name}
+                          </span>
+                        )
+                      })}
+                    </div>
                   </div>
-                ))}
+                )})}
               </div>
             )}
 
-            <button onClick={handleAutoRun} disabled={autoBusy || autoGroups.length === 0}
-              className={"mt-4 w-full py-3 rounded-lg text-sm font-bold text-white " + (autoBusy || autoGroups.length === 0 ? "bg-gray-300 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700")}>
-              {autoBusy ? "Đang chạy, đừng đóng tab..." : `⚡ Tạo ${autoGroups.length || ""} campaign tự động (${autoTotalVideos} video)`}
-            </button>
+            {autoScanMsg && (
+              <p className={"mt-3 text-xs font-semibold " + (autoScanMsg.startsWith("✗") ? "text-red-600" : "text-green-700")}>{autoScanMsg}</p>
+            )}
+
+            <div className="mt-4 flex flex-col sm:flex-row gap-2">
+              <button onClick={handleAutoScan} disabled={autoScanBusy || autoBusy || autoGroups.length === 0}
+                className={"sm:w-auto px-4 py-3 rounded-lg text-sm font-bold border-2 " + (autoScanBusy || autoBusy || autoGroups.length === 0 ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed" : "bg-white text-indigo-700 border-indigo-300 hover:bg-indigo-50")}>
+                {autoScanBusy ? "Đang quét..." : "🔍 Quét video"}
+              </button>
+              <button onClick={handleAutoRun} disabled={autoBusy || autoScanBusy || autoNewVideos === 0}
+                className={"flex-1 py-3 rounded-lg text-sm font-bold text-white " + (autoBusy || autoScanBusy || autoNewVideos === 0 ? "bg-gray-300 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700")}>
+                {autoBusy ? "Đang chạy, đừng đóng tab..."
+                  : autoNewVideos === 0 ? (autoExisting ? "✓ Không có video mới" : "Chọn folder trước")
+                  : `⬆️ Upload ${autoNewVideos} video mới${autoExisting ? "" : " (bấm Quét để lọc trùng)"}`}
+              </button>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-2">Bấm <b>🔍 Quét video</b> để app đối chiếu sổ đã upload và bỏ qua video đã có ad. Bỏ qua bước quét thì sẽ upload tất cả video trong folder.</p>
           </div>
 
           {/* Tiến trình + kết quả */}
