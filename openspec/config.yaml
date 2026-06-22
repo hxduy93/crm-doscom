@@ -1,0 +1,86 @@
+# Cấu hình OpenSpec cho dự án CRM Doscom.
+# `context` được tự động nạp vào MỌI yêu cầu OpenSpec (propose/design/specs/tasks)
+# → đây là cách OpenSpec "nhận diện" dự án. `rules` là luật riêng theo từng loại tài liệu.
+
+schema: spec-driven
+
+context: |
+  # CRM Doscom — Hiến pháp dự án (AI đọc trước khi đề xuất/viết code)
+
+  ## Bối cảnh
+  CRM nội bộ của Doscom (bán thiết bị ô tô + dòng chăm sóc xe Noma), gồm nhiều
+  agent/module độc lập trong `functions/api/`. Giao tiếp với UI qua HTTP JSON.
+  Ngôn ngữ trả lời người dùng cuối: 100% TIẾNG VIỆT có dấu.
+
+  ## Tech stack
+  - Cloudflare Pages Functions (routing theo thư mục `functions/`); handler
+    `onRequestGet` / `onRequestPost` / `onRequestOptions`. JavaScript thuần (ES modules), KHÔNG TypeScript.
+  - Lưu trữ: D1 (binding `DB`, db `crm-doscom-db`) cho đơn Noma911; KV (binding
+    `INVENTORY`) cache AI + cấu hình + inventory; Workers AI (binding `AI`) làm fallback.
+  - AI: Claude `claude-haiku-4-5` qua Cloudflare AI Gateway `doscom-erp`, fallback Llama 70B→8B.
+  - Frontend: HTML tĩnh + đọc snapshot `data/*.json` cùng origin; build output `dist/`.
+  - Deploy: Cloudflare Pages → crm-doscom.pages.dev; cấu hình ở `wrangler.toml`.
+
+  ## Các agent ĐÃ CÓ (đọc spec ở openspec/specs/ trước khi làm mới — TÁI DÙNG, đừng viết trùng)
+  - agent-fb-ai        : POST /api/agent-fb-ai — audit/optimize FB Ads (7 mode), cache KV + history.
+  - agent-google-ai    : POST /api/agent-google-ai — audit/suggest Google Ads (11 mode), cache KV.
+  - agent-weekly-ai    : POST /api/weekly-ai — nhận xét báo cáo tuần (Claude, không fallback).
+  - noma911-orders     : POST /api/noma911/order + GET /api/noma911/stats — thu & thống kê đơn (D1).
+  - agent-geo          : ~15 endpoint /api/geo/* — theo dõi brand trong AI + pipeline nội dung (D1 + WordPress).
+
+  ## Quy ước API
+  - Endpoint theo cây thư mục: `/api/{resource}` hoặc `/api/{resource}/{sub}`.
+  - POST cho agent phân tích (body JSON); GET cho truy vấn thống kê (query params).
+  - Có `onRequestOptions` cho CORS khi landing khác origin gọi sang.
+  - KHÔNG dùng versioning `/api/v1` (QUYẾT 2026-06-15): CRM nội bộ, frontend + backend deploy
+    cùng lúc nên đổi API thì đổi cả 2 — không cần version. Chỉ cân nhắc khi có client ngoài
+    (vd landing noma, bên thứ 3) cần giữ tương thích lâu dài.
+  - Response: chuẩn `{ ok: boolean, data?, error? }` áp dụng cho agent MỚI. KHÔNG viết lại agent
+    cũ chỉ để đổi khuôn (tránh breaking change frontend) — chỉ chuẩn hoá khi đã đụng vào agent đó.
+    (Hiện cũ chưa nhất quán: weekly-ai/noma911 dùng `{ ok }`, fb-ai/google-ai trả thẳng object.)
+
+  ## Xác thực
+  - CHỦ Ý để PUBLIC trong giai đoạn hoàn thiện (QUYẾT 2026-06-15): sẽ cài đăng nhập
+    (Cloudflare Access) SAU KHI sửa xong giao diện/tính năng. Khi làm tính năng mới, KHÔNG cần
+    tự thêm gate đăng nhập — nhưng cũng đừng phụ thuộc vào việc có sẵn auth.
+  - Ngoại lệ luôn đúng: endpoint GHI dữ liệu / nhận webhook từ ngoài PHẢI có token (vd
+    noma911/order dùng header X-Noma-Token == env.NOMA911_INGEST_TOKEN). Agent ghi-DB mới PHẢI bảo vệ tương tự.
+
+  ## RED LINES (không được vi phạm)
+  - KHÔNG hard-code secret/token → dùng `env` (ANTHROPIC_API_KEY, CF_ACCOUNT_ID, NOMA911_INGEST_TOKEN...).
+  - Gọi Claude PHẢI qua AI Gateway `doscom-erp`; giữ kill switch env `USE_CLAUDE=false` để revert Llama.
+  - Mode AI tốn tiền PHẢI cache KV (key gồm version + ngày VN) để F5 cùng ngày không tốn credit.
+  - AI output deterministic (cùng input → cùng output), KHÔNG random text/emoji.
+  - KHÔNG đổi schema D1 trực tiếp → thêm file `migrations/000X_*.sql` mới.
+  - KHÔNG bịa số liệu; thiếu data thì ghi rõ "thiếu dữ liệu".
+  - 1 agent KHÔNG tự ý đọc DB của agent khác → gọi qua API/spec công khai.
+
+  ## LUẬT TÍNH DỮ LIỆU (đã từng sai — bắt buộc tuân thủ)
+  - Chi phí quảng cáo = `accounts.daily.spend` (FB) + `google_ads.by_category` (Google).
+  - Lợi nhuận = Doanh thu − VAT 10% − chi phí QC − giá vốn (units × gia_nhap_vnd).
+  - Doanh thu theo nhân sự/nguồn = loại trạng thái returning/returned/canceled (afterReturns).
+  - Bảng lợi nhuận dùng `revenue.products` (gộp mọi trạng thái = revenueByProd).
+  - Doanh thu Facebook brand tính CẤP ĐƠN (order-level), KHÔNG per-SKU
+    (combo Noma đúng ≈ 244k/đơn khớp Pancake, sai thành ~200k nếu tính per-SKU).
+  - Noma = tổng đơn FB − Doscom(per-product). FB_PAGE = Messenger organic (không gồm Website/Google/Zalo/Hotline).
+  - Data Google (Windsor.ai) trễ ~2 ngày so với FB → kỳ "tuần này" Google thiếu 1-2 ngày cuối là BÌNH THƯỜNG.
+
+  ## Quy trình
+  - Thay đổi đáng kể đi qua workflow OpenSpec: /opsx:propose → design/tasks → implement → /opsx:sync hoặc /opsx:archive.
+  - Sau khi viết/sửa code: TỰ chạy `node --test tests/`, sửa tới khi xanh mới báo xong. Phần có tính toán
+    dữ liệu mà chưa có test thì viết thêm test trong tests/ theo LUẬT TÍNH DỮ LIỆU ở trên.
+  - Phát hiện mâu thuẫn (khác khuôn/cách tính phần đã có, hoặc trái luật) → DỪNG và hỏi người dùng, không tự quyết.
+
+# Luật riêng theo từng loại tài liệu (cộng thêm vào hướng dẫn mặc định của schema)
+rules:
+  proposal:
+    - "Đọc toàn bộ openspec/specs/ trước; nếu đã có agent làm việc tương tự thì đề xuất TÁI DÙNG thay vì tạo mới."
+    - "Nêu rõ Breaking change (Có/Không) và các agent bị ảnh hưởng."
+  specs:
+    - "Mỗi Requirement phải có ít nhất 1 #### Scenario (WHEN/THEN)."
+    - "Nếu liên quan tính toán dữ liệu, Scenario phải phản ánh đúng LUẬT TÍNH DỮ LIỆU trong context."
+  design:
+    - "Tôn trọng tech stack hiện có: Cloudflare Pages Functions + D1/KV/AI; không thêm framework/build step cho functions."
+    - "Endpoint ghi dữ liệu phải có token bảo vệ; mode AI tốn tiền phải có cache KV + kill switch USE_CLAUDE."
+  tasks:
+    - "Chia nhỏ, làm tuần tự; sau mỗi task nên commit. Không gộp nhiều task khác nhau vào 1 lần."
