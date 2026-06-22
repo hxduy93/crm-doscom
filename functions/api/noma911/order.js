@@ -86,6 +86,28 @@ export async function onRequestPost(context) {
       row.created_at, row.created_date, row.ip
     ).run();
 
+    // Fan-out song song sang CRM Doscom (D1 riêng) — KHÔNG block đơn chính, lỗi CRM bỏ qua.
+    // CRM tự tính amount/created_date từ combo + timestamp (xem crm /api/noma911/order).
+    if (env.CRM_INGEST_TOKEN && context.waitUntil) {
+      context.waitUntil(
+        fetch("https://crm-doscom.pages.dev/api/noma911/order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Noma-Token": env.CRM_INGEST_TOKEN },
+          body: JSON.stringify({
+            staff: row.staff,
+            combo: row.combo,
+            gift: row.gift,
+            source: row.source,
+            province: row.province,
+            phone: row.phone,
+            url: row.url,
+            referrer: row.referrer,
+            timestamp: new Date(row.created_at * 1000).toISOString(),
+          }),
+        }).catch(() => {})
+      );
+    }
+
     return json({ ok: true, stored: { combo: row.combo, combo_label: row.combo_label, amount: row.amount, staff: row.staff } });
   } catch (err) {
     return json({ ok: false, error: String(err?.message || err).slice(0, 300) }, 500);
