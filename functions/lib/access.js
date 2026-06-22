@@ -15,7 +15,6 @@ const ACCOUNT_TO_GROUPS = {
   "764394829882083": { name: "Doscom - Noma.vn - Giải Pháp Chăm Sóc Xe Hơi Toàn Diện", staff: "PHUONG_NAM", active: true },
   "906015559004892": { name: "Doscom Mart", staff: "PHUONG_NAM", active: true },
   "1416634670476226": { name: "CÔNG TY TNHH DOSCOM HOLDINGS - Doscom Mart", staff: "PHUONG_NAM", active: true },
-  "1418124406240173": { name: "DA8.1 mới (PN, chưa chạy)", staff: "PHUONG_NAM", active: true },
 };
 // Mặc định mọi email (qua được Cloudflare Access) = admin.
 // Chỉ liệt kê ở đây những email cần GIỚI HẠN quyền (role "staff").

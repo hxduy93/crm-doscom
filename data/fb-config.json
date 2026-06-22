@@ -52,13 +52,6 @@
       "groups": [],
       "active": true,
       "products_note": "Chưa chạy QC"
-    },
-    "1418124406240173": {
-      "name": "DA8.1 mới (PN, chưa chạy)",
-      "staff": "PHUONG_NAM",
-      "groups": ["CAMERA_VIDEO_CALL"],
-      "active": true,
-      "products_note": "DA8.1 (camera video call) — account mới chuẩn bị chạy"
     }
   },
   "_note_906": "Account 906015559004892 (DoscomMart) — spend trước 2026-05-29 tính cho PHUONG_NAM (lịch sử giữ nguyên); từ 2026-05-29 trở đi spend tính cho AI_AGENT (xem fb-ads-auto-agent/). Logic backend phải check loaned_from_date: spend.date < loaned_from_date → staff = staff cũ; spend.date >= loaned_from_date → staff = loaned_to_staff. Khôi phục: xóa 2 field loaned_to_staff + loaned_from_date, sửa products_note về 'D1 (máy dò)'.",
