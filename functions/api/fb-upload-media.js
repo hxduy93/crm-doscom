@@ -82,9 +82,10 @@ async function uploadImage(accountId, file, token) {
   return first.hash;
 }
 
-// Poll FB cho đến khi video.status.video_status = "ready". Endpoint riêng nên có
-// thể chờ lâu hơn (22s) so với create-campaign cũ.
-async function waitForVideoReady(videoId, token, maxWaitMs = 22000, pollIntervalMs = 2500) {
+// Poll FB cho đến khi video.status.video_status = "ready". Endpoint riêng nên chờ
+// lâu hơn create-campaign — nâng lên 40s để video nặng kịp encode (CF Pages Functions
+// cho phép chờ I/O dài hơn limit CPU). Video quá lớn vẫn nên nén < ~30MB.
+async function waitForVideoReady(videoId, token, maxWaitMs = 40000, pollIntervalMs = 3000) {
   const start = Date.now();
   let lastStatus = "unknown";
   while (Date.now() - start < maxWaitMs) {
