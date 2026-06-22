@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-23 01:42",
+  "generated_at": "2026-06-23 04:28",
   "source_data_date_range": {
     "start_7d": "2026-06-14",
     "end": "2026-06-20",
@@ -1670,46 +1670,6 @@
         ]
       },
       {
-        "search_term": "thiết bị dò camera ẩn",
-        "spend_30d": 19844.0,
-        "clicks_30d": 5,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.5556,
-        "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
-        "search_term": "thiết bị dò định vị trên xe ô tô",
-        "spend_30d": 46999.0,
-        "clicks_30d": 13,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.5,
-        "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
-        "search_term": "máy ghi âm mini kết nối điện thoại",
-        "spend_30d": 93177.0,
-        "clicks_30d": 12,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.2182,
-        "match_types": [
-          "NEAR_PHRASE",
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
         "search_term": "camera không dây",
         "spend_30d": 97469.0,
         "clicks_30d": 25,
@@ -1733,6 +1693,47 @@
         ],
         "statuses": [
           "NONE"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm mini kết nối điện thoại",
+        "spend_30d": 93177.0,
+        "clicks_30d": 12,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.2182,
+        "match_types": [
+          "NEAR_PHRASE",
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "máy phát hiện ghi âm ghi hình",
+        "spend_30d": 27574.0,
+        "clicks_30d": 7,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.28,
+        "match_types": [
+          "BROAD",
+          "NEAR_PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "thiết bị dò camera ẩn",
+        "spend_30d": 19844.0,
+        "clicks_30d": 5,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.5556,
+        "match_types": [
+          "EXACT"
+        ],
+        "statuses": [
+          "ADDED"
         ]
       }
     ],
@@ -2124,23 +2125,17 @@
       }
     ],
     "match_type_breakdown": {
-      "EXACT": {
-        "spend_30d": 1604541.0,
-        "clicks_30d": 334,
-        "conversions_30d": 2.0,
-        "term_count": 75
+      "BROAD": {
+        "spend_30d": 10861047.0,
+        "clicks_30d": 1372,
+        "conversions_30d": 39.97,
+        "term_count": 1993
       },
       "NEAR_PHRASE": {
         "spend_30d": 3896402.0,
         "clicks_30d": 863,
         "conversions_30d": 6.0,
         "term_count": 848
-      },
-      "BROAD": {
-        "spend_30d": 10861047.0,
-        "clicks_30d": 1372,
-        "conversions_30d": 39.97,
-        "term_count": 1993
       },
       "PHRASE": {
         "spend_30d": 4617838.0,
@@ -2153,6 +2148,12 @@
         "clicks_30d": 11,
         "conversions_30d": 0.0,
         "term_count": 1
+      },
+      "EXACT": {
+        "spend_30d": 1604541.0,
+        "clicks_30d": 334,
+        "conversions_30d": 2.0,
+        "term_count": 75
       }
     }
   },
