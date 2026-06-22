@@ -3,10 +3,11 @@
 // Danh tính lấy từ header `Cf-Access-Authenticated-User-Email` (Access tự gắn).
 // - Worker/nội bộ: gửi header `X-Internal-Token == env.OPTIMIZER_TOKEN` → full quyền.
 // - Access CHƯA bật (không có header email): trả role "open" = full (giữ nguyên giai đoạn public).
-// - Access bật: tra `staff_access` (email → role). admin = mọi account; staff = account có staff trùng.
+// - Access bật: MẶC ĐỊNH email nào qua được Access = admin (full account). Chỉ email liệt kê
+//   trong STAFF_ACCESS với role "staff" mới bị giới hạn theo `staff`.
 //
 // Sổ tài khoản + phân quyền nhúng TRỰC TIẾP (chắc chắn nhất — không import/fetch).
-// Đồng bộ account_to_groups với data/fb-config.json. Thêm email nhân sự vào STAFF_ACCESS.
+// Đồng bộ account_to_groups với data/fb-config.json. Chỉ thêm vào STAFF_ACCESS email cần GIỚI HẠN quyền.
 const ACCOUNT_TO_GROUPS = {
   "1449385949897024": { name: "CÔNG TY TNHH DOSCOM HOLDINGS - Công nghệ nâng tầm cuộc sống", staff: "DUY", active: true },
   "927390616363424": { name: "Doscom - Công nghệ nâng tầm cuộc sống", staff: "DUY", active: true },
@@ -16,9 +17,9 @@ const ACCOUNT_TO_GROUPS = {
   "1416634670476226": { name: "CÔNG TY TNHH DOSCOM HOLDINGS - Doscom Mart", staff: "PHUONG_NAM", active: true },
   "1418124406240173": { name: "DA8.1 mới (PN, chưa chạy)", staff: "PHUONG_NAM", active: true },
 };
+// Mặc định mọi email (qua được Cloudflare Access) = admin.
+// Chỉ liệt kê ở đây những email cần GIỚI HẠN quyền (role "staff").
 const STAFF_ACCESS = {
-  "kinhdoanh.doscom@gmail.com": { role: "admin" },
-  "doscom.vietnam@gmail.com": { role: "admin" },
   "tranphuongnam.2010tb@gmail.com": { role: "staff", staff: "PHUONG_NAM" },
 };
 
@@ -51,12 +52,9 @@ export async function getIdentity(context) {
     return { email: null, role: "open", accounts: activeAccountIds(conf), all: true, conf };
   }
 
-  // 3) Access bật → tra quyền
+  // 3) Access bật → tra quyền. MẶC ĐỊNH: không nằm trong STAFF_ACCESS (hoặc role admin) = admin.
   const access = (conf.staff_access || {})[email];
-  if (!access) {
-    return { email, role: "none", accounts: [], all: false, conf };
-  }
-  if (access.role === "admin") {
+  if (!access || access.role === "admin") {
     return { email, role: "admin", accounts: activeAccountIds(conf), all: true, conf };
   }
   const accts = Object.entries(conf.account_to_groups)
