@@ -19,7 +19,7 @@ const ACCOUNT_TO_GROUPS = {
 const STAFF_ACCESS = {
   "kinhdoanh.doscom@gmail.com": { role: "admin" },
   "doscom.vietnam@gmail.com": { role: "admin" },
-  // Thêm email nhân sự: "namphuong@gmail.com": { role: "staff", staff: "PHUONG_NAM" },
+  "tranphuongnam.2010tb@gmail.com": { role: "staff", staff: "PHUONG_NAM" },
 };
 
 async function loadConfig(_env) {
