@@ -22,6 +22,7 @@ binding = "AI"
 #   - ANTHROPIC_API_KEY  (Claude)
 #   - FB_ACCESS_TOKEN    (Meta token có quyền trên TK 927390616363424 — cho /api/optimizer/* + tạo camp)
 #   - OPTIMIZER_TOKEN    (mật khẩu để LƯU danh sách bảo vệ / shadow / killswitch từ UI)
+#   - FB_EXPORT_TOKEN    (Bearer token cho /api/export/fb-ad-spend — đối tác facebook-data-sync kéo data)
 [vars]
 CF_ACCOUNT_ID = "cffb0c35f8c649872436b2087a64b7bc"
 # URL Worker agent tối ưu (để UI xem agent vừa làm gì).
