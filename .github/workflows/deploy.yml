@@ -27,8 +27,10 @@ jobs:
           cp index.html dist/
           cp -r data dist/data
           if [ -d demos ]; then cp -r demos dist/demos; fi
+          # Hermes chat widget — inject vào index.html qua <script src="/hermes-widget.js">.
+          if [ -f hermes-widget.js ]; then cp hermes-widget.js dist/; fi
           # Trang standalone (nhúng iframe trong CRM) — phải copy thủ công.
-          for page in agent-geo-doscom.html ads-creator.html; do
+          for page in agent-geo-doscom.html ads-creator.html agent-hermes-chat.html; do
             if [ -f "$page" ]; then cp "$page" dist/; fi
           done
           # Functions (functions/) được wrangler tự bundle từ gốc repo → không cần copy.

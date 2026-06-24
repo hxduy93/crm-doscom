@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hermes Chat — Doscom CRM</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f7fb; margin: 0; padding: 0; color: #111827; }
+  .app { display: grid; grid-template-columns: 240px 1fr; height: 100vh; }
+
+  /* Sidebar — session list */
+  .sidebar { background: #1f2937; color: white; padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+  .sidebar h2 { margin: 0 0 4px; font-size: 13px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.5px; }
+  .btn-new { background: #3b82f6; color: white; border: none; padding: 10px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; justify-content: center; }
+  .btn-new:hover { background: #2563eb; }
+  .session-item { padding: 8px 10px; border-radius: 5px; cursor: pointer; font-size: 12.5px; color: #d1d5db; transition: all 0.15s; position: relative; }
+  .session-item:hover { background: #374151; color: white; }
+  .session-item.active { background: #2563eb; color: white; }
+  .session-item .title { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .session-item .meta { font-size: 10px; opacity: 0.6; margin-top: 2px; }
+  .session-item .del { position: absolute; right: 6px; top: 6px; opacity: 0; cursor: pointer; font-size: 11px; padding: 2px 4px; }
+  .session-item:hover .del { opacity: 0.7; }
+  .session-item .del:hover { opacity: 1; color: #fca5a5; }
+
+  /* Main chat area */
+  .main { display: flex; flex-direction: column; height: 100vh; background: white; }
+  .topbar { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .topbar h1 { margin: 0; font-size: 16px; }
+  .topbar h1 .badge { background: #3b82f6; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 6px; }
+  .topbar .stats { font-size: 11px; color: #6b7280; }
+
+  .messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.user { background: #3b82f6; color: white; align-self: flex-end; border-bottom-right-radius: 3px; }
+  .msg.assistant { background: #f3f4f6; color: #111827; align-self: flex-start; border-bottom-left-radius: 3px; }
+  .msg.system { background: #fef3c7; color: #78350f; align-self: center; font-size: 11.5px; max-width: 90%; }
+  .msg .tools-used { margin-top: 6px; padding-top: 6px; border-top: 1px dashed #d1d5db; font-size: 10.5px; opacity: 0.8; }
+  .msg .tools-used code { background: rgba(0,0,0,0.05); padding: 1px 4px; border-radius: 3px; }
+  .msg table { border-collapse: collapse; margin: 6px 0; font-size: 12px; }
+  .msg th, .msg td { border: 1px solid #d1d5db; padding: 4px 8px; text-align: left; }
+  .msg th { background: rgba(0,0,0,0.05); }
+
+  .typing { font-size: 12px; color: #6b7280; padding: 4px 14px; font-style: italic; }
+  .typing::after { content: '...'; animation: dots 1s steps(4, end) infinite; }
+  @keyframes dots { 0%, 20% { content: ''; } 40% { content: '.'; } 60% { content: '..'; } 80%, 100% { content: '...'; } }
+
+  /* Suggestion chips */
+  .suggestions { padding: 8px 16px; border-top: 1px solid #e5e7eb; display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { padding: 5px 10px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 14px; font-size: 11.5px; cursor: pointer; transition: all 0.15s; }
+  .chip:hover { background: #dbeafe; }
+
+  /* Input */
+  .input-row { padding: 12px 16px; border-top: 1px solid #e5e7eb; display: flex; gap: 8px; }
+  .input-row textarea { flex: 1; resize: none; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 12px; font-size: 13.5px; font-family: inherit; min-height: 44px; max-height: 140px; outline: none; }
+  .input-row textarea:focus { border-color: #3b82f6; }
+  .input-row button { background: #3b82f6; color: white; border: none; border-radius: 8px; padding: 0 18px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .input-row button:hover { background: #2563eb; }
+  .input-row button:disabled { background: #9ca3af; cursor: not-allowed; }
+
+  .empty-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: #6b7280; text-align: center; padding: 40px; }
+  .empty-hero h2 { margin: 0; font-size: 22px; color: #111827; }
+  .empty-hero p { margin: 0; font-size: 13px; max-width: 460px; line-height: 1.6; }
+  .empty-hero .examples { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; max-width: 540px; }
+  .empty-hero .ex-card { padding: 10px 14px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; text-align: left; font-size: 12.5px; transition: all 0.15s; }
+  .empty-hero .ex-card:hover { border-color: #3b82f6; background: #eff6ff; }
+  .empty-hero .ex-card strong { display: block; color: #1e40af; margin-bottom: 2px; }
+
+  @media (max-width: 768px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .msg { max-width: 95%; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <button class="btn-new" onclick="newConversation()">＋ Hội thoại mới</button>
+    <h2>Lịch sử chat</h2>
+    <div id="session-list" style="display: flex; flex-direction: column; gap: 4px;"></div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <h1>💬 Hermes Chat <span class="badge">v1 read-only</span></h1>
+      <div class="stats" id="stats">—</div>
+    </div>
+
+    <div class="messages" id="messages"></div>
+    <div class="typing" id="typing" style="display: none;">Hermes đang suy nghĩ</div>
+
+    <div class="suggestions" id="suggestions">
+      <span class="chip" onclick="sendQuick('Spend FB tháng này của Phương Nam là bao nhiêu?')">Spend Phương Nam tháng này</span>
+      <span class="chip" onclick="sendQuick('KPI tháng này đạt bao nhiêu %?')">KPI tháng này</span>
+      <span class="chip" onclick="sendQuick('Có bài GEO nào chờ duyệt không?')">GEO chờ duyệt</span>
+      <span class="chip" onclick="sendQuick('So sánh spend DUY và PHƯƠNG NAM tháng này')">So sánh 2 staff</span>
+      <span class="chip" onclick="sendQuick('Spend hôm qua tổng cộng bao nhiêu?')">Spend hôm qua</span>
+    </div>
+
+    <div class="input-row">
+      <textarea id="input" placeholder="Hỏi Hermes về dữ liệu FB Ads, KPI, GEO content... (Enter để gửi, Shift+Enter xuống dòng)" rows="1"></textarea>
+      <button id="send-btn" onclick="sendMessage()">Gửi</button>
+    </div>
+  </main>
+</div>
+
+<script>
+let currentSessionId = null;
+let isSending = false;
+
+function escapeHtml(s) {
+  return String(s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function renderMarkdown(text) {
+  // Tối giản: bold, italic, code, table, line break
+  let html = escapeHtml(text);
+  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+  // Tables (line bắt đầu | và | ... |)
+  const lines = html.split("\n");
+  let inTable = false, tableHtml = "";
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*\|.+\|\s*$/.test(line)) {
+      if (!inTable) { inTable = true; tableHtml = "<table>"; }
+      const isSep = /^\s*\|[\s\-:|]+\|\s*$/.test(line);
+      if (isSep) continue;
+      const cells = line.trim().slice(1, -1).split("|").map(c => c.trim());
+      const tag = (i + 1 < lines.length && /^\s*\|[\s\-:|]+\|\s*$/.test(lines[i + 1])) ? "th" : "td";
+      tableHtml += "<tr>" + cells.map(c => `<${tag}>${c}</${tag}>`).join("") + "</tr>";
+    } else {
+      if (inTable) { tableHtml += "</table>"; out.push(tableHtml); inTable = false; tableHtml = ""; }
+      out.push(line);
+    }
+  }
+  if (inTable) { tableHtml += "</table>"; out.push(tableHtml); }
+  return out.join("<br>");
+}
+
+function fmtTime(ms) {
+  const d = new Date(ms);
+  const now = Date.now();
+  const diff = (now - ms) / 1000;
+  if (diff < 60) return "vừa xong";
+  if (diff < 3600) return Math.round(diff / 60) + "p trước";
+  if (diff < 86400) return Math.round(diff / 3600) + "h trước";
+  return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+}
+
+async function loadSessions() {
+  try {
+    const r = await fetch("/api/hermes/sessions", { credentials: "same-origin" });
+    const j = await r.json();
+    if (!j.ok) return;
+    const list = document.getElementById("session-list");
+    list.innerHTML = j.sessions.map(s => `
+      <div class="session-item ${s.id === currentSessionId ? 'active' : ''}" onclick="loadSession('${s.id}')">
+        <span class="title">${escapeHtml(s.title)}</span>
+        <span class="meta">${s.message_count} tin · ${fmtTime(s.updated_at)}</span>
+        <span class="del" onclick="event.stopPropagation(); deleteSession('${s.id}')">✕</span>
+      </div>
+    `).join("");
+  } catch (e) { console.error(e); }
+}
+
+async function loadSession(id) {
+  currentSessionId = id;
+  document.getElementById("messages").innerHTML = '<div class="typing">Đang tải lịch sử</div>';
+  try {
+    const r = await fetch("/api/hermes/history?session_id=" + encodeURIComponent(id), { credentials: "same-origin" });
+    const j = await r.json();
+    if (!j.ok) { document.getElementById("messages").innerHTML = '<div class="msg system">Lỗi: ' + escapeHtml(j.error) + '</div>'; return; }
+    renderMessages(j.messages);
+    loadSessions();  // refresh sidebar active state
+  } catch (e) {
+    document.getElementById("messages").innerHTML = '<div class="msg system">Lỗi tải: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+async function deleteSession(id) {
+  if (!confirm("Xóa hội thoại này?")) return;
+  try {
+    const r = await fetch("/api/hermes/sessions?id=" + encodeURIComponent(id), { method: "DELETE", credentials: "same-origin" });
+    const j = await r.json();
+    if (!j.ok) { alert("Lỗi xóa: " + (j.error || "")); return; }
+    if (id === currentSessionId) newConversation();
+    loadSessions();
+  } catch (e) { alert("Lỗi: " + e.message); }
+}
+
+function newConversation() {
+  currentSessionId = null;
+  document.getElementById("messages").innerHTML = `
+    <div class="empty-hero">
+      <h2>💬 Bắt đầu hội thoại</h2>
+      <p>Hỏi Hermes về spend FB Ads, KPI, content GEO, hoặc tìm trong lịch sử chat trước. Agent có thể gọi tool để lấy số chuẩn từ data thực, không bịa.</p>
+      <div class="examples">
+        <div class="ex-card" onclick="sendQuick('Spend FB của 2 staff từ đầu tháng tới ngày 25/05')"><strong>📊 Báo cáo spend</strong>So sánh chi phí 2 nhân sự</div>
+        <div class="ex-card" onclick="sendQuick('KPI tháng này đạt bao nhiêu %?')"><strong>🎯 Tiến độ KPI</strong>Tháng này còn thiếu bao nhiêu</div>
+        <div class="ex-card" onclick="sendQuick('Liệt kê 5 bài GEO mới nhất status pending_review')"><strong>📝 GEO queue</strong>Bài content chờ duyệt</div>
+        <div class="ex-card" onclick="sendQuick('Tìm trong lịch sử: lần nào tôi hỏi về Noma 911')"><strong>🔍 Search lịch sử</strong>Tìm chat cũ bằng FTS5</div>
+      </div>
+    </div>`;
+  document.getElementById("stats").textContent = "—";
+  loadSessions();
+}
+
+function renderMessages(msgs) {
+  const box = document.getElementById("messages");
+  box.innerHTML = "";
+  for (const m of msgs) {
+    const div = document.createElement("div");
+    div.className = "msg " + m.role;
+    div.innerHTML = renderMarkdown(m.content);
+    box.appendChild(div);
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+function appendMessage(role, content, toolsUsed) {
+  const box = document.getElementById("messages");
+  // Nếu đang ở empty-hero thì xóa trước
+  if (box.querySelector(".empty-hero")) box.innerHTML = "";
+  const div = document.createElement("div");
+  div.className = "msg " + role;
+  div.innerHTML = renderMarkdown(content);
+  if (toolsUsed && toolsUsed.length) {
+    const t = document.createElement("div");
+    t.className = "tools-used";
+    t.innerHTML = "🔧 Đã gọi: " + toolsUsed.map(tu => `<code>${escapeHtml(tu.name)}</code>`).join(", ");
+    div.appendChild(t);
+  }
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendMessage() {
+  if (isSending) return;
+  const input = document.getElementById("input");
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = "";
+  isSending = true;
+  document.getElementById("send-btn").disabled = true;
+  document.getElementById("typing").style.display = "block";
+
+  appendMessage("user", text);
+
+  try {
+    const r = await fetch("/api/hermes/chat", {
+      method: "POST", credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: currentSessionId, message: text }),
+    });
+    const j = await r.json();
+    if (!j.ok) {
+      appendMessage("system", "❌ Lỗi: " + (j.error || "Unknown"));
+    } else {
+      currentSessionId = j.session_id;
+      appendMessage("assistant", j.response, j.tools_used);
+      document.getElementById("stats").textContent =
+        `${j.tokens_in}↓ ${j.tokens_out}↑ tokens · $${j.cost_usd.toFixed(4)} · ${j.tools_used.length} tool calls`;
+      loadSessions();
+    }
+  } catch (e) {
+    appendMessage("system", "❌ Lỗi mạng: " + e.message);
+  } finally {
+    isSending = false;
+    document.getElementById("send-btn").disabled = false;
+    document.getElementById("typing").style.display = "none";
+    input.focus();
+  }
+}
+
+function sendQuick(text) {
+  document.getElementById("input").value = text;
+  sendMessage();
+}
+
+// Enter to send, Shift+Enter for newline; auto-resize
+const input = document.getElementById("input");
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+input.addEventListener("input", () => {
+  input.style.height = "auto";
+  input.style.height = Math.min(input.scrollHeight, 140) + "px";
+});
+
+// Init
+newConversation();
+loadSessions();
+</script>
+</body>
+</html>
