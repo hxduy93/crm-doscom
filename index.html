@@ -272,10 +272,10 @@
       </section>
 
       <section class="mod wide" style="margin-bottom:16px" id="sec-staff">
-        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo nhân sự</h3></div><span class="s">Website/Hotline = gộp Website + Zalo + Hotline (kênh Google) · DT đã loại đơn hoàn/huỷ</span></div>
+        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo nhân sự</h3></div><span class="s">Website/Hotline = gộp Website + Zalo + Hotline (kênh Google) · DT &amp; Giá vốn đã loại đơn hoàn/huỷ · LN = DT − Chi phí QC − Giá vốn</span></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
-            <thead><tr><th>Nhân sự / Nguồn</th><th class="num">Chi phí QC</th><th class="num">Doanh thu</th><th class="num">ROAS</th><th class="num">Đơn</th><th class="num">Lãi gộp tạm (DT−chi)</th></tr></thead>
+            <thead><tr><th>Nhân sự / Nguồn</th><th class="num">Chi phí QC</th><th class="num">Doanh thu</th><th class="num">Giá vốn</th><th class="num">ROAS</th><th class="num">Đơn</th><th class="num">Lợi nhuận (DT−CP−GV)</th></tr></thead>
             <tbody id="staff-rows"></tbody>
           </table>
         </div>
@@ -507,6 +507,8 @@
   function pkRevenue(){ var r=(D.revenue||{}).order_revenue_by_status_by_date||{},s=0; for(var st in r){ s+=sumByDate(r[st]); } return s; }
   // theo nguồn/nhân sự
   function srcRevenue(key){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0; var r=g.order_revenue_by_status_by_date||{},s=0; for(var st in r){ if(EXCL[st])continue; s+=sumByDate(r[st]); } return s; }
+  // Giá vốn theo nguồn = Σ(số lượng bán × giá nhập kho), loại trạng thái hoàn/huỷ (khớp cách tính DT). product_costs đồng bộ từ facebookadsallinone.
+  function srcCogs(key){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0; var pbs=g.products_by_status||{},pc=D.product_costs||{},s=0; for(var st in pbs){ if(EXCL[st])continue; var prods=pbs[st]; for(var p in prods){ var cost=Number((pc[p]||{}).gia_nhap_vnd)||0; if(!cost)continue; s+=cost*sumByDate((prods[p]||{}).units_by_date); } } return s; }
   function srcOrders(key){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0; return sumByDate(g.total_orders_by_date); }
   function srcDailyOrders(key){ var g=((D.revenue||{}).source_groups||{})[key]; return g?(g.total_orders_by_date||{}):{}; }
   function staffSpend(s){ if(s.ad==='GOOGLE') return ggSpend(); if(!s.ad) return 0; var o=(D.ad_spend_by_staff||{})[s.ad]||{},sum=0; for(var p in o){ sum+=sumByDate(o[p].by_date); } return sum; }
@@ -545,22 +547,24 @@
       {label:'Website / Hotline', color:'#16A34A', keys:['WEBSITE','ZALO_OA','HOTLINE'], ad:'GOOGLE'},
       {label:'Page Facebook', color:'#F472B6', keys:['FB_PAGE'], ad:null}
     ];
-    var tRev=0,tSp=0,tOrd=0;
+    var tRev=0,tSp=0,tOrd=0,tCogs=0;
     var rows=STAFF_GROUPS.map(function(s){
       var sp=staffSpend({ad:s.ad});
       var rv=s.keys.reduce(function(t,k){return t+srcRevenue(k);},0);
+      var cg=s.keys.reduce(function(t,k){return t+srcCogs(k);},0);
       var od=s.keys.reduce(function(t,k){return t+srcOrders(k);},0);
-      tRev+=rv;tSp+=sp;tOrd+=od;
-      var roas=sp>0?(rv/sp):null;
+      tRev+=rv;tSp+=sp;tOrd+=od;tCogs+=cg;
+      var roas=sp>0?(rv/sp):null, ln=rv-sp-cg;
       return '<tr><td><span class="who"><i style="background:'+s.color+'"></i>'+s.label+'</span></td>'+
         '<td class="num tnum">'+(sp>0?vnd(sp):'—')+'</td>'+
         '<td class="num tnum">'+vnd(rv)+'</td>'+
+        '<td class="num tnum">'+(cg>0?vnd(cg):'—')+'</td>'+
         '<td class="num roas" style="color:'+(roas==null?'var(--text-2)':(roas>=1.5?'#16A34A':(roas>=1?'#E08600':'#E5484D')))+'">'+(roas!=null?roas.toFixed(2)+'×':'—')+'</td>'+
         '<td class="num tnum">'+num(od)+'</td>'+
-        '<td class="num tnum" style="color:'+((rv-sp)>=0?'#16A34A':'#E5484D')+'">'+vnd(rv-sp)+'</td></tr>';
+        '<td class="num tnum" style="color:'+(ln>=0?'#16A34A':'#E5484D')+'">'+vnd(ln)+'</td></tr>';
     }).join('');
-    var tRoas=tSp>0?(tRev/tSp):null;
-    rows+='<tr class="tot"><td>Tổng</td><td class="num tnum">'+vnd(tSp)+'</td><td class="num tnum">'+vnd(tRev)+'</td><td class="num">'+(tRoas!=null?tRoas.toFixed(2)+'×':'—')+'</td><td class="num tnum">'+num(tOrd)+'</td><td class="num tnum">'+vnd(tRev-tSp)+'</td></tr>';
+    var tRoas=tSp>0?(tRev/tSp):null, tLn=tRev-tSp-tCogs;
+    rows+='<tr class="tot"><td>Tổng</td><td class="num tnum">'+vnd(tSp)+'</td><td class="num tnum">'+vnd(tRev)+'</td><td class="num tnum">'+vnd(tCogs)+'</td><td class="num">'+(tRoas!=null?tRoas.toFixed(2)+'×':'—')+'</td><td class="num tnum">'+num(tOrd)+'</td><td class="num tnum" style="color:'+(tLn>=0?'#16A34A':'#E5484D')+'">'+vnd(tLn)+'</td></tr>';
     document.getElementById('staff-rows').innerHTML=rows;
     // biểu đồ ngày theo nhân sự
     drawDayChart();

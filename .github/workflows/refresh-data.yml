@@ -50,8 +50,10 @@ jobs:
 
       # Bot đẩy bằng GITHUB_TOKEN nên push KHÔNG kích hoạt deploy.yml (chống lặp vô hạn).
       # => Tự deploy ngay tại đây khi có dữ liệu mới, để web Cloudflare luôn cập nhật.
-      - name: Chuẩn bị thư mục deploy (chỉ khi dữ liệu đổi)
-        if: steps.commit.outputs.changed == 'true'
+      # Deploy khi dữ liệu đổi HOẶC khi bấm tay (workflow_dispatch) — để thay đổi code (index.html) cũng lên được web.
+      # refresh_data.py luôn chạy trước nên data trong dist luôn tươi, không dính lỗi "deploy data cũ".
+      - name: Chuẩn bị thư mục deploy (khi dữ liệu đổi hoặc bấm tay)
+        if: steps.commit.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           rm -rf dist && mkdir dist
           cp index.html dist/
@@ -61,8 +63,8 @@ jobs:
             if [ -f "$page" ]; then cp "$page" dist/; fi
           done
 
-      - name: Deploy lên Cloudflare Pages (chỉ khi dữ liệu đổi)
-        if: steps.commit.outputs.changed == 'true'
+      - name: Deploy lên Cloudflare Pages (khi dữ liệu đổi hoặc bấm tay)
+        if: steps.commit.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
         run: npx wrangler@4 pages deploy dist --project-name=crm-doscom --branch=master --commit-dirty=true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
