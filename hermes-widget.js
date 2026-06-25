@@ -77,6 +77,20 @@
     .hermes-typing::after { content: '...'; animation: hermes-dots 1s steps(4, end) infinite; }
     @keyframes hermes-dots { 0%, 20% { content: ''; } 40% { content: '.'; } 60% { content: '..'; } 80%, 100% { content: '...'; } }
 
+    /* Token-expiry alert badge (chấm đỏ trên FAB) */
+    #hermes-fab-badge {
+      position: absolute; top: -2px; right: -2px;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #ef4444; border: 2px solid white;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
+    }
+    /* Banner cảnh báo trong panel */
+    .hermes-alert {
+      padding: 9px 12px; background: #fef2f2; color: #991b1b;
+      border-bottom: 1px solid #fecaca; font-size: 12px; line-height: 1.45;
+      display: flex; align-items: flex-start; gap: 6px;
+    }
+
     /* Mobile responsive */
     @media (max-width: 540px) {
       #hermes-panel {
@@ -108,6 +122,7 @@
           <button id="hermes-close" title="Đóng">✕</button>
         </div>
       </div>
+      <div class="hermes-alert" id="hermes-alert" style="display:none"></div>
       <div class="hermes-messages" id="hermes-messages"></div>
       <div class="hermes-typing" id="hermes-typing" style="display:none">Hermes đang suy nghĩ</div>
       <div class="hermes-suggestions" id="hermes-suggestions">
@@ -292,6 +307,27 @@
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && isOpen) closePanel();
   });
+
+  // ─── Token-expiry alert ───────────────────────────────────────────────
+  // Gọi /api/hermes/alerts (kiểm hạn token FB). Còn ≤2 ngày hoặc token chết →
+  // chấm đỏ trên FAB (thấy ngay không cần mở) + banner đỏ trong panel.
+  const alertEl = document.getElementById("hermes-alert");
+  async function checkAlert() {
+    try {
+      const r = await fetch("/api/hermes/alerts", { credentials: "same-origin" });
+      const j = await r.json();
+      if (j && j.ok && j.alert && j.alert.active) {
+        alertEl.textContent = j.alert.msg;
+        alertEl.style.display = "flex";
+        if (!document.getElementById("hermes-fab-badge")) {
+          const b = document.createElement("span");
+          b.id = "hermes-fab-badge";
+          fab.appendChild(b);
+        }
+      }
+    } catch { /* im lặng — alert là phụ, không chặn widget */ }
+  }
+  checkAlert();
 
   showEmpty();
 
