@@ -379,6 +379,21 @@ def main():
         print(f"  [DONE] {len(campaigns)} campaigns · Spend: {total_spend:,.0f}₫ · Clicks: {total_clicks:,} · Leads: {total_leads}")
         time.sleep(1)  # Rate limit between accounts
 
+    # ── Guard: KHÔNG ghi đè snapshot thật bằng data rỗng ────────────────────
+    # Nếu 0/N account trả về row nào → fetch thất bại hoàn toàn (thường do
+    # FB_ACCESS_TOKEN hết hạn / OAuthException). Trước đây script vẫn ghi file
+    # spend=0 → lan sang dashboard CRM + Hermes thành "cpqc Facebook = 0đ".
+    # Giờ GIỮ NGUYÊN file cũ (last-known-good) và exit lỗi để Actions báo đỏ rõ.
+    accounts_with_data = sum(1 for a in accounts_data if a["rows_raw"] > 0)
+    if accounts_with_data == 0:
+        print(
+            f"[FATAL] 0/{len(accounts_data)} account trả về data — fetch thất bại "
+            f"(token FB hết hạn hoặc API lỗi). GIỮ NGUYÊN data/fb-ads-data.json cũ, "
+            f"KHÔNG ghi đè bằng spend=0. Hãy làm mới FB_ACCESS_TOKEN.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     # Build output
     output = {
         "generated_at": now_vn.strftime("%Y-%m-%d %H:%M"),
