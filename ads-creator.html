@@ -700,6 +700,8 @@ function AdsCreatorPanel() {
     }
   }
 
+  const MAX_CREATIVES = 3  // Luật: tối đa 3 creative (video) mỗi campaign.
+
   const handleAutoRun = async () => {
     if (autoBusy || autoGroups.length === 0) return
     setAutoBusy(true); setAutoResults([]); setAutoLog([])
@@ -708,12 +710,18 @@ function AdsCreatorPanel() {
     try {
       for (const g of autoGroups) {
         // Chỉ chạy video MỚI (chưa có ad). Đã quét + cả nhóm đều cũ → bỏ qua.
-        const files = g.files.filter(isNewFile)
-        if (files.length === 0) {
+        const newFiles = g.files.filter(isNewFile)
+        if (newFiles.length === 0) {
           pushLog(`▶ "${g.product}" — bỏ qua (tất cả video đã có ad)`)
           continue
         }
-        pushLog(`▶ Sản phẩm "${g.product}" — ${files.length} video mới`)
+        // Chia nhỏ thành các campaign tối đa MAX_CREATIVES video. >3 video → nhiều campaign.
+        const chunks = []
+        for (let s = 0; s < newFiles.length; s += MAX_CREATIVES) chunks.push(newFiles.slice(s, s + MAX_CREATIVES))
+        pushLog(`▶ Sản phẩm "${g.product}" — ${newFiles.length} video mới → ${chunks.length} campaign (tối đa ${MAX_CREATIVES} creative/campaign)`)
+        for (let ci = 0; ci < chunks.length; ci++) {
+        const files = chunks[ci]
+        const partLabel = chunks.length > 1 ? ` #${ci + 1}` : ""
         const adsArr = []
         const skipped = []
         try {
@@ -771,10 +779,10 @@ function AdsCreatorPanel() {
           if (skipped.length) pushLog(`  ⚠ ${skipped.length} video lỗi — giữ trạng thái "mới" để thử lại sau: ${skipped.join(", ")}`)
           if (adsArr.length === 0) throw new Error(`cả ${files.length} video đều upload lỗi — không tạo campaign`)
           // 3) Tạo campaign cho cả nhóm (1 campaign → 1 adset → nhiều ad)
-          pushLog(`  • Tạo campaign "${g.product}" với ${adsArr.length} quảng cáo...`)
+          pushLog(`  • Tạo campaign "${g.product}${partLabel}" với ${adsArr.length} quảng cáo...`)
           const config = {
-            campaign_name: `${g.product} - Doanh số - ${today}`,
-            adset_name: `${g.product} - AdSet - ${today}`,
+            campaign_name: `${g.product}${partLabel} - Doanh số - ${today}`,
+            adset_name: `${g.product}${partLabel} - AdSet - ${today}`,
             objective: "OUTCOME_SALES",
             buying_type: "AUCTION",
             account_id: autoAccount,
@@ -801,7 +809,7 @@ function AdsCreatorPanel() {
           const cr = await fetch("/api/create-campaign", { method: "POST", body: fd2 })
           const cd = await cr.json()
           if (!cr.ok || !cd.success) throw new Error(`[${cd.step || "?"}] ${cd.error || "lỗi tạo camp"}`)
-          pushLog(`  ✓ Xong campaign "${g.product}" (PAUSED)`)
+          pushLog(`  ✓ Xong campaign "${g.product}${partLabel}" (PAUSED)`)
           // 4) Ghi sổ video đã upload (để lần quét sau bỏ qua). cd.ads cùng thứ tự adsArr.
           try {
             const records = adsArr.map((a, idx) => ({
@@ -825,12 +833,13 @@ function AdsCreatorPanel() {
           } catch (recErr) {
             pushLog(`    ⚠ tạo ad OK nhưng ghi sổ lỗi: ${recErr.message} (lần quét sau có thể trùng)`)
           }
-          results.push({ product: g.product, ok: true, campaign_id: cd.campaign_id, ads_created: (cd.ads || []).length, skipped: skipped.length, ads_manager_url: cd.ads_manager_url })
+          results.push({ product: `${g.product}${partLabel}`, ok: true, campaign_id: cd.campaign_id, ads_created: (cd.ads || []).length, skipped: skipped.length, ads_manager_url: cd.ads_manager_url })
         } catch (err) {
-          pushLog(`  ✗ "${g.product}" lỗi: ${err.message}`)
-          results.push({ product: g.product, ok: false, error: err.message })
+          pushLog(`  ✗ "${g.product}${partLabel}" lỗi: ${err.message}`)
+          results.push({ product: `${g.product}${partLabel}`, ok: false, error: err.message })
         }
         setAutoResults([...results])
+        }
       }
       pushLog(`■ Hoàn tất: ${results.filter(r => r.ok).length}/${results.length} campaign tạo thành công.`)
     } finally {
@@ -1018,30 +1027,36 @@ function AdsCreatorPanel() {
               <div className="w-10 h-10 rounded-full bg-indigo-500 text-white flex items-center justify-center font-bold text-lg">⚡</div>
               <div>
                 <h3 className="text-base font-bold text-indigo-900">Tự động từ folder video</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Chọn folder sản phẩm → mỗi video thành 1 quảng cáo, gom vào 1 chiến dịch. AI tự viết caption.</p>
+                <p className="text-xs text-gray-500 mt-0.5">Chọn TKQC/Page/Pixel/Sản phẩm → chọn folder video → mỗi video thành 1 quảng cáo, gom tối đa 3 creative/chiến dịch (dư thì tách thêm campaign). AI tự viết caption.</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2 mb-4">
               <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Mục tiêu: Doanh số (Sales)</span>
               <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200">Sự kiện: Hoàn tất đăng ký</span>
               <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Tạo ở PAUSED (duyệt rồi bật)</span>
-              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gray-50 text-gray-600 border border-gray-200">VN · 1 folder = 1 campaign</span>
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gray-50 text-gray-600 border border-gray-200">VN · tối đa 3 creative/campaign</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className={labelClass}>Tài khoản QC</label>
-                <input className={inputClass} value={autoAccount} onChange={e => setAutoAccount(e.target.value)} />
+                <select className={selectClass} value={autoAccount} onChange={e => setAutoAccount(e.target.value)}>
+                  {Object.entries(ACCOUNTS).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                </select>
               </div>
               <div>
-                <label className={labelClass}>Page ID</label>
-                <input className={inputClass} value={autoPage} onChange={e => setAutoPage(e.target.value)} />
+                <label className={labelClass}>Page (Trang chạy QC)</label>
+                <select className={selectClass} value={autoPage} onChange={e => setAutoPage(e.target.value)}>
+                  {Object.entries(PAGES).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                </select>
               </div>
               <div>
-                <label className={labelClass}>Pixel ID</label>
-                <input className={inputClass} value={autoPixel} onChange={e => setAutoPixel(e.target.value)} />
+                <label className={labelClass}>Pixel</label>
+                <select className={selectClass} value={autoPixel} onChange={e => setAutoPixel(e.target.value)}>
+                  {Object.entries(PIXELS).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                </select>
               </div>
               <div>
-                <label className={labelClass}>SP danh mục (để AI viết caption)</label>
+                <label className={labelClass}>Sản phẩm (danh mục — AI viết caption)</label>
                 <select className={selectClass} value={autoCopyProduct} onChange={e => setAutoCopyProduct(e.target.value)}>
                   {Object.keys(PRODUCTS).map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
