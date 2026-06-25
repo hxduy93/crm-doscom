@@ -16,19 +16,36 @@ import {
   STAFF_TO_SOURCE_GROUP,
 } from "./fbAdsHelpers.js";
 
+// Nguồn data: raw GitHub repo facebook-ads-dashboard (CÔNG KHAI — KHÔNG qua Cloudflare Access).
+// Lý do: crm-doscom.pages.dev đã bật Access → subrequest nội bộ tới /data/*.json bị chặn,
+// tool nhận rỗng → trả 0. Raw GitHub là source-of-truth của fb-ads-data (auto-sync) và public.
+// Pattern + KV cache giống functions/api/export/fb-ad-spend.js.
+const RAW_DATA_BASE = "https://raw.githubusercontent.com/hxduy93/facebook-ads-dashboard/main/data";
+const DATA_CACHE_TTL = 600; // 10 phút — tránh refetch GitHub mỗi tool call
+
+// path dạng "/data/<file>.json". Thử KV cache → raw GitHub → fallback /data local (forward cookie).
 async function fetchData(ctx, path) {
-  const url = new URL(path, ctx.origin).toString();
-  // CRM hiện public (không có _middleware redirect) nên /data/*.json serve trực tiếp.
-  // Vẫn forward cookie để khi bật Cloudflare Access sau này không vỡ.
-  const r = await fetch(url, {
-    headers: { Cookie: ctx.cookieHeader || "" },
-    redirect: "manual",  // không follow redirect → fail rõ ràng
-  });
-  if (!r.ok) {
-    if (r.status === 302) throw new Error(`Fetch ${path} bị redirect (cookie không hợp lệ?)`);
-    throw new Error(`Fetch ${path} ${r.status}`);
-  }
-  return await r.json();
+  const file = String(path).replace(/^\/data\//, "");
+  const kv = ctx.env?.INVENTORY;
+  const cacheKey = `hermes_data:v1:${file}`;
+
+  // 1. KV cache
+  try { if (kv) { const c = await kv.get(cacheKey); if (c) return JSON.parse(c); } } catch { /* ignore */ }
+
+  // 2. Raw GitHub (public, không qua Access)
+  try {
+    const r = await fetch(`${RAW_DATA_BASE}/${file}`, { headers: { "User-Agent": "crm-doscom-hermes" } });
+    if (r.ok) {
+      const data = await r.json();
+      try { if (kv) await kv.put(cacheKey, JSON.stringify(data), { expirationTtl: DATA_CACHE_TTL }); } catch { /* ignore */ }
+      return data;
+    }
+  } catch { /* fallthrough to local */ }
+
+  // 3. Fallback: /data local cùng origin (qua Access — forward cookie từ request gốc)
+  const r2 = await fetch(new URL(path, ctx.origin).toString(), { headers: { Cookie: ctx.cookieHeader || "" } });
+  if (!r2.ok) throw new Error(`Fetch ${path} ${r2.status} (raw GitHub + local đều fail)`);
+  return await r2.json();
 }
 
 async function fetchInternal(ctx, path) {
@@ -250,7 +267,12 @@ const get_geo_queue = {
     if (input.status) qs.set("status", input.status);
     if (input.brand) qs.set("brand", input.brand);
     qs.set("limit", String(Math.min(input.limit || 20, 50)));
-    const data = await fetchInternal(ctx, `/api/geo/queue?${qs}`);
+    let data;
+    try {
+      data = await fetchInternal(ctx, `/api/geo/queue?${qs}`);
+    } catch (e) {
+      return { count: 0, articles: [], error: `Không đọc được GEO queue: ${e.message}` };
+    }
     const rows = data?.items || data?.articles || data?.results || [];
     const articles = rows.map(a => ({
       id: a.id, brand: a.brand, status: a.status,
