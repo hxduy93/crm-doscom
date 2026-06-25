@@ -918,6 +918,19 @@ def main():
     total_spend = sum(sum(d['spend'] for d in a['daily']) for a in data['accounts'])
     print(f"      ✓ last {DAYS_BACK} days: {total_reg} đăng ký, {total_spend:,.0f}₫ spend")
 
+    # ── Guard: KHÔNG ghi đè index.html bằng spend=0 khi FB fetch thất bại ──────
+    # update.yml chạy mỗi 30' và fetch FB live. Token hết hạn → fetch rỗng →
+    # total_spend=0 → ad_spend_by_staff=0 → "cpqc Facebook = 0đ" trên dashboard +
+    # CRM (extract DATA) + Hermes. Giữ index.html cũ (last-known-good) + exit lỗi
+    # để Actions báo đỏ, thay vì ghi đè bằng 0. Active advertiser 90 ngày không bao
+    # giờ spend=0 thật → đây là sentinel an toàn cho lỗi token/API.
+    if total_spend <= 0 and data["accounts"]:
+        raise SystemExit(
+            "[FATAL] total FB spend = 0 (token FB hết hạn hoặc API lỗi). "
+            "GIỮ NGUYÊN index.html cũ, KHÔNG ghi đè bằng spend=0. "
+            "Hãy làm mới FB_ACCESS_TOKEN (dài hạn / System User token)."
+        )
+
     print("\n[2/2] Generating HTML from template...")
     html = generate_html(data)
     with open("index.html", "w", encoding="utf-8") as f:
