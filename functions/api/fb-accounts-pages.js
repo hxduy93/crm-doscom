@@ -51,12 +51,13 @@ export async function onRequestGet(context) {
   try {
     // 1 call: tài khoản token truy cập được + page chạy QC được (promote_pages) lồng sẵn.
     const res = await fbGet("/me/adaccounts", {
-      fields: "account_id,name,account_status,promote_pages.limit(50){id,name}",
+      fields: "account_id,name,account_status,promote_pages.limit(50){id,name},adspixels.limit(50){id,name}",
       limit: "200",
     }, token);
 
     let accounts = (res.data || []).map((a) => {
       const pages = ((a.promote_pages && a.promote_pages.data) || []).map((p) => ({ id: p.id, name: p.name }));
+      const pixels = ((a.adspixels && a.adspixels.data) || []).map((px) => ({ id: px.id, name: px.name || px.id }));
       const status = STATUS_MAP[a.account_status] || `UNKNOWN(${a.account_status})`;
       return {
         id: a.account_id,
@@ -64,6 +65,7 @@ export async function onRequestGet(context) {
         status,
         can_use: status === "ACTIVE" && pages.length > 0,
         pages,
+        pixels,
       };
     });
 

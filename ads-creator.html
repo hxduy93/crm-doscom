@@ -151,6 +151,10 @@ function AdsCreatorPanel() {
   const [autoExisting, setAutoExisting] = useState(null) // null = chưa quét | Set(filename)
   const [autoScanBusy, setAutoScanBusy] = useState(false)
   const [autoScanMsg, setAutoScanMsg] = useState("")
+  // Live: danh sách TKQC + Page + Pixel token có quyền (để chọn bất kỳ). null = chưa tải.
+  const [fbRes, setFbRes] = useState(null)        // { accounts:[{id,name,status,pages,pixels}] }
+  const [fbResErr, setFbResErr] = useState("")
+  const [fbResLoading, setFbResLoading] = useState(false)
 
   // ══════════ CHẾ ĐỘ TỐI ƯU & BẢO VỆ (đa-tài-khoản, phân quyền theo người đăng nhập) ══════════
   const [optAccountList, setOptAccountList] = useState([]) // tài khoản được xem
@@ -847,6 +851,28 @@ function AdsCreatorPanel() {
     }
   }
 
+  // Kéo live danh sách TKQC + Page + Pixel mà token FB có quyền (chọn bất kỳ).
+  const loadAutoResources = async () => {
+    if (fbRes || fbResLoading) return
+    setFbResLoading(true); setFbResErr("")
+    try {
+      const r = await fetch("/api/fb-accounts-pages", { credentials: "same-origin" })
+      const d = await r.json()
+      if (!d.ok || !Array.isArray(d.accounts)) throw new Error(d.error || "Không tải được danh sách tài khoản")
+      setFbRes(d)
+    } catch (e) { setFbResErr(e.message || String(e)) }
+    finally { setFbResLoading(false) }
+  }
+  // Đổi TKQC → set Page + Pixel về cái hợp lệ đầu tiên của tài khoản đó.
+  const onAutoAccountChange = (val) => {
+    setAutoAccount(val)
+    const acc = (fbRes && fbRes.accounts || []).find(a => ("act_" + a.id) === val)
+    if (acc) {
+      if (acc.pages && acc.pages.length) setAutoPage(acc.pages[0].id)
+      if (acc.pixels && acc.pixels.length) setAutoPixel(acc.pixels[0].id)
+    }
+  }
+
   // ── Handlers chế độ Tối ưu & Bảo vệ ──
   const loadOptAccounts = async () => {
     try {
@@ -900,6 +926,8 @@ function AdsCreatorPanel() {
   }
   // Mở tab → nạp danh sách tài khoản được xem.
   React.useEffect(() => { if (mode === "optimize") loadOptAccounts() }, [mode])
+  // Vào tab "Tự động từ folder" → kéo live danh sách TKQC/Page/Pixel.
+  React.useEffect(() => { if (mode === "auto") loadAutoResources() }, [mode])
   // Đổi tài khoản (hoặc nạp xong) → load camp + control + decisions.
   React.useEffect(() => { if (mode === "optimize" && optAccount) { loadOptimizer(); loadOptDecisions() } }, [optAccount, mode])
 
@@ -909,6 +937,26 @@ function AdsCreatorPanel() {
   // ── Validations ──
   const allAdsHaveContent = ads.every(a => a.headline && a.adCopy)
   const canPublish = allAdsHaveContent
+
+  // ── Options dropdown auto-folder: ưu tiên LIVE từ FB, fallback danh sách cấu hình ──
+  const liveAccs = (fbRes && fbRes.accounts) || []
+  let accOptions = liveAccs.length
+    ? liveAccs.map(a => ({ value: "act_" + a.id, label: a.name + (a.status !== "ACTIVE" ? ` ⚠${a.status}` : "") }))
+    : Object.entries(ACCOUNTS).map(([id, name]) => ({ value: id, label: name }))
+  const curAcc = liveAccs.find(a => ("act_" + a.id) === autoAccount)
+  let pageOptions = curAcc
+    ? curAcc.pages.map(p => ({ value: p.id, label: p.name }))
+    : Object.entries(PAGES).map(([id, name]) => ({ value: id, label: name }))
+  let pixelOptions = (curAcc && curAcc.pixels && curAcc.pixels.length)
+    ? curAcc.pixels.map(p => ({ value: p.id, label: p.name }))
+    : Object.entries(PIXELS).map(([id, name]) => ({ value: id, label: name }))
+  // Luôn giữ giá trị đang chọn trong list (kể cả khác account / chưa load) để không bị mất.
+  if (autoAccount && !accOptions.some(o => o.value === autoAccount))
+    accOptions = [{ value: autoAccount, label: (ACCOUNTS[autoAccount] || autoAccount) }, ...accOptions]
+  if (autoPage && !pageOptions.some(o => o.value === autoPage))
+    pageOptions = [{ value: autoPage, label: (PAGES[autoPage] || autoPage) + (curAcc ? " (khác account)" : "") }, ...pageOptions]
+  if (autoPixel && !pixelOptions.some(o => o.value === autoPixel))
+    pixelOptions = [{ value: autoPixel, label: (PIXELS[autoPixel] || autoPixel) + (curAcc ? " (khác account)" : "") }, ...pixelOptions]
 
   const selectClass = "w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
   const inputClass = "w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -1038,21 +1086,22 @@ function AdsCreatorPanel() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className={labelClass}>Tài khoản QC</label>
-                <select className={selectClass} value={autoAccount} onChange={e => setAutoAccount(e.target.value)}>
-                  {Object.entries(ACCOUNTS).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                <label className={labelClass}>Tài khoản QC {fbResLoading ? <span className="text-[11px] text-gray-400">(đang tải…)</span> : (fbRes ? <span className="text-[11px] text-green-600">({liveAccs.length} TK live)</span> : null)}</label>
+                <select className={selectClass} value={autoAccount} onChange={e => onAutoAccountChange(e.target.value)}>
+                  {accOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
+                {fbResErr ? <p className="text-[11px] text-amber-600 mt-1">⚠ Dùng danh sách cấu hình (lỗi tải live: {fbResErr})</p> : null}
               </div>
               <div>
                 <label className={labelClass}>Page (Trang chạy QC)</label>
                 <select className={selectClass} value={autoPage} onChange={e => setAutoPage(e.target.value)}>
-                  {Object.entries(PAGES).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                  {pageOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
               <div>
                 <label className={labelClass}>Pixel</label>
                 <select className={selectClass} value={autoPixel} onChange={e => setAutoPixel(e.target.value)}>
-                  {Object.entries(PIXELS).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                  {pixelOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
               <div>
