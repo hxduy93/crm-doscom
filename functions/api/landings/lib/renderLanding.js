@@ -34,6 +34,7 @@ function withDefaults(c) {
     title: c.title || c.brand || "Landing page",
     description: c.description || "",
     pixelId: c.pixelId || "",
+    clarityId: c.clarityId || "xczl125ty0",  // Microsoft Clarity heatmap (mặc định chung, override per-landing nếu cần)
     theme: {
       primary: t.primary || "#FF6B1A",       // --orange
       orangeDeep: t.orangeDeep || "#E55100",  // --orange-deep
@@ -994,6 +995,15 @@ export function renderLanding(rawConfig) {
   <noscript><img height="1" width="1" style="display:none"
     src="https://www.facebook.com/tr?id=${esc(c.pixelId)}&ev=PageView&noscript=1"/></noscript>` : "";
 
+  const clarity = c.clarityId ? `
+  <script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+      c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+      t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+      y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", ${JSON.stringify(c.clarityId)});
+  </script>` : "";
+
   const ogImage = img("hero") || img("product");
   const runtime = JSON.stringify({ staff: c.staff, source: c.source, thankUrl: c.thankUrl, slug: c.slug });
 
@@ -1014,6 +1024,7 @@ ${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">` : ""}
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 ${pixel}
+${clarity}
 <style>${css(t)}</style>
 </head>
 <body>
