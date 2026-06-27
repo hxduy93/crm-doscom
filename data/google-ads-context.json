@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-28 00:56",
+  "generated_at": "2026-06-28 02:51",
   "source_data_date_range": {
     "start_7d": "2026-06-20",
     "end": "2026-06-26",
@@ -1681,29 +1681,16 @@
         ]
       },
       {
-        "search_term": "camera không dây",
-        "spend_30d": 128514.0,
-        "clicks_30d": 26,
+        "search_term": "thiết bị dò định vị trên xe ô tô",
+        "spend_30d": 29267.0,
+        "clicks_30d": 8,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.1376,
+        "ctr_30d": 0.5,
         "match_types": [
-          "BROAD"
+          "EXACT"
         ],
         "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera viettel",
-        "spend_30d": 36870.0,
-        "clicks_30d": 5,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0943,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
+          "ADDED"
         ]
       },
       {
@@ -1734,11 +1721,25 @@
         ]
       },
       {
-        "search_term": "thiết bị chống ghi âm",
-        "spend_30d": 15578.0,
-        "clicks_30d": 5,
+        "search_term": "thiết bị nghe lén mini",
+        "spend_30d": 34428.0,
+        "clicks_30d": 10,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.1389,
+        "ctr_30d": 0.0971,
+        "match_types": [
+          "BROAD",
+          "NEAR_PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera không dây",
+        "spend_30d": 128514.0,
+        "clicks_30d": 26,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1376,
         "match_types": [
           "BROAD"
         ],
@@ -1747,16 +1748,16 @@
         ]
       },
       {
-        "search_term": "thiết bị dò định vị trên xe ô tô",
-        "spend_30d": 29267.0,
-        "clicks_30d": 8,
+        "search_term": "camera viettel",
+        "spend_30d": 36870.0,
+        "clicks_30d": 5,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.5,
+        "ctr_30d": 0.0943,
         "match_types": [
-          "EXACT"
+          "BROAD"
         ],
         "statuses": [
-          "ADDED"
+          "NONE"
         ]
       }
     ],
@@ -2218,11 +2219,11 @@
       }
     ],
     "match_type_breakdown": {
-      "BROAD": {
-        "spend_30d": 12592413.0,
-        "clicks_30d": 1542,
-        "conversions_30d": 36.39,
-        "term_count": 2100
+      "EXACT": {
+        "spend_30d": 1858407.0,
+        "clicks_30d": 328,
+        "conversions_30d": 2.0,
+        "term_count": 69
       },
       "PHRASE": {
         "spend_30d": 4682321.0,
@@ -2236,17 +2237,17 @@
         "conversions_30d": 5.5,
         "term_count": 662
       },
+      "BROAD": {
+        "spend_30d": 12592413.0,
+        "clicks_30d": 1542,
+        "conversions_30d": 36.39,
+        "term_count": 2100
+      },
       "NEAR_EXACT": {
         "spend_30d": 38313.0,
         "clicks_30d": 10,
         "conversions_30d": 0.0,
         "term_count": 1
-      },
-      "EXACT": {
-        "spend_30d": 1858407.0,
-        "clicks_30d": 328,
-        "conversions_30d": 2.0,
-        "term_count": 69
       }
     }
   },
@@ -2491,7 +2492,7 @@
   "ad_insights": {
     "summary": {
       "total_ads": 89,
-      "total_spend_30d": 55897021.0
+      "total_spend_30d": 55887174.0
     },
     "format_breakdown": {
       "DISPLAY_BANNER": {
@@ -2502,10 +2503,10 @@
         "ad_count": 5
       },
       "OTHER": {
-        "spend_30d": 49930894.0,
-        "clicks_30d": 15329,
+        "spend_30d": 49921047.0,
+        "clicks_30d": 15326,
         "impressions_30d": 1293579,
-        "ctr_30d": 0.0119,
+        "ctr_30d": 0.0118,
         "ad_count": 84
       }
     },
