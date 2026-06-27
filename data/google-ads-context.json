@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-27 16:58",
+  "generated_at": "2026-06-27 18:51",
   "source_data_date_range": {
     "start_7d": "2026-06-20",
     "end": "2026-06-26",
@@ -49,49 +49,28 @@
   },
   "roas_proxy": {
     "google_ads_spend_30d": 55897023.0,
-    "website_revenue_30d_vnd": 174036440.0,
-    "roas_overall": 3.11,
+    "website_revenue_30d_vnd": 0,
+    "roas_overall": 0.0,
     "target_roas": 3.0,
-    "status": "healthy",
+    "status": "below_target",
     "note": "ROAS = Pancake Website revenue (30d) / Google Ads spend (30d). Proxy — mua qua Zalo/Hotline sau khi thay Google Ads khong count vao day."
   },
   "website_revenue_pancake": {
-    "total_30d": 174036440.0,
-    "orders_30d": 74,
-    "by_status": {
-      "delivered": {
-        "revenue": 125768440.0,
-        "orders": 54
-      },
-      "returning": {
-        "revenue": 3840000.0,
-        "orders": 2
-      },
-      "other": {
-        "revenue": 39132000.0,
-        "orders": 14
-      },
-      "returned": {
-        "revenue": 497000.0,
-        "orders": 1
-      },
-      "canceled": {
-        "revenue": 4799000.0,
-        "orders": 3
-      }
-    },
+    "total_30d": 0,
+    "orders_30d": 0,
+    "by_status": {},
     "by_source": {
       "WEBSITE": {
-        "revenue": 40270000.0,
-        "orders": 30
+        "revenue": 0,
+        "orders": 0
       },
       "ZALO_OA": {
-        "revenue": 67264440.0,
-        "orders": 24
+        "revenue": 0,
+        "orders": 0
       },
       "HOTLINE": {
-        "revenue": 66502000.0,
-        "orders": 20
+        "revenue": 0,
+        "orders": 0
       }
     },
     "note": "Gộp 3 nguồn POS: WEBSITE + ZALO_OA + HOTLINE (filter 'Website' trên POS). Loại DUY + PHUONG_NAM (team FB Ads). Match: delivered + other. Excluded returning/returned/canceled/refunded."
@@ -1702,16 +1681,29 @@
         ]
       },
       {
-        "search_term": "thiết bị dò định vị trên xe ô tô",
-        "spend_30d": 29267.0,
-        "clicks_30d": 8,
+        "search_term": "camera không dây",
+        "spend_30d": 128514.0,
+        "clicks_30d": 26,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.5,
+        "ctr_30d": 0.1376,
         "match_types": [
-          "EXACT"
+          "BROAD"
         ],
         "statuses": [
-          "ADDED"
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera viettel",
+        "spend_30d": 36870.0,
+        "clicks_30d": 5,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.0943,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "NONE"
         ]
       },
       {
@@ -1742,43 +1734,29 @@
         ]
       },
       {
-        "search_term": "thiết bị nghe lén mini",
-        "spend_30d": 34428.0,
-        "clicks_30d": 10,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0971,
-        "match_types": [
-          "BROAD",
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera không dây",
-        "spend_30d": 128514.0,
-        "clicks_30d": 26,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1376,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera viettel",
-        "spend_30d": 36870.0,
+        "search_term": "thiết bị chống ghi âm",
+        "spend_30d": 15578.0,
         "clicks_30d": 5,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.0943,
+        "ctr_30d": 0.1389,
         "match_types": [
           "BROAD"
         ],
         "statuses": [
           "NONE"
+        ]
+      },
+      {
+        "search_term": "thiết bị dò định vị trên xe ô tô",
+        "spend_30d": 29267.0,
+        "clicks_30d": 8,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.5,
+        "match_types": [
+          "EXACT"
+        ],
+        "statuses": [
+          "ADDED"
         ]
       }
     ],
@@ -2240,16 +2218,16 @@
       }
     ],
     "match_type_breakdown": {
-      "EXACT": {
-        "spend_30d": 1858407.0,
-        "clicks_30d": 328,
-        "conversions_30d": 2.0,
-        "term_count": 69
+      "BROAD": {
+        "spend_30d": 12592413.0,
+        "clicks_30d": 1542,
+        "conversions_30d": 36.39,
+        "term_count": 2100
       },
       "PHRASE": {
         "spend_30d": 4682321.0,
         "clicks_30d": 861,
-        "conversions_30d": 10.41,
+        "conversions_30d": 10.74,
         "term_count": 616
       },
       "NEAR_PHRASE": {
@@ -2258,17 +2236,17 @@
         "conversions_30d": 5.5,
         "term_count": 662
       },
-      "BROAD": {
-        "spend_30d": 12592413.0,
-        "clicks_30d": 1542,
-        "conversions_30d": 36.39,
-        "term_count": 2100
-      },
       "NEAR_EXACT": {
         "spend_30d": 38313.0,
         "clicks_30d": 10,
         "conversions_30d": 0.0,
         "term_count": 1
+      },
+      "EXACT": {
+        "spend_30d": 1858407.0,
+        "clicks_30d": 328,
+        "conversions_30d": 2.0,
+        "term_count": 69
       }
     }
   },
