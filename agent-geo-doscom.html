@@ -151,9 +151,14 @@
         <h2 class="text-lg font-semibold text-gray-900">Tình trạng index bài viết đã đăng</h2>
         <p class="text-xs text-gray-500" id="index-meta">Tỉ lệ bài đã đăng được báo cho search engine & được Google index thật</p>
       </div>
-      <button id="btn-check-index" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition" title="Gọi Google Search Console kiểm tra từng URL đã đăng (tốn quota — nên chạy 1 lần/ngày)">
-        🔎 Kiểm tra Google index
-      </button>
+      <div class="flex gap-2">
+        <button id="btn-submit-index" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition" title="Ping Google Indexing API + IndexNow yêu cầu index các bài đã đăng (cần service account quyền Owner)">
+          📤 Báo Google index
+        </button>
+        <button id="btn-check-index" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition" title="Gọi Google Search Console kiểm tra từng URL đã đăng (tốn quota — nên chạy 1 lần/ngày)">
+          🔎 Kiểm tra Google index
+        </button>
+      </div>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div class="kpi-card">
@@ -728,6 +733,36 @@ document.getElementById("days-filter").addEventListener("change", e => {
 });
 
 document.getElementById("refresh-btn").addEventListener("click", () => loadAll());
+
+// 📤 Báo Google index — ping Indexing API + IndexNow cho các bài đã đăng.
+document.getElementById("btn-submit-index").addEventListener("click", async () => {
+  const btn = document.getElementById("btn-submit-index");
+  const meta = document.getElementById("index-meta");
+  if (btn.disabled) return;
+  if (!confirm("Ping Google (Indexing API) + IndexNow để yêu cầu index các bài đã đăng.\n\nBài đã báo thành công trong 24h gần đây sẽ được bỏ qua.\n\nTiếp tục?")) return;
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "⏳ Đang báo…";
+  try {
+    const r = await fetch("/api/geo/submit-index", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ limit: 50 }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.ok === false) {
+      meta.innerHTML = `<span class="text-red-600">${escapeHtml(j.error || ("HTTP " + r.status))}</span>`;
+    } else {
+      meta.textContent = `Đã báo ${j.submitted || 0} bài · Google OK ${j.google_ok || 0} · IndexNow ${j.indexnow_ok || 0}`;
+      await loadIndexStats();
+    }
+  } catch (err) {
+    meta.innerHTML = `<span class="text-red-600">Lỗi: ${escapeHtml(err.message || String(err))}</span>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+});
 
 // 🔎 Kiểm tra Google index — gọi Search Console URL Inspection cho các URL đã đăng.
 document.getElementById("btn-check-index").addEventListener("click", async () => {
