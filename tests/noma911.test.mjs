@@ -15,6 +15,7 @@ const GIA_COMBO = {
   "combo-2x911": 398000,
   "combo-911-310": 398000,
   "combo-911-922": 398000,
+  "le-922": 199000,
 };
 
 // Gọi API 1 lần, dùng lại cho mọi test
