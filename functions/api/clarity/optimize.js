@@ -4,8 +4,8 @@
 // RED LINES: Claude qua gateway doscom-erp · kill switch USE_CLAUDE · cache KV theo ngày VN
 // (mode tốn tiền PHẢI cache để F5 cùng ngày không tốn credit).
 
-const CLAUDE_MODEL = "claude-haiku-4-5";
-const CACHE_VER = "v1";
+const CLAUDE_MODEL = "claude-opus-4-8";
+const CACHE_VER = "v2";
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
@@ -51,7 +51,7 @@ async function callClaude(env, userPrompt) {
   const url = `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/doscom-erp/anthropic/v1/messages`;
   const body = {
     model: CLAUDE_MODEL,
-    max_tokens: 2200,
+    max_tokens: 3000,
     system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     messages: [{ role: "user", content: userPrompt }],
   };
