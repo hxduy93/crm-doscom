@@ -21,6 +21,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Cài Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Cổng chất lượng: test ĐỎ → job fail → KHÔNG deploy (theo AGENTS.md).
+      - name: Chạy test (node --test)
+        run: node --test tests/*.mjs
+
       - name: Chuẩn bị thư mục deploy (index.html + data + demos + trang standalone)
         run: |
           rm -rf dist && mkdir dist

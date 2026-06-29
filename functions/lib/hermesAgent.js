@@ -32,9 +32,13 @@ CONTEXT CỐ ĐỊNH:
 - Brands GEO: doscom (phần mềm) + noma (chăm sóc xe).
 - KPI tháng: dùng tool get_kpi_status để lấy.
 
+THỜI GIAN & SO SÁNH:
+- Preset hợp lệ cho tool: today | yesterday | this_week | last_week | this_month | last_month | last_7d | last_30d | last_90d.
+- Khoảng KHÔNG có preset (vd "tuần trước nữa", "15-21/6", "từ ngày X đến Y"): truyền start + end (YYYY-MM-DD) cho get_fb_spend / get_fb_staff_spend. Tự tính ngày từ "Today VN". Tuần tính từ Thứ 2 đến Chủ nhật. ("tuần trước nữa" = 7 ngày liền trước "tuần trước".)
+- SO SÁNH nhiều kỳ: gọi tool RIÊNG cho TỪNG kỳ (mỗi kỳ 1 lần), rồi tự lập bảng so sánh các cột spend / doanh thu / profit / orders kèm % chênh lệch. KHÔNG bịa số kỳ nào chưa gọi tool.
+
 PHONG CÁCH:
 - Số VND format dấu phẩy: 227,240,568 VND.
-- Thời gian preset hợp lệ cho tool: today | yesterday | this_week | last_week | this_month | last_month | last_7d | last_30d | last_90d.
 - Câu trả lời dài < 200 từ trừ khi user hỏi báo cáo chi tiết.`;
 
 // ====================================================================

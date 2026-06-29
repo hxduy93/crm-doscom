@@ -94,14 +94,22 @@ async function loadFbConfig(ctx) {
 // ────────────────────────────────────────────────────────────
 const get_fb_spend = {
   name: "get_fb_spend",
-  description: "Lấy tổng spend FB Ads + profit + orders trong 1 time range. Dùng khi user hỏi 'chi phí quảng cáo FB tháng này', 'spend tuần qua', v.v. Trả về tổng theo group (NOMA, MAY_DO, CAMERA_VIDEO_CALL, GHI_AM) hoặc ALL.",
+  description: "Lấy tổng spend FB Ads + profit + orders trong 1 time range. Dùng khi user hỏi 'chi phí quảng cáo FB tháng này', 'spend tuần qua', v.v. Trả về tổng theo group (NOMA, MAY_DO, CAMERA_VIDEO_CALL, GHI_AM) hoặc ALL. Muốn khoảng KHÔNG có sẵn preset (vd 'tuần trước nữa', '15-21/6') → truyền start + end.",
   input_schema: {
     type: "object",
     properties: {
       time_preset: {
         type: "string",
         enum: ["today","yesterday","this_week","last_week","this_month","last_month","last_7d","last_30d","last_90d"],
-        description: "Khoảng thời gian. Default this_month.",
+        description: "Khoảng thời gian. Default this_month. Bị bỏ qua nếu có cả start+end.",
+      },
+      start: {
+        type: "string",
+        description: "Ngày bắt đầu YYYY-MM-DD (tùy chọn). Có cả start+end → dùng khoảng tùy chỉnh, bỏ qua time_preset.",
+      },
+      end: {
+        type: "string",
+        description: "Ngày kết thúc YYYY-MM-DD (tùy chọn). Đi kèm start.",
       },
       group: {
         type: "string",
@@ -113,8 +121,11 @@ const get_fb_spend = {
   handler: async (input, ctx) => {
     const time = input.time_preset || "this_month";
     const group = input.group || "ALL";
-    const timeRange = resolveTimeRange(time);
-    if (!timeRange) return { error: "Invalid time preset" };
+    const timeRange = (input.start && input.end)
+      ? resolveTimeRange("custom", input.start, input.end)
+      : resolveTimeRange(time);
+    if (!timeRange) return { error: "Invalid time range (start/end phải là YYYY-MM-DD)" };
+    if (timeRange.custom) timeRange.label = `${timeRange.start} → ${timeRange.end}`;
 
     const [fbAds, rev, costs] = await Promise.all([
       fetchData(ctx, "/data/fb-ads-data.json"),
@@ -147,7 +158,7 @@ const get_fb_spend = {
 // ────────────────────────────────────────────────────────────
 const get_fb_staff_spend = {
   name: "get_fb_staff_spend",
-  description: "Lấy spend MTD chuẩn của 1 nhân sự FB Ads (DUY hoặc PHUONG_NAM), break down per account. Gọi khi user hỏi 'spend Phương Nam tháng này', 'DUY chi bao nhiêu cho Noma'.",
+  description: "Lấy spend MTD chuẩn của 1 nhân sự FB Ads (DUY hoặc PHUONG_NAM), break down per account. Gọi khi user hỏi 'spend Phương Nam tháng này', 'DUY chi bao nhiêu cho Noma'. Khoảng không có preset → truyền start + end.",
   input_schema: {
     type: "object",
     properties: {
@@ -155,15 +166,26 @@ const get_fb_staff_spend = {
       time_preset: {
         type: "string",
         enum: ["today","yesterday","this_week","last_week","this_month","last_month","last_7d","last_30d","last_90d"],
-        description: "Khoảng thời gian. Default this_month.",
+        description: "Khoảng thời gian. Default this_month. Bị bỏ qua nếu có cả start+end.",
+      },
+      start: {
+        type: "string",
+        description: "Ngày bắt đầu YYYY-MM-DD (tùy chọn). Có cả start+end → dùng khoảng tùy chỉnh, bỏ qua time_preset.",
+      },
+      end: {
+        type: "string",
+        description: "Ngày kết thúc YYYY-MM-DD (tùy chọn). Đi kèm start.",
       },
     },
     required: ["staff"],
   },
   handler: async (input, ctx) => {
     const time = input.time_preset || "this_month";
-    const timeRange = resolveTimeRange(time);
-    if (!timeRange) return { error: "Invalid time preset" };
+    const timeRange = (input.start && input.end)
+      ? resolveTimeRange("custom", input.start, input.end)
+      : resolveTimeRange(time);
+    if (!timeRange) return { error: "Invalid time range (start/end phải là YYYY-MM-DD)" };
+    if (timeRange.custom) timeRange.label = `${timeRange.start} → ${timeRange.end}`;
 
     const [cfg, fbAds] = await Promise.all([
       loadFbConfig(ctx),

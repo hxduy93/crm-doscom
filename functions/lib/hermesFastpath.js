@@ -45,6 +45,33 @@ function detectTimePreset(text) {
   return null;
 }
 
+// Đếm số time-preset KHÁC NHAU xuất hiện trong text (để nhận query đa-kỳ
+// kiểu "tuần này và tuần trước" → là so sánh, fastpath không kham nổi).
+function countTimePresets(text) {
+  const t = text.toLowerCase();
+  const pats = [
+    /hôm nay|today/, /hôm qua|yesterday/, /tuần này|this week/,
+    /tuần (trước|qua)|last week/, /tháng này|this month|mtd/,
+    /tháng (trước|qua)|last month/, /7\s*ng[àa]y/, /30\s*ng[àa]y/, /90\s*ng[àa]y/,
+  ];
+  return pats.reduce((n, re) => n + (re.test(t) ? 1 : 0), 0);
+}
+
+// Tín hiệu câu vượt khả năng fastpath → phải nhường cho LLM (gọi tool nhiều lần,
+// ghép kết quả, so sánh, parse ngày tùy chỉnh). Fastpath chỉ được short-circuit
+// khi xử lý TRỌN VẸN cả câu; có bất kỳ tín hiệu dưới đây → bail.
+const COMPARE_RE = /so s[áa]nh|so v[ớo]i|\bvs\b|chênh l[ệe]ch|tăng hay gi[ảa]m|cùng k[ỳy]|với k[ỳy]|với kho[ảa]ng/i;
+// Ngày/khoảng ngày tùy chỉnh: "15-21/6", "15/6", "ngày 15", "từ 15/6".
+const DATE_RE = /\d{1,2}\s*[-–]\s*\d{1,2}\s*\/\s*\d{1,2}|\bng[àa]y\s*\d{1,2}|\bt[ừu]\s+\d{1,2}\s*\/\s*\d{1,2}|\d{1,2}\s*\/\s*\d{1,2}(\s*\/\s*\d{2,4})?/;
+
+export function isComplexQuery(text) {
+  const t = String(text || "");
+  if (COMPARE_RE.test(t)) return true;   // so sánh / với kỳ / với khoảng
+  if (DATE_RE.test(t)) return true;      // có ngày/khoảng ngày tùy chỉnh
+  if (countTimePresets(t) >= 2) return true; // đa-kỳ ("tuần này và tuần trước")
+  return false;
+}
+
 const RULES = [
   // ─────────────────────────────────────────────
   // R1: "spend của [staff] [time]" hoặc "[staff] spend bao nhiêu [time]"
@@ -174,6 +201,10 @@ const RULES = [
 export async function tryFastpath(userMessage, ctx) {
   const text = String(userMessage || "").trim();
   if (text.length === 0 || text.length > 200) return null;  // câu quá dài → để LLM
+
+  // Câu có ý so sánh / nhiều kỳ / ngày tùy chỉnh → fastpath không kham nổi.
+  // Nhường cho agent loop (LLM) để gọi tool nhiều lần và ghép kết quả.
+  if (isComplexQuery(text)) return null;
 
   for (const rule of RULES) {
     let match;
