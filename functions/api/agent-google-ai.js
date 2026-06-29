@@ -225,7 +225,28 @@ const MODE_CONFIG = {
 const SUGGEST_MODES = new Set(["suggest_keyword", "suggest_headline", "suggest_banner", "analyze_combined"]);
 const CACHE_TTL_SECONDS = 86400; // 24 giờ
 // Bump khi đổi prompt/post-process để invalidate KV entries cũ (cache cũ chứa output có heading).
-const CACHE_VERSION = "v6";
+// v7: thêm compactContext (truyền per_campaign/channel/ngưỡng CTR/Pancake) + guardrail red-line.
+const CACHE_VERSION = "v7";
+
+// ── Guardrail Red Lines thương hiệu Doscom (đối phó copy QC cấm, vd "Phát hiện 100%") ──
+// Áp HẬU KIỂM lên output các mode sinh COPY quảng cáo (banner/headline/tổng hợp). KHÔNG áp cho
+// suggest_keyword: keyword khách GÕ có thể chứa "tốt nhất"/"giá rẻ" hợp lệ — đó là cụm tìm, không phải claim.
+const DOSCOM_RED_LINES = [
+  "phát hiện 100", "100%", "cam kết 100", "hoàn tiền 100", "chính xác 100",
+  "số 1", "số một", "tốt nhất", "duy nhất", "lần đầu tiên", "đầu tiên tại việt nam",
+  "tuyệt đối", "an toàn tuyệt đối", "vĩnh viễn", "trọn đời", "rẻ nhất", "đỉnh cao",
+  "made in usa", "công nghệ mỹ", "chính hãng mỹ",
+];
+const COPY_MODES = new Set(["suggest_banner", "suggest_headline", "analyze_combined"]);
+
+// Quét cụm vi phạm trong text (lowercase, substring). Trả mảng cụm khớp (unique).
+export function scanRedLines(text) {
+  if (!text || typeof text !== "string") return [];
+  const low = text.toLowerCase();
+  const hits = [];
+  for (const w of DOSCOM_RED_LINES) if (low.includes(w)) hits.push(w);
+  return [...new Set(hits)];
+}
 
 function getCookie(request, name) {
   const cookie = request.headers.get("Cookie") || "";
@@ -602,6 +623,65 @@ function compactPlacement(j, topN, group, perCampaignByName) {
   };
 }
 
+// Lỗi 3/4/6: google-ads-context.json CHỨA SẴN channel + ngưỡng CTR theo kênh + tín hiệu
+// Pancake (roas_proxy, website_revenue_pancake) + per_campaign(flags). TRƯỚC ĐÂY handler vứt
+// gần hết, chỉ giữ {date_range, total_campaigns} (và còn đếm sai vì context.json không có
+// campaigns_raw → luôn 0). Trong khi prompt audit RA LỆNH cho LLM dùng đúng các field này
+// → LLM không có data → chấm theo CTR/CPC thô + bịa số. Hàm này truyền đúng phần cần, lọc
+// theo nhóm SP để gọn token. Đọc-chỉ: tính 1 lần ở upstream, agent không tính lại.
+export function compactContext(j, group) {
+  if (!j) return null;
+  const pcAll = j.per_campaign || {};
+  const per_campaign = {};
+  for (const [name, c] of Object.entries(pcAll)) {
+    if (group !== "ALL" && c.category !== group) continue;
+    per_campaign[name] = {
+      category: c.category,
+      channel: c.channel,                              // SEARCH / DISPLAY_RMK / ... → biết áp ngưỡng CTR nào
+      ctr_low_threshold: c.ctr_low_threshold,
+      ctr_critical_threshold: c.ctr_critical_threshold,
+      spend_30d: Math.round(c.spend_30d || 0),
+      clicks_30d: c.clicks_30d || 0,
+      impressions_30d: c.impressions_30d || 0,
+      ctr_30d: c.ctr_30d || 0,
+      cpc_30d: Math.round(c.cpc_30d || 0),
+      ctr_trend_pct: c.ctr_trend_pct,
+      spend_trend_pct: c.spend_trend_pct,
+      active_days_30d: c.active_days_30d,
+      // forward-compat: upstream (facebook-ads-dashboard) hiện CHƯA kéo conversions per-campaign.
+      // Khi có thì truyền thẳng; còn null thì để null (KHÔNG fake 0 → tránh LLM kết luận "0 đơn").
+      conversions_30d: c.conversions_30d != null ? c.conversions_30d : null,
+      cost_per_conversion: c.cost_per_conversion != null ? c.cost_per_conversion : null,
+      flags: c.flags || [],
+    };
+  }
+  const per_category = {};
+  for (const [k, v] of Object.entries(j.per_category || {})) {
+    if (group !== "ALL" && k !== group) continue;
+    per_category[k] = {
+      spend_30d: Math.round(v.spend_30d || 0),
+      clicks_30d: v.clicks_30d || 0,
+      impressions_30d: v.impressions_30d || 0,
+      ctr_30d: v.ctr_30d || 0,
+      cpc_30d: Math.round(v.cpc_30d || 0),
+      campaign_count: v.campaign_count,
+    };
+  }
+  const wp = j.website_revenue_pancake || null;
+  return {
+    date_range: j.source_data_date_range || j.date_range || null,
+    total_campaigns: Object.keys(pcAll).length,
+    group_filter: group,
+    ctr_thresholds_by_channel: j.ctr_thresholds_by_channel || null,
+    // Tín hiệu lợi nhuận thật của Doscom (KHÔNG dùng ROAS Google) — dùng để chấm profit/waste.
+    roas_proxy: j.roas_proxy || null,
+    website_revenue_pancake: wp ? { total_30d: wp.total_30d, orders_30d: wp.orders_30d, note: wp.note } : null,
+    per_category,
+    per_campaign,
+    waste_estimate: j.waste_estimate || null,
+  };
+}
+
 function buildSystemPrompt(skills, group, jsonMode) {
   const groupNote = group !== "ALL" ? `\n\n⚠ FOCUS: Chỉ phân tích nhóm SP "${GROUP_LABELS[group]}". Bỏ qua các SP khác.` : "";
   if (jsonMode) {
@@ -611,6 +691,7 @@ function buildSystemPrompt(skills, group, jsonMode) {
       "🚨 Bắt đầu output bằng dấu { và kết thúc bằng }. Không có ký tự nào khác.",
       "Mọi giá trị string trong JSON dùng tiếng Việt có dấu.",
       "Mọi số liệu DỰA TRÊN DATA trong context — KHÔNG bịa. Thiếu data thì điểm thấp + note 'Thiếu data'.",
+      "⛔ RED LINE copy QC Doscom — KHÔNG đề xuất các cụm: 'phát hiện 100%', '100%', 'tốt nhất', 'số 1', 'duy nhất', 'rẻ nhất', 'tuyệt đối', 'hoàn tiền 100%', 'made in USA/công nghệ Mỹ'.",
       groupNote,
       "",
       "═══ RULE & SKILL ═══",
@@ -624,6 +705,7 @@ function buildSystemPrompt(skills, group, jsonMode) {
     "Mọi số liệu DỰA TRÊN DATA cụ thể trong context — KHÔNG bịa.",
     "Nếu thiếu data → ghi rõ 'Thiếu dữ liệu'.",
     "Mỗi action đề xuất phải có: cụ thể (làm gì), đo được (đ tiết kiệm/tăng), ưu tiên (cao/trung/thấp).",
+    "⛔ RED LINE copy QC Doscom — KHÔNG đề xuất các cụm: 'phát hiện 100%', '100%', 'tốt nhất', 'số 1', 'duy nhất', 'rẻ nhất', 'tuyệt đối', 'hoàn tiền 100%', 'made in USA/công nghệ Mỹ'.",
     groupNote,
     "",
     "═══ RULE & SKILL ═══",
@@ -1138,7 +1220,7 @@ export async function onRequestPost(context) {
   const dataContext = { mode, group_filter: group, group_label: GROUP_LABELS[group] };
   if (timeRange) dataContext.time_range = timeRange;
   const tasks = [];
-  if (cfg.data.includes("context")) tasks.push(fetchJson(origin, "/data/google-ads-context.json", cookieHeader).then(j => { if (j) dataContext.context = { date_range: j.date_range, total_campaigns: (j.campaigns_raw || []).length }; }));
+  if (cfg.data.includes("context")) tasks.push(fetchJson(origin, "/data/google-ads-context.json", cookieHeader).then(j => { dataContext.context = compactContext(j, group); }));
   if (cfg.data.includes("spend")) tasks.push(fetchJson(origin, "/data/google-ads-spend.json", cookieHeader).then(j => dataContext.spend = compactSpend(j, group, timeRange)));
   if (cfg.data.includes("revenue")) tasks.push(fetchJson(origin, "/data/product-revenue.json", cookieHeader).then(j => dataContext.revenue = compactRevenue(j, group, timeRange)));
   if (cfg.data.includes("search_terms")) tasks.push(fetchJson(origin, "/data/google-ads-search-terms.json", cookieHeader).then(j => dataContext.search_terms = compactSearchTerms(j, mode === "analyze_combined" ? 60 : 30, group)));
@@ -1188,6 +1270,7 @@ export async function onRequestPost(context) {
           cached_at: cached.cached_at,
           cache_note: `Kết quả đã lưu từ ${cached.cached_at}. Bấm "Làm mới" để tạo đề xuất mới.`,
           claude_used: cached.claude_used || false,
+          red_line_flags: cached.red_line_flags || null,
           _enrichment: cached.enrichment || null,
         });
       }
@@ -1347,6 +1430,17 @@ ${candidatesBlock}
       final_data_rows: (rawResp.match(/^\|\s*\d+\s*\|/gm) || []).length,
     };
   }
+  // ── Guardrail Red Lines: hậu kiểm output COPY (banner/headline/tổng hợp) ──
+  // Không chặn cứng (UX): nếu lọt cụm cấm thì gắn cờ + chèn cảnh báo để người duyệt bỏ/thay.
+  let redLineFlags = null;
+  if (COPY_MODES.has(mode) && rawResp) {
+    const hits = scanRedLines(rawResp);
+    if (hits.length) {
+      redLineFlags = hits;
+      rawResp += `\n\n---\n⚠️ **CẢNH BÁO RED LINE THƯƠNG HIỆU DOSCOM** — output chứa cụm có thể vi phạm quy định quảng cáo: ${hits.map(h => `"${h}"`).join(", ")}. Rà lại & bỏ/thay trước khi dùng (vd tránh "Phát hiện 100%", "tốt nhất", "số 1").`;
+    }
+  }
+
   let parsedJson = null;
   if (cfg.json_output && rawResp) {
     // Strategy: thử nhiều cách parse JSON từ AI output
@@ -1452,6 +1546,7 @@ ${candidatesBlock}
         cached_at: nowVN,
         model: actualModel,
         claude_used: claudeUsed,
+        red_line_flags: redLineFlags,
         enrichment: enrichedData ? {
           candidates_count: enrichedData.candidates.length,
           anchor: enrichedData.anchor || null,
@@ -1479,6 +1574,7 @@ ${candidatesBlock}
     claude_debug: claudeDebug,   // diagnostic khi không gọi Claude (env vars thiếu/sai)
     response: rawResp,
     parsed_json: parsedJson,
+    red_line_flags: redLineFlags,   // Lỗi 5: cụm copy vi phạm Red Lines (null nếu sạch)
     skills_used: cfg.skills,
     data_used: cfg.data,
     cached: false,
