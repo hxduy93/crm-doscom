@@ -454,12 +454,14 @@
             <h2 style="margin:0 0 4px">Heatmap landing — chỉ số UX (Microsoft Clarity)</h2>
             <p style="margin:0;color:var(--text-2);font-size:13px">Số liệu 3 ngày gần nhất từ Clarity Data Export · cache trong ngày. Ảnh heatmap trực quan xem trực tiếp trên Clarity (nút bên dưới).</p>
           </div>
-          <div style="display:flex;gap:8px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn-cl" id="hmap-optimize-btn" type="button" style="background:var(--primary);color:#fff;border-color:transparent">💡 Đề xuất tối ưu landing</button>
             <a class="btn-cl" href="https://clarity.microsoft.com/projects/view/xczl125ty0/heatmaps" target="_blank" rel="noopener" style="text-decoration:none">🔥 Mở Heatmap Clarity</a>
             <a class="btn-cl" href="https://clarity.microsoft.com/projects/view/xczl125ty0/dashboard" target="_blank" rel="noopener" style="text-decoration:none">📊 Dashboard Clarity</a>
             <button class="btn-cl" id="hmap-refresh" type="button">↻ Làm mới</button>
           </div>
         </div>
+        <div id="hmap-optimize"></div>
         <div id="hmap-body"><div class="hero"><p>Đang tải số liệu Clarity…</p></div></div>
       </div>
       <style>
@@ -536,12 +538,50 @@
     var body=document.getElementById('hmap-body');
     var btn=document.getElementById('hmap-refresh');
     if(!nav||!body) return;
-    var loaded=false;
+    var loaded=false, lastData=null;
     function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
     var MET={Traffic:'Lưu lượng',EngagementTime:'Thời gian tương tác',ScrollDepth:'Độ sâu cuộn',PopularPages:'Trang phổ biến',DeadClickCount:'Dead click (bấm vô tác dụng)',RageClickCount:'Rage click (bấm bực bội)',QuickbackClick:'Quay lại nhanh',ExcessiveScroll:'Cuộn quá mức',ScriptErrorCount:'Lỗi script',ErrorClickCount:'Click lỗi',Browser:'Trình duyệt',Device:'Thiết bị',OS:'Hệ điều hành',Country:'Quốc gia',ReferrerUrl:'Nguồn truy cập'};
     var COL={URL:'Trang',Url:'Trang',totalSessionCount:'Phiên',totalBotSessionCount:'Bot',distinctUserCount:'Người dùng',pagesPerSessionPercentage:'Trang/phiên',averageScrollDepth:'Scroll TB (%)',totalTime:'Tổng thời gian (s)',activeTime:'Chủ động (s)',sessionsCount:'Phiên',sessionsWithMetricPercentage:'% có gặp',sessionsWithoutMetricPercentage:'% không gặp',pagesViews:'Lượt xem',subTotal:'Số lần'};
     function isUrl(c){ return /^url$/i.test(c); }
     function shortUrl(u){ return String(u).replace(/^https?:\/\//,'').replace(/\/$/,'') || '/'; }
+    var EXPL={
+      _kpi:'Tổng lượt truy cập 3 ngày: số phiên, số người dùng riêng biệt và số phiên bot (bot đã bị loại khỏi các chỉ số UX).',
+      Traffic:'Lưu lượng truy cập theo từng trang/anchor.',
+      ScrollDepth:'Khách cuộn sâu trung bình tới bao nhiêu % chiều dài trang — càng cao nghĩa là nội dung càng giữ chân.',
+      EngagementTime:'Thời gian khách ở lại (tổng) và thời gian thực sự tương tác (chủ động) trên mỗi trang/section, tính bằng giây.',
+      DeadClickCount:'Số lần khách bấm vào chỗ tưởng bấm được nhưng không xảy ra gì — dấu hiệu UI gây hiểu nhầm.',
+      RageClickCount:'Số lần khách bấm dồn dập vì bực bội (nút không phản hồi/chậm) — cần ưu tiên sửa.',
+      QuickbackClick:'Khách bấm vào rồi quay lại ngay — đích đến không như kỳ vọng.',
+      ExcessiveScroll:'Khách cuộn lên xuống quá nhiều — thường do khó tìm thông tin cần.',
+      ScriptErrorCount:'Số lỗi JavaScript ghi nhận — có thể làm hỏng nút bấm/trải nghiệm.',
+      ErrorClickCount:'Số lần bấm dẫn tới lỗi.',
+      Browser:'Phân bổ theo trình duyệt.',Device:'Phân bổ theo loại thiết bị.',OS:'Phân bổ theo hệ điều hành.',Country:'Phân bổ theo quốc gia.',ReferrerUrl:'Nguồn dẫn khách tới trang.'
+    };
+    function explLine(t){ return t?('<p class="hmap-note" style="margin:-2px 0 8px">'+esc(t)+'</p>'):''; }
+    function mdToHtml(md){
+      var lines=String(md||'').split(/\r?\n/),html='',inUl=false;
+      function inline(s){ return esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`(.+?)`/g,'<code>$1</code>'); }
+      lines.forEach(function(ln){
+        if(/^\s*##\s+/.test(ln)){ if(inUl){html+='</ul>';inUl=false;} html+='<h3 style="margin:16px 0 6px">'+inline(ln.replace(/^\s*##\s+/,''))+'</h3>'; return; }
+        if(/^\s*[-*]\s+/.test(ln)){ if(!inUl){html+='<ul style="margin:6px 0 6px 18px">';inUl=true;} html+='<li>'+inline(ln.replace(/^\s*[-*]\s+/,''))+'</li>'; return; }
+        if(/^\s*\d+\.\s+/.test(ln)){ if(!inUl){html+='<ul style="margin:6px 0 6px 18px">';inUl=true;} html+='<li>'+inline(ln.replace(/^\s*\d+\.\s+/,''))+'</li>'; return; }
+        if(/^\s*$/.test(ln)){ if(inUl){html+='</ul>';inUl=false;} return; }
+        html+='<p style="margin:6px 0">'+inline(ln)+'</p>';
+      });
+      if(inUl) html+='</ul>';
+      return html;
+    }
+    function dwellBlock(metrics){
+      var et=metrics.filter(function(m){return /^engagementtime$/i.test(m.metricName||'');})[0];
+      var rows=et&&Array.isArray(et.information)?et.information.slice():[];
+      if(!rows.length) return '';
+      rows.sort(function(a,b){ return (Number(b.totalTime)||0)-(Number(a.totalTime)||0); });
+      var top=rows.slice(0,6);
+      var tb=top.map(function(r){ return '<tr><td class="lbl">'+esc(shortUrl(r.Url||r.URL||''))+'</td><td class="num">'+esc(r.totalTime||'0')+'</td><td class="num">'+esc(r.activeTime||'0')+'</td></tr>'; }).join('');
+      return '<h3 style="margin:20px 0 6px">🏆 Section khách dừng lại lâu nhất</h3>'
+        +explLine('Xếp theo tổng thời gian khách ở lại (giây) trên từng trang/anchor — chỗ đứng đầu là nơi khách quan tâm/đọc lâu nhất. (Anchor xuất hiện khi khách bấm vào mục đó trên trang.)')
+        +'<table class="rpt"><thead><tr><th>Trang / section</th><th class="num">Tổng thời gian (s)</th><th class="num">Chủ động (s)</th></tr></thead><tbody>'+tb+'</tbody></table>';
+    }
     function pMet(n){ return MET[n]||n||'Chỉ số'; }
     function pCol(c){ return COL[c]||c; }
     function sumF(rows,k){ var s=0; rows.forEach(function(r){ if(r[k]!=null) s+=Number(r[k])||0; }); return s; }
@@ -553,7 +593,7 @@
       cols.sort(function(a,b){ return (isUrl(b)?1:0)-(isUrl(a)?1:0); });
       var th='<tr>'+cols.map(function(c){ return '<th class="'+(isUrl(c)?'':'num')+'">'+esc(pCol(c))+'</th>'; }).join('')+'</tr>';
       var tb=rows.map(function(r){ return '<tr>'+cols.map(function(c){ var v=r[c]; var disp=(v==null?'—':(isUrl(c)?shortUrl(v):String(v))); return '<td class="'+(isUrl(c)?'lbl':'num')+'">'+esc(disp)+'</td>'; }).join('')+'</tr>'; }).join('');
-      return '<h3 style="margin:20px 0 8px">'+esc(pMet(m.metricName))+'</h3><table class="rpt"><thead>'+th+'</thead><tbody>'+tb+'</tbody></table>';
+      return '<h3 style="margin:20px 0 6px">'+esc(pMet(m.metricName))+'</h3>'+explLine(EXPL[m.metricName])+'<table class="rpt"><thead>'+th+'</thead><tbody>'+tb+'</tbody></table>';
     }
     function render(data){
       if(!data||!data.ok){
@@ -563,6 +603,7 @@
           +'<p class="hmap-note">Bạn vẫn xem được heatmap trực quan bằng nút “Mở Heatmap Clarity” phía trên.</p></div>';
         return;
       }
+      lastData=data;
       var metrics=Array.isArray(data.metrics)?data.metrics:[];
       var html='';
       var tr=metrics.filter(function(m){return /^traffic$/i.test(m.metricName||'');})[0];
@@ -572,8 +613,9 @@
           +card('Tổng phiên', num(sumF(rows,'totalSessionCount')), (data.days||3)+' ngày · '+rows.length+' trang')
           +card('Người dùng', num(sumF(rows,'distinctUserCount')), 'duy nhất')
           +card('Phiên bot', num(sumF(rows,'totalBotSessionCount')), 'đã loại khỏi UX')
-          +'</div>';
+          +'</div>'+explLine(EXPL._kpi);
       }
+      html+=dwellBlock(metrics);
       metrics.forEach(function(m){ html+=table(m); });
       if(!html) html='<div class="hero"><p>Clarity trả về rỗng (có thể landing chưa đủ lượt truy cập trong 3 ngày).</p></div>';
       var info='Cập nhật: '+esc((data.fetchedAt||'').replace('T',' ').slice(0,16))+(data.cached?' · từ cache':'')+(data.stale?' · (đã hết lượt gọi hôm nay, đang xem bản gần nhất)':'');
@@ -587,6 +629,25 @@
     }
     nav.addEventListener('click',function(){ if(!loaded){ loaded=true; load(false); } });
     if(btn) btn.addEventListener('click',function(){ load(true); });
+
+    // Nút đề xuất tối ưu landing (Claude phân tích số liệu Clarity)
+    var optBtn=document.getElementById('hmap-optimize-btn');
+    var optBox=document.getElementById('hmap-optimize');
+    function renderOpt(d){
+      if(!d||!d.ok){ optBox.innerHTML='<div class="ai-box">'+esc((d&&d.error)||'Không tạo được đề xuất.')+'</div>'; return; }
+      optBox.innerHTML='<div class="ai-box"><div style="font-weight:800;margin-bottom:6px">💡 Đề xuất tối ưu landing (AI)'+(d.cached?' · cache hôm nay':'')+'</div>'+mdToHtml(d.suggestions)+'</div>';
+    }
+    if(optBtn&&optBox) optBtn.addEventListener('click',function(){
+      if(!lastData||!lastData.ok||!Array.isArray(lastData.metrics)||!lastData.metrics.length){
+        optBox.innerHTML='<div class="ai-box">Chưa có số liệu Clarity để phân tích. Bấm “↻ Làm mới” để tải số trước đã.</div>'; return;
+      }
+      optBtn.disabled=true; var old=optBtn.textContent; optBtn.textContent='Đang phân tích…';
+      optBox.innerHTML='<div class="ai-box">⏳ Claude đang đọc số liệu và đề xuất tối ưu…</div>';
+      fetch('/api/clarity/optimize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({metrics:lastData.metrics})})
+        .then(function(r){return r.json();}).then(renderOpt)
+        .catch(function(e){ optBox.innerHTML='<div class="ai-box">Lỗi: '+esc(e&&e.message||e)+'</div>'; })
+        .finally(function(){ optBtn.disabled=false; optBtn.textContent=old; });
+    });
   })();
 
   // Chi phí/doanh thu: hiển thị ĐẦY ĐỦ, làm tròn đến hàng nghìn (không rút gọn tr/tỷ)
