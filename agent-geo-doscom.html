@@ -147,10 +147,7 @@
   <!-- ═══════════════ TÌNH TRẠNG INDEX BÀI VIẾT ═══════════════ -->
   <div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
     <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-      <div>
-        <h2 class="text-lg font-semibold text-gray-900">Tình trạng index bài viết đã đăng</h2>
-        <p class="text-xs text-gray-500" id="index-meta">Tỉ lệ bài đã đăng được báo cho search engine & được Google index thật</p>
-      </div>
+      <h2 class="text-lg font-semibold text-gray-900">Tình trạng index bài viết đã đăng</h2>
       <div class="flex gap-2">
         <button id="btn-submit-index" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition" title="Ping Google Indexing API + IndexNow yêu cầu index các bài đã đăng (cần service account quyền Owner)">
           📤 Báo Google index
@@ -160,16 +157,45 @@
         </button>
       </div>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <div class="kpi-card">
-        <div class="kpi-label">Tỉ lệ đã báo index (submit)</div>
-        <div class="kpi-value tabular-nums" id="kpi-submit-rate">—</div>
-        <div class="kpi-sub" id="kpi-submit-sub">% bài đã báo Google Indexing API / IndexNow</div>
+    <p class="text-xs text-gray-500 mb-3" id="index-meta">Bấm 🔎 để kiểm tra Google đã index chưa</p>
+
+    <!-- Chú thích 2 chỉ số -->
+    <div class="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 space-y-1.5">
+      <div><span class="font-semibold text-indigo-700">Tỉ lệ đã báo index (submit):</span> % bài đã đăng mà hệ thống đã chủ động "gõ cửa" báo Google (Indexing API) + Bing/Yandex (IndexNow) để yêu cầu index. <em class="text-gray-500">Đã báo ≠ chắc chắn được index — chỉ là đã gửi yêu cầu.</em></div>
+      <div><span class="font-semibold text-emerald-700">Tỉ lệ Google đã index thật:</span> % bài Google THỰC SỰ đã đưa vào kết quả tìm kiếm — hỏi trực tiếp qua Google Search Console. Đây là con số SEO thật.</div>
+    </div>
+
+    <!-- Doscom -->
+    <div class="mb-4">
+      <div class="text-sm font-semibold text-gray-800 mb-2">🏪 Doscom <span class="text-xs font-normal text-gray-400" id="idx-doscom-total"></span></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="kpi-card">
+          <div class="kpi-label">Tỉ lệ đã báo index (submit)</div>
+          <div class="kpi-value tabular-nums" id="kpi-submit-rate-doscom">—</div>
+          <div class="kpi-sub" id="kpi-submit-sub-doscom">Google Indexing API / IndexNow</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Tỉ lệ Google đã index thật</div>
+          <div class="kpi-value tabular-nums" id="kpi-indexed-rate-doscom">—</div>
+          <div class="kpi-sub" id="kpi-indexed-sub-doscom">Search Console</div>
+        </div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Tỉ lệ Google đã index thật</div>
-        <div class="kpi-value tabular-nums" id="kpi-indexed-rate">—</div>
-        <div class="kpi-sub" id="kpi-indexed-sub">Search Console URL Inspection</div>
+    </div>
+
+    <!-- NOMA -->
+    <div>
+      <div class="text-sm font-semibold text-gray-800 mb-2">🚗 NOMA <span class="text-xs font-normal text-gray-400" id="idx-noma-total"></span></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="kpi-card">
+          <div class="kpi-label">Tỉ lệ đã báo index (submit)</div>
+          <div class="kpi-value tabular-nums" id="kpi-submit-rate-noma">—</div>
+          <div class="kpi-sub" id="kpi-submit-sub-noma">Google Indexing API / IndexNow</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Tỉ lệ Google đã index thật</div>
+          <div class="kpi-value tabular-nums" id="kpi-indexed-rate-noma">—</div>
+          <div class="kpi-sub" id="kpi-indexed-sub-noma">Search Console</div>
+        </div>
       </div>
     </div>
   </div>
@@ -477,41 +503,50 @@ function renderKpis(summary) {
 // Render: Tình trạng index bài viết
 // ============================================================
 async function loadIndexStats() {
-  try {
-    const s = await fetchJson("/api/geo/index-stats");
-    renderIndexStats(s);
-  } catch (err) {
-    document.getElementById("kpi-submit-rate").textContent = "—";
-    document.getElementById("kpi-indexed-rate").textContent = "—";
-    console.error("index-stats load failed", err);
+  let lastChecked = null;
+  for (const brand of ["doscom", "noma"]) {
+    try {
+      const s = await fetchJson("/api/geo/index-stats?brand=" + brand);
+      renderIndexStats(brand, s);
+      if (s.indexed && s.indexed.last_checked_at)
+        lastChecked = Math.max(lastChecked || 0, s.indexed.last_checked_at);
+    } catch (err) {
+      document.getElementById("kpi-submit-rate-" + brand).textContent = "—";
+      document.getElementById("kpi-indexed-rate-" + brand).textContent = "—";
+      console.error("index-stats " + brand + " failed", err);
+    }
   }
+  document.getElementById("index-meta").textContent = lastChecked
+    ? `Cập nhật index Google lúc ${fmtTime(lastChecked)} · submit lấy realtime từ log publish`
+    : "Bấm 🔎 để kiểm tra Google đã index chưa";
 }
 
-function renderIndexStats(s) {
+function renderIndexStats(brand, s) {
   const total = s.total_published || 0;
   const sub = s.submit || {};
   const idx = s.indexed || {};
+  const el = (id) => document.getElementById(id + "-" + brand);
+
+  document.getElementById("idx-" + brand + "-total").textContent =
+    total ? `· ${total} bài đã đăng` : "· chưa có bài đăng";
 
   // (1) Tỉ lệ đã báo index — luôn có data nếu đã publish bài.
-  document.getElementById("kpi-submit-rate").textContent = total ? fmtPct(sub.rate) : "—";
-  document.getElementById("kpi-submit-sub").textContent = total
+  el("kpi-submit-rate").textContent = total ? fmtPct(sub.rate) : "—";
+  el("kpi-submit-sub").textContent = total
     ? `${sub.any_ok || 0}/${total} bài đã báo · Google ${sub.google_ok || 0} · IndexNow ${sub.indexnow_ok || 0}`
     : "Chưa có bài nào publish";
 
   // (2) Tỉ lệ Google đã index thật — cần đã bấm "Kiểm tra".
   if ((idx.checked || 0) > 0) {
-    document.getElementById("kpi-indexed-rate").textContent = fmtPct(idx.rate);
+    el("kpi-indexed-rate").textContent = fmtPct(idx.rate);
     let note = `${idx.indexed || 0}/${total} bài Google đã index`;
     if ((idx.checked || 0) < total) note += ` · mới kiểm ${idx.checked}/${total} bài`;
-    document.getElementById("kpi-indexed-sub").textContent = note;
+    el("kpi-indexed-sub").textContent = note;
   } else {
-    document.getElementById("kpi-indexed-rate").textContent = "—";
-    document.getElementById("kpi-indexed-sub").textContent = 'Chưa kiểm tra — bấm "🔎 Kiểm tra Google index"';
-  }
-
-  if (idx.last_checked_at) {
-    document.getElementById("index-meta").textContent =
-      `Cập nhật index Google lúc ${fmtTime(idx.last_checked_at)} · submit lấy realtime từ log publish`;
+    el("kpi-indexed-rate").textContent = "—";
+    el("kpi-indexed-sub").textContent = total
+      ? 'Chưa kiểm tra — bấm "🔎 Kiểm tra Google index"'
+      : "—";
   }
 }
 
