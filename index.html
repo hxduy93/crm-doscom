@@ -214,6 +214,7 @@
     </div>
     <button class="nav-item" data-view="agent-fb"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M9 2h6M8 13h.01M16 13h.01M9 17h6"/></svg></span><span class="lb">Agent Facebook Ads</span></button>
     <button class="nav-item" data-view="agent-gg"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg></span><span class="lb">Agent Google Ads</span></button>
+    <button class="nav-item" data-view="heatmap"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s5 4 5 9a5 5 0 0 1-10 0c0-1.5.5-2.8 1.2-3.8"/><path d="M12 13a2.5 2.5 0 0 0 2.5-2.5C14.5 9 12 6.5 12 6.5S9.5 9 9.5 10.5A2.5 2.5 0 0 0 12 13z"/></svg></span><span class="lb">Heatmap landing</span></button>
     <div class="nav-label">Công cụ</div>
     <button class="nav-item" data-view="ads-creator"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14zM11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></span><span class="lb">Tạo Ads tự động</span></button>
     <button class="nav-item" data-view="geo"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></span><span class="lb">GEO Monitor</span></button>
@@ -447,6 +448,26 @@
       </div><!-- /view-geo -->
       <div class="view" id="view-landing"></div>
       <div class="view" id="view-warehouse"></div>
+      <div class="view" id="view-heatmap">
+        <div class="hmap-head" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div>
+            <h2 style="margin:0 0 4px">Heatmap landing — chỉ số UX (Microsoft Clarity)</h2>
+            <p style="margin:0;color:var(--text-2);font-size:13px">Số liệu 3 ngày gần nhất từ Clarity Data Export · cache trong ngày. Ảnh heatmap trực quan xem trực tiếp trên Clarity (nút bên dưới).</p>
+          </div>
+          <div style="display:flex;gap:8px">
+            <a class="btn-cl" href="https://clarity.microsoft.com/projects/view/xczl125ty0/heatmaps" target="_blank" rel="noopener" style="text-decoration:none">🔥 Mở Heatmap Clarity</a>
+            <a class="btn-cl" href="https://clarity.microsoft.com/projects/view/xczl125ty0/dashboard" target="_blank" rel="noopener" style="text-decoration:none">📊 Dashboard Clarity</a>
+            <button class="btn-cl" id="hmap-refresh" type="button">↻ Làm mới</button>
+          </div>
+        </div>
+        <div id="hmap-body"><div class="hero"><p>Đang tải số liệu Clarity…</p></div></div>
+      </div>
+      <style>
+        .btn-cl{background:var(--muted);border:1px solid var(--line,rgba(0,0,0,.08));color:var(--text);border-radius:10px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+        .btn-cl:hover{background:var(--primary);color:#fff;border-color:transparent}
+        #view-heatmap .metric-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:0 0 18px}
+        #view-heatmap .hmap-note{color:var(--text-2);font-size:12.5px;margin-top:8px}
+      </style>
 
       <footer id="footer">Dữ liệu là bản sao (snapshot) từ dashboard facebookadsallinone · bộ lọc &amp; tính toán khớp logic dashboard cũ</footer>
     </main>
@@ -476,7 +497,7 @@
 
   // ===== Menu chính: chuyển VIEW (trang) + sub-nav cuộn trong Dashboard =====
   (function(){
-    var TITLES={'dashboard':'Tổng quan Dashboard','agent-fb':'Agent Facebook Ads','agent-gg':'Agent Google Ads','ads-creator':'Tạo Ads tự động','geo':'GEO Monitor','landing':'Landing Builder','warehouse':'Kho tổng Doscom'};
+    var TITLES={'dashboard':'Tổng quan Dashboard','agent-fb':'Agent Facebook Ads','agent-gg':'Agent Google Ads','heatmap':'Heatmap landing','ads-creator':'Tạo Ads tự động','geo':'GEO Monitor','landing':'Landing Builder','warehouse':'Kho tổng Doscom'};
     var DESC={'agent-gg':'Phân tích keyword / banner / category Google Ads bằng AI — chuyển từ dashboard cũ.','ads-creator':'Tự sinh & đăng campaign theo mẫu, gợi ý ngân sách + đối tượng.','geo':'Theo dõi thứ hạng GEO/SEO, đối thủ và nội dung.','landing':'Dựng landing page kéo-thả, xuất bản nhanh.','warehouse':'Tồn kho, nhập–xuất, định giá vốn toàn Doscom.'};
     function comingHtml(v){ return '<div class="hero"><h2>'+TITLES[v]+'</h2><p>Module sắp được chuyển sang CRM</p></div>'+
       '<div class="coming"><div class="coming-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg></div>'+
@@ -507,6 +528,63 @@
       Array.prototype.slice.call(subs.querySelectorAll('.nav-sub')).forEach(function(x){ x.classList.toggle('active', x===b); });
     }); }
     showView('dashboard');
+  })();
+
+  // ===== Heatmap landing (Microsoft Clarity) — tải lazy khi mở menu =====
+  (function(){
+    var nav=document.querySelector('.sidebar .nav-item[data-view="heatmap"]');
+    var body=document.getElementById('hmap-body');
+    var btn=document.getElementById('hmap-refresh');
+    if(!nav||!body) return;
+    var loaded=false;
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+    var MET={Traffic:'Lưu lượng',EngagementTime:'Thời gian tương tác',ScrollDepth:'Độ sâu cuộn',PopularPages:'Trang phổ biến',DeadClickCount:'Dead click (bấm vô tác dụng)',RageClickCount:'Rage click (bấm bực bội)',QuickbackClick:'Quay lại nhanh',ExcessiveScroll:'Cuộn quá mức',ScriptErrorCount:'Lỗi script',ErrorClickCount:'Click lỗi',Browser:'Trình duyệt',Device:'Thiết bị',OS:'Hệ điều hành',Country:'Quốc gia',ReferrerUrl:'Nguồn truy cập'};
+    var COL={URL:'Trang',totalSessionCount:'Phiên',totalBotSessionCount:'Bot',distinctUserCount:'Người dùng',pagesPerSessionPercentage:'Trang/phiên',averageScrollDepth:'Scroll TB (%)',totalTime:'Tổng thời gian (s)',activeTime:'Chủ động (s)',sessionsCount:'Phiên',sessionsWithMetricPercentage:'% phiên',subTotal:'Số lần'};
+    function pMet(n){ return MET[n]||n||'Chỉ số'; }
+    function pCol(c){ return COL[c]||c; }
+    function sumF(rows,k){ var s=0; rows.forEach(function(r){ if(r[k]!=null) s+=Number(r[k])||0; }); return s; }
+    function card(l,v,s){ return '<div class="metric-card"><div class="metric-label">'+esc(l)+'</div><div class="metric-value">'+esc(v)+'</div><div class="metric-sub">'+esc(s)+'</div></div>'; }
+    function table(m){
+      var rows=Array.isArray(m.information)?m.information:[];
+      if(!rows.length) return '';
+      var cols=[]; rows.forEach(function(r){ Object.keys(r).forEach(function(k){ if(cols.indexOf(k)<0) cols.push(k); }); });
+      cols.sort(function(a,b){ return (b==='URL'?1:0)-(a==='URL'?1:0); });
+      var th='<tr>'+cols.map(function(c){ return '<th class="'+(c==='URL'?'':'num')+'">'+esc(pCol(c))+'</th>'; }).join('')+'</tr>';
+      var tb=rows.map(function(r){ return '<tr>'+cols.map(function(c){ var v=r[c]; return '<td class="'+(c==='URL'?'lbl':'num')+'">'+esc(v==null?'—':String(v))+'</td>'; }).join('')+'</tr>'; }).join('');
+      return '<h3 style="margin:20px 0 8px">'+esc(pMet(m.metricName))+'</h3><table class="rpt"><thead>'+th+'</thead><tbody>'+tb+'</tbody></table>';
+    }
+    function render(data){
+      if(!data||!data.ok){
+        var msg = (data&&data.error==='missing_token') ? (data.hint||'Chưa cấu hình token Clarity.')
+          : ('Chưa lấy được số liệu Clarity'+(data&&data.error?(' ('+esc(data.error)+')'):'')+'.');
+        body.innerHTML='<div class="hero"><h3>Chưa có số liệu</h3><p>'+esc(msg)+'</p>'
+          +'<p class="hmap-note">Bạn vẫn xem được heatmap trực quan bằng nút “Mở Heatmap Clarity” phía trên.</p></div>';
+        return;
+      }
+      var metrics=Array.isArray(data.metrics)?data.metrics:[];
+      var html='';
+      var tr=metrics.filter(function(m){return /^traffic$/i.test(m.metricName||'');})[0];
+      if(tr&&Array.isArray(tr.information)&&tr.information.length){
+        var rows=tr.information;
+        html+='<div class="metric-row">'
+          +card('Tổng phiên', num(sumF(rows,'totalSessionCount')), (data.days||3)+' ngày · '+rows.length+' trang')
+          +card('Người dùng', num(sumF(rows,'distinctUserCount')), 'duy nhất')
+          +card('Phiên bot', num(sumF(rows,'totalBotSessionCount')), 'đã loại khỏi UX')
+          +'</div>';
+      }
+      metrics.forEach(function(m){ html+=table(m); });
+      if(!html) html='<div class="hero"><p>Clarity trả về rỗng (có thể landing chưa đủ lượt truy cập trong 3 ngày).</p></div>';
+      var info='Cập nhật: '+esc((data.fetchedAt||'').replace('T',' ').slice(0,16))+(data.cached?' · từ cache':'')+(data.stale?' · (đã hết lượt gọi hôm nay, đang xem bản gần nhất)':'');
+      body.innerHTML='<p class="hmap-note" style="margin:0 0 12px">'+info+'</p>'+html;
+    }
+    function load(force){
+      body.innerHTML='<div class="hero"><p>Đang tải số liệu Clarity…</p></div>';
+      fetch('/api/clarity/insights?days=3'+(force?'&refresh=1':''))
+        .then(function(r){ return r.json(); }).then(render)
+        .catch(function(e){ body.innerHTML='<div class="hero"><h3>Lỗi tải</h3><p>'+esc(e&&e.message||e)+'</p></div>'; });
+    }
+    nav.addEventListener('click',function(){ if(!loaded){ loaded=true; load(false); } });
+    if(btn) btn.addEventListener('click',function(){ load(true); });
   })();
 
   // Chi phí/doanh thu: hiển thị ĐẦY ĐỦ, làm tròn đến hàng nghìn (không rút gọn tr/tỷ)
