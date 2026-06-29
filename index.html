@@ -539,7 +539,9 @@
     var loaded=false;
     function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
     var MET={Traffic:'Lưu lượng',EngagementTime:'Thời gian tương tác',ScrollDepth:'Độ sâu cuộn',PopularPages:'Trang phổ biến',DeadClickCount:'Dead click (bấm vô tác dụng)',RageClickCount:'Rage click (bấm bực bội)',QuickbackClick:'Quay lại nhanh',ExcessiveScroll:'Cuộn quá mức',ScriptErrorCount:'Lỗi script',ErrorClickCount:'Click lỗi',Browser:'Trình duyệt',Device:'Thiết bị',OS:'Hệ điều hành',Country:'Quốc gia',ReferrerUrl:'Nguồn truy cập'};
-    var COL={URL:'Trang',totalSessionCount:'Phiên',totalBotSessionCount:'Bot',distinctUserCount:'Người dùng',pagesPerSessionPercentage:'Trang/phiên',averageScrollDepth:'Scroll TB (%)',totalTime:'Tổng thời gian (s)',activeTime:'Chủ động (s)',sessionsCount:'Phiên',sessionsWithMetricPercentage:'% phiên',subTotal:'Số lần'};
+    var COL={URL:'Trang',Url:'Trang',totalSessionCount:'Phiên',totalBotSessionCount:'Bot',distinctUserCount:'Người dùng',pagesPerSessionPercentage:'Trang/phiên',averageScrollDepth:'Scroll TB (%)',totalTime:'Tổng thời gian (s)',activeTime:'Chủ động (s)',sessionsCount:'Phiên',sessionsWithMetricPercentage:'% có gặp',sessionsWithoutMetricPercentage:'% không gặp',pagesViews:'Lượt xem',subTotal:'Số lần'};
+    function isUrl(c){ return /^url$/i.test(c); }
+    function shortUrl(u){ return String(u).replace(/^https?:\/\//,'').replace(/\/$/,'') || '/'; }
     function pMet(n){ return MET[n]||n||'Chỉ số'; }
     function pCol(c){ return COL[c]||c; }
     function sumF(rows,k){ var s=0; rows.forEach(function(r){ if(r[k]!=null) s+=Number(r[k])||0; }); return s; }
@@ -548,9 +550,9 @@
       var rows=Array.isArray(m.information)?m.information:[];
       if(!rows.length) return '';
       var cols=[]; rows.forEach(function(r){ Object.keys(r).forEach(function(k){ if(cols.indexOf(k)<0) cols.push(k); }); });
-      cols.sort(function(a,b){ return (b==='URL'?1:0)-(a==='URL'?1:0); });
-      var th='<tr>'+cols.map(function(c){ return '<th class="'+(c==='URL'?'':'num')+'">'+esc(pCol(c))+'</th>'; }).join('')+'</tr>';
-      var tb=rows.map(function(r){ return '<tr>'+cols.map(function(c){ var v=r[c]; return '<td class="'+(c==='URL'?'lbl':'num')+'">'+esc(v==null?'—':String(v))+'</td>'; }).join('')+'</tr>'; }).join('');
+      cols.sort(function(a,b){ return (isUrl(b)?1:0)-(isUrl(a)?1:0); });
+      var th='<tr>'+cols.map(function(c){ return '<th class="'+(isUrl(c)?'':'num')+'">'+esc(pCol(c))+'</th>'; }).join('')+'</tr>';
+      var tb=rows.map(function(r){ return '<tr>'+cols.map(function(c){ var v=r[c]; var disp=(v==null?'—':(isUrl(c)?shortUrl(v):String(v))); return '<td class="'+(isUrl(c)?'lbl':'num')+'">'+esc(disp)+'</td>'; }).join('')+'</tr>'; }).join('');
       return '<h3 style="margin:20px 0 8px">'+esc(pMet(m.metricName))+'</h3><table class="rpt"><thead>'+th+'</thead><tbody>'+tb+'</tbody></table>';
     }
     function render(data){
