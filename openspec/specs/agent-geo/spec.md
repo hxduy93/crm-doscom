@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Cụm GEO (Generative Engine Optimization) theo dõi mức độ xuất hiện của brand Doscom/NOMA trong câu trả lời của các AI engine (ChatGPT, Gemini, Meta AI) và vận hành pipeline nội dung để cải thiện độ phủ. Gồm 3 mảng: (1) quản lý bộ câu hỏi + chạy engine + đo brand mention/citation/đối thủ; (2) xử lý hàng đợi theo lô qua cron; (3) pipeline nội dung gap-analysis → sinh bài → duyệt → đăng WordPress. Dữ liệu lưu ở D1 (`DB`): `geo_queries`, `geo_runs`, `geo_citations`, `geo_competitor_mentions`, `geo_job_queue`, `geo_content_queue`, `geo_article_performance`, và log AI usage.
+Cụm GEO (Generative Engine Optimization) theo dõi mức độ xuất hiện của brand Doscom/NOMA trong câu trả lời của các AI engine (ChatGPT, Gemini, Meta AI) và vận hành pipeline nội dung để cải thiện độ phủ. Gồm 3 mảng: (1) quản lý bộ câu hỏi + chạy engine + đo brand mention/citation/đối thủ; (2) xử lý hàng đợi theo lô qua cron; (3) pipeline nội dung gap-analysis → sinh bài → duyệt → đăng WordPress. Dữ liệu lưu ở D1 (`DB`): `geo_queries`, `geo_runs`, `geo_citations`, `geo_competitor_mentions`, `geo_job_queue`, `geo_content_queue`, `geo_article_performance`, `geo_index_log` (đã submit index chưa), `geo_index_status` (Google đã index thật chưa), và log AI usage.
 
 ## Requirements
 
@@ -51,6 +51,27 @@ Các endpoint `GET /api/geo/queue`, `GET /api/geo/runs`, `GET /api/geo/sov`, `GE
 
 - **WHEN** client gọi `GET /api/geo/sov?days=30`
 - **THEN** agent trả SoV của brand vs đối thủ tính trên runs trong 30 ngày
+
+### Requirement: Tỉ lệ index bài viết đã đăng
+
+Endpoint `GET /api/geo/index-stats` SHALL trả 2 tỉ lệ tính trên các bài đã publish (`geo_content_queue.status='published'` có `wp_post_url`): (1) **submit rate** = % bài đã báo index thành công ít nhất 1 search engine, lấy từ `geo_index_log` (gom MAX `google_ok`/`indexnow_ok` theo `article_id`); (2) **indexed rate** = % bài Google THỰC SỰ đã index, lấy từ cache `geo_index_status`. Mỗi rate SHALL kèm tử/mẫu (`any_ok`, `indexed`, `checked`, `coverage`) để KHÔNG bịa số liệu; bài chưa kiểm GSC coi như chưa index nhưng `coverage` cho biết đã phủ bao nhiêu. Khi chưa có bài published, rate trả `null` (không chia cho 0).
+
+Endpoint `POST /api/geo/check-index` SHALL quét các bài đã publish, gọi Google Search Console URL Inspection API (`POST /v1/urlInspection/index:inspect`, scope `webmasters.readonly`, dùng chung service account `GOOGLE_INDEXING_SA_JSON`), suy ra `indexed = (verdict === "PASS")` và UPSERT vào `geo_index_status`. Endpoint SHALL throttle: bỏ qua URL đã kiểm trong vòng `min_age_hours` (default 12h) trừ khi `force=true`, để tiết kiệm quota (~2000 lệnh/ngày/property). Khi thiếu cấu hình service account/Search Console, endpoint SHALL trả lỗi 400 với hint, KHÔNG ghi `indexed` sai.
+
+#### Scenario: Đọc tỉ lệ index
+
+- **WHEN** client gọi `GET /api/geo/index-stats`
+- **THEN** agent trả `submit.rate` (từ geo_index_log) và `indexed.rate` + `indexed.coverage` (từ geo_index_status), kèm tử/mẫu
+
+#### Scenario: Kiểm tra Google index thật
+
+- **WHEN** client gọi `POST /api/geo/check-index` và service account có quyền trên property GSC
+- **THEN** agent gọi URL Inspection cho các bài published chưa kiểm gần đây, UPSERT verdict/coverage vào `geo_index_status`
+
+#### Scenario: Chưa cấu hình Search Console
+
+- **WHEN** client gọi `POST /api/geo/check-index` nhưng thiếu `GOOGLE_INDEXING_SA_JSON` hoặc service account chưa có quyền GSC
+- **THEN** agent trả lỗi 400 kèm hint, KHÔNG đánh dấu bài nào là indexed
 
 ### Requirement: Phân tích lỗ hổng nội dung
 

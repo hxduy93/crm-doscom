@@ -144,6 +144,31 @@
     </div>
   </div>
 
+  <!-- ═══════════════ TÌNH TRẠNG INDEX BÀI VIẾT ═══════════════ -->
+  <div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+      <div>
+        <h2 class="text-lg font-semibold text-gray-900">Tình trạng index bài viết đã đăng</h2>
+        <p class="text-xs text-gray-500" id="index-meta">Tỉ lệ bài đã đăng được báo cho search engine & được Google index thật</p>
+      </div>
+      <button id="btn-check-index" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition" title="Gọi Google Search Console kiểm tra từng URL đã đăng (tốn quota — nên chạy 1 lần/ngày)">
+        🔎 Kiểm tra Google index
+      </button>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="kpi-card">
+        <div class="kpi-label">Tỉ lệ đã báo index (submit)</div>
+        <div class="kpi-value tabular-nums" id="kpi-submit-rate">—</div>
+        <div class="kpi-sub" id="kpi-submit-sub">% bài đã báo Google Indexing API / IndexNow</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Tỉ lệ Google đã index thật</div>
+        <div class="kpi-value tabular-nums" id="kpi-indexed-rate">—</div>
+        <div class="kpi-sub" id="kpi-indexed-sub">Search Console URL Inspection</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══════════════ TREND CHART ═══════════════ -->
   <div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
     <div class="flex items-center justify-between mb-4">
@@ -444,6 +469,48 @@ function renderKpis(summary) {
 }
 
 // ============================================================
+// Render: Tình trạng index bài viết
+// ============================================================
+async function loadIndexStats() {
+  try {
+    const s = await fetchJson("/api/geo/index-stats");
+    renderIndexStats(s);
+  } catch (err) {
+    document.getElementById("kpi-submit-rate").textContent = "—";
+    document.getElementById("kpi-indexed-rate").textContent = "—";
+    console.error("index-stats load failed", err);
+  }
+}
+
+function renderIndexStats(s) {
+  const total = s.total_published || 0;
+  const sub = s.submit || {};
+  const idx = s.indexed || {};
+
+  // (1) Tỉ lệ đã báo index — luôn có data nếu đã publish bài.
+  document.getElementById("kpi-submit-rate").textContent = total ? fmtPct(sub.rate) : "—";
+  document.getElementById("kpi-submit-sub").textContent = total
+    ? `${sub.any_ok || 0}/${total} bài đã báo · Google ${sub.google_ok || 0} · IndexNow ${sub.indexnow_ok || 0}`
+    : "Chưa có bài nào publish";
+
+  // (2) Tỉ lệ Google đã index thật — cần đã bấm "Kiểm tra".
+  if ((idx.checked || 0) > 0) {
+    document.getElementById("kpi-indexed-rate").textContent = fmtPct(idx.rate);
+    let note = `${idx.indexed || 0}/${total} bài Google đã index`;
+    if ((idx.checked || 0) < total) note += ` · mới kiểm ${idx.checked}/${total} bài`;
+    document.getElementById("kpi-indexed-sub").textContent = note;
+  } else {
+    document.getElementById("kpi-indexed-rate").textContent = "—";
+    document.getElementById("kpi-indexed-sub").textContent = 'Chưa kiểm tra — bấm "🔎 Kiểm tra Google index"';
+  }
+
+  if (idx.last_checked_at) {
+    document.getElementById("index-meta").textContent =
+      `Cập nhật index Google lúc ${fmtTime(idx.last_checked_at)} · submit lấy realtime từ log publish`;
+  }
+}
+
+// ============================================================
 // Render: Trend chart
 // ============================================================
 function renderTrendChart(dailySov, brand = currentTrendBrand) {
@@ -642,6 +709,7 @@ async function loadAll() {
     renderTrendChart(sov.daily_sov);
     renderWorstQueries(sov, currentWorstBrand);
     renderRuns(runs.runs);
+    loadIndexStats();  // độc lập, không chặn các phần khác
 
     document.getElementById("status-text").textContent =
       `${sov.summary.total_runs || 0} runs · last update ${fmtTime(sov.summary.last_run)}`;
@@ -660,6 +728,36 @@ document.getElementById("days-filter").addEventListener("change", e => {
 });
 
 document.getElementById("refresh-btn").addEventListener("click", () => loadAll());
+
+// 🔎 Kiểm tra Google index — gọi Search Console URL Inspection cho các URL đã đăng.
+document.getElementById("btn-check-index").addEventListener("click", async () => {
+  const btn = document.getElementById("btn-check-index");
+  const meta = document.getElementById("index-meta");
+  if (btn.disabled) return;
+  if (!confirm("Gọi Google Search Console kiểm tra các bài đã đăng xem Google đã index chưa.\n\nTốn quota Search Console (~2000 lệnh/ngày). Bài đã kiểm trong 12h gần đây sẽ được bỏ qua.\n\nTiếp tục?")) return;
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "⏳ Đang kiểm tra…";
+  try {
+    const r = await fetch("/api/geo/check-index", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ limit: 50 }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.ok === false) {
+      meta.innerHTML = `<span class="text-red-600">${escapeHtml(j.error || ("HTTP " + r.status))}</span>`;
+    } else {
+      meta.textContent = `Đã kiểm ${j.checked || 0} bài · ${j.indexed || 0} đã index · ${j.errors || 0} lỗi`;
+      await loadIndexStats();
+    }
+  } catch (err) {
+    meta.innerHTML = `<span class="text-red-600">Lỗi: ${escapeHtml(err.message || String(err))}</span>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+});
 
 // ▶ Chạy cron ngay — tạo job hôm nay (idempotent) rồi loop run-batch tới khi hết job.
 async function runCronNow() {
