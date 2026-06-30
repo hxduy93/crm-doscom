@@ -214,7 +214,7 @@
     </div>
     <button class="nav-item" data-view="agent-fb"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M9 2h6M8 13h.01M16 13h.01M9 17h6"/></svg></span><span class="lb">Agent Facebook Ads</span></button>
     <button class="nav-item" data-view="agent-gg"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg></span><span class="lb">Agent Google Ads</span></button>
-    <button class="nav-item" data-view="heatmap"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s5 4 5 9a5 5 0 0 1-10 0c0-1.5.5-2.8 1.2-3.8"/><path d="M12 13a2.5 2.5 0 0 0 2.5-2.5C14.5 9 12 6.5 12 6.5S9.5 9 9.5 10.5A2.5 2.5 0 0 0 12 13z"/></svg></span><span class="lb">Heatmap landing</span></button>
+    <button class="nav-item" data-view="heatmap"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s5 4 5 9a5 5 0 0 1-10 0c0-1.5.5-2.8 1.2-3.8"/><path d="M12 13a2.5 2.5 0 0 0 2.5-2.5C14.5 9 12 6.5 12 6.5S9.5 9 9.5 10.5A2.5 2.5 0 0 0 12 13z"/></svg></span><span class="lb">Heatmap sản phẩm</span></button>
     <div class="nav-label">Công cụ</div>
     <button class="nav-item" data-view="ads-creator"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14zM11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></span><span class="lb">Tạo Ads tự động</span></button>
     <button class="nav-item" data-view="geo"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></span><span class="lb">GEO Monitor</span></button>
@@ -449,10 +449,10 @@
       <div class="view" id="view-landing"></div>
       <div class="view" id="view-warehouse"></div>
       <div class="view" id="view-heatmap">
-        <div class="hmap-head" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="hmap-head" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
           <div>
-            <h2 style="margin:0 0 4px">Heatmap landing — chỉ số UX (Microsoft Clarity)</h2>
-            <p style="margin:0;color:var(--text-2);font-size:13px">Số liệu 3 ngày gần nhất từ Clarity Data Export · cache trong ngày. Ảnh heatmap trực quan xem trực tiếp trên Clarity (nút bên dưới).</p>
+            <h2 style="margin:0 0 4px">🔥 Heatmap sản phẩm</h2>
+            <p style="margin:0;color:var(--text-2);font-size:13px">Hành vi khách trên landing từng sản phẩm · 3 ngày gần nhất · nguồn Microsoft Clarity. Ảnh heatmap trực quan xem trực tiếp trên Clarity.</p>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn-cl" id="hmap-optimize-btn" type="button" style="background:var(--primary);color:#fff;border-color:transparent">💡 Đề xuất tối ưu landing</button>
@@ -461,14 +461,72 @@
             <button class="btn-cl" id="hmap-refresh" type="button">↻ Làm mới</button>
           </div>
         </div>
-        <div id="hmap-optimize"></div>
+        <div class="hm-tabs" id="hmap-tabs"></div>
         <div id="hmap-body"><div class="hero"><p>Đang tải số liệu Clarity…</p></div></div>
       </div>
       <style>
         .btn-cl{background:var(--muted);border:1px solid var(--line,rgba(0,0,0,.08));color:var(--text);border-radius:10px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
         .btn-cl:hover{background:var(--primary);color:#fff;border-color:transparent}
-        #view-heatmap .metric-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:0 0 18px}
         #view-heatmap .hmap-note{color:var(--text-2);font-size:12.5px;margin-top:8px}
+        /* tabs sản phẩm */
+        #view-heatmap .hm-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+        #view-heatmap .hm-tab{border:1px solid var(--line,rgba(0,0,0,.08));background:var(--bg-1,#fff);border-radius:13px;padding:10px 16px;font-family:inherit;font-weight:800;font-size:14px;color:var(--text-2);cursor:pointer;display:flex;align-items:center;gap:9px;transition:.2s}
+        #view-heatmap .hm-tab .dot{width:8px;height:8px;border-radius:99px;background:#c9cdda}
+        #view-heatmap .hm-tab.active{color:#fff;background:var(--primary);border-color:transparent;box-shadow:0 8px 20px -10px var(--primary)}
+        #view-heatmap .hm-tab.active .dot{background:#fff}
+        #view-heatmap .hm-tab .cnt{font-size:11px;font-weight:700;opacity:.7}
+        /* kpi */
+        #view-heatmap .hm-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+        @media(max-width:760px){#view-heatmap .hm-kpis{grid-template-columns:repeat(2,1fr)}}
+        #view-heatmap .hm-kpi{background:var(--bg-1,#fff);border:1px solid var(--line,rgba(0,0,0,.08));border-radius:16px;padding:16px}
+        #view-heatmap .hm-kpi .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:19px;background:color-mix(in srgb,var(--primary) 12%,transparent);margin-bottom:10px}
+        #view-heatmap .hm-kpi .v{font-size:26px;font-weight:800;line-height:1;letter-spacing:-.02em}
+        #view-heatmap .hm-kpi .l{font-size:12.5px;color:var(--text-2);font-weight:600;margin-top:5px}
+        #view-heatmap .hm-kpi .s{font-size:11.5px;color:var(--text-2);margin-top:2px;opacity:.85}
+        /* card */
+        #view-heatmap .hm-card{background:var(--bg-1,#fff);border:1px solid var(--line,rgba(0,0,0,.08));border-radius:18px;padding:20px;margin-bottom:16px}
+        #view-heatmap .hm-card h3{font-size:16px;margin:0 0 3px;display:flex;align-items:center;gap:8px}
+        #view-heatmap .hm-card .desc{color:var(--text-2);font-size:12.5px;margin:0 0 16px}
+        /* signals */
+        #view-heatmap .hm-signals{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+        #view-heatmap .hm-sig{border-radius:14px;padding:14px;border:1px solid var(--line,rgba(0,0,0,.08));display:flex;gap:12px;align-items:center}
+        #view-heatmap .hm-sig .si{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-size:20px;flex:none}
+        #view-heatmap .hm-sig .num{font-size:20px;font-weight:800;line-height:1}
+        #view-heatmap .hm-sig .tx{font-size:12.5px;color:var(--text-2);font-weight:600;margin-top:3px}
+        #view-heatmap .hm-sig.ok{background:#e9f7ef}#view-heatmap .hm-sig.ok .si{background:#d3f0e0}
+        #view-heatmap .hm-sig.warn{background:#fdf3e7}#view-heatmap .hm-sig.warn .si{background:#f8e2c2}
+        #view-heatmap .hm-sig.bad{background:#fdeced}#view-heatmap .hm-sig.bad .si{background:#f7cdd0}
+        #view-heatmap .hm-sig .num,#view-heatmap .hm-sig .tx{color:#1a1d2e}
+        /* bars */
+        #view-heatmap .hm-bars{display:flex;flex-direction:column;gap:13px}
+        #view-heatmap .hm-bar-row{display:grid;grid-template-columns:200px 1fr auto auto;gap:14px;align-items:center}
+        @media(max-width:680px){#view-heatmap .hm-bar-row{grid-template-columns:1fr;gap:7px}}
+        #view-heatmap .hm-bar-lbl{font-size:13px;font-weight:700}
+        #view-heatmap .hm-bar-lbl small{display:block;color:var(--text-2);font-weight:600;font-size:11px}
+        #view-heatmap .hm-bar-track{background:color-mix(in srgb,var(--text) 8%,transparent);border-radius:99px;height:14px;overflow:hidden}
+        #view-heatmap .hm-bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#818cf8,var(--primary));transition:width .6s cubic-bezier(.2,.8,.2,1)}
+        #view-heatmap .hm-bar-fill.scr{background:linear-gradient(90deg,#34d399,#10b981)}
+        #view-heatmap .hm-bar-val{font-size:13px;font-weight:800;min-width:64px;text-align:right}
+        #view-heatmap .hm-bar-val small{color:var(--text-2);font-weight:600}
+        #view-heatmap .hm-bar-open{border:1px solid var(--line,rgba(0,0,0,.08));background:var(--bg-1,#fff);color:var(--primary);border-radius:9px;padding:6px 11px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;text-decoration:none;white-space:nowrap;transition:.2s}
+        #view-heatmap .hm-bar-open:hover{background:var(--primary);color:#fff;border-color:transparent}
+        /* ai */
+        #view-heatmap .hm-ai{background:color-mix(in srgb,var(--primary) 5%,var(--bg-1,#fff));border-color:color-mix(in srgb,var(--primary) 22%,transparent)}
+        #view-heatmap .hm-ai .tag{background:color-mix(in srgb,var(--primary) 14%,transparent);color:var(--primary);font-size:11px;font-weight:800;padding:4px 9px;border-radius:99px}
+        #view-heatmap .hm-md h3{font-size:14px;margin:14px 0 6px}#view-heatmap .hm-md p{margin:6px 0;font-size:13.5px;line-height:1.55}#view-heatmap .hm-md ul{margin:6px 0 6px 18px;font-size:13.5px;line-height:1.5}#view-heatmap .hm-md strong{color:var(--primary)}
+        /* empty */
+        #view-heatmap .hm-empty{background:var(--bg-1,#fff);border:1px dashed color-mix(in srgb,var(--text) 18%,transparent);border-radius:18px;padding:44px 24px;text-align:center;color:var(--text-2)}
+        #view-heatmap .hm-empty .em-ic{font-size:38px}#view-heatmap .hm-empty h3{color:var(--text);margin:10px 0 6px;font-size:17px}#view-heatmap .hm-empty p{margin:0 auto;font-size:13.5px;max-width:520px;line-height:1.6}
+        /* raw */
+        #view-heatmap details.hm-raw{background:var(--bg-1,#fff);border:1px solid var(--line,rgba(0,0,0,.08));border-radius:16px;padding:4px 18px;margin-bottom:16px}
+        #view-heatmap details.hm-raw summary{cursor:pointer;font-weight:700;font-size:14px;padding:14px 0;list-style:none;display:flex;align-items:center;gap:8px}
+        #view-heatmap details.hm-raw summary::-webkit-details-marker{display:none}
+        #view-heatmap details.hm-raw summary .chev{margin-left:auto;transition:.2s}#view-heatmap details.hm-raw[open] summary .chev{transform:rotate(180deg)}
+        #view-heatmap table.hm-rpt{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0 16px}
+        #view-heatmap table.hm-rpt th,#view-heatmap table.hm-rpt td{padding:8px 10px;border-bottom:1px solid var(--line,rgba(0,0,0,.08));text-align:right}
+        #view-heatmap table.hm-rpt th:first-child,#view-heatmap table.hm-rpt td:first-child{text-align:left}
+        #view-heatmap table.hm-rpt th{color:var(--text-2);font-weight:700}
+        #view-heatmap .hm-mh{font-weight:800;font-size:13px;margin:14px 0 2px}#view-heatmap .hm-mexpl{color:var(--text-2);font-size:12px;margin:0 0 6px}
       </style>
 
       <footer id="footer">Dữ liệu là bản sao (snapshot) từ dashboard facebookadsallinone · bộ lọc &amp; tính toán khớp logic dashboard cũ</footer>
@@ -499,7 +557,7 @@
 
   // ===== Menu chính: chuyển VIEW (trang) + sub-nav cuộn trong Dashboard =====
   (function(){
-    var TITLES={'dashboard':'Tổng quan Dashboard','agent-fb':'Agent Facebook Ads','agent-gg':'Agent Google Ads','heatmap':'Heatmap landing','ads-creator':'Tạo Ads tự động','geo':'GEO Monitor','landing':'Landing Builder','warehouse':'Kho tổng Doscom'};
+    var TITLES={'dashboard':'Tổng quan Dashboard','agent-fb':'Agent Facebook Ads','agent-gg':'Agent Google Ads','heatmap':'Heatmap sản phẩm','ads-creator':'Tạo Ads tự động','geo':'GEO Monitor','landing':'Landing Builder','warehouse':'Kho tổng Doscom'};
     var DESC={'agent-gg':'Phân tích keyword / banner / category Google Ads bằng AI — chuyển từ dashboard cũ.','ads-creator':'Tự sinh & đăng campaign theo mẫu, gợi ý ngân sách + đối tượng.','geo':'Theo dõi thứ hạng GEO/SEO, đối thủ và nội dung.','landing':'Dựng landing page kéo-thả, xuất bản nhanh.','warehouse':'Tồn kho, nhập–xuất, định giá vốn toàn Doscom.'};
     function comingHtml(v){ return '<div class="hero"><h2>'+TITLES[v]+'</h2><p>Module sắp được chuyển sang CRM</p></div>'+
       '<div class="coming"><div class="coming-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg></div>'+
@@ -532,122 +590,179 @@
     showView('dashboard');
   })();
 
-  // ===== Heatmap landing (Microsoft Clarity) — tải lazy khi mở menu =====
+  // ===== Heatmap sản phẩm (Microsoft Clarity) — tải lazy khi mở menu =====
   (function(){
     var nav=document.querySelector('.sidebar .nav-item[data-view="heatmap"]');
     var body=document.getElementById('hmap-body');
-    var btn=document.getElementById('hmap-refresh');
+    var tabsEl=document.getElementById('hmap-tabs');
+    var refreshBtn=document.getElementById('hmap-refresh');
+    var optBtn=document.getElementById('hmap-optimize-btn');
     if(!nav||!body) return;
-    var loaded=false, lastData=null;
+
+    var loaded=false, LIVE=null;            // LIVE = phản hồi /api/clarity/insights (gắn vào sản phẩm Noma 911)
+    var product='noma911';
+    var PRODUCTS=[{key:'dr1',name:'DR1'},{key:'d1',name:'D1'},{key:'noma911',name:'Noma 911'}];
+    // nhãn section đẹp cho landing Noma (theo anchor); không khớp -> tự sinh từ hash/đường dẫn.
+    var PRETTY={'/':'Trang chủ (Hero)','/#san-pham-kem':'Sản phẩm mua kèm','/#noma922':'Chi tiết 922 / combo','/#combo':'Combo mua 2 tặng 1','/#dat-hang':'Form đặt hàng'};
+    var METLBL={DeadClickCount:'Dead click',RageClickCount:'Rage click',QuickbackClick:'Quay lại nhanh',ExcessiveScroll:'Cuộn quá mức',ScriptErrorCount:'Lỗi script',ErrorClickCount:'Click lỗi'};
+    var METEXPL={Traffic:'Lưu lượng theo trang.',ScrollDepth:'% chiều dài trang khách cuộn được.',EngagementTime:'Thời gian ở lại (tổng) & tương tác (chủ động), giây.',DeadClickCount:'Bấm vào chỗ không có gì xảy ra.',RageClickCount:'Bấm dồn dập vì bực bội.',QuickbackClick:'Vào rồi quay lại ngay.',ExcessiveScroll:'Cuộn lên xuống quá nhiều.',ScriptErrorCount:'Lỗi JavaScript.',ErrorClickCount:'Bấm dẫn tới lỗi.'};
+
     function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
-    var MET={Traffic:'Lưu lượng',EngagementTime:'Thời gian tương tác',ScrollDepth:'Độ sâu cuộn',PopularPages:'Trang phổ biến',DeadClickCount:'Dead click (bấm vô tác dụng)',RageClickCount:'Rage click (bấm bực bội)',QuickbackClick:'Quay lại nhanh',ExcessiveScroll:'Cuộn quá mức',ScriptErrorCount:'Lỗi script',ErrorClickCount:'Click lỗi',Browser:'Trình duyệt',Device:'Thiết bị',OS:'Hệ điều hành',Country:'Quốc gia',ReferrerUrl:'Nguồn truy cập'};
-    var COL={URL:'Trang',Url:'Trang',totalSessionCount:'Phiên',totalBotSessionCount:'Bot',distinctUserCount:'Người dùng',pagesPerSessionPercentage:'Trang/phiên',averageScrollDepth:'Scroll TB (%)',totalTime:'Tổng thời gian (s)',activeTime:'Chủ động (s)',sessionsCount:'Phiên',sessionsWithMetricPercentage:'% có gặp',sessionsWithoutMetricPercentage:'% không gặp',pagesViews:'Lượt xem',subTotal:'Số lần'};
-    function isUrl(c){ return /^url$/i.test(c); }
-    function shortUrl(u){ return String(u).replace(/^https?:\/\//,'').replace(/\/$/,'') || '/'; }
-    var EXPL={
-      _kpi:'Tổng lượt truy cập 3 ngày: số phiên, số người dùng riêng biệt và số phiên bot (bot đã bị loại khỏi các chỉ số UX).',
-      Traffic:'Lưu lượng truy cập theo từng trang/anchor.',
-      ScrollDepth:'Khách cuộn sâu trung bình tới bao nhiêu % chiều dài trang — càng cao nghĩa là nội dung càng giữ chân.',
-      EngagementTime:'Thời gian khách ở lại (tổng) và thời gian thực sự tương tác (chủ động) trên mỗi trang/section, tính bằng giây.',
-      DeadClickCount:'Số lần khách bấm vào chỗ tưởng bấm được nhưng không xảy ra gì — dấu hiệu UI gây hiểu nhầm.',
-      RageClickCount:'Số lần khách bấm dồn dập vì bực bội (nút không phản hồi/chậm) — cần ưu tiên sửa.',
-      QuickbackClick:'Khách bấm vào rồi quay lại ngay — đích đến không như kỳ vọng.',
-      ExcessiveScroll:'Khách cuộn lên xuống quá nhiều — thường do khó tìm thông tin cần.',
-      ScriptErrorCount:'Số lỗi JavaScript ghi nhận — có thể làm hỏng nút bấm/trải nghiệm.',
-      ErrorClickCount:'Số lần bấm dẫn tới lỗi.',
-      Browser:'Phân bổ theo trình duyệt.',Device:'Phân bổ theo loại thiết bị.',OS:'Phân bổ theo hệ điều hành.',Country:'Phân bổ theo quốc gia.',ReferrerUrl:'Nguồn dẫn khách tới trang.'
-    };
-    function explLine(t){ return t?('<p class="hmap-note" style="margin:-2px 0 8px">'+esc(t)+'</p>'):''; }
-    function mdToHtml(md){
-      var lines=String(md||'').split(/\r?\n/),html='',inUl=false;
-      function inline(s){ return esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`(.+?)`/g,'<code>$1</code>'); }
-      lines.forEach(function(ln){
-        if(/^\s*##\s+/.test(ln)){ if(inUl){html+='</ul>';inUl=false;} html+='<h3 style="margin:16px 0 6px">'+inline(ln.replace(/^\s*##\s+/,''))+'</h3>'; return; }
-        if(/^\s*[-*]\s+/.test(ln)){ if(!inUl){html+='<ul style="margin:6px 0 6px 18px">';inUl=true;} html+='<li>'+inline(ln.replace(/^\s*[-*]\s+/,''))+'</li>'; return; }
-        if(/^\s*\d+\.\s+/.test(ln)){ if(!inUl){html+='<ul style="margin:6px 0 6px 18px">';inUl=true;} html+='<li>'+inline(ln.replace(/^\s*\d+\.\s+/,''))+'</li>'; return; }
-        if(/^\s*$/.test(ln)){ if(inUl){html+='</ul>';inUl=false;} return; }
-        html+='<p style="margin:6px 0">'+inline(ln)+'</p>';
+    function n(v){ return Number(v)||0; }
+    function fmtInt(v){ return n(v).toLocaleString('vi-VN'); }
+    function fmtTime(s){ s=n(s); if(s<60) return s+'s'; var m=Math.floor(s/60); return m+'m'+(s%60?' '+(s%60)+'s':''); }
+    function host(u){ try{ return new URL(u).host; }catch(e){ return ''; } }
+    function cleanPath(u){ try{ var x=new URL(u); return (x.pathname.replace(/\/$/,'')||'')+(x.hash||''); }catch(e){ var s=String(u||''); var h=s.indexOf('#'); return h>=0?s.slice(h):s; } }
+    function pretty(u){
+      if(!u) return '(không xác định)';
+      var c=cleanPath(u), key=(c===''?'/':c);
+      if(PRETTY[key]) return PRETTY[key];
+      var h=key.indexOf('#');
+      if(h>=0) return '# '+key.slice(h+1).replace(/[-_]/g,' ');
+      return key.replace(/^\//,'') || 'Trang chủ';
+    }
+
+    // ----- truy xuất dữ liệu sản phẩm đang chọn -----
+    function liveMetrics(){ return (LIVE&&LIVE.ok&&Array.isArray(LIVE.metrics))?LIVE.metrics:null; }
+    function curData(){ return product==='noma911'?liveMetrics():null; }
+    function metric(name){ var d=curData()||[]; var m=d.find(function(x){return (x.metricName||'')===name;}); return (m&&m.information)||[]; }
+    function urlOf(r){ return r.Url||r.URL; }
+    function rows(name){ return metric(name).filter(function(r){ return urlOf(r); }); }
+    function sum(name,key){ return rows(name).reduce(function(s,r){ return s+n(r[key]); },0); }
+    function noma911Sessions(){
+      var m=(liveMetrics()||[]).find(function(x){return x.metricName==='Traffic';});
+      return ((m&&m.information)||[]).reduce(function(s,r){ return s+(urlOf(r)?n(r.totalSessionCount):0); },0);
+    }
+    function productName(){ var p=PRODUCTS.find(function(x){return x.key===product;}); return p?p.name:''; }
+
+    // ----- render từng phần -----
+    function renderTabs(){
+      tabsEl.innerHTML=PRODUCTS.map(function(p){
+        var has=(p.key==='noma911' && LIVE && LIVE.ok);
+        var c=has?(noma911Sessions()+' phiên'):'chưa có dữ liệu';
+        return '<button class="hm-tab '+(p.key===product?'active':'')+'" data-p="'+p.key+'"><span class="dot"></span>'+esc(p.name)+'<span class="cnt">· '+c+'</span></button>';
+      }).join('');
+      Array.prototype.forEach.call(tabsEl.querySelectorAll('.hm-tab'),function(b){ b.addEventListener('click',function(){ product=b.dataset.p; renderAll(); }); });
+    }
+    function kpisHtml(){
+      var sess=sum('Traffic','totalSessionCount'), users=sum('Traffic','distinctUserCount');
+      var sd=rows('ScrollDepth'); var sdAvg=sd.length?Math.round(sd.reduce(function(s,r){return s+n(r.averageScrollDepth);},0)/sd.length):0;
+      var et=rows('EngagementTime'); var tAvg=et.length?Math.round(et.reduce(function(s,r){return s+n(r.totalTime);},0)/et.length):0;
+      var cards=[['👀',fmtInt(sess),'Phiên truy cập','3 ngày'],['🧑',fmtInt(users),'Người dùng','cộng theo trang'],['📜',sdAvg+'%','Scroll trung bình','khách cuộn tới'],['⏱️',fmtTime(tAvg),'Thời gian xem TB','mỗi trang']];
+      return '<div class="hm-kpis">'+cards.map(function(c){return '<div class="hm-kpi"><div class="ic">'+c[0]+'</div><div class="v">'+esc(c[1])+'</div><div class="l">'+esc(c[2])+'</div><div class="s">'+esc(c[3])+'</div></div>';}).join('')+'</div>';
+    }
+    function signalsHtml(){
+      var defs=[['DeadClickCount','💢'],['RageClickCount','😡'],['QuickbackClick','↩️'],['ExcessiveScroll','🌀'],['ScriptErrorCount','🐞'],['ErrorClickCount','⚠️']];
+      var items=[]; defs.forEach(function(d){ var t=sum(d[0],'subTotal'); if(t>0) items.push({k:d[0],ic:d[1],t:t}); });
+      var inner;
+      if(!items.length){ inner='<div class="hm-sig ok"><div class="si">✅</div><div><div class="num">Ổn</div><div class="tx">Không phát hiện tín hiệu UX bất thường</div></div></div>'; }
+      else{ items.sort(function(a,b){return b.t-a.t;}); inner=items.map(function(it,i){return '<div class="hm-sig '+(i===0?'bad':'warn')+'"><div class="si">'+it.ic+'</div><div><div class="num">'+it.t+' lần</div><div class="tx">'+esc(METLBL[it.k]||it.k)+'</div></div></div>';}).join(''); }
+      return '<div class="hm-card"><h3>🚦 Tín hiệu cần chú ý</h3><p class="desc">Tự động nhặt dấu hiệu UX bất thường — sửa cái đỏ/cam trước.</p><div class="hm-signals">'+inner+'</div></div>';
+    }
+    function barRows(data,valKey,opts){
+      opts=opts||{}; var max=Math.max.apply(null,[1].concat(data.map(function(d){return n(d[valKey]);})));
+      return data.map(function(d){
+        var v=n(d[valKey]); var w=opts.fixed?v:Math.round(v/max*100);
+        var valTxt=opts.time?fmtTime(v):(opts.pct?v+'%':fmtInt(v));
+        var sub=opts.subKey?'<small>'+fmtTime(d[opts.subKey])+' chủ động</small>':'';
+        var u=urlOf(d);
+        var openBtn=(u)?'<a class="hm-bar-open" href="'+esc(u)+'" target="_blank" rel="noopener" title="Mở landing & kéo tới đúng mục này">↗ Mở mục</a>':'<span></span>';
+        return '<div class="hm-bar-row"><div class="hm-bar-lbl">'+esc(pretty(u))+'<small>'+esc(host(u).replace('.pages.dev',''))+'</small></div>'
+          +'<div class="hm-bar-track"><div class="hm-bar-fill '+(opts.scr?'scr':'')+'" style="width:'+Math.max(4,w)+'%"></div></div>'
+          +'<div class="hm-bar-val">'+valTxt+sub+'</div>'+openBtn+'</div>';
+      }).join('');
+    }
+    function dwellHtml(){
+      var d=rows('EngagementTime').slice().sort(function(a,b){return n(b.totalTime)-n(a.totalTime);});
+      var inner=d.length?barRows(d,'totalTime',{time:true,subKey:'activeTime'}):'<p class="hmap-note">Chưa có dữ liệu thời gian xem.</p>';
+      return '<div class="hm-card"><h3>🏆 Khách dừng lại lâu nhất</h3><p class="desc">Theo tổng thời gian ở lại từng section (giây). Bấm “↗ Mở mục” để nhảy thẳng tới đúng phần đó trên landing.</p><div class="hm-bars">'+inner+'</div></div>';
+    }
+    function scrollHtml(){
+      var d=rows('ScrollDepth').slice().sort(function(a,b){return n(b.averageScrollDepth)-n(a.averageScrollDepth);});
+      var inner=d.length?barRows(d,'averageScrollDepth',{fixed:true,pct:true,scr:true}):'<p class="hmap-note">Chưa có dữ liệu cuộn.</p>';
+      return '<div class="hm-card"><h3>📜 Độ sâu cuộn theo trang</h3><p class="desc">Khách cuộn được bao nhiêu % chiều dài trang.</p><div class="hm-bars">'+inner+'</div></div>';
+    }
+    function aiHtml(){
+      return '<div class="hm-card hm-ai"><div style="display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px">'
+        +'<h3 style="margin:0">💡 Đề xuất tối ưu landing <span class="tag">AI · Claude</span></h3><span class="hmap-note" style="margin:0">cache theo ngày</span></div>'
+        +'<div id="hmap-optimize"><p class="hmap-note" style="margin:0">Bấm “💡 Đề xuất tối ưu landing” ở trên để Claude đọc số liệu và gợi ý cải thiện.</p></div></div>';
+    }
+    function rawHtml(){
+      var d=curData()||[], html='';
+      d.forEach(function(m){
+        var rs=(m.information||[]); if(!rs.length) return;
+        var cols=[]; rs.forEach(function(r){ Object.keys(r).forEach(function(k){ if(cols.indexOf(k)<0) cols.push(k); }); });
+        cols.sort(function(a,b){ return (/^url$/i.test(b)?1:0)-(/^url$/i.test(a)?1:0); });
+        var th=cols.map(function(c){ return '<th>'+esc(/^url$/i.test(c)?'Trang':c)+'</th>'; }).join('');
+        var tb=rs.map(function(r){ return '<tr>'+cols.map(function(c){ var v=r[c]; return '<td>'+(v==null?'—':esc(/^url$/i.test(c)?String(v).replace(/^https?:\/\//,''):v))+'</td>'; }).join('')+'</tr>'; }).join('');
+        html+='<div class="hm-mh">'+esc(m.metricName)+'</div><p class="hm-mexpl">'+esc(METEXPL[m.metricName]||'')+'</p><table class="hm-rpt"><thead><tr>'+th+'</tr></thead><tbody>'+tb+'</tbody></table>';
       });
-      if(inUl) html+='</ul>';
-      return html;
+      if(!html) return '';
+      return '<details class="hm-raw"><summary>📋 Dữ liệu chi tiết Clarity (raw) <span class="chev">▾</span></summary>'+html+'</details>';
     }
-    function dwellBlock(metrics){
-      var et=metrics.filter(function(m){return /^engagementtime$/i.test(m.metricName||'');})[0];
-      var rows=et&&Array.isArray(et.information)?et.information.slice():[];
-      if(!rows.length) return '';
-      rows.sort(function(a,b){ return (Number(b.totalTime)||0)-(Number(a.totalTime)||0); });
-      var top=rows.slice(0,6);
-      var tb=top.map(function(r){ return '<tr><td class="lbl">'+esc(shortUrl(r.Url||r.URL||''))+'</td><td class="num">'+esc(r.totalTime||'0')+'</td><td class="num">'+esc(r.activeTime||'0')+'</td></tr>'; }).join('');
-      return '<h3 style="margin:20px 0 6px">🏆 Section khách dừng lại lâu nhất</h3>'
-        +explLine('Xếp theo tổng thời gian khách ở lại (giây) trên từng trang/anchor — chỗ đứng đầu là nơi khách quan tâm/đọc lâu nhất. (Anchor xuất hiện khi khách bấm vào mục đó trên trang.)')
-        +'<table class="rpt"><thead><tr><th>Trang / section</th><th class="num">Tổng thời gian (s)</th><th class="num">Chủ động (s)</th></tr></thead><tbody>'+tb+'</tbody></table>';
+    function infoLine(){
+      if(!(LIVE&&LIVE.ok)) return '';
+      var t=(LIVE.fetchedAt||'').replace('T',' ').slice(0,16);
+      return '<p class="hmap-note" style="margin:0 0 12px">Cập nhật: '+esc(t)+(LIVE.cached?' · từ cache':'')+(LIVE.stale?' · (đã hết lượt gọi hôm nay, đang xem bản gần nhất)':'')+'</p>';
     }
-    function pMet(n){ return MET[n]||n||'Chỉ số'; }
-    function pCol(c){ return COL[c]||c; }
-    function sumF(rows,k){ var s=0; rows.forEach(function(r){ if(r[k]!=null) s+=Number(r[k])||0; }); return s; }
-    function card(l,v,s){ return '<div class="metric-card"><div class="metric-label">'+esc(l)+'</div><div class="metric-value">'+esc(v)+'</div><div class="metric-sub">'+esc(s)+'</div></div>'; }
-    function table(m){
-      var rows=Array.isArray(m.information)?m.information:[];
-      if(!rows.length) return '';
-      var cols=[]; rows.forEach(function(r){ Object.keys(r).forEach(function(k){ if(cols.indexOf(k)<0) cols.push(k); }); });
-      cols.sort(function(a,b){ return (isUrl(b)?1:0)-(isUrl(a)?1:0); });
-      var th='<tr>'+cols.map(function(c){ return '<th class="'+(isUrl(c)?'':'num')+'">'+esc(pCol(c))+'</th>'; }).join('')+'</tr>';
-      var tb=rows.map(function(r){ return '<tr>'+cols.map(function(c){ var v=r[c]; var disp=(v==null?'—':(isUrl(c)?shortUrl(v):String(v))); return '<td class="'+(isUrl(c)?'lbl':'num')+'">'+esc(disp)+'</td>'; }).join('')+'</tr>'; }).join('');
-      return '<h3 style="margin:20px 0 6px">'+esc(pMet(m.metricName))+'</h3>'+explLine(EXPL[m.metricName])+'<table class="rpt"><thead>'+th+'</thead><tbody>'+tb+'</tbody></table>';
-    }
-    function render(data){
-      if(!data||!data.ok){
-        var msg = (data&&data.error==='missing_token') ? (data.hint||'Chưa cấu hình token Clarity.')
-          : ('Chưa lấy được số liệu Clarity'+(data&&data.error?(' ('+esc(data.error)+')'):'')+'.');
-        body.innerHTML='<div class="hero"><h3>Chưa có số liệu</h3><p>'+esc(msg)+'</p>'
-          +'<p class="hmap-note">Bạn vẫn xem được heatmap trực quan bằng nút “Mở Heatmap Clarity” phía trên.</p></div>';
+    function emptyCard(ic,h,p){ return '<div class="hm-empty"><div class="em-ic">'+ic+'</div><h3>'+esc(h)+'</h3><p>'+esc(p)+'</p></div>'; }
+
+    function renderAll(){
+      renderTabs();
+      if(product!=='noma911'){
+        body.innerHTML=emptyCard('📭','Sản phẩm '+productName()+' chưa có dữ liệu heatmap','Khi landing của sản phẩm này được gắn Microsoft Clarity, dữ liệu UX sẽ tự hiện ở đây — y như tab “Noma 911”.');
         return;
       }
-      lastData=data;
-      var metrics=Array.isArray(data.metrics)?data.metrics:[];
-      var html='';
-      var tr=metrics.filter(function(m){return /^traffic$/i.test(m.metricName||'');})[0];
-      if(tr&&Array.isArray(tr.information)&&tr.information.length){
-        var rows=tr.information;
-        html+='<div class="metric-row">'
-          +card('Tổng phiên', num(sumF(rows,'totalSessionCount')), (data.days||3)+' ngày · '+rows.length+' trang')
-          +card('Người dùng', num(sumF(rows,'distinctUserCount')), 'duy nhất')
-          +card('Phiên bot', num(sumF(rows,'totalBotSessionCount')), 'đã loại khỏi UX')
-          +'</div>'+explLine(EXPL._kpi);
+      if(!LIVE){ body.innerHTML='<div class="hero"><p>Đang tải số liệu Clarity…</p></div>'; return; }
+      if(!LIVE.ok){
+        var msg=(LIVE.error==='missing_token')?(LIVE.hint||'Chưa cấu hình token Clarity.'):('Chưa lấy được số liệu Clarity'+(LIVE.error?(' ('+LIVE.error+')'):'')+'.');
+        body.innerHTML='<div class="hm-empty"><div class="em-ic">⚠️</div><h3>Chưa có số liệu</h3><p>'+esc(msg)+'</p><p class="hmap-note">Bạn vẫn xem heatmap trực quan bằng nút “🔥 Mở Heatmap Clarity” phía trên.</p></div>';
+        return;
       }
-      html+=dwellBlock(metrics);
-      metrics.forEach(function(m){ html+=table(m); });
-      if(!html) html='<div class="hero"><p>Clarity trả về rỗng (có thể landing chưa đủ lượt truy cập trong 3 ngày).</p></div>';
-      var info='Cập nhật: '+esc((data.fetchedAt||'').replace('T',' ').slice(0,16))+(data.cached?' · từ cache':'')+(data.stale?' · (đã hết lượt gọi hôm nay, đang xem bản gần nhất)':'');
-      body.innerHTML='<p class="hmap-note" style="margin:0 0 12px">'+info+'</p>'+html;
+      if(!rows('Traffic').length){ body.innerHTML=infoLine()+emptyCard('📭','Clarity trả về rỗng','Có thể landing chưa đủ lượt truy cập trong 3 ngày.'); return; }
+      body.innerHTML=infoLine()+kpisHtml()+signalsHtml()+dwellHtml()+scrollHtml()+aiHtml()+rawHtml();
     }
+
     function load(force){
-      body.innerHTML='<div class="hero"><p>Đang tải số liệu Clarity…</p></div>';
+      if(product==='noma911') body.innerHTML='<div class="hero"><p>Đang tải số liệu Clarity…</p></div>';
       fetch('/api/clarity/insights?days=3'+(force?'&refresh=1':''))
-        .then(function(r){ return r.json(); }).then(render)
-        .catch(function(e){ body.innerHTML='<div class="hero"><h3>Lỗi tải</h3><p>'+esc(e&&e.message||e)+'</p></div>'; });
+        .then(function(r){ return r.json(); })
+        .then(function(d){ LIVE=d; renderAll(); })
+        .catch(function(e){ LIVE={ok:false,error:String(e&&e.message||e)}; renderAll(); });
     }
     nav.addEventListener('click',function(){ if(!loaded){ loaded=true; load(false); } });
-    if(btn) btn.addEventListener('click',function(){ load(true); });
+    if(refreshBtn) refreshBtn.addEventListener('click',function(){ load(true); });
 
-    // Nút đề xuất tối ưu landing (Claude phân tích số liệu Clarity)
-    var optBtn=document.getElementById('hmap-optimize-btn');
-    var optBox=document.getElementById('hmap-optimize');
-    function renderOpt(d){
-      if(!d||!d.ok){ optBox.innerHTML='<div class="ai-box">'+esc((d&&d.error)||'Không tạo được đề xuất.')+'</div>'; return; }
-      optBox.innerHTML='<div class="ai-box"><div style="font-weight:800;margin-bottom:6px">💡 Đề xuất tối ưu landing (AI)'+(d.cached?' · cache hôm nay':'')+'</div>'+mdToHtml(d.suggestions)+'</div>';
+    // ----- markdown nhẹ cho output AI -----
+    function mdToHtml(md){
+      var lines=String(md||'').split(/\r?\n/),html='',ul=false;
+      function il(s){ return esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`(.+?)`/g,'<code>$1</code>'); }
+      lines.forEach(function(l){
+        if(/^\s*##\s+/.test(l)){ if(ul){html+='</ul>';ul=false;} html+='<h3>'+il(l.replace(/^\s*##\s+/,''))+'</h3>'; return; }
+        if(/^\s*[-*]\s+/.test(l)){ if(!ul){html+='<ul>';ul=true;} html+='<li>'+il(l.replace(/^\s*[-*]\s+/,''))+'</li>'; return; }
+        if(/^\s*\d+\.\s+/.test(l)){ if(!ul){html+='<ul>';ul=true;} html+='<li>'+il(l.replace(/^\s*\d+\.\s+/,''))+'</li>'; return; }
+        if(/^\s*$/.test(l)){ if(ul){html+='</ul>';ul=false;} return; }
+        html+='<p>'+il(l)+'</p>';
+      });
+      if(ul)html+='</ul>'; return html;
     }
-    if(optBtn&&optBox) optBtn.addEventListener('click',function(){
-      if(!lastData||!lastData.ok||!Array.isArray(lastData.metrics)||!lastData.metrics.length){
-        optBox.innerHTML='<div class="ai-box">Chưa có số liệu Clarity để phân tích. Bấm “↻ Làm mới” để tải số trước đã.</div>'; return;
-      }
+    if(optBtn) optBtn.addEventListener('click',function(){
+      var box=document.getElementById('hmap-optimize');
+      if(product!=='noma911'||!(LIVE&&LIVE.ok)){ if(box) box.innerHTML='<p class="hmap-note" style="margin:0">Sản phẩm đang chọn chưa có số liệu để phân tích.</p>'; return; }
+      if(!box) return;
       optBtn.disabled=true; var old=optBtn.textContent; optBtn.textContent='Đang phân tích…';
-      optBox.innerHTML='<div class="ai-box">⏳ Claude đang đọc số liệu và đề xuất tối ưu…</div>';
-      fetch('/api/clarity/optimize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({metrics:lastData.metrics})})
-        .then(function(r){return r.json();}).then(renderOpt)
-        .catch(function(e){ optBox.innerHTML='<div class="ai-box">Lỗi: '+esc(e&&e.message||e)+'</div>'; })
+      box.innerHTML='<p class="hmap-note" style="margin:0">⏳ Claude đang đọc số liệu và đề xuất tối ưu…</p>';
+      fetch('/api/clarity/optimize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({metrics:LIVE.metrics})})
+        .then(function(r){return r.json();})
+        .then(function(d){
+          if(!d||!d.ok){ box.innerHTML='<p class="hmap-note" style="margin:0">'+esc((d&&d.error)||'Không tạo được đề xuất.')+'</p>'; return; }
+          box.innerHTML='<div class="hm-md">'+mdToHtml(d.suggestions)+'</div>'+(d.cached?'<p class="hmap-note" style="margin:10px 0 0">· cache hôm nay</p>':'');
+        })
+        .catch(function(e){ box.innerHTML='<p class="hmap-note" style="margin:0">Lỗi: '+esc(e&&e.message||e)+'</p>'; })
         .finally(function(){ optBtn.disabled=false; optBtn.textContent=old; });
     });
+
+    renderTabs(); // hiện tabs ngay, trước cả khi mở menu lần đầu
   })();
 
   // Chi phí/doanh thu: hiển thị ĐẦY ĐỦ, làm tròn đến hàng nghìn (không rút gọn tr/tỷ)
