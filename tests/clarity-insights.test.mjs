@@ -94,6 +94,12 @@ test("Trung bình có trọng số theo phiên (sessionsWithMetricPercentage)", 
   assert.equal(r[0].sessionsWithoutMetricPercentage, 40);
 });
 
+test("aggregateMetrics IDEMPOTENT — chạy 2 lần = 1 lần (an toàn khi gộp ở read cache)", () => {
+  const once = aggregateMetrics(SAMPLE);
+  const twice = aggregateMetrics(once);
+  assert.deepEqual(twice, once);
+});
+
 test("aggregateMetrics an toàn với input rỗng/sai kiểu", () => {
   assert.deepEqual(aggregateMetrics([]), []);
   assert.equal(aggregateMetrics(null), null);
