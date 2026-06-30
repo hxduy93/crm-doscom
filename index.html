@@ -455,7 +455,7 @@
             <p style="margin:0;color:var(--text-2);font-size:13px">Hành vi khách trên landing từng sản phẩm · 3 ngày gần nhất · nguồn Microsoft Clarity. Ảnh heatmap trực quan xem trực tiếp trên Clarity.</p>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn-cl" id="hmap-optimize-btn" type="button" style="background:var(--primary);color:#fff;border-color:transparent">💡 Đề xuất tối ưu landing</button>
+            <button class="btn-cl hm-opt-trigger" id="hmap-optimize-btn" type="button" style="background:var(--primary);color:#fff;border-color:transparent">💡 Đề xuất tối ưu landing</button>
             <a class="btn-cl" href="https://clarity.microsoft.com/projects/view/xczl125ty0/heatmaps" target="_blank" rel="noopener" style="text-decoration:none">🔥 Mở Heatmap Clarity</a>
             <a class="btn-cl" href="https://clarity.microsoft.com/projects/view/xczl125ty0/dashboard" target="_blank" rel="noopener" style="text-decoration:none">📊 Dashboard Clarity</a>
             <button class="btn-cl" id="hmap-refresh" type="button">↻ Làm mới</button>
@@ -659,33 +659,57 @@
       else{ items.sort(function(a,b){return b.t-a.t;}); inner=items.map(function(it,i){return '<div class="hm-sig '+(i===0?'bad':'warn')+'"><div class="si">'+it.ic+'</div><div><div class="num">'+it.t+' lần</div><div class="tx">'+esc(METLBL[it.k]||it.k)+'</div></div></div>';}).join(''); }
       return '<div class="hm-card"><h3>🚦 Tín hiệu cần chú ý</h3><p class="desc">Tự động nhặt dấu hiệu UX bất thường — sửa cái đỏ/cam trước.</p><div class="hm-signals">'+inner+'</div></div>';
     }
-    function barRows(data,valKey,opts){
-      opts=opts||{}; var max=Math.max.apply(null,[1].concat(data.map(function(d){return n(d[valKey]);})));
+    // Gộp 2 landing của 1 sản phẩm (Duy /nm911d + Phương Nam /911tpn) thành một:
+    // khoá section = anchor #hash; gốc trang (không hash) gom về "Trang chủ".
+    // Dwell: CỘNG DỒN thời gian; Scroll: TRUNG BÌNH % giữa các landing.
+    function sectionKey(u){ var c=cleanPath(u); var h=c.indexOf('#'); return h>=0?c.slice(h):'#__root__'; }
+    function sectionLabel(k){
+      if(k==='#__root__') return 'Trang chủ (Hero)';
+      if(PRETTY['/'+k]) return PRETTY['/'+k];
+      return '# '+k.replace(/^#/,'').replace(/[-_]/g,' ');
+    }
+    function mergedSections(name){
+      var map={}, order=[];
+      rows(name).forEach(function(r){
+        var k=sectionKey(urlOf(r));
+        if(!map[k]){ map[k]={key:k,items:[],urls:[]}; order.push(k); }
+        map[k].items.push(r); map[k].urls.push(urlOf(r));
+      });
+      return order.map(function(k){ return map[k]; });
+    }
+    function mergedBars(name,opts){
+      var groups=mergedSections(name);
+      if(!groups.length) return '<p class="hmap-note">'+opts.empty+'</p>';
+      var data=groups.map(function(g){
+        var out={key:g.key,url:g.urls[0],cnt:g.urls.length};
+        if(opts.kind==='time'){ out.val=g.items.reduce(function(s,r){return s+n(r.totalTime);},0); out.sub=g.items.reduce(function(s,r){return s+n(r.activeTime);},0); }
+        else { out.val=Math.round(g.items.reduce(function(s,r){return s+n(r.averageScrollDepth);},0)/g.items.length); }
+        return out;
+      });
+      data.sort(function(a,b){return b.val-a.val;});
+      var max=Math.max.apply(null,[1].concat(data.map(function(d){return d.val;})));
       return data.map(function(d){
-        var v=n(d[valKey]); var w=opts.fixed?v:Math.round(v/max*100);
-        var valTxt=opts.time?fmtTime(v):(opts.pct?v+'%':fmtInt(v));
-        var sub=opts.subKey?'<small>'+fmtTime(d[opts.subKey])+' chủ động</small>':'';
-        var u=urlOf(d);
-        var openBtn=(u)?'<a class="hm-bar-open" href="'+esc(u)+'" target="_blank" rel="noopener" title="Mở landing & kéo tới đúng mục này">↗ Mở mục</a>':'<span></span>';
-        return '<div class="hm-bar-row"><div class="hm-bar-lbl">'+esc(pretty(u))+'<small>'+esc(host(u).replace('.pages.dev',''))+'</small></div>'
-          +'<div class="hm-bar-track"><div class="hm-bar-fill '+(opts.scr?'scr':'')+'" style="width:'+Math.max(4,w)+'%"></div></div>'
+        var w=opts.kind==='scroll'?d.val:Math.round(d.val/max*100);
+        var valTxt=opts.kind==='time'?fmtTime(d.val):d.val+'%';
+        var sub=opts.kind==='time'?'<small>'+fmtTime(d.sub)+' chủ động</small>':'';
+        var subLbl=d.cnt>1?('gộp '+d.cnt+' landing'):host(d.url).replace('.pages.dev','');
+        var openBtn=d.url?'<a class="hm-bar-open" href="'+esc(d.url)+'" target="_blank" rel="noopener" title="Mở landing & kéo tới đúng mục này">↗ Mở mục</a>':'<span></span>';
+        return '<div class="hm-bar-row"><div class="hm-bar-lbl">'+esc(sectionLabel(d.key))+'<small>'+esc(subLbl)+'</small></div>'
+          +'<div class="hm-bar-track"><div class="hm-bar-fill '+(opts.kind==='scroll'?'scr':'')+'" style="width:'+Math.max(4,w)+'%"></div></div>'
           +'<div class="hm-bar-val">'+valTxt+sub+'</div>'+openBtn+'</div>';
       }).join('');
     }
     function dwellHtml(){
-      var d=rows('EngagementTime').slice().sort(function(a,b){return n(b.totalTime)-n(a.totalTime);});
-      var inner=d.length?barRows(d,'totalTime',{time:true,subKey:'activeTime'}):'<p class="hmap-note">Chưa có dữ liệu thời gian xem.</p>';
-      return '<div class="hm-card"><h3>🏆 Khách dừng lại lâu nhất</h3><p class="desc">Theo tổng thời gian ở lại từng section (giây). Bấm “↗ Mở mục” để nhảy thẳng tới đúng phần đó trên landing.</p><div class="hm-bars">'+inner+'</div></div>';
+      return '<div class="hm-card"><h3>🏆 Khách dừng lại lâu nhất</h3><p class="desc">Tổng thời gian khách ở lại từng section (giây) — đã gộp 2 landing của sản phẩm thành một. Bấm “↗ Mở mục” để mở đúng phần đó.</p><div class="hm-bars">'+mergedBars('EngagementTime',{kind:'time',empty:'Chưa có dữ liệu thời gian xem.'})+'</div></div>';
     }
     function scrollHtml(){
-      var d=rows('ScrollDepth').slice().sort(function(a,b){return n(b.averageScrollDepth)-n(a.averageScrollDepth);});
-      var inner=d.length?barRows(d,'averageScrollDepth',{fixed:true,pct:true,scr:true}):'<p class="hmap-note">Chưa có dữ liệu cuộn.</p>';
-      return '<div class="hm-card"><h3>📜 Độ sâu cuộn theo trang</h3><p class="desc">Khách cuộn được bao nhiêu % chiều dài trang.</p><div class="hm-bars">'+inner+'</div></div>';
+      return '<div class="hm-card"><h3>📜 Độ sâu cuộn theo trang</h3><p class="desc">% chiều dài trang khách cuộn được — trung bình giữa 2 landing đã gộp.</p><div class="hm-bars">'+mergedBars('ScrollDepth',{kind:'scroll',empty:'Chưa có dữ liệu cuộn.'})+'</div></div>';
     }
     function aiHtml(){
       return '<div class="hm-card hm-ai"><div style="display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px">'
-        +'<h3 style="margin:0">💡 Đề xuất tối ưu landing <span class="tag">AI · Claude</span></h3><span class="hmap-note" style="margin:0">cache theo ngày</span></div>'
-        +'<div id="hmap-optimize"><p class="hmap-note" style="margin:0">Bấm “💡 Đề xuất tối ưu landing” ở trên để Claude đọc số liệu và gợi ý cải thiện.</p></div></div>';
+        +'<h3 style="margin:0">💡 Đề xuất tối ưu landing <span class="tag">AI · Claude</span></h3>'
+        +'<button class="btn-cl hm-opt-trigger" type="button" style="background:var(--primary);color:#fff;border-color:transparent">💡 Đề xuất tối ưu landing page</button></div>'
+        +'<div id="hmap-optimize"><p class="hmap-note" style="margin:0">Bấm “💡 Đề xuất tối ưu landing page” để Claude đọc số liệu và gợi ý cải thiện.</p></div></div>';
     }
     function rawHtml(){
       var d=curData()||[], html='';
@@ -746,11 +770,16 @@
       });
       if(ul)html+='</ul>'; return html;
     }
-    if(optBtn) optBtn.addEventListener('click',function(){
+    var viewEl=document.getElementById('view-heatmap');
+    var optBusy=false;
+    function runOptimize(){
+      if(optBusy) return;
       var box=document.getElementById('hmap-optimize');
       if(product!=='noma911'||!(LIVE&&LIVE.ok)){ if(box) box.innerHTML='<p class="hmap-note" style="margin:0">Sản phẩm đang chọn chưa có số liệu để phân tích.</p>'; return; }
       if(!box) return;
-      optBtn.disabled=true; var old=optBtn.textContent; optBtn.textContent='Đang phân tích…';
+      optBusy=true;
+      var triggers=Array.prototype.slice.call(viewEl.querySelectorAll('.hm-opt-trigger'));
+      triggers.forEach(function(b){ b.disabled=true; b.dataset.old=b.textContent; b.textContent='Đang phân tích…'; });
       box.innerHTML='<p class="hmap-note" style="margin:0">⏳ Claude đang đọc số liệu và đề xuất tối ưu…</p>';
       fetch('/api/clarity/optimize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({metrics:LIVE.metrics})})
         .then(function(r){return r.json();})
@@ -759,8 +788,10 @@
           box.innerHTML='<div class="hm-md">'+mdToHtml(d.suggestions)+'</div>'+(d.cached?'<p class="hmap-note" style="margin:10px 0 0">· cache hôm nay</p>':'');
         })
         .catch(function(e){ box.innerHTML='<p class="hmap-note" style="margin:0">Lỗi: '+esc(e&&e.message||e)+'</p>'; })
-        .finally(function(){ optBtn.disabled=false; optBtn.textContent=old; });
-    });
+        .finally(function(){ optBusy=false; triggers.forEach(function(b){ b.disabled=false; if(b.dataset.old) b.textContent=b.dataset.old; }); });
+    }
+    // 1 handler dùng chung cho nút header + nút trong box (nút trong box render lại mỗi lần đổi tab/làm mới)
+    if(viewEl) viewEl.addEventListener('click',function(e){ var t=e.target.closest('.hm-opt-trigger'); if(t){ e.preventDefault(); runOptimize(); } });
 
     renderTabs(); // hiện tabs ngay, trước cả khi mở menu lần đầu
   })();
