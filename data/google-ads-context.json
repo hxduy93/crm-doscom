@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-01 03:25",
+  "generated_at": "2026-07-01 05:11",
   "source_data_date_range": {
     "start_7d": "2026-06-23",
     "end": "2026-06-29",
@@ -1645,7 +1645,7 @@
       "total_unique_terms": 3285,
       "terms_with_conversions": 33,
       "conv_rate_terms": 0.01,
-      "total_spend_30d": 20422403.0
+      "total_spend_30d": 20377413.0
     },
     "top_converting_terms": [
       {
@@ -1702,29 +1702,16 @@
         ]
       },
       {
-        "search_term": "camera không dây",
-        "spend_30d": 121274.0,
-        "clicks_30d": 24,
+        "search_term": "thiết bị ghi âm chuyên nghiệp",
+        "spend_30d": 105516.0,
+        "clicks_30d": 9,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.1224,
+        "ctr_30d": 0.1525,
         "match_types": [
-          "BROAD"
+          "EXACT"
         ],
         "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera mini theo dõi",
-        "spend_30d": 20021.0,
-        "clicks_30d": 5,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.5,
-        "match_types": [
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
+          "ADDED"
         ]
       },
       {
@@ -1754,6 +1741,32 @@
         ]
       },
       {
+        "search_term": "camera mini theo dõi",
+        "spend_30d": 20021.0,
+        "clicks_30d": 5,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.5,
+        "match_types": [
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera không dây",
+        "spend_30d": 121274.0,
+        "clicks_30d": 24,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1224,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
         "search_term": "thiết bị chống ghi âm",
         "spend_30d": 19461.0,
         "clicks_30d": 6,
@@ -1765,28 +1778,15 @@
         "statuses": [
           "NONE"
         ]
-      },
-      {
-        "search_term": "thiết bị ghi âm chuyên nghiệp",
-        "spend_30d": 105516.0,
-        "clicks_30d": 9,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1525,
-        "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
       }
     ],
     "top_waste_terms": [
       {
         "search_term": "camera an ninh giá rẻ",
-        "spend_30d": 668424.0,
-        "clicks_30d": 72,
+        "spend_30d": 623434.0,
+        "clicks_30d": 66,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.1393,
+        "ctr_30d": 0.1277,
         "match_types": [
           "BROAD"
         ],
@@ -2044,8 +2044,8 @@
     "negative_keyword_gap": [
       {
         "search_term": "camera an ninh giá rẻ",
-        "spend_30d": 668424.0,
-        "clicks_30d": 72,
+        "spend_30d": 623434.0,
+        "clicks_30d": 66,
         "conversions_30d": 0.0,
         "match_types": [
           "BROAD"
@@ -2290,11 +2290,11 @@
       }
     ],
     "match_type_breakdown": {
-      "BROAD": {
-        "spend_30d": 13196242.0,
-        "clicks_30d": 1582,
-        "conversions_30d": 31.89,
-        "term_count": 2131
+      "EXACT": {
+        "spend_30d": 1934265.0,
+        "clicks_30d": 334,
+        "conversions_30d": 3.0,
+        "term_count": 68
       },
       "NEAR_PHRASE": {
         "spend_30d": 4103255.0,
@@ -2308,17 +2308,17 @@
         "conversions_30d": 10.74,
         "term_count": 613
       },
+      "BROAD": {
+        "spend_30d": 13151252.0,
+        "clicks_30d": 1576,
+        "conversions_30d": 31.89,
+        "term_count": 2131
+      },
       "NEAR_EXACT": {
         "spend_30d": 42815.0,
         "clicks_30d": 12,
         "conversions_30d": 0.0,
         "term_count": 1
-      },
-      "EXACT": {
-        "spend_30d": 1934265.0,
-        "clicks_30d": 334,
-        "conversions_30d": 3.0,
-        "term_count": 68
       }
     }
   },
