@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-30 17:29",
+  "generated_at": "2026-06-30 20:05",
   "source_data_date_range": {
     "start_7d": "2026-06-23",
     "end": "2026-06-29",
@@ -1645,7 +1645,7 @@
       "total_unique_terms": 3285,
       "terms_with_conversions": 33,
       "conv_rate_terms": 0.01,
-      "total_spend_30d": 20432794.0
+      "total_spend_30d": 20422403.0
     },
     "top_converting_terms": [
       {
@@ -1702,16 +1702,29 @@
         ]
       },
       {
-        "search_term": "thiết bị ghi âm chuyên nghiệp",
-        "spend_30d": 105516.0,
-        "clicks_30d": 9,
+        "search_term": "camera không dây",
+        "spend_30d": 121274.0,
+        "clicks_30d": 24,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.1525,
+        "ctr_30d": 0.1224,
         "match_types": [
-          "EXACT"
+          "BROAD"
         ],
         "statuses": [
-          "ADDED"
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera mini theo dõi",
+        "spend_30d": 20021.0,
+        "clicks_30d": 5,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.5,
+        "match_types": [
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
         ]
       },
       {
@@ -1741,32 +1754,6 @@
         ]
       },
       {
-        "search_term": "camera mini theo dõi",
-        "spend_30d": 20021.0,
-        "clicks_30d": 5,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.5,
-        "match_types": [
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera không dây",
-        "spend_30d": 121274.0,
-        "clicks_30d": 24,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1224,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
         "search_term": "thiết bị chống ghi âm",
         "spend_30d": 19461.0,
         "clicks_30d": 6,
@@ -1778,15 +1765,28 @@
         "statuses": [
           "NONE"
         ]
+      },
+      {
+        "search_term": "thiết bị ghi âm chuyên nghiệp",
+        "spend_30d": 105516.0,
+        "clicks_30d": 9,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1525,
+        "match_types": [
+          "EXACT"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
       }
     ],
     "top_waste_terms": [
       {
         "search_term": "camera an ninh giá rẻ",
-        "spend_30d": 678815.0,
-        "clicks_30d": 73,
+        "spend_30d": 668424.0,
+        "clicks_30d": 72,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.1412,
+        "ctr_30d": 0.1393,
         "match_types": [
           "BROAD"
         ],
@@ -2044,8 +2044,8 @@
     "negative_keyword_gap": [
       {
         "search_term": "camera an ninh giá rẻ",
-        "spend_30d": 678815.0,
-        "clicks_30d": 73,
+        "spend_30d": 668424.0,
+        "clicks_30d": 72,
         "conversions_30d": 0.0,
         "match_types": [
           "BROAD"
@@ -2290,11 +2290,11 @@
       }
     ],
     "match_type_breakdown": {
-      "EXACT": {
-        "spend_30d": 1934265.0,
-        "clicks_30d": 334,
-        "conversions_30d": 3.0,
-        "term_count": 68
+      "BROAD": {
+        "spend_30d": 13196242.0,
+        "clicks_30d": 1582,
+        "conversions_30d": 31.89,
+        "term_count": 2131
       },
       "NEAR_PHRASE": {
         "spend_30d": 4103255.0,
@@ -2308,31 +2308,31 @@
         "conversions_30d": 10.74,
         "term_count": 613
       },
-      "BROAD": {
-        "spend_30d": 13206633.0,
-        "clicks_30d": 1583,
-        "conversions_30d": 31.89,
-        "term_count": 2131
-      },
       "NEAR_EXACT": {
         "spend_30d": 42815.0,
         "clicks_30d": 12,
         "conversions_30d": 0.0,
         "term_count": 1
+      },
+      "EXACT": {
+        "spend_30d": 1934265.0,
+        "clicks_30d": 334,
+        "conversions_30d": 3.0,
+        "term_count": 68
       }
     }
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 19084,
-      "total_spend_30d": 22223559.0
+      "total_unique_placements": 19111,
+      "total_spend_30d": 22214902.0
     },
     "network_breakdown": {
       "CONTENT": {
-        "spend_30d": 22224258.0,
-        "clicks_30d": 13953,
-        "impressions_30d": 1052772,
-        "ctr_30d": 0.0133,
+        "spend_30d": 22215600.0,
+        "clicks_30d": 13945,
+        "impressions_30d": 1052766,
+        "ctr_30d": 0.0132,
         "cpc_30d": 1593.0,
         "campaign_count": 5
       },
@@ -2347,11 +2347,11 @@
     },
     "placement_type_breakdown": {
       "WEBSITE": {
-        "spend_30d": 22223559.0,
-        "clicks_30d": 13952,
-        "impressions_30d": 1016017,
+        "spend_30d": 22214902.0,
+        "clicks_30d": 13944,
+        "impressions_30d": 1016286,
         "ctr_30d": 0.0137,
-        "placement_count": 19084
+        "placement_count": 19111
       }
     },
     "top_waste_placements": [],
@@ -2456,7 +2456,7 @@
         "placement": "webgia.com/gia-vang/the-gioi",
         "spend_30d": 18417.0,
         "clicks_30d": 6,
-        "impressions_30d": 2327,
+        "impressions_30d": 2328,
         "ctr_30d": 0.0026,
         "placement_type": "WEBSITE"
       },
@@ -2488,8 +2488,8 @@
       },
       {
         "placement": "xosodaiphat.com/xsmb-xo-so-mien-bac.html",
-        "spend_30d": 660507.0,
-        "clicks_30d": 1116,
+        "spend_30d": 660040.0,
+        "clicks_30d": 1115,
         "ctr_30d": 0.0122,
         "placement_type": "WEBSITE",
         "ad_network_type": "CONTENT"
@@ -2563,20 +2563,20 @@
   "ad_insights": {
     "summary": {
       "total_ads": 89,
-      "total_spend_30d": 56302621.0
+      "total_spend_30d": 56296738.0
     },
     "format_breakdown": {
       "DISPLAY_BANNER": {
-        "spend_30d": 5455859.0,
-        "clicks_30d": 3952,
-        "impressions_30d": 346115,
+        "spend_30d": 5454123.0,
+        "clicks_30d": 3950,
+        "impressions_30d": 346114,
         "ctr_30d": 0.0114,
         "ad_count": 5
       },
       "OTHER": {
-        "spend_30d": 50846762.0,
-        "clicks_30d": 15204,
-        "impressions_30d": 1277607,
+        "spend_30d": 50842615.0,
+        "clicks_30d": 15201,
+        "impressions_30d": 1277604,
         "ctr_30d": 0.0119,
         "ad_count": 84
       }
@@ -2588,8 +2588,8 @@
         "ad_group_name": "Ad group 1",
         "ad_name": "300x250.gif",
         "ad_format": "DISPLAY_BANNER",
-        "spend_30d": 2652435.0,
-        "clicks_30d": 2691,
+        "spend_30d": 2650699.0,
+        "clicks_30d": 2689,
         "ctr_30d": 0.0113
       },
       {
