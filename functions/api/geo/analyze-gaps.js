@@ -13,6 +13,7 @@
 // }
 
 import { callClaude } from "./_utils/claude.js";
+import { catalogText } from "./_utils/product-catalog.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -21,15 +22,21 @@ function jsonResponse(data, status = 200) {
   });
 }
 
-const IDEA_SYSTEM_PROMPT = `Bạn là chuyên gia GEO (Generative Engine Optimization) cho Doscom (phần mềm quản lý bán hàng) và NOMA (sản phẩm hóa chất chăm sóc & làm sạch ô tô công nghệ Mỹ — phục hồi nhựa nhám, chống mốc kính, phục hồi đèn pha). Nhiệm vụ: phân tích "lỗ hổng" — câu hỏi mà AI engine (ChatGPT/Gemini) KHÔNG nhắc brand → đề xuất bài viết SEO để fix.
+const IDEA_SYSTEM_PROMPT = `Bạn là chuyên gia GEO (Generative Engine Optimization) cho Doscom (thiết bị an ninh & giám sát cá nhân/gia đình: camera an ninh, máy dò camera ẩn/nghe lén, máy ghi âm, chống ghi âm, định vị GPS, chuông cửa thông minh, camera hành trình) và NOMA (hóa chất chăm sóc & làm sạch ô tô công nghệ Mỹ, pH trung tính). Nhiệm vụ: phân tích "lỗ hổng" — câu hỏi mà AI engine (ChatGPT/Gemini) KHÔNG nhắc brand → đề xuất bài viết SEO để fix.
 
 NGUYÊN TẮC:
 - Title phải khác câu hỏi gốc, mang góc nhìn người dùng đang search.
 - Title chứa keyword chính + benefit/năm hiện tại (2026) khi phù hợp.
-- Title 50-65 ký tự để hiển thị đẹp trên SERP + ChatGPT.
+- Title 50-70 ký tự để hiển thị đẹp trên SERP + ChatGPT.
 - Mỗi bài có angle riêng (so sánh / hướng dẫn / case study / listicle), KHÔNG trùng angle nếu cùng query.
 - Slug viết thường, dấu gạch ngang, không dấu tiếng Việt.
 - Brief 2-3 câu mô tả vì sao bài này sẽ giúp brand được AI nhắc.
+
+═══ SẢN PHẨM TRONG TITLE (BẮT BUỘC) ═══
+- MỖI title PHẢI giới thiệu ĐÚNG 1 sản phẩm của brand có công dụng KHỚP chủ đề bài (vd bài đèn pha ố vàng → "NOMA 620"; bài định vị xe → "Doscom DV3").
+- CHỈ được dùng tên sản phẩm có trong DANH MỤC được cung cấp ở phần user. TUYỆT ĐỐI KHÔNG bịa/chế tên model không có trong danh mục.
+- Chọn sản phẩm sát công dụng nhất với query. Nếu không có sản phẩm nào khớp thật sự → chọn cái gần nhất cùng nhóm, KHÔNG bịa.
+- Trả thêm field "featured_product" = đúng tên sản phẩm đã đưa vào title (phải trùng 1 mục trong danh mục).
 
 OUTPUT BẮT BUỘC: JSON array hợp lệ, không markdown, không text bao quanh.`;
 
@@ -46,13 +53,17 @@ ENGINES MISS: ${(JSON.parse(gap.gap_engines || "[]")).join(", ")}
 ĐỐI THỦ THẮNG: ${winners.slice(0, 5).map(w => `${w.name} (${w.mentions} mentions)`).join(", ") || "không có"}
 NGUỒN AI TRÍCH (đối thủ): ${citations.slice(0, 5).map(c => c.domain).join(", ") || "không có"}
 
-Sinh 3 ý tưởng bài viết (3 angle khác nhau) để fix lỗ hổng này. Output JSON array:
+DANH MỤC SẢN PHẨM ${brandName} (CHỈ được chọn trong đây, KHÔNG bịa tên khác):
+${catalogText(brand)}
+
+Sinh 3 ý tưởng bài viết (3 angle khác nhau) để fix lỗ hổng này. MỖI title phải lồng đúng 1 sản phẩm khớp công dụng từ danh mục trên. Output JSON array:
 [
   {
-    "title": "...",
+    "title": "... (có chứa tên 1 sản phẩm khớp chủ đề)",
     "slug": "...",
     "angle": "comparison" | "howto" | "listicle" | "case_study" | "explainer",
     "primary_keyword": "...",
+    "featured_product": "đúng tên 1 sản phẩm trong danh mục, trùng cái đã đưa vào title",
     "brief": "2-3 câu: bài này sẽ chứa gì, cấu trúc thế nào để AI dễ trích",
     "target_word_count": 1500-3000
   },

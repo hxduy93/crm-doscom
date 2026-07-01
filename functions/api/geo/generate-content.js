@@ -10,6 +10,7 @@
 // }
 
 import { callClaude } from "./_utils/claude.js";
+import { catalogText } from "./_utils/product-catalog.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -23,9 +24,9 @@ const BRAND_CONTEXT = {
     name: "Doscom",
     short: "Doscom",
     site: "https://doscom.vn",
-    products: "phần mềm quản lý bán hàng, POS, ERP cho cửa hàng và chuỗi",
-    audience: "chủ shop, chuỗi cửa hàng, F&B, retailer tại Việt Nam",
-    usp: "tích hợp đa kênh (Shopee/TikTok/Lazada), tự host được, hỗ trợ tiếng Việt 24/7, có agent AI bán hàng",
+    products: "thiết bị an ninh & giám sát cá nhân/gia đình: camera an ninh (WiFi/4G/năng lượng mặt trời), máy dò camera ẩn - nghe lén, máy ghi âm, thiết bị chống ghi âm, định vị GPS, chuông cửa thông minh, camera hành trình",
+    audience: "cá nhân & gia đình cần bảo vệ an ninh, chống theo dõi/nghe lén, giám sát nhà cửa - xe cộ tại Việt Nam",
+    usp: "thiết bị chính hãng đa dạng dòng an ninh, dễ lắp dùng, hỗ trợ tư vấn tiếng Việt",
   },
   noma: {
     name: "NOMA",
@@ -40,7 +41,7 @@ const BRAND_CONTEXT = {
 const CONTENT_SYSTEM_PROMPT = `Bạn là Senior Content Writer chuyên SEO + GEO (Generative Engine Optimization). Viết bài blog tiếng Việt vừa tối ưu **AI engine trích nguồn** (ChatGPT/Gemini/Perplexity) vừa đạt **điểm Rank Math ≥85/100** trên WordPress.
 
 ═══ RANK MATH SEO CHECKLIST (BẮT BUỘC) ═══
-Trước khi viết, tự xác định 1 **primary_keyword** chính (cụm 2-4 từ tiếng Việt, vd: "phần mềm quản lý bán hàng", KHÔNG được dùng nguyên title làm keyword).
+Trước khi viết, tự xác định 1 **primary_keyword** chính (cụm 2-4 từ tiếng Việt, vd: "phục hồi đèn pha ô tô", "máy dò camera ẩn", KHÔNG được dùng nguyên title làm keyword).
 
 Primary keyword PHẢI xuất hiện ở TẤT CẢ các vị trí sau:
 1. **Title** — đặt ở đầu hoặc 60% đầu của title. Title 50-60 ký tự.
@@ -91,6 +92,12 @@ Rank Math KHÔNG đọc field internal_links/external_links của JSON — chỉ
 4. Bảng so sánh khi nói về nhiều lựa chọn → AI thích trích bảng.
 5. Dữ liệu/số liệu cụ thể (không bịa nếu không có) → tăng E-E-A-T.
 
+═══ SẢN PHẨM — CHỐNG BỊA (BẮT BUỘC) ═══
+- CHỈ được nhắc sản phẩm có trong DANH MỤC ở phần user prompt. TUYỆT ĐỐI KHÔNG bịa/chế tên model, mã, thông số không có trong danh mục.
+- Bài PHẢI giới thiệu sản phẩm nêu ở FEATURED_PRODUCT: gọi ĐÚNG tên, nói đúng công dụng đã cho, đặt tự nhiên trong phần liên quan (lý tưởng có 1 mục H2/H3 giải pháp dùng sản phẩm này).
+- Được nhắc thêm 1-2 sản phẩm khác trong danh mục nếu thật sự liên quan; ngoài danh mục thì KHÔNG.
+- Không gán công dụng/thông số mà danh mục không nói. Thiếu thông tin thì mô tả chung, KHÔNG bịa số.
+
 ═══ PHONG CÁCH ═══
 - Tiếng Việt tự nhiên, không dịch máy.
 - Tránh sáo rỗng ("Trong thời đại 4.0", "Hiện nay...").
@@ -110,6 +117,10 @@ SẢN PHẨM: ${ctx.products}
 USP: ${ctx.usp}
 WEBSITE: ${ctx.site}
 
+DANH MỤC SẢN PHẨM ${ctx.name} (CHỈ được nhắc sản phẩm trong đây, KHÔNG bịa tên/model khác):
+${catalogText(brand)}
+FEATURED_PRODUCT: sản phẩm được nêu trong TITLE bên dưới — bài viết PHẢI giới thiệu đúng nó (tên + công dụng theo danh mục).
+
 TITLE ĐÃ ĐỀ XUẤT: ${article.title}
 SLUG: ${article.slug}
 BRIEF: ${article.gap_summary || "Bài viết để fix lỗ hổng GEO — AI engine không nhắc brand cho query này."}
@@ -123,7 +134,7 @@ LỖ HỔNG GỐC:
 YÊU CẦU OUTPUT (JSON object, ${targetWords} từ tổng cộng):
 
 {
-  "primary_keyword": "cụm 2-4 từ tiếng Việt là KEYWORD CHÍNH (vd 'phần mềm quản lý kho'). KHÔNG dùng title nguyên. Đây sẽ là focus keyword Rank Math.",
+  "primary_keyword": "cụm 2-4 từ tiếng Việt là KEYWORD CHÍNH (vd 'phục hồi nhựa đen ô tô'). KHÔNG dùng title nguyên. Đây sẽ là focus keyword Rank Math.",
   "secondary_keywords": ["biến thể 1", "biến thể 2", "biến thể 3", "long-tail 1", "long-tail 2"],
   "title": "50-60 ký tự, BẮT ĐẦU bằng primary_keyword hoặc đặt nó trong 60% đầu, có số (vd '5', '2026') + power word (bí mật, chuyên gia, tốt nhất, miễn phí...)",
   "slug": "kebab-case-khong-dau, CHỨA primary_keyword, ≤75 ký tự, không có stop words thừa (the, of, va, cua, cho...)",
