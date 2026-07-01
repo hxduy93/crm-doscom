@@ -456,8 +456,8 @@
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn-cl hm-opt-trigger" id="hmap-optimize-btn" type="button" style="background:var(--primary);color:#fff;border-color:transparent">💡 Đề xuất tối ưu landing</button>
-            <a class="btn-cl" href="https://clarity.microsoft.com/projects/view/xczl125ty0/heatmaps" target="_blank" rel="noopener" style="text-decoration:none">🔥 Mở Heatmap Clarity</a>
-            <a class="btn-cl" href="https://clarity.microsoft.com/projects/view/xczl125ty0/dashboard" target="_blank" rel="noopener" style="text-decoration:none">📊 Dashboard Clarity</a>
+            <a class="btn-cl" id="hmLinkHeat" href="https://clarity.microsoft.com/projects/view/xczl125ty0/heatmaps" target="_blank" rel="noopener" style="text-decoration:none">🔥 Mở Heatmap Clarity</a>
+            <a class="btn-cl" id="hmLinkDash" href="https://clarity.microsoft.com/projects/view/xczl125ty0/dashboard" target="_blank" rel="noopener" style="text-decoration:none">📊 Dashboard Clarity</a>
             <button class="btn-cl" id="hmap-refresh" type="button">↻ Làm mới</button>
           </div>
         </div>
@@ -599,9 +599,9 @@
     var optBtn=document.getElementById('hmap-optimize-btn');
     if(!nav||!body) return;
 
-    var loaded=false, LIVE=null;            // LIVE = phản hồi /api/clarity/insights (gắn vào sản phẩm Noma 911)
+    var loaded=false, LIVEMAP={};           // LIVEMAP[product] = phản hồi /api/clarity/insights của từng project Clarity riêng
     var product='noma911';
-    var PRODUCTS=[{key:'dr1',name:'DR1'},{key:'d1',name:'D1'},{key:'noma911',name:'Noma 911'}];
+    var PRODUCTS=[{key:'dr1',name:'DR1',clarity:'xfeuknbpdy'},{key:'d1',name:'D1',clarity:'rvl7bil3q4'},{key:'noma911',name:'Noma 911',clarity:'xczl125ty0'}];
     // nhãn section đẹp cho landing Noma (theo anchor); không khớp -> tự sinh từ hash/đường dẫn.
     var PRETTY={'/':'Trang chủ (Hero)','/#san-pham-kem':'Sản phẩm mua kèm','/#noma922':'Chi tiết 922 / combo','/#combo':'Combo mua 2 tặng 1','/#dat-hang':'Form đặt hàng'};
     var METLBL={DeadClickCount:'Dead click',RageClickCount:'Rage click',QuickbackClick:'Quay lại nhanh',ExcessiveScroll:'Cuộn quá mức',ScriptErrorCount:'Lỗi script',ErrorClickCount:'Click lỗi'};
@@ -623,26 +623,28 @@
     }
 
     // ----- truy xuất dữ liệu sản phẩm đang chọn -----
-    function liveMetrics(){ return (LIVE&&LIVE.ok&&Array.isArray(LIVE.metrics))?LIVE.metrics:null; }
-    function curData(){ return product==='noma911'?liveMetrics():null; }
+    function curLive(){ return LIVEMAP[product]||null; }
+    function liveMetrics(){ var L=curLive(); return (L&&L.ok&&Array.isArray(L.metrics))?L.metrics:null; }
+    function curData(){ return liveMetrics(); }
     function metric(name){ var d=curData()||[]; var m=d.find(function(x){return (x.metricName||'')===name;}); return (m&&m.information)||[]; }
     function urlOf(r){ return r.Url||r.URL; }
     function rows(name){ return metric(name).filter(function(r){ return urlOf(r); }); }
     function sum(name,key){ return rows(name).reduce(function(s,r){ return s+n(r[key]); },0); }
-    function noma911Sessions(){
-      var m=(liveMetrics()||[]).find(function(x){return x.metricName==='Traffic';});
-      return ((m&&m.information)||[]).reduce(function(s,r){ return s+(urlOf(r)?n(r.totalSessionCount):0); },0);
+    function sessionsOf(L){
+      if(!L||!L.ok||!Array.isArray(L.metrics)) return 0;
+      var m=L.metrics.find(function(x){return x.metricName==='Traffic';});
+      return ((m&&m.information)||[]).reduce(function(s,r){ return s+((r.Url||r.URL)?n(r.totalSessionCount):0); },0);
     }
     function productName(){ var p=PRODUCTS.find(function(x){return x.key===product;}); return p?p.name:''; }
 
     // ----- render từng phần -----
     function renderTabs(){
       tabsEl.innerHTML=PRODUCTS.map(function(p){
-        var has=(p.key==='noma911' && LIVE && LIVE.ok);
-        var c=has?(noma911Sessions()+' phiên'):'chưa có dữ liệu';
+        var L=LIVEMAP[p.key];
+        var c=(L&&L.ok)?(sessionsOf(L)+' phiên'):(L?'chưa có dữ liệu':'…');
         return '<button class="hm-tab '+(p.key===product?'active':'')+'" data-p="'+p.key+'"><span class="dot"></span>'+esc(p.name)+'<span class="cnt">· '+c+'</span></button>';
       }).join('');
-      Array.prototype.forEach.call(tabsEl.querySelectorAll('.hm-tab'),function(b){ b.addEventListener('click',function(){ product=b.dataset.p; renderAll(); }); });
+      Array.prototype.forEach.call(tabsEl.querySelectorAll('.hm-tab'),function(b){ b.addEventListener('click',function(){ product=b.dataset.p; if(!LIVEMAP[product]) load(false); else renderAll(); }); });
     }
     function kpisHtml(){
       var sess=sum('Traffic','totalSessionCount'), users=sum('Traffic','distinctUserCount');
@@ -725,34 +727,36 @@
       return '<details class="hm-raw"><summary>📋 Dữ liệu chi tiết Clarity (raw) <span class="chev">▾</span></summary>'+html+'</details>';
     }
     function infoLine(){
-      if(!(LIVE&&LIVE.ok)) return '';
-      var t=(LIVE.fetchedAt||'').replace('T',' ').slice(0,16);
-      return '<p class="hmap-note" style="margin:0 0 12px">Cập nhật: '+esc(t)+(LIVE.cached?' · từ cache':'')+(LIVE.stale?' · (đã hết lượt gọi hôm nay, đang xem bản gần nhất)':'')+'</p>';
+      var L=curLive();
+      if(!(L&&L.ok)) return '';
+      var t=(L.fetchedAt||'').replace('T',' ').slice(0,16);
+      return '<p class="hmap-note" style="margin:0 0 12px">Cập nhật: '+esc(t)+(L.cached?' · từ cache':'')+(L.stale?' · (đã hết lượt gọi hôm nay, đang xem bản gần nhất)':'')+'</p>';
     }
     function emptyCard(ic,h,p){ return '<div class="hm-empty"><div class="em-ic">'+ic+'</div><h3>'+esc(h)+'</h3><p>'+esc(p)+'</p></div>'; }
 
     function renderAll(){
       renderTabs();
-      if(product!=='noma911'){
-        body.innerHTML=emptyCard('📭','Sản phẩm '+productName()+' chưa có dữ liệu heatmap','Khi landing của sản phẩm này được gắn Microsoft Clarity, dữ liệu UX sẽ tự hiện ở đây — y như tab “Noma 911”.');
-        return;
-      }
-      if(!LIVE){ body.innerHTML='<div class="hero"><p>Đang tải số liệu Clarity…</p></div>'; return; }
-      if(!LIVE.ok){
-        var msg=(LIVE.error==='missing_token')?(LIVE.hint||'Chưa cấu hình token Clarity.'):('Chưa lấy được số liệu Clarity'+(LIVE.error?(' ('+LIVE.error+')'):'')+'.');
+      var pj=((PRODUCTS.find(function(x){return x.key===product;})||{}).clarity)||'xczl125ty0';
+      var lh=document.getElementById('hmLinkHeat'); if(lh) lh.href='https://clarity.microsoft.com/projects/view/'+pj+'/heatmaps';
+      var ld=document.getElementById('hmLinkDash'); if(ld) ld.href='https://clarity.microsoft.com/projects/view/'+pj+'/dashboard';
+      var L=curLive();
+      if(!L){ body.innerHTML='<div class="hero"><p>Đang tải số liệu Clarity…</p></div>'; return; }
+      if(!L.ok){
+        var msg=(L.error==='missing_token')?(L.hint||'Chưa cấu hình token Clarity.'):('Chưa lấy được số liệu Clarity'+(L.error?(' ('+L.error+')'):'')+'.');
         body.innerHTML='<div class="hm-empty"><div class="em-ic">⚠️</div><h3>Chưa có số liệu</h3><p>'+esc(msg)+'</p><p class="hmap-note">Bạn vẫn xem heatmap trực quan bằng nút “🔥 Mở Heatmap Clarity” phía trên.</p></div>';
         return;
       }
-      if(!rows('Traffic').length){ body.innerHTML=infoLine()+emptyCard('📭','Clarity trả về rỗng','Có thể landing chưa đủ lượt truy cập trong 3 ngày.'); return; }
+      if(!rows('Traffic').length){ body.innerHTML=infoLine()+emptyCard('📭','Clarity trả về rỗng','Có thể '+productName()+' chưa đủ lượt truy cập trong 3 ngày.'); return; }
       body.innerHTML=infoLine()+kpisHtml()+signalsHtml()+dwellHtml()+scrollHtml()+aiHtml()+rawHtml();
     }
 
     function load(force){
-      if(product==='noma911') body.innerHTML='<div class="hero"><p>Đang tải số liệu Clarity…</p></div>';
-      fetch('/api/clarity/insights?days=3'+(force?'&refresh=1':''))
+      var key=product;
+      body.innerHTML='<div class="hero"><p>Đang tải số liệu Clarity…</p></div>';
+      fetch('/api/clarity/insights?days=3&product='+encodeURIComponent(key)+(force?'&refresh=1':''))
         .then(function(r){ return r.json(); })
-        .then(function(d){ LIVE=d; renderAll(); })
-        .catch(function(e){ LIVE={ok:false,error:String(e&&e.message||e)}; renderAll(); });
+        .then(function(d){ LIVEMAP[key]=d; renderAll(); })
+        .catch(function(e){ LIVEMAP[key]={ok:false,error:String(e&&e.message||e)}; renderAll(); });
     }
     nav.addEventListener('click',function(){ if(!loaded){ loaded=true; load(false); } });
     if(refreshBtn) refreshBtn.addEventListener('click',function(){ load(true); });
@@ -775,13 +779,14 @@
     function runOptimize(){
       if(optBusy) return;
       var box=document.getElementById('hmap-optimize');
-      if(product!=='noma911'||!(LIVE&&LIVE.ok)){ if(box) box.innerHTML='<p class="hmap-note" style="margin:0">Sản phẩm đang chọn chưa có số liệu để phân tích.</p>'; return; }
+      var L=curLive();
+      if(!(L&&L.ok)){ if(box) box.innerHTML='<p class="hmap-note" style="margin:0">Sản phẩm đang chọn chưa có số liệu để phân tích.</p>'; return; }
       if(!box) return;
       optBusy=true;
       var triggers=Array.prototype.slice.call(viewEl.querySelectorAll('.hm-opt-trigger'));
       triggers.forEach(function(b){ b.disabled=true; b.dataset.old=b.textContent; b.textContent='Đang phân tích…'; });
       box.innerHTML='<p class="hmap-note" style="margin:0">⏳ Claude đang đọc số liệu và đề xuất tối ưu…</p>';
-      fetch('/api/clarity/optimize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({metrics:LIVE.metrics})})
+      fetch('/api/clarity/optimize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({metrics:L.metrics})})
         .then(function(r){return r.json();})
         .then(function(d){
           if(!d||!d.ok){ box.innerHTML='<p class="hmap-note" style="margin:0">'+esc((d&&d.error)||'Không tạo được đề xuất.')+'</p>'; return; }
