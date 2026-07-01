@@ -52,3 +52,19 @@ export function isRealProduct(brand, name) {
   const n = String(name || "").trim().toLowerCase();
   return items.some((p) => p.name.toLowerCase() === n);
 }
+
+// Trả về danh sách tên sản phẩm THẬT (trong danh mục) xuất hiện trong text.
+// Dùng cho guardrail: title/bài viết phải chứa ít nhất 1 sản phẩm thật.
+export function findProductsInText(brand, text) {
+  const items = PRODUCT_CATALOG[brand] || [];
+  const t = String(text || "").toLowerCase();
+  return items.filter((p) => t.includes(p.name.toLowerCase())).map((p) => p.name);
+}
+
+// Guardrail cho 1 idea (analyze-gaps): featured_product PHẢI là sản phẩm thật
+// VÀ phải thực sự nằm trong title. Trả true nếu đạt, false nếu thiếu/bịa → sẽ bị loại/retry.
+export function ideaHasValidProduct(brand, idea) {
+  if (!idea || !idea.title || !idea.featured_product) return false;
+  if (!isRealProduct(brand, idea.featured_product)) return false;
+  return String(idea.title).toLowerCase().includes(String(idea.featured_product).toLowerCase());
+}

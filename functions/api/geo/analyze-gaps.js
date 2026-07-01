@@ -13,7 +13,7 @@
 // }
 
 import { callClaude } from "./_utils/claude.js";
-import { catalogText } from "./_utils/product-catalog.js";
+import { catalogText, ideaHasValidProduct } from "./_utils/product-catalog.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -138,16 +138,31 @@ async function findGaps(env, { days, brand }) {
 
 async function generateIdeasForGap(env, gap, brand) {
   const userPrompt = buildIdeaPrompt(gap, brand);
-  const result = await callClaude(env, {
-    model: "haiku",
-    systemPrompt: IDEA_SYSTEM_PROMPT,
-    userPrompt,
-    maxTokens: 2000,
-    jsonOutput: true,
-  });
 
-  const ideas = Array.isArray(result.parsed) ? result.parsed : [];
-  return { ideas, cost: result.cost_usd, model: result.model };
+  // GUARDRAIL: chỉ giữ idea có sản phẩm THẬT trong title (featured_product hợp lệ + có mặt
+  // trong title). Idea nào bịa/thiếu sản phẩm → loại. Nếu 1 lượt không ra idea hợp lệ nào →
+  // retry (tối đa 2 lượt). Bảo đảm 100% idea được lưu đều gắn sản phẩm thật.
+  const valid = [];
+  let cost = 0;
+  let model = null;
+  const MAX_ATTEMPTS = 2;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS && valid.length === 0; attempt++) {
+    const result = await callClaude(env, {
+      model: "haiku",
+      systemPrompt: IDEA_SYSTEM_PROMPT,
+      userPrompt,
+      maxTokens: 2000,
+      jsonOutput: true,
+    });
+    cost += result.cost_usd || 0;
+    model = result.model;
+    const ideas = Array.isArray(result.parsed) ? result.parsed : [];
+    for (const idea of ideas) {
+      if (ideaHasValidProduct(brand, idea)) valid.push(idea);
+    }
+  }
+
+  return { ideas: valid, cost, model };
 }
 
 export async function onRequestPost(context) {

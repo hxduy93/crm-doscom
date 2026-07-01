@@ -10,7 +10,7 @@
 // }
 
 import { callClaude } from "./_utils/claude.js";
-import { catalogText } from "./_utils/product-catalog.js";
+import { catalogText, findProductsInText } from "./_utils/product-catalog.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -391,16 +391,37 @@ export async function onRequestPost(context) {
 
   try {
     const userPrompt = buildContentPrompt({ article, brand: article.brand, targetWords });
-    const result = await callClaude(env, {
-      model,
-      systemPrompt: CONTENT_SYSTEM_PROMPT,
-      userPrompt,
-      maxTokens: 16000,
-      jsonOutput: true,
-    });
 
-    const c = result.parsed;
-    if (!c || !c.content_markdown) throw new Error("Claude trả content_markdown empty");
+    // GUARDRAIL: bài viết PHẢI gắn sản phẩm thật — cả TITLE lẫn THÂN BÀI đều phải chứa
+    // ít nhất 1 sản phẩm trong danh mục. Không đạt → retry (tối đa 2 lượt). Vẫn không đạt
+    // → throw → catch bên dưới đánh dấu status='failed' (KHÔNG bao giờ lưu pending_review
+    // bài thiếu/bịa sản phẩm). Cost cộng dồn qua các lượt.
+    let result = null;
+    let c = null;
+    let genCost = 0;
+    let guardErr = "";
+    const MAX_ATTEMPTS = 2;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      result = await callClaude(env, {
+        model,
+        systemPrompt: CONTENT_SYSTEM_PROMPT,
+        userPrompt,
+        maxTokens: 16000,
+        jsonOutput: true,
+      });
+      genCost += result.cost_usd || 0;
+      const parsed = result.parsed;
+      if (!parsed || !parsed.content_markdown) { guardErr = "content_markdown empty"; c = null; continue; }
+      const inTitle = findProductsInText(article.brand, parsed.title || "");
+      const inBody = findProductsInText(article.brand, parsed.content_markdown || "");
+      if (inTitle.length > 0 && inBody.length > 0) { c = parsed; break; } // đạt guardrail
+      guardErr = `thiếu sản phẩm thật (title:${inTitle.length}, body:${inBody.length})`;
+      c = null;
+    }
+    if (!c || !c.content_markdown) {
+      throw new Error(`Guardrail: bài không gắn sản phẩm thật sau ${MAX_ATTEMPTS} lượt — ${guardErr}`);
+    }
+    result.cost_usd = Number(genCost.toFixed(6)); // cost cộng dồn để lưu DB đúng
 
     // Đảm bảo external + internal links được embed trong body (Rank Math chỉ scan <a> trong HTML,
     // KHÔNG đọc field JSON). Nếu Claude chỉ liệt kê field mà không embed → auto inject.
