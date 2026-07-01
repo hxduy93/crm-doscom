@@ -1,0 +1,36 @@
+name: Quét sức khỏe API/Token (health-scan)
+
+# Quét toàn bộ API key / token / link 1 LẦN/TUẦN:
+#  - Gọi /api/health/keys?refresh=1 → function quét LIVE + ghi cache KV (health_keys:v1).
+#  - Widget Hermes đọc cache đó → tự hiện banner cảnh báo khi có key/link chết.
+# Không cần secret: endpoint để public (theo openspec/config.yaml, đây là endpoint ĐỌC).
+on:
+  schedule:
+    # 8h sáng thứ Hai giờ VN = 01:00 UTC thứ Hai.
+    - cron: '0 1 * * 1'
+  workflow_dispatch:        # bấm tay khi cần
+
+concurrency:
+  group: health-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Quét & làm mới cache health
+        run: |
+          echo "Gọi /api/health/keys?refresh=1 …"
+          BODY=$(curl -sS --max-time 120 "https://crm-doscom.pages.dev/api/health/keys?refresh=1")
+          echo "$BODY" | head -c 4000
+          echo ""
+          # Tách summary để in ra log Actions (không fail job — chỉ để xem nhanh).
+          PROBLEM=$(echo "$BODY" | grep -o '"problem":[0-9]*' | grep -o '[0-9]*' || echo "?")
+          WARN=$(echo "$BODY" | grep -o '"warning":[0-9]*' | grep -o '[0-9]*' || echo "?")
+          echo "----"
+          echo "Số key/link CHẾT hoặc HẾT HẠN: $PROBLEM"
+          echo "Số key/token SẮP hết hạn:      $WARN"
+          if [ "$PROBLEM" != "0" ] && [ "$PROBLEM" != "?" ]; then
+            echo "::warning::Có $PROBLEM API/token/link đang chết hoặc hết hạn — mở CRM (module 'Sức khỏe API & Token') để xử lý."
+          fi

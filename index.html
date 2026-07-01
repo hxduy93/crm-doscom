@@ -221,6 +221,7 @@
     <button class="nav-item" data-view="landing"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span><span class="lb">Landing Builder</span></button>
     <div class="nav-label">Vận hành</div>
     <button class="nav-item" data-view="warehouse"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><span class="lb">Kho tổng Doscom</span></button>
+    <button class="nav-item" data-view="health"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="lb">Sức khỏe API &amp; Token</span></button>
     <div class="sidebar-foot"><b>CRM Doscom</b> · v0.4<br/>Menu phân nhóm · số thật<br/><span id="foot-fresh">…</span></div>
   </aside>
 
@@ -448,6 +449,46 @@
       </div><!-- /view-geo -->
       <div class="view" id="view-landing"></div>
       <div class="view" id="view-warehouse"></div>
+      <div class="view" id="view-health">
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <h2 style="margin:0 0 4px">🛡️ Sức khỏe API &amp; Token</h2>
+            <p style="margin:0;color:var(--text-2);font-size:13px;max-width:640px">Trạng thái tất cả API key / token / link dịch vụ CRM đang dùng. Chỉ token Facebook có <b>ngày hết hạn thật</b>; còn lại kiểm được <b>còn sống / chết</b>. Số dư tiền của Anthropic/OpenAI/Gemini không có API để đọc nên không hiển thị. Tự quét lại 1 lần/tuần + cảnh báo qua Hermes khi có key/link chết.</p>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span id="hk-checked" style="font-size:12px;color:var(--text-2)"></span>
+            <button class="btn-cl" id="hk-refresh" type="button">↻ Quét lại</button>
+          </div>
+        </div>
+        <div class="hk-sum" id="hk-sum"></div>
+        <div id="hk-body"><div class="hk-empty">Đang tải trạng thái…</div></div>
+        <style>
+          #view-health .hk-sum{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+          #view-health .hk-chip{border:1px solid var(--line,rgba(0,0,0,.08));border-radius:12px;padding:9px 14px;font-size:13px;font-weight:800;display:flex;align-items:center;gap:8px;background:var(--bg-1,#fff)}
+          #view-health .hk-chip .n{font-size:18px;letter-spacing:-.02em}
+          #view-health .hk-chip.bad{background:#fdeced;border-color:transparent;color:#b3261e}
+          #view-health .hk-chip.warn{background:#fdf3e7;border-color:transparent;color:#8a5a00}
+          #view-health .hk-chip.ok{background:#e9f7ef;border-color:transparent;color:#0f7b43}
+          #view-health .hk-grid{display:grid;gap:10px}
+          #view-health .hk-row{background:var(--bg-1,#fff);border:1px solid var(--line,rgba(0,0,0,.08));border-radius:14px;padding:14px 16px;display:grid;grid-template-columns:1fr auto;gap:6px 14px;align-items:center}
+          #view-health .hk-row.is-bad{border-color:#f4b8bc;background:color-mix(in srgb,#fdeced 55%,var(--bg-1,#fff))}
+          #view-health .hk-row.is-warn{border-color:#f1d69a;background:color-mix(in srgb,#fdf3e7 55%,var(--bg-1,#fff))}
+          #view-health .hk-name{font-weight:800;font-size:14.5px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+          #view-health .hk-tag{font-size:10.5px;font-weight:800;color:var(--text-2);background:var(--muted);border-radius:99px;padding:3px 9px;text-transform:uppercase;letter-spacing:.04em}
+          #view-health .hk-meta{grid-column:1;color:var(--text-2);font-size:12.5px;margin-top:1px}
+          #view-health .hk-meta code{background:var(--muted);border-radius:6px;padding:1px 6px;font-size:11.5px}
+          #view-health .hk-badge{grid-column:2;grid-row:1;justify-self:end;font-size:12px;font-weight:800;border-radius:99px;padding:6px 12px;white-space:nowrap}
+          #view-health .b-ok{background:#e9f7ef;color:#0f7b43}
+          #view-health .b-bad{background:#fdeced;color:#b3261e}
+          #view-health .b-warn{background:#fdf3e7;color:#8a5a00}
+          #view-health .b-internal{background:#eef1f7;color:#4a5169}
+          #view-health .b-missing{background:#f3f4f6;color:#6b7280}
+          #view-health .b-unknown{background:#eef1f7;color:#5b6270}
+          #view-health .hk-days{grid-column:2;grid-row:2;justify-self:end;font-size:12px;color:var(--text-2);font-weight:700}
+          #view-health .hk-empty{background:var(--bg-1,#fff);border:1px dashed color-mix(in srgb,var(--text) 18%,transparent);border-radius:16px;padding:34px;text-align:center;color:var(--text-2)}
+          #view-health .hk-secgap{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text-2);margin:16px 2px 2px}
+        </style>
+      </div><!-- /view-health -->
       <div class="view" id="view-heatmap">
         <div class="hmap-head" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
           <div>
@@ -557,7 +598,7 @@
 
   // ===== Menu chính: chuyển VIEW (trang) + sub-nav cuộn trong Dashboard =====
   (function(){
-    var TITLES={'dashboard':'Tổng quan Dashboard','agent-fb':'Agent Facebook Ads','agent-gg':'Agent Google Ads','heatmap':'Heatmap sản phẩm','ads-creator':'Tạo Ads tự động','geo':'GEO Monitor','landing':'Landing Builder','warehouse':'Kho tổng Doscom'};
+    var TITLES={'dashboard':'Tổng quan Dashboard','agent-fb':'Agent Facebook Ads','agent-gg':'Agent Google Ads','heatmap':'Heatmap sản phẩm','ads-creator':'Tạo Ads tự động','geo':'GEO Monitor','landing':'Landing Builder','warehouse':'Kho tổng Doscom','health':'Sức khỏe API & Token'};
     var DESC={'agent-gg':'Phân tích keyword / banner / category Google Ads bằng AI — chuyển từ dashboard cũ.','ads-creator':'Tự sinh & đăng campaign theo mẫu, gợi ý ngân sách + đối tượng.','geo':'Theo dõi thứ hạng GEO/SEO, đối thủ và nội dung.','landing':'Dựng landing page kéo-thả, xuất bản nhanh.','warehouse':'Tồn kho, nhập–xuất, định giá vốn toàn Doscom.'};
     function comingHtml(v){ return '<div class="hero"><h2>'+TITLES[v]+'</h2><p>Module sắp được chuyển sang CRM</p></div>'+
       '<div class="coming"><div class="coming-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg></div>'+
@@ -1861,6 +1902,79 @@
   var sel=document.getElementById('gg-group'); if(sel) sel.addEventListener('change',function(){ if(R) render(); });
   ['gg-run','gg-refresh'].forEach(function(id){ var el=document.getElementById(id); if(el) el.addEventListener('click',function(){ if(R) setTimeout(render,50); }); });
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',load); else load();
+})();
+</script>
+<!-- Module Sức khỏe API & Token — gọi /api/health/keys, render bảng trạng thái. -->
+<script>
+(function(){
+  var body=document.getElementById('hk-body'), sumEl=document.getElementById('hk-sum'),
+      checkedEl=document.getElementById('hk-checked'), btn=document.getElementById('hk-refresh');
+  if(!body) return;
+  var loaded=false;
+
+  var STATUS={
+    ok:      {cls:'b-ok',      txt:'✔ Còn sống'},
+    expiring:{cls:'b-warn',    txt:'⏳ Sắp hết hạn'},
+    expired: {cls:'b-bad',     txt:'✖ Hết hạn'},
+    dead:    {cls:'b-bad',     txt:'✖ Chết'},
+    link_down:{cls:'b-bad',    txt:'✖ Link chết'},
+    internal:{cls:'b-internal',txt:'Nội bộ'},
+    missing: {cls:'b-missing', txt:'Chưa cấu hình'},
+    unknown: {cls:'b-unknown', txt:'? Chưa rõ'}
+  };
+  var ORDER={expired:0,dead:0,link_down:0,expiring:1,unknown:2,ok:3,internal:4,missing:5};
+
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+  function chip(cls,n,label){ return '<div class="hk-chip '+cls+'"><span class="n">'+n+'</span> '+label+'</div>'; }
+
+  function render(d){
+    if(!d || !d.ok){ body.innerHTML='<div class="hk-empty">Không tải được dữ liệu. Thử «Quét lại».</div>'; return; }
+    var s=d.summary||{};
+    var chips='';
+    if(s.problem) chips+=chip('bad',s.problem,'chết / hết hạn');
+    if(s.warning) chips+=chip('warn',s.warning,'sắp hết hạn');
+    chips+=chip('ok',s.ok||0,'còn sống');
+    chips+=chip('',(s.internal||0),'nội bộ');
+    if(s.missing) chips+=chip('',s.missing,'chưa cấu hình');
+    if(s.unknown) chips+=chip('',s.unknown,'chưa rõ');
+    sumEl.innerHTML=chips;
+    if(d.checkedAt){ var t=new Date(d.checkedAt); checkedEl.textContent='Quét lúc: '+t.toLocaleString('vi-VN')+(d.cached?' (cache)':''); }
+
+    var items=(d.items||[]).slice().sort(function(a,b){
+      var oa=ORDER[a.status]==null?9:ORDER[a.status], ob=ORDER[b.status]==null?9:ORDER[b.status];
+      return oa-ob || String(a.category).localeCompare(String(b.category));
+    });
+    if(!items.length){ body.innerHTML='<div class="hk-empty">Chưa có mục nào.</div>'; return; }
+
+    var html='<div class="hk-grid">';
+    items.forEach(function(it){
+      var st=STATUS[it.status]||STATUS.unknown;
+      var rowcls=(it.status==='expired'||it.status==='dead'||it.status==='link_down')?' is-bad':((it.status==='expiring')?' is-warn':'');
+      var days='';
+      if(it.daysLeft!=null) days='còn '+it.daysLeft+' ngày';
+      else if(it.expiresAt) days='hết '+it.expiresAt;
+      html+='<div class="hk-row'+rowcls+'">'
+        +'<div class="hk-name">'+esc(it.label)+' <span class="hk-tag">'+esc(it.provider)+'</span> <span class="hk-tag">'+esc(it.category)+'</span></div>'
+        +'<div class="hk-badge '+st.cls+'">'+st.txt+'</div>'
+        +'<div class="hk-meta">'+esc(it.detail||it.note||'')+' <code>'+esc(it.key)+'</code></div>'
+        +(days?'<div class="hk-days">'+esc(days)+'</div>':'')
+        +'</div>';
+    });
+    html+='</div>';
+    body.innerHTML=html;
+  }
+
+  function load(refresh){
+    body.innerHTML='<div class="hk-empty">Đang '+(refresh?'quét lại':'tải')+' trạng thái…</div>';
+    fetch('/api/health/keys'+(refresh?'?refresh=1':''),{credentials:'same-origin'})
+      .then(function(r){return r.json();}).then(render)
+      .catch(function(){ body.innerHTML='<div class="hk-empty">Lỗi mạng. Thử lại sau.</div>'; });
+  }
+
+  var nav=document.querySelector('.sidebar .nav-item[data-view="health"]');
+  if(nav) nav.addEventListener('click',function(){ if(loaded)return; loaded=true; load(false); });
+  if(btn) btn.addEventListener('click',function(){ loaded=true; load(true); });
 })();
 </script>
 <!-- Hermes Chat — widget nổi (FAB) hỏi đáp dữ liệu FB/KPI/GEO. Tự inject, dùng /api/hermes/*. -->

@@ -1,13 +1,16 @@
 // GET /api/hermes/alerts
-// Cảnh báo nội bộ cho widget Hermes. Hiện chỉ 1 loại: token FB sắp hết hạn (≤2 ngày).
+// Cảnh báo nội bộ cho widget Hermes. 2 nguồn:
+//   1. Token FB sắp hết hạn (≤2 ngày) — kiểm LIVE bằng FB debug_token (như cũ).
+//   2. API key / token / link khác ĐÃ CHẾT/HẾT HẠN — đọc cache health_keys:v1
+//      (do GET /api/health/keys ghi, cron tuần làm mới). Không ping lại → nhẹ.
 //
-// Kiểm hạn token bằng FB debug_token trên env.FB_ACCESS_TOKEN (token CRM đang dùng để
-// tạo ads). KHÔNG lộ token ra response — chỉ trả số ngày còn lại + ngày hết hạn.
-// Cache kết quả vào KV INVENTORY 3h để không gọi FB mỗi lần load trang.
+// KHÔNG lộ token ra response — chỉ trả số ngày còn lại + ngày hết hạn.
+// Cache kết quả FB vào KV INVENTORY 3h để không gọi FB mỗi lần load trang.
 //
 // Response: { ok, alert: { active, days, expires, invalid, msg } }
 
 const CACHE_KEY = "hermes_alert:fb_token";
+const HEALTH_CACHE_KEY = "health_keys:v1";   // do /api/health/keys ghi
 const CACHE_TTL = 3 * 3600;   // 3h
 const WARN_DAYS = 2;          // báo trước 2 ngày
 
@@ -18,22 +21,42 @@ function json(obj, status = 200) {
   });
 }
 
+// Gom các key/link ĐÃ CHẾT/HẾT HẠN từ cache health_keys:v1 (không ping lại — chỉ đọc KV).
+// Trả về mảng câu ngắn để chèn thêm vào banner Hermes. Bỏ FB (đã kiểm riêng bên dưới).
+async function healthProblemLines(kv) {
+  if (!kv) return [];
+  try {
+    const raw = await kv.get(HEALTH_CACHE_KEY);
+    if (!raw) return [];
+    const items = (JSON.parse(raw).items) || [];
+    const lines = [];
+    for (const it of items) {
+      if (it.id === "fb_access") continue;                // FB kiểm live riêng, tránh trùng
+      if (it.status === "expired" || it.status === "dead") lines.push(`• ${it.label}: KEY/TOKEN đã chết — cần thay.`);
+      else if (it.status === "link_down") lines.push(`• ${it.label}: LINK chết — không phản hồi.`);
+    }
+    return lines;
+  } catch { return []; }
+}
+
 export async function onRequestGet(context) {
   const { env } = context;
   const kv = env.INVENTORY;
 
-  // 1. Cache (tránh gọi FB mỗi lần widget load)
+  // Cache FB (tránh gọi FB mỗi lần widget load). Vẫn phải gộp health bên dưới,
+  // nên chỉ dùng cache cho phần FB — không return sớm.
+  let fbCached = null;
   try {
     if (kv) {
-      const cached = await kv.get(CACHE_KEY);
-      if (cached) return json(JSON.parse(cached));
+      const c = await kv.get(CACHE_KEY);
+      if (c) fbCached = JSON.parse(c);
     }
   } catch { /* ignore */ }
 
-  let payload = { ok: true, alert: { active: false } };
+  let payload = fbCached || { ok: true, alert: { active: false } };
   const token = env.FB_ACCESS_TOKEN;
 
-  if (token) {
+  if (!fbCached && token) {
     try {
       const r = await fetch(
         `https://graph.facebook.com/v21.0/debug_token?input_token=${encodeURIComponent(token)}&access_token=${encodeURIComponent(token)}`,
@@ -59,12 +82,26 @@ export async function onRequestGet(context) {
         };
       }
     } catch { /* lỗi mạng → không cảnh báo sai, coi như không có alert */ }
+
+    // Cache phần FB (cả khi không có alert) để khỏi gọi FB liên tục.
+    try {
+      if (kv) await kv.put(CACHE_KEY, JSON.stringify(payload), { expirationTtl: CACHE_TTL });
+    } catch { /* ignore */ }
   }
 
-  // Cache cả khi không có alert (để khỏi gọi FB liên tục)
-  try {
-    if (kv) await kv.put(CACHE_KEY, JSON.stringify(payload), { expirationTtl: CACHE_TTL });
-  } catch { /* ignore */ }
+  // Gộp thêm các key/link khác đã chết (đọc cache health, không tốn ping).
+  const extra = await healthProblemLines(kv);
+  if (extra.length) {
+    const base = payload.alert.active ? payload.alert.msg + "\n" : "⚠️ Có API/token khác gặp sự cố:\n";
+    payload = {
+      ...payload,
+      alert: {
+        ...payload.alert,
+        active: true,
+        msg: base + extra.join("\n"),
+      },
+    };
+  }
 
   return json(payload);
 }
