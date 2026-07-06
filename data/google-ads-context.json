@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-07 00:18",
+  "generated_at": "2026-07-07 02:12",
   "source_data_date_range": {
     "start_7d": "2026-06-29",
     "end": "2026-07-05",
@@ -1714,19 +1714,6 @@
         ]
       },
       {
-        "search_term": "máy chống ghi âm",
-        "spend_30d": 51050.0,
-        "clicks_30d": 18,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.2571,
-        "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
         "search_term": "máy ghi âm mini kết nối điện thoại",
         "spend_30d": 54988.0,
         "clicks_30d": 10,
@@ -1767,16 +1754,29 @@
         ]
       },
       {
-        "search_term": "camera ip",
-        "spend_30d": 539935.0,
-        "clicks_30d": 42,
+        "search_term": "máy ghi",
+        "spend_30d": 32159.0,
+        "clicks_30d": 5,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.0457,
+        "ctr_30d": 0.1786,
         "match_types": [
-          "BROAD"
+          "NEAR_PHRASE"
         ],
         "statuses": [
-          "EXCLUDED",
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "thiết bị nghe lén mini",
+        "spend_30d": 18661.0,
+        "clicks_30d": 5,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.061,
+        "match_types": [
+          "BROAD",
+          "NEAR_PHRASE"
+        ],
+        "statuses": [
           "NONE"
         ]
       }
@@ -2287,17 +2287,17 @@
         "conversions_30d": 13.25,
         "term_count": 591
       },
-      "BROAD": {
-        "spend_30d": 12496248.0,
-        "clicks_30d": 1457,
-        "conversions_30d": 21.25,
-        "term_count": 2130
-      },
       "NEAR_PHRASE": {
         "spend_30d": 3752419.0,
         "clicks_30d": 761,
         "conversions_30d": 7.5,
         "term_count": 655
+      },
+      "BROAD": {
+        "spend_30d": 12496248.0,
+        "clicks_30d": 1457,
+        "conversions_30d": 21.25,
+        "term_count": 2130
       },
       "NEAR_EXACT": {
         "spend_30d": 31516.0,
@@ -2309,7 +2309,7 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 16086,
+      "total_unique_placements": 16090,
       "total_spend_30d": 18187738.0
     },
     "network_breakdown": {
@@ -2334,9 +2334,9 @@
       "WEBSITE": {
         "spend_30d": 18187738.0,
         "clicks_30d": 11257,
-        "impressions_30d": 820326,
+        "impressions_30d": 820373,
         "ctr_30d": 0.0137,
-        "placement_count": 16086
+        "placement_count": 16090
       }
     },
     "top_waste_placements": [],
