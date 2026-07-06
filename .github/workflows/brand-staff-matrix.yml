@@ -1,0 +1,55 @@
+name: Brand-Staff Revenue Matrix
+
+# Bảng doanh số/chi phí theo Brand (Noma/Doscom) × Nhân sự.
+# Chạy 2 lần/ngày: 9:07 và 15:07 giờ VN (= 02:07 và 08:07 UTC).
+# Lệch phút :07 để né các cron khác (:00/:30/...) → tránh push reject (race).
+# Tự fetch doanh thu Pancake TƯƠI trước khi build (9h VN sớm hơn cron pancake 10h nên phải tự kéo).
+on:
+  schedule:
+    - cron: "7 2,8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Fetch doanh thu Pancake (tươi tại thời điểm chạy)
+        env:
+          PANCAKE_API_KEY: ${{ secrets.PANCAKE_API_KEY }}
+          PANCAKE_SHOP_ID: ${{ secrets.PANCAKE_SHOP_ID }}
+        run: python scripts/fetch_pancake_revenue.py
+
+      - name: Build bảng Brand × Nhân sự
+        run: python scripts/build_brand_staff_matrix.py
+
+      - name: Commit doanh thu + bảng matrix
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/product-revenue.json data/brand-staff-matrix.json
+          if git diff --cached --quiet; then
+            echo "Không có thay đổi để commit."
+          else
+            git commit -m "chore: update brand-staff revenue matrix (9h/15h)"
+            # Retry + rebase tránh race với các workflow khác cùng push vào main
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin main && git push && exit 0
+              echo "[retry $i] push bị reject, chờ $((i*5))s rồi rebase lại..."
+              sleep $((i*5))
+            done
+            echo "Push vẫn fail sau 5 lần retry"
+            exit 1
+          fi
