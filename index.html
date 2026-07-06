@@ -207,6 +207,7 @@
     <div class="nav-subs open" id="dash-subs">
       <button class="nav-sub active" data-scroll="sec-overview">Tổng quan</button>
       <button class="nav-sub" data-scroll="sec-staff">Theo nhân sự</button>
+      <button class="nav-sub" data-scroll="sec-brand-cost">Chi phí theo brand</button>
       <button class="nav-sub" data-scroll="sec-daily">Doanh số ngày</button>
       <button class="nav-sub" data-scroll="sec-prodtrend">Đăng ký &amp; CPL theo SP</button>
       <button class="nav-sub" data-scroll="sec-profit">Lợi nhuận</button>
@@ -294,6 +295,16 @@
           <table>
             <thead><tr><th>Nhân sự / Nguồn</th><th class="num">Chi phí QC</th><th class="num">Doanh thu</th><th class="num">Giá vốn</th><th class="num">ROAS</th><th class="num">Đơn</th><th class="num">Lợi nhuận (DT−CP−GV)</th></tr></thead>
             <tbody id="staff-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="mod wide" style="margin-bottom:16px" id="sec-brand-cost">
+        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí quảng cáo theo brand</h3></div><span class="s">Noma = sản phẩm tên "Noma…" · Doscom = còn lại (máy dò, camera, ghi âm…) · FB theo tài khoản×SP (ad_spend_by_staff) + Google theo nhóm SP</span></div>
+        <div class="mod-b" style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Brand</th><th class="num">Chi phí FB</th><th class="num">Chi phí Google</th><th class="num">Tổng chi phí</th><th class="num">% tổng</th></tr></thead>
+            <tbody id="brand-cost-rows"></tbody>
           </table>
         </div>
       </section>
@@ -930,6 +941,8 @@
     var tRoas=tSp>0?(tRev/tSp):null, tLn=tRev-tSp-tCogs;
     rows+='<tr class="tot"><td>Tổng</td><td class="num tnum">'+vnd(tSp)+'</td><td class="num tnum">'+vnd(tRev)+'</td><td class="num tnum">'+vnd(tCogs)+'</td><td class="num">'+(tRoas!=null?tRoas.toFixed(2)+'×':'—')+'</td><td class="num tnum">'+num(tOrd)+'</td><td class="num tnum" style="color:'+(tLn>=0?'#16A34A':'#E5484D')+'">'+vnd(tLn)+'</td></tr>';
     document.getElementById('staff-rows').innerHTML=rows;
+    // chi phí QC tách theo brand
+    renderBrandCost();
     // biểu đồ ngày theo nhân sự
     drawDayChart();
     // biểu đồ đăng ký + CPL theo ngày, từng sản phẩm
@@ -938,6 +951,28 @@
     renderProfit();
     // đơn đăng ký Noma911 (gọi API D1 riêng theo kỳ)
     loadNoma(range.start, range.end);
+  }
+
+  // Chi phí QC tách theo brand (Noma vs Doscom) — đúng LUẬT: FB = ad_spend_by_staff (tài khoản×SP),
+  // Google = by_category. Noma = SP tên "Noma…" (khớp isNoma dùng ở bảng lợi nhuận brand); còn lại = Doscom.
+  function renderBrandCost(){
+    var el=document.getElementById('brand-cost-rows'); if(!el||!D) return;
+    var isNomaP=function(p){ return /^\s*noma/i.test(p||''); };
+    var fbN=0,fbD=0,ggN=0,ggD=0, asb=D.ad_spend_by_staff||{};
+    for(var k in asb){ var prods=asb[k]||{}; for(var p in prods){ var v=sumByDate((prods[p]||{}).by_date); if(isNomaP(p)) fbN+=v; else fbD+=v; } }
+    var ga=(D.google_ads||{}).by_category||{};
+    for(var c in ga){ var v2=sumByDate((ga[c]||{}).by_date); if(/noma/i.test(c)) ggN+=v2; else ggD+=v2; }
+    var grand=fbN+fbD+ggN+ggD;
+    var rd=[{label:'Noma',color:'#8B5CF6',fb:fbN,gg:ggN},{label:'Doscom',color:'#14B8A6',fb:fbD,gg:ggD}];
+    var html=rd.map(function(r){ var t=r.fb+r.gg;
+      return '<tr><td><span class="who"><i style="background:'+r.color+'"></i>'+r.label+'</span></td>'+
+        '<td class="num tnum">'+(r.fb>0?vnd(r.fb):'—')+'</td>'+
+        '<td class="num tnum">'+(r.gg>0?vnd(r.gg):'—')+'</td>'+
+        '<td class="num tnum">'+vnd(t)+'</td>'+
+        '<td class="num tnum">'+(grand>0?Math.round(t/grand*100)+'%':'—')+'</td></tr>';
+    }).join('');
+    html+='<tr class="tot"><td>Tổng</td><td class="num tnum">'+vnd(fbN+fbD)+'</td><td class="num tnum">'+vnd(ggN+ggD)+'</td><td class="num tnum">'+vnd(grand)+'</td><td class="num tnum">100%</td></tr>';
+    el.innerHTML=html;
   }
 
   function monthName(m){ var p=m.split('-'); return 'Th'+p[1]+'/'+p[0]; }
