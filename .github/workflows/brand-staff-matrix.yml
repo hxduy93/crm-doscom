@@ -15,7 +15,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20   # fetch Pancake 90 ngày ~12ph, +build+commit → để dư tránh bị kill
 
     steps:
       - name: Checkout repo
