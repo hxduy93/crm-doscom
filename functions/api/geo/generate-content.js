@@ -400,22 +400,31 @@ export async function onRequestPost(context) {
     let c = null;
     let genCost = 0;
     let guardErr = "";
-    const MAX_ATTEMPTS = 2;
+    const MAX_ATTEMPTS = 3;
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      result = await callClaude(env, {
-        model,
-        systemPrompt: CONTENT_SYSTEM_PROMPT,
-        userPrompt,
-        maxTokens: 16000,
-        jsonOutput: true,
-      });
+      // callClaude có thể THROW khi parse JSON fail (output escape sai / truncate) — lỗi NGẪU NHIÊN.
+      // Trước đây throw thoát cả vòng lặp → chết luôn. Nay bọc try/catch để RETRY (lượt sau thường qua).
+      try {
+        result = await callClaude(env, {
+          model,
+          systemPrompt: CONTENT_SYSTEM_PROMPT,
+          userPrompt,
+          maxTokens: 16000,
+          jsonOutput: true,
+        });
+      } catch (e) {
+        guardErr = `Claude/parse fail lượt ${attempt}: ${String(e?.message || e).slice(0, 160)}`;
+        c = null;
+        continue;
+      }
       genCost += result.cost_usd || 0;
       const parsed = result.parsed;
       if (!parsed || !parsed.content_markdown) { guardErr = "content_markdown empty"; c = null; continue; }
-      const inTitle = findProductsInText(article.brand, parsed.title || "");
+      // GUARDRAIL chống bịa: THÂN BÀI phải chứa ≥1 sản phẩm thật trong danh mục.
+      // Title chỉ cần có brand (chủ đề chung chung khó nhét đúng tên model vào title) — nới so với bản cũ.
       const inBody = findProductsInText(article.brand, parsed.content_markdown || "");
-      if (inTitle.length > 0 && inBody.length > 0) { c = parsed; break; } // đạt guardrail
-      guardErr = `thiếu sản phẩm thật (title:${inTitle.length}, body:${inBody.length})`;
+      if (inBody.length > 0) { c = parsed; break; } // đạt guardrail
+      guardErr = `thân bài thiếu sản phẩm thật trong danh mục (body:${inBody.length})`;
       c = null;
     }
     if (!c || !c.content_markdown) {
