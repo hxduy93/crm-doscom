@@ -85,38 +85,73 @@ export async function callClaude(env, {
   };
 }
 
-function extractJson(text) {
-  // Cố parse JSON nguyên text. Nếu fail, thử nhiều chiến lược recovery
-  // (strip ```json fence, balance braces walking, completion of truncated output).
-  let t = String(text || "").trim();
-  try { return JSON.parse(t); } catch {}
+function tryParse(s) { try { return JSON.parse(s); } catch { return undefined; } }
 
-  // Bóc ```json ... ``` (cả fence đóng và fence mở-không-đóng do output truncate)
+// Escape ký tự điều khiển (xuống dòng / tab / CR / control) NẰM TRONG string value.
+// Đây là lỗi phổ biến NHẤT khi LLM xuất JSON có content_markdown dài: model chèn \n THẬT
+// thay vì \\n → JSON.parse fail. Hàm walk theo trạng thái in-string để chỉ escape bên trong string.
+function sanitizeJsonControlChars(s) {
+  let out = "", inStr = false, esc = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (esc) { out += ch; esc = false; continue; }
+    if (ch === "\\") { out += ch; esc = true; continue; }
+    if (ch === '"') { inStr = !inStr; out += ch; continue; }
+    if (inStr) {
+      if (ch === "\n") { out += "\\n"; continue; }
+      if (ch === "\r") { out += "\\r"; continue; }
+      if (ch === "\t") { out += "\\t"; continue; }
+      const code = ch.charCodeAt(0);
+      if (code < 0x20) { out += "\\u" + code.toString(16).padStart(4, "0"); continue; }
+    }
+    out += ch;
+  }
+  return out;
+}
+
+export function extractJson(text) {
+  // Cố parse JSON nguyên text. Nếu fail, thử nhiều chiến lược recovery: sanitize control chars,
+  // strip ```json fence, balance braces walking, completion of truncated output.
+  let t = String(text || "").trim();
+  let v;
+
+  // 1. Nguyên bản, rồi bản đã sanitize newline/control chars trong string
+  v = tryParse(t); if (v !== undefined) return v;
+  v = tryParse(sanitizeJsonControlChars(t)); if (v !== undefined) return v;
+
+  // 2. Bóc ```json ... ``` (fence đóng đầy đủ)
   const fenceMatch = t.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (fenceMatch) {
-    try { return JSON.parse(fenceMatch[1]); } catch {}
+    const inner = fenceMatch[1];
+    v = tryParse(inner); if (v !== undefined) return v;
+    v = tryParse(sanitizeJsonControlChars(inner)); if (v !== undefined) return v;
   }
+
+  // 3. Fence mở-không-đóng (output truncate)
   const openFence = t.match(/^```(?:json)?\s*([\s\S]*)$/);
   if (openFence) {
-    let inner = openFence[1].replace(/```\s*$/, "").trim();
-    try { return JSON.parse(inner); } catch {
-      const r = tryBalanceJson(inner);
-      if (r !== undefined) return r;
-    }
+    const inner = openFence[1].replace(/```\s*$/, "").trim();
+    v = tryParse(inner); if (v !== undefined) return v;
+    v = tryParse(sanitizeJsonControlChars(inner)); if (v !== undefined) return v;
+    v = tryBalanceJson(inner); if (v !== undefined) return v;
+    v = tryBalanceJson(sanitizeJsonControlChars(inner)); if (v !== undefined) return v;
   }
 
-  // Balance braces từ vị trí { đầu tiên (xử lý JSON bị truncate)
+  // 4. Balance braces từ vị trí { đầu tiên (xử lý JSON bị truncate)
   const firstBrace = t.indexOf("{");
   if (firstBrace >= 0) {
-    const r = tryBalanceJson(t.slice(firstBrace));
-    if (r !== undefined) return r;
+    const slice = t.slice(firstBrace);
+    v = tryBalanceJson(slice); if (v !== undefined) return v;
+    v = tryBalanceJson(sanitizeJsonControlChars(slice)); if (v !== undefined) return v;
   }
 
-  // Array fallback
+  // 5. Array fallback
   const firstBracket = t.indexOf("[");
   const lastBracket  = t.lastIndexOf("]");
   if (firstBracket >= 0 && lastBracket > firstBracket) {
-    try { return JSON.parse(t.slice(firstBracket, lastBracket + 1)); } catch {}
+    const arr = t.slice(firstBracket, lastBracket + 1);
+    v = tryParse(arr); if (v !== undefined) return v;
+    v = tryParse(sanitizeJsonControlChars(arr)); if (v !== undefined) return v;
   }
 
   throw new Error(`Claude output không parse được JSON. First 200 chars: ${t.slice(0, 200)}`);
