@@ -140,6 +140,7 @@ function AdsCreatorPanel() {
   const [autoCopyProduct, setAutoCopyProduct] = useState("Noma 911") // SP trong catalog để AI viết caption
   const [autoLink, setAutoLink] = useState("https://www.noma.io.vn/nm911d")
   const [autoBudget, setAutoBudget] = useState("100000")
+  const [autoRunner, setAutoRunner] = useState("") // tên người chạy → vào tên campaign + UTM
   const [autoCta, setAutoCta] = useState("ORDER_NOW")
   const [autoAgeMin, setAutoAgeMin] = useState(30)
   const [autoAgeMax, setAutoAgeMax] = useState(60)
@@ -710,6 +711,13 @@ function AdsCreatorPanel() {
     if (autoBusy || autoGroups.length === 0) return
     setAutoBusy(true); setAutoResults([]); setAutoLog([])
     const today = new Date().toISOString().slice(0, 10)
+    // dd/m (không leading zero, không năm) — khớp cấu trúc UTM đang dùng, vd "6/7".
+    const [, mmStr, ddStr] = today.split("-")
+    const dm = `${parseInt(ddStr, 10)}/${parseInt(mmStr, 10)}`
+    // slug gọn: bỏ dấu tiếng Việt + mọi ký tự không phải chữ/số → "NOMA 911" → "noma911".
+    const slugCompact = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase().replace(/[^a-z0-9]+/g, "")
+    const runner = (autoRunner || "").trim()
+    const runnerSlug = slugCompact(runner)
     const results = []
     try {
       for (const g of autoGroups) {
@@ -726,6 +734,10 @@ function AdsCreatorPanel() {
         for (let ci = 0; ci < chunks.length; ci++) {
         const files = chunks[ci]
         const partLabel = chunks.length > 1 ? ` #${ci + 1}` : ""
+        // UTM: cả 4 field (source/medium/campaign/id) BẰNG NHAU = "d/m-sảnphẩm-ngườichạy"
+        // (đúng cấu trúc user đang dùng, vd "6/7-noma911-thangthattha").
+        const utmVal = [dm, slugCompact(g.product), runnerSlug].filter(Boolean).join("-") + (chunks.length > 1 ? `-${ci + 1}` : "")
+        const utmStr = ["utm_source", "utm_medium", "utm_campaign", "utm_id"].map(k => `${k}=${utmVal}`).join("&")
         const adsArr = []
         const skipped = []
         try {
@@ -769,9 +781,10 @@ function AdsCreatorPanel() {
               const ud = await ur.json()
               if (!ur.ok || !ud.ok) throw new Error(`[${ud.step || "?"}] ${ud.error || ur.status}`)
               adsArr.push({
-                ad_name: `${g.product} - ${baseName}`,
+                // Tên ad = tên ad set = tên creative: "d/m - sản phẩm - tên video".
+                ad_name: `${dm} - ${g.product}${partLabel} - ${baseName}`,
                 headline, ad_copy: adCopy, cta: autoCta, link: autoLink,
-                url_tags: "", video_id: ud.video_id, thumbnail_url: ud.thumbnail_url,
+                url_tags: utmStr, video_id: ud.video_id, thumbnail_url: ud.thumbnail_url,
                 filename: file.name, // để ghi sổ uploaded_videos sau khi tạo ad
               })
               pushLog(`    ✓ video ${i + 1}/${files.length} xong`)
@@ -785,8 +798,9 @@ function AdsCreatorPanel() {
           // 3) Tạo campaign cho cả nhóm (1 campaign → 1 adset → nhiều ad)
           pushLog(`  • Tạo campaign "${g.product}${partLabel}" với ${adsArr.length} ad set (mỗi ad set 1 creative)...`)
           const config = {
-            campaign_name: `${g.product}${partLabel} - Doanh số - ${today}`,
-            adset_name: `${g.product}${partLabel} - AdSet - ${today}`,
+            // Campaign: "d/m - sản phẩm - người chạy". Ad set lấy theo tên từng ad (video).
+            campaign_name: `${dm} - ${g.product}${partLabel} - ${runner || "NA"}`,
+            adset_name: `${dm} - ${g.product}${partLabel}`,
             objective: "OUTCOME_SALES",
             buying_type: "AUCTION",
             account_id: autoAccount,
@@ -1118,6 +1132,10 @@ function AdsCreatorPanel() {
               <div>
                 <label className={labelClass}>Ngân sách / ad set (VND/ngày)</label>
                 <input className={inputClass} type="number" value={autoBudget} onChange={e => setAutoBudget(e.target.value)} />
+              </div>
+              <div>
+                <label className={labelClass}>Người chạy (vào tên camp + UTM)</label>
+                <input className={inputClass} value={autoRunner} onChange={e => setAutoRunner(e.target.value)} placeholder="vd: thangthattha" />
               </div>
               <div>
                 <label className={labelClass}>Nút CTA</label>

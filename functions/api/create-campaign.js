@@ -397,9 +397,10 @@ export async function onRequestPost(context) {
         destinationType: cfg.destination_type,
       });
 
-      // Build adcreative body — attach url_tags if ad has UTM params
+      // Build adcreative body — attach url_tags if ad has UTM params.
+      // Tên creative ĐẶT GIỐNG ad set / ad (= ngày - sản phẩm - tên video).
       const creativeBody = {
-        name: `${ad.ad_name || `Ad ${i + 1}`} — creative`,
+        name: ad.ad_name || `Ad ${i + 1}`,
         object_story_spec: storySpec,
       };
       if (ad.url_tags && typeof ad.url_tags === "string" && ad.url_tags.trim()) {
@@ -432,7 +433,8 @@ export async function onRequestPost(context) {
           currentAdIndex = i;
           currentAdSubStep = "create_adset";
           const body = buildAdsetBase(cfg, partial.campaign_id, isCBO, launchStatus);
-          body.name = `${cfg.adset_name || cfg.campaign_name} #${i + 1}`;
+          // 1 creative/ad set → tên ad set = tên ad (= ngày - sản phẩm - tên video).
+          body.name = cfg.ads[i].ad_name || `${cfg.adset_name || cfg.campaign_name} #${i + 1}`;
           withAdsetBudget(body, cfg, cfg.budget_amount);
           const adsetRes = await fbPost(`/act_${accountIdRaw}/adsets`, body, token);
           partial.adsets.push(adsetRes.id);
