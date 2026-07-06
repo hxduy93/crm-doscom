@@ -225,6 +225,39 @@ function buildStorySpec({ pageId, ad, videoId, videoThumbnailUrl, imageHash, des
   throw new Error("Ad must have either a video or image");
 }
 
+// Build the shared AdSet body (mọi field TRỪ name + budget) — dùng lại dù tạo
+// 1 ad set chung hay 1 ad set / creative.
+export function buildAdsetBase(cfg, campaignId, isCBO, launchStatus) {
+  const base = {
+    campaign_id: campaignId,
+    optimization_goal: cfg.optimization_goal,
+    billing_event: cfg.billing_event,
+    status: launchStatus,
+    destination_type: cfg.destination_type || "WEBSITE",
+    targeting: buildTargeting(cfg),
+  };
+  const startIso = toMetaDatetime(cfg.start_time);
+  const endIso = toMetaDatetime(cfg.end_time);
+  if (startIso) base.start_time = startIso;
+  if (endIso) base.end_time = endIso;
+  if (Array.isArray(cfg.attribution_spec) && cfg.attribution_spec.length > 0) {
+    base.attribution_spec = cfg.attribution_spec;
+  }
+  if (cfg.pacing_type) base.pacing_type = [cfg.pacing_type];
+  const po = buildPromotedObject(cfg);
+  if (po) base.promoted_object = po;
+  // ABO → bid_strategy nằm ở ad set (CBO thì ở campaign).
+  if (!isCBO) base.bid_strategy = "LOWEST_COST_WITHOUT_CAP";
+  return base;
+}
+
+// Gắn ngân sách ABO cho 1 ad set. amount = ngân sách của CHÍNH ad set này.
+export function withAdsetBudget(body, cfg, amount) {
+  if (cfg.budget_type === "lifetime") body.lifetime_budget = amount;
+  else body.daily_budget = amount;
+  return body;
+}
+
 // ───────────────────────── main handler ─────────────────────────
 
 export async function onRequestPost(context) {
@@ -326,103 +359,99 @@ export async function onRequestPost(context) {
     const campRes = await fbPost(`/act_${accountIdRaw}/campaigns`, campaignBody, token);
     partial.campaign_id = campRes.id;
 
-    // ── Step 3: Create AdSet ────────────────────────────────────
-    const adsetBody = {
-      name: cfg.adset_name || cfg.campaign_name,
-      campaign_id: partial.campaign_id,
-      optimization_goal: cfg.optimization_goal,
-      billing_event: cfg.billing_event,
-      status: launchStatus,
-      destination_type: cfg.destination_type || "WEBSITE",
-      targeting: buildTargeting(cfg),
-    };
-    // Budget on adset only when ABO
-    if (!isCBO) {
-      adsetBody.bid_strategy = "LOWEST_COST_WITHOUT_CAP";
-      if (cfg.budget_type === "lifetime") {
-        adsetBody.lifetime_budget = cfg.budget_amount;
-      } else {
-        adsetBody.daily_budget = cfg.budget_amount;
-      }
-    }
-    // Schedule
-    const startIso = toMetaDatetime(cfg.start_time);
-    const endIso   = toMetaDatetime(cfg.end_time);
-    if (startIso) adsetBody.start_time = startIso;
-    if (endIso)   adsetBody.end_time   = endIso;
-
-    // Attribution window (cfg.attribution_spec is already the Meta-API array format)
-    if (Array.isArray(cfg.attribution_spec) && cfg.attribution_spec.length > 0) {
-      adsetBody.attribution_spec = cfg.attribution_spec;
-    }
-
-    // Pacing (standard | no_pacing) — Meta wants an array
-    if (cfg.pacing_type) {
-      adsetBody.pacing_type = [cfg.pacing_type];
-    }
-
-    const po = buildPromotedObject(cfg);
-    if (po) adsetBody.promoted_object = po;
-
-    const adsetRes = await fbPost(`/act_${accountIdRaw}/adsets`, adsetBody, token);
-    partial.adset_id = adsetRes.id;
-
-    // ── Step 4: Create Creative + Ad for each ad in config ───────
+    // ── Step 3+4: AdSet(s) + Ads ────────────────────────────────
+    // 2026-07-06: hỗ trợ "1 creative = 1 ad set" (cfg.adset_per_ad).
+    // Nhiều ad CHUNG 1 ad set bị FB dồn phân phối cho 1 ad "khỏe nhất" ngay trong
+    // learning phase → 2 creative đều ngon vẫn chỉ 1 cái được tiêu tiền. Tách mỗi
+    // creative sang 1 ad set NGÂN SÁCH RIÊNG (ABO) → FB buộc phân phối tất cả.
+    // Mỗi ad set nhận TRỌN cfg.budget_amount (vd 100k/ngày × 3 = 300k/campaign).
+    const adsetPerAd = cfg.adset_per_ad === true && !isCBO;
     partial.ads = [];
+    partial.adsets = [];
     let currentAdSubStep = "";  // để báo lỗi chính xác sub-step nào fail
     let currentAdIndex = -1;
+
+    // Tạo Creative + Ad cho ad thứ i, gắn vào adsetId cho sẵn.
+    async function createAdForAdset(i, adsetId) {
+      const ad = cfg.ads[i];
+      const media = uploaded[i];
+
+      // Video ads need: (1) status=ready (xử lý xong) (2) thumbnail.
+      // Đã pre-upload qua /api/fb-upload-media → media.thumbnail_url có sẵn,
+      // video chắc chắn ready → skip wait, không lo timeout.
+      let videoThumbnailUrl = media.thumbnail_url || null;
+      if (media.video_id && !videoThumbnailUrl) {
+        currentAdSubStep = "wait_video_ready";
+        await waitForVideoReady(media.video_id, token);
+        currentAdSubStep = "wait_video_thumbnail";
+        videoThumbnailUrl = await waitForVideoThumbnail(media.video_id, token);
+      }
+
+      currentAdSubStep = "build_story_spec";
+      const storySpec = buildStorySpec({
+        pageId: cfg.page_id,
+        ad,
+        videoId: media.video_id,
+        videoThumbnailUrl,
+        imageHash: media.image_hash,
+        destinationType: cfg.destination_type,
+      });
+
+      // Build adcreative body — attach url_tags if ad has UTM params
+      const creativeBody = {
+        name: `${ad.ad_name || `Ad ${i + 1}`} — creative`,
+        object_story_spec: storySpec,
+      };
+      if (ad.url_tags && typeof ad.url_tags === "string" && ad.url_tags.trim()) {
+        creativeBody.url_tags = ad.url_tags.trim();
+      }
+      currentAdSubStep = "create_adcreative";
+      const creativeRes = await fbPost(`/act_${accountIdRaw}/adcreatives`, creativeBody, token);
+
+      currentAdSubStep = "create_ad";
+      const adRes = await fbPost(`/act_${accountIdRaw}/ads`, {
+        name: ad.ad_name || `${cfg.campaign_name} - Ad ${i + 1}`,
+        adset_id: adsetId,
+        creative: { creative_id: creativeRes.id },
+        status: launchStatus,
+      }, token);
+
+      partial.ads.push({
+        ad_id: adRes.id,
+        creative_id: creativeRes.id,
+        adset_id: adsetId,
+        video_id: media.video_id || null,
+        image_hash: media.image_hash || null,
+      });
+    }
+
     try {
-      for (let i = 0; i < cfg.ads.length; i++) {
-        currentAdIndex = i;
-        const ad = cfg.ads[i];
-        const media = uploaded[i];
-
-        // Video ads need: (1) status=ready (xử lý xong) (2) thumbnail
-        // Nếu đã pre-upload qua /api/fb-upload-media → media.thumbnail_url có
-        // sẵn, video chắc chắn ready → skip wait, không lo timeout.
-        let videoThumbnailUrl = media.thumbnail_url || null;
-        if (media.video_id && !videoThumbnailUrl) {
-          currentAdSubStep = "wait_video_ready";
-          await waitForVideoReady(media.video_id, token);
-          currentAdSubStep = "wait_video_thumbnail";
-          videoThumbnailUrl = await waitForVideoThumbnail(media.video_id, token);
+      if (adsetPerAd) {
+        // 1 ad set / creative — mỗi ad set nhận TRỌN budget_amount.
+        for (let i = 0; i < cfg.ads.length; i++) {
+          currentAdIndex = i;
+          currentAdSubStep = "create_adset";
+          const body = buildAdsetBase(cfg, partial.campaign_id, isCBO, launchStatus);
+          body.name = `${cfg.adset_name || cfg.campaign_name} #${i + 1}`;
+          withAdsetBudget(body, cfg, cfg.budget_amount);
+          const adsetRes = await fbPost(`/act_${accountIdRaw}/adsets`, body, token);
+          partial.adsets.push(adsetRes.id);
+          if (!partial.adset_id) partial.adset_id = adsetRes.id;
+          await createAdForAdset(i, adsetRes.id);
         }
-
-        currentAdSubStep = "build_story_spec";
-        const storySpec = buildStorySpec({
-          pageId: cfg.page_id,
-          ad,
-          videoId: media.video_id,
-          videoThumbnailUrl,
-          imageHash: media.image_hash,
-          destinationType: cfg.destination_type,
-        });
-
-        // Build adcreative body — attach url_tags if ad has UTM params
-        const creativeBody = {
-          name: `${ad.ad_name || `Ad ${i + 1}`} — creative`,
-          object_story_spec: storySpec,
-        };
-        if (ad.url_tags && typeof ad.url_tags === "string" && ad.url_tags.trim()) {
-          creativeBody.url_tags = ad.url_tags.trim();
+      } else {
+        // Cũ: 1 ad set dùng chung, N ad.
+        currentAdSubStep = "create_adset";
+        const body = buildAdsetBase(cfg, partial.campaign_id, isCBO, launchStatus);
+        body.name = cfg.adset_name || cfg.campaign_name;
+        if (!isCBO) withAdsetBudget(body, cfg, cfg.budget_amount);
+        const adsetRes = await fbPost(`/act_${accountIdRaw}/adsets`, body, token);
+        partial.adsets.push(adsetRes.id);
+        partial.adset_id = adsetRes.id;
+        for (let i = 0; i < cfg.ads.length; i++) {
+          currentAdIndex = i;
+          await createAdForAdset(i, adsetRes.id);
         }
-        currentAdSubStep = "create_adcreative";
-        const creativeRes = await fbPost(`/act_${accountIdRaw}/adcreatives`, creativeBody, token);
-
-        currentAdSubStep = "create_ad";
-        const adRes = await fbPost(`/act_${accountIdRaw}/ads`, {
-          name: ad.ad_name || `${cfg.campaign_name} - Ad ${i + 1}`,
-          adset_id: partial.adset_id,
-          creative: { creative_id: creativeRes.id },
-          status: launchStatus,
-        }, token);
-
-        partial.ads.push({
-          ad_id: adRes.id,
-          creative_id: creativeRes.id,
-          video_id: media.video_id || null,
-          image_hash: media.image_hash || null,
-        });
       }
     } catch (adErr) {
       // Re-throw nhưng kèm context: ad index + sub-step nào fail
@@ -433,6 +462,7 @@ export async function onRequestPost(context) {
       success: true,
       campaign_id: partial.campaign_id,
       adset_id: partial.adset_id,
+      adsets: partial.adsets,
       ads: partial.ads,
       ads_manager_url: `https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${accountIdRaw}&selected_campaign_ids=${partial.campaign_id}`,
     });
