@@ -1,25 +1,12 @@
 // Cloudflare Cron Worker cho Doscom — chạy ĐÚNG GIỜ (Cloudflare cron đáng tin hơn GitHub
 // schedule, vốn hay trễ 10 phút → vài tiếng). Mỗi mốc giờ VN, gọi GitHub workflow_dispatch
-// để chạy workflow tương ứng (dispatch khởi động NGAY, không bị trễ như schedule).
+// cho refresh-data.yml của crm-doscom (kéo dữ liệu mới + deploy dashboard) — chạy NGAY.
 //
-// Secrets cần set (wrangler secret put):
-//   GH_PAT       — fine-grained PAT, quyền Actions: Read+Write trên cả 2 repo.
+// Secrets (wrangler secret put):
+//   GH_PAT       — fine-grained PAT, quyền Actions: Read+Write trên repo hxduy93/crm-doscom.
 //   TRIGGER_KEY  — chuỗi ngẫu nhiên để test tay qua URL (?key=...).
 
-const FB  = { repo: "hxduy93/facebook-ads-dashboard", ref: "main",   workflow: "brand-staff-matrix.yml" };
-const CRM = { repo: "hxduy93/crm-doscom",             ref: "master", workflow: "refresh-data.yml" };
-
-// cron UTC -> danh sách workflow cần dispatch (giữ nguyên lịch cũ, chỉ đổi bộ hẹn giờ):
-//   9h VN  : fetch Pancake tươi (FB) + refresh + deploy dashboard (CRM)
-//   13h VN : refresh dashboard
-//   15h VN : fetch Pancake tươi + build (FB)
-//   17h VN : refresh dashboard
-const PLAN = {
-  "0 2 * * *":  [FB, CRM],
-  "0 6 * * *":  [CRM],
-  "0 8 * * *":  [FB],
-  "0 10 * * *": [CRM],
-};
+const CRM = { repo: "hxduy93/crm-doscom", ref: "master", workflow: "refresh-data.yml" };
 
 async function dispatch(env, job) {
   const url = `https://api.github.com/repos/${job.repo}/actions/workflows/${job.workflow}/dispatches`;
@@ -43,25 +30,23 @@ async function dispatch(env, job) {
 }
 
 async function runPlan(env, cron) {
-  const jobs = PLAN[cron] || [FB, CRM]; // fallback an toàn: chạy hết
-  const results = [];
-  for (const j of jobs) results.push(await dispatch(env, j));
-  console.log("doscom-cron", cron, JSON.stringify(results));
-  return { cron, results };
+  // Mọi mốc giờ (9h/13h/17h VN) đều: kéo dữ liệu mới + deploy dashboard.
+  const r = await dispatch(env, CRM);
+  console.log("doscom-cron", cron, JSON.stringify(r));
+  return { cron, results: [r] };
 }
 
 export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(runPlan(env, event.cron));
   },
-  // Test tay: GET https://doscom-cron.<subdomain>.workers.dev/?key=<TRIGGER_KEY>&cron=0%202%20*%20*%20*
+  // Test tay: GET https://doscom-cron.<subdomain>.workers.dev/?key=<TRIGGER_KEY>
   async fetch(req, env) {
     const u = new URL(req.url);
     if (!env.TRIGGER_KEY || u.searchParams.get("key") !== env.TRIGGER_KEY) {
       return new Response("forbidden", { status: 403 });
     }
-    const cron = u.searchParams.get("cron") || "0 2 * * *";
-    const out = await runPlan(env, cron);
+    const out = await runPlan(env, u.searchParams.get("cron") || "manual");
     return new Response(JSON.stringify(out, null, 2), {
       headers: { "content-type": "application/json; charset=utf-8" },
     });

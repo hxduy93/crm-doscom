@@ -1,14 +1,11 @@
 name: Đọc lại dữ liệu (refresh data)
 
 # Kéo dữ liệu mới nhất từ dashboard cũ -> cập nhật data/dashboard-data.json -> commit -> deploy.
-# Tự chạy 3 lần/ngày (9h / 13h / 17h giờ VN) + bấm tay khi cần (tab Actions -> Run workflow).
+# Hẹn giờ do Cloudflare Cron Worker "doscom-cron" điều khiển (dispatch 9h/13h/17h VN — đúng giờ
+# hơn GitHub schedule vốn hay trễ vài tiếng). Xem cron-worker/. Ở đây chỉ giữ workflow_dispatch.
 # Tự deploy luôn ở cuối workflow khi dữ liệu đổi (vì push bằng GITHUB_TOKEN không kích hoạt deploy.yml).
 on:
-  schedule:
-    # Giờ cron của GitHub Actions là UTC. VN = UTC+7.
-    # 9h VN = 02:00 UTC | 13h VN = 06:00 UTC | 17h VN = 10:00 UTC
-    - cron: '0 2,6,10 * * *'
-  workflow_dispatch:        # cho phép bấm tay khi cần
+  workflow_dispatch:        # Worker gọi qua đây + cho phép bấm tay khi cần
 
 permissions:
   contents: write           # cho phép commit data mới
