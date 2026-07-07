@@ -1,0 +1,12 @@
+{
+  // Worker cron RIÊNG (không dính Pages crm-doscom) — chạy đúng giờ trên Cloudflare,
+  // gọi GitHub workflow_dispatch để thay cho GitHub schedule (hay bị trễ vài tiếng).
+  "name": "doscom-cron",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-01",
+  "triggers": {
+    // Giờ UTC (VN = UTC+7): 02:00=9h · 06:00=13h · 08:00=15h · 10:00=17h
+    "crons": ["0 2 * * *", "0 6 * * *", "0 8 * * *", "0 10 * * *"]
+  },
+  "observability": { "enabled": true }
+}
