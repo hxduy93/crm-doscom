@@ -38,7 +38,8 @@ const SYSTEM_PROMPT = `Bạn là chuyên viên viết nội dung sản phẩm ch
 QUY TẮC TUYỆT ĐỐI:
 1. CHỐNG BỊA: chỉ dùng thông số/tính năng CÓ TRONG ẢNH hoặc trong ghi chú người dùng. Thiếu thông tin thì KHÔNG bịa số (dung lượng, pin, kích thước, giá...). Không chắc thì bỏ qua.
 2. KHÔNG tự đặt giá bán.
-3. Không dùng emoji. Không thêm chữ ngoài JSON.
+3. Không dùng emoji. Trả về JSON HỢP LỆ DUY NHẤT, không thêm chữ ngoài JSON, không bọc markdown. Escape đúng mọi ký tự.
+   ⚠️ TRONG HTML (long_html, short_description) BẮT BUỘC dùng nháy ĐƠN ' cho MỌI thuộc tính (href, style, class, src...). TUYỆT ĐỐI KHÔNG dùng nháy kép " bên trong HTML — vì sẽ làm hỏng JSON. Ví dụ: <a href='https://doscom.vn' style='color:blue'>.
 4. Bài viết dùng HTML đơn giản: <h2>, <h3>, <p>, <ul><li>, <table>. Mỗi <p> tối đa ~80 từ.
 5. SEO RANK MATH (BẮT BUỘC đủ tiêu chí — nếu thiếu là hỏng):
    - primary_keyword: cụm 2-4 từ tiếng Việt tự nhiên, KHÔNG dùng nguyên tên sản phẩm/model.
@@ -85,7 +86,7 @@ export async function onRequestPost({ request, env }) {
 
   // ---- cache theo input + ngày VN ----
   const dateVN = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-  const cacheKey = `prodgen:v4:${site}:${slugify(name)}:${note.length}:${images.length}:${dateVN}`;
+  const cacheKey = `prodgen:v5:${site}:${slugify(name)}:${note.length}:${images.length}:${dateVN}`;
   if (!body.regenerate && env.INVENTORY) {
     const hit = await env.INVENTORY.get(cacheKey).catch(() => null);
     if (hit) { try { return json({ ok: true, cached: true, generated: JSON.parse(hit) }); } catch {} }
@@ -110,14 +111,20 @@ export async function onRequestPost({ request, env }) {
   });
   content.push({ type: "text", text: "Hãy trả về JSON đúng schema ở trên. Không thêm chữ nào ngoài JSON." });
 
+  const callOnce = () => callClaude(env, {
+    model: "haiku",
+    systemPrompt: SYSTEM_PROMPT,
+    userPrompt: content,
+    maxTokens: 8000,
+    jsonOutput: true,
+  });
+
   try {
-    const res = await callClaude(env, {
-      model: "haiku",
-      systemPrompt: SYSTEM_PROMPT,
-      userPrompt: content,
-      maxTokens: 4000,
-      jsonOutput: true,
-    });
+    // Thử 2 lần: lỗi parse JSON thường ngẫu nhiên (HTML lệch dấu ngoặc), lần 2 hay qua.
+    let res;
+    try { res = await callOnce(); }
+    catch (e1) { res = await callOnce(); }
+
     const g = res.parsed;
     if (!g || !g.seo_title || !g.long_html) {
       return json({ ok: false, error: "AI không trả đúng cấu trúc bài viết" }, 502);
