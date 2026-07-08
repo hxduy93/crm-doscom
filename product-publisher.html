@@ -55,6 +55,12 @@
   .thumb img{width:100%;height:100%;object-fit:cover;display:block}
   .thumb .rm{position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:0;cursor:pointer;font-weight:900;font-size:12px;line-height:1;display:grid;place-items:center}
   .thumb .fbadge{position:absolute;left:3px;bottom:3px;font-size:8px;font-weight:800;color:#fff;background:var(--green);padding:2px 5px;border-radius:4px}
+  .thumb .bg{position:absolute;top:3px;left:3px;height:18px;padding:0 6px;border-radius:6px;background:rgba(0,0,0,.62);color:#fff;border:0;cursor:pointer;font-family:var(--font);font-weight:800;font-size:8.5px;display:flex;align-items:center;gap:3px}
+  .thumb .bg svg{width:10px;height:10px}
+  .thumb .bg:hover{background:var(--brand)}
+  .thumb.busy{pointer-events:none}
+  .thumb.busy::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center}
+  .thumb.busy::before{content:"";position:absolute;z-index:2;top:50%;left:50%;width:20px;height:20px;margin:-10px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:rot .7s linear infinite}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;cursor:pointer;font-family:var(--font);font-weight:800;font-size:13.5px;padding:12px 16px;transition:var(--t)}
   .btn svg{width:17px;height:17px}.btn:disabled{opacity:.55;cursor:not-allowed}
   .btn-gen{width:100%;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));box-shadow:0 12px 24px -12px var(--brand);margin-top:4px}
@@ -271,6 +277,32 @@ async function loadCats(site){
 function readFile(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
 function downscale(dataURL, maxDim){ return new Promise(res=>{ const img=new Image(); img.onload=()=>{ let {width:w,height:h}=img; const sc=Math.min(1,maxDim/Math.max(w,h)); w=Math.round(w*sc); h=Math.round(h*sc); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h); res(cv.toDataURL('image/jpeg',0.85).split(',')[1]); }; img.onerror=()=>res(dataURL.split(',')[1]||''); img.src=dataURL; }); }
 function syncCardImg(){ if($('pvResult').classList.contains('show')) $('pcImg').src = state.imgs[0]?state.imgs[0].url:''; }
+
+// ---------- xóa nền (chạy trong trình duyệt, miễn phí) ----------
+let _bgMod=null;
+async function loadBgLib(){
+  if(_bgMod) return _bgMod;
+  toast('Đang tải model xóa nền lần đầu (vài chục MB, sau đó lưu cache)…');
+  _bgMod=await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.6.0/+esm');
+  return _bgMod;
+}
+function dataURLtoBlob(d){ const c=d.indexOf(','); const mime=(d.slice(0,c).match(/:(.*?);/)||[])[1]||'image/jpeg'; const bin=atob(d.slice(c+1)); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i); return new Blob([u],{type:mime}); }
+function whiteComposite(blob){ return new Promise((res,rej)=>{ const url=URL.createObjectURL(blob); const img=new Image(); img.onload=()=>{ const cv=document.createElement('canvas'); cv.width=img.naturalWidth||img.width; cv.height=img.naturalHeight||img.height; const ctx=cv.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,cv.width,cv.height); ctx.drawImage(img,0,0); URL.revokeObjectURL(url); res(cv.toDataURL('image/jpeg',0.92)); }; img.onerror=e=>{ URL.revokeObjectURL(url); rej(new Error('không đọc được ảnh kết quả')); }; img.src=url; }); }
+async function removeBg(i){
+  const im=state.imgs[i]; if(!im) return;
+  const t=$('thumbs').children[i]; if(t) t.classList.add('busy');
+  try{
+    const mod=await loadBgLib();
+    const fn=mod.removeBackground || (mod.default&&mod.default.removeBackground) || mod.default;
+    if(typeof fn!=='function') throw new Error('không nạp được thư viện xóa nền');
+    const outBlob=await fn(dataURLtoBlob(im.url));            // PNG trong suốt
+    const whiteURL=await whiteComposite(outBlob);            // ghép nền trắng
+    const small=await downscale(whiteURL,1152);
+    state.imgs.unshift({ url:whiteURL, full:whiteURL.split(',')[1], small, media_type:'image/jpeg', name:'nen-trang.jpg', pl:{role:'featured'} });
+    syncCardImg(); toast('Đã tạo ảnh nền trắng và đặt làm ảnh đại diện ✓');
+  }catch(e){ toast('Xóa nền lỗi: '+((e&&e.message)||e),true); }
+  finally{ renderThumbs(); }
+}
 async function onFiles(files){
   const list=[...files].filter(f=>f.type.startsWith('image/')).sort((a,b)=>(a.name||'').localeCompare(b.name||'','vi'));
   for(const f of list){ if(state.imgs.length>=20){ toast('Tối đa 20 ảnh',true); break; }
@@ -282,11 +314,13 @@ async function onFiles(files){
 function renderThumbs(){
   const wrap=$('thumbs'); wrap.innerHTML='';
   state.imgs.forEach((im,i)=>{ const d=document.createElement('div'); d.className='thumb';
-    d.innerHTML='<img src="'+im.url+'" alt=""/>'+(i===0?'<span class="fbadge">đại diện</span>':'')+'<button class="rm" data-i="'+i+'" title="Xoá">×</button>';
+    d.innerHTML='<img src="'+im.url+'" alt=""/>'+(i===0?'<span class="fbadge">đại diện</span>':'')
+      +'<button class="bg" data-i="'+i+'" title="Tách nền → tạo ảnh nền trắng làm đại diện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2 2M16.4 16.4l2 2M5.6 18.4l2-2M16.4 7.6l2-2"/><circle cx="12" cy="12" r="3.2"/></svg>nền</button>'
+      +'<button class="rm" data-i="'+i+'" title="Xoá">×</button>';
     wrap.appendChild(d); });
   const n=state.imgs.length;
   $('imgHint').style.display = n?'block':'none';
-  $('imgHint').innerHTML = n? ('<b style="color:var(--teal)">'+n+' ảnh</b> — tất cả sẽ được dùng trong bài (đại diện + chèn theo đoạn).') : '';
+  $('imgHint').innerHTML = n? ('<b style="color:var(--teal)">'+n+' ảnh</b> — tất cả được dùng trong bài. Bấm nút <b>“nền”</b> góc trái ảnh để tách nền → tạo ảnh nền trắng làm đại diện.') : '';
 }
 
 // ---------- site switch ----------
@@ -397,6 +431,7 @@ $('dz').onclick=e=>{ if(e.target.id==='pickDir'){ e.preventDefault(); $('dirInp'
 $('fileInp').onchange=e=>{ onFiles(e.target.files); e.target.value=''; };
 $('dirInp').onchange=e=>{ onFiles(e.target.files); e.target.value=''; };
 $('thumbs').addEventListener('click',e=>{
+  const bg=e.target.closest('.bg'); if(bg){ removeBg(+bg.dataset.i); return; }
   const rm=e.target.closest('.rm'); if(rm){ state.imgs.splice(+rm.dataset.i,1); renderThumbs(); syncCardImg(); return; }
   const th=e.target.closest('.thumb'); if(!th)return;
   const i=[...$('thumbs').children].indexOf(th);
