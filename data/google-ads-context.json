@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-08 17:33",
+  "generated_at": "2026-07-08 19:15",
   "source_data_date_range": {
     "start_7d": "2026-07-01",
     "end": "2026-07-07",
@@ -1642,7 +1642,7 @@
   "search_term_insights": {
     "summary": {
       "total_unique_terms": 3321,
-      "terms_with_conversions": 30,
+      "terms_with_conversions": 31,
       "conv_rate_terms": 0.009,
       "total_spend_30d": 19394477.0
     },
@@ -1661,6 +1661,19 @@
         ]
       },
       {
+        "search_term": "camera quan sát",
+        "spend_30d": 406830.0,
+        "clicks_30d": 20,
+        "conversions_30d": 2.0,
+        "ctr_30d": 0.0312,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
         "search_term": "máy dò thiết bị định vị ô tô",
         "spend_30d": 19328.0,
         "clicks_30d": 5,
@@ -1669,19 +1682,6 @@
         "match_types": [
           "NEAR_PHRASE",
           "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera quan sát",
-        "spend_30d": 406830.0,
-        "clicks_30d": 20,
-        "conversions_30d": 2.0,
-        "ctr_30d": 0.0312,
-        "match_types": [
-          "BROAD"
         ],
         "statuses": [
           "NONE"
@@ -1715,16 +1715,57 @@
         ]
       },
       {
-        "search_term": "thiết bị dò định vị trên xe ô tô",
-        "spend_30d": 26638.0,
-        "clicks_30d": 7,
+        "search_term": "camera doscom",
+        "spend_30d": 76242.0,
+        "clicks_30d": 13,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.3889,
+        "ctr_30d": 0.3514,
         "match_types": [
-          "EXACT"
+          "BROAD"
         ],
         "statuses": [
-          "ADDED"
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera không dây",
+        "spend_30d": 122042.0,
+        "clicks_30d": 24,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1132,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera viettel",
+        "spend_30d": 22447.0,
+        "clicks_30d": 3,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.0577,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "EXCLUDED",
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "ezviz camera",
+        "spend_30d": 87187.0,
+        "clicks_30d": 8,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.08,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "EXCLUDED",
+          "NONE"
         ]
       },
       {
@@ -1735,47 +1776,6 @@
         "ctr_30d": 0.1923,
         "match_types": [
           "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "thiết bị ghi âm chuyên nghiệp",
-        "spend_30d": 92071.0,
-        "clicks_30d": 8,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1667,
-        "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
-        "search_term": "máy ghi âm mini kết nối điện thoại",
-        "spend_30d": 61378.0,
-        "clicks_30d": 10,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1538,
-        "match_types": [
-          "NEAR_PHRASE",
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "thiết bị nghe lén mini",
-        "spend_30d": 23847.0,
-        "clicks_30d": 6,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0706,
-        "match_types": [
-          "BROAD",
-          "NEAR_PHRASE"
         ],
         "statuses": [
           "NONE"
@@ -2259,11 +2259,11 @@
       }
     ],
     "match_type_breakdown": {
-      "EXACT": {
-        "spend_30d": 1888377.0,
-        "clicks_30d": 311,
-        "conversions_30d": 4.0,
-        "term_count": 67
+      "BROAD": {
+        "spend_30d": 12776231.0,
+        "clicks_30d": 1498,
+        "conversions_30d": 19.25,
+        "term_count": 2192
       },
       "NEAR_PHRASE": {
         "spend_30d": 3955372.0,
@@ -2277,17 +2277,17 @@
         "conversions_30d": 15.25,
         "term_count": 594
       },
-      "BROAD": {
-        "spend_30d": 12776231.0,
-        "clicks_30d": 1498,
-        "conversions_30d": 19.25,
-        "term_count": 2192
-      },
       "NEAR_EXACT": {
         "spend_30d": 42585.0,
         "clicks_30d": 11,
         "conversions_30d": 0.0,
         "term_count": 1
+      },
+      "EXACT": {
+        "spend_30d": 1888377.0,
+        "clicks_30d": 311,
+        "conversions_30d": 5.0,
+        "term_count": 67
       }
     }
   },
