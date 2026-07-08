@@ -30,30 +30,30 @@ async function publishToSite(site, env, data) {
   const c = siteCreds(site, env);
   if (!isConfigured(c)) throw new Error(`Chưa cấu hình secret WC_${site.toUpperCase()}_*`);
 
-  const images = Array.isArray(data.images) ? data.images.slice(0, 12) : [];
+  const images = Array.isArray(data.images) ? data.images.slice(0, 20) : [];
   if (!images.length) throw new Error("Chưa có ảnh sản phẩm");
 
-  // 1) Upload từng ảnh vào WP Media
+  const kw = String(data.primary_keyword || "").trim();
+  let featIdx = images.findIndex((im) => im.role === "featured");
+  if (featIdx < 0) featIdx = 0;
+
+  // 1) Upload từng ảnh vào WP Media. Ảnh đại diện có alt chứa keyword (tiêu chí Rank Math).
   const uploaded = [];
   for (let i = 0; i < images.length; i++) {
     const im = images[i];
     const mime = im.media_type || "image/jpeg";
     const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
+    const alt = i === featIdx && kw ? (kw + (im.alt ? ` — ${im.alt}` : "")) : (im.alt || data.name);
     const media = await uploadMedia(c, {
       bytes: b64ToBytes(im.data),
-      filename: `${slugify(data.name) || "san-pham"}-${i + 1}.${ext}`,
-      mime,
-      alt: im.alt || data.name,
-      caption: im.caption || "",
-      title: data.name,
+      filename: `${slugify(kw || data.name) || "san-pham"}-${i + 1}.${ext}`,
+      mime, alt, caption: im.caption || "", title: data.name,
     });
     uploaded.push({ ...media, meta: im });
   }
 
-  // 2) Ảnh đại diện = ảnh role "featured" (hoặc ảnh đầu). Gallery = tất cả (đại diện lên đầu).
-  let featuredIdx = uploaded.findIndex((u) => u.meta.role === "featured");
-  if (featuredIdx < 0) featuredIdx = 0;
-  const ordered = [uploaded[featuredIdx], ...uploaded.filter((_, i) => i !== featuredIdx)];
+  // 2) Gallery = tất cả, ảnh đại diện lên đầu.
+  const ordered = [uploaded[featIdx], ...uploaded.filter((_, i) => i !== featIdx)];
 
   // 3) Chèn ảnh inline vào mô tả dài theo after_heading
   let html = data.long_html || data.short_description || "";
@@ -65,9 +65,12 @@ async function publishToSite(site, env, data) {
 
   // 4) Tạo product
   const catId = Number(data.category_id);
+  const seoTitle = data.seo_title || data.name;
+  const stockQty = Number(String(data.stock ?? "").replace(/[^\d]/g, ""));
+  const soldQty = Number(String(data.sold ?? "").replace(/[^\d]/g, ""));
   const payload = {
-    name: data.seo_title || data.name,
-    slug: slugify(data.name),
+    name: data.name,
+    slug: slugify(kw || data.name),
     type: "simple",
     status: data.status === "publish" ? "publish" : "draft",
     ...priceFields(data.price, data.old_price),
@@ -76,9 +79,19 @@ async function publishToSite(site, env, data) {
     categories: catId ? [{ id: catId }] : [],
     images: ordered.map((u) => ({ id: u.id })),
     tags: (Array.isArray(data.tags) ? data.tags : []).filter(Boolean).map((t) => ({ name: String(t).slice(0, 50) })),
+    // Tồn kho + đã bán
+    ...(Number.isFinite(stockQty) && stockQty > 0
+      ? { manage_stock: true, stock_quantity: stockQty, stock_status: "instock" }
+      : {}),
     meta_data: [
-      { key: "_yoast_wpseo_metadesc", value: data.meta_description || "" },
+      // Rank Math + Yoast: focus keyword + SEO title + meta description
+      { key: "rank_math_focus_keyword", value: kw },
+      { key: "rank_math_title", value: seoTitle },
       { key: "rank_math_description", value: data.meta_description || "" },
+      { key: "_yoast_wpseo_focuskw", value: kw },
+      { key: "_yoast_wpseo_title", value: seoTitle },
+      { key: "_yoast_wpseo_metadesc", value: data.meta_description || "" },
+      ...(Number.isFinite(soldQty) && soldQty > 0 ? [{ key: "total_sales", value: String(soldQty) }] : []),
     ],
   };
 

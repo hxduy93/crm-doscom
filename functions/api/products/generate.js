@@ -13,7 +13,7 @@
 // Chống bịa (red line): AI chỉ dùng thông số có trong ảnh + ghi chú, thiếu thì để trống.
 // Cache KV (red line): cùng input trong ngày → không tốn credit; regenerate=true để bỏ qua.
 import { callClaude } from "../geo/_utils/claude.js";
-import { slugify } from "./_wc.js";
+import { slugify, SITE_URL } from "./_wc.js";
 
 function json(o, s = 200) {
   return new Response(JSON.stringify(o), {
@@ -40,11 +40,16 @@ QUY TẮC TUYỆT ĐỐI:
 2. KHÔNG tự đặt giá bán.
 3. Không dùng emoji. Không thêm chữ ngoài JSON.
 4. Bài viết dùng HTML đơn giản: <h2>, <h3>, <p>, <ul><li>, <table>. Mỗi <p> tối đa ~80 từ.
-5. Có ít nhất 3 <h2>. Xác định 1 primary keyword tiếng Việt và rải hợp lý ở title, mô tả, h2, đoạn đầu & cuối.
+5. SEO RANK MATH (BẮT BUỘC đủ tiêu chí — nếu thiếu là hỏng):
+   - primary_keyword: cụm 2-4 từ tiếng Việt tự nhiên, KHÔNG dùng nguyên tên sản phẩm/model.
+   - Keyword PHẢI xuất hiện ở: 40% ĐẦU của seo_title; trong meta_description; CÂU ĐẦU TIÊN của long_html (trong 100 từ đầu); ít nhất 1 thẻ <h2>; và đoạn kết.
+   - Mật độ keyword ~1-1.5% (bài ~900 từ → keyword lặp 9-14 lần). Không nhồi quá 2%.
+   - Có ít nhất 3 <h2>.
+   - long_html PHẢI chứa 1-2 LIÊN KẾT NỘI BỘ dofollow trỏ về website (dùng ĐÚNG URL website được cung cấp) dạng <a href="URL">chữ neo có keyword</a>, VÀ ít nhất 1 liên kết NGOÀI dofollow tới nguồn uy tín.
 
 CHÈN ẢNH: bạn sẽ nhận nhiều ảnh (Ảnh #0, #1, ...). Với MỖI ảnh, quyết định:
-- 1 ảnh làm ảnh đại diện: role="featured".
-- Các ảnh còn lại: gán vào 1 mục bài viết phù hợp NHẤT với nội dung ảnh — dùng after_heading = ĐÚNG chữ trong thẻ <h2> tương ứng, kèm alt (chứa keyword) + caption ngắn mô tả ảnh.
+- 1 ảnh làm ảnh đại diện: role="featured". Ảnh featured PHẢI có alt CHỨA primary_keyword.
+- Các ảnh còn lại: gán vào 1 mục bài viết phù hợp NHẤT với nội dung ảnh — dùng after_heading = ĐÚNG chữ trong thẻ <h2> tương ứng, kèm alt (nên chứa keyword) + caption ngắn mô tả ảnh.
 - Ảnh chỉ chứa bảng thông số: đọc lấy số để viết bài, vẫn có thể đặt ở mục thông số.
 
 TRẢ VỀ DUY NHẤT JSON đúng schema:
@@ -88,6 +93,7 @@ export async function onRequestPost({ request, env }) {
   // ---- dựng content vision (mảng block: text + image) ----
   const intro =
     `Thương hiệu: ${brand.name} — ${brand.voice}\n` +
+    `Website (dùng cho liên kết nội bộ): ${SITE_URL[site] || ""}\n` +
     `Tên sản phẩm: ${name}\n` +
     (catName ? `Danh mục: ${catName}\n` : "") +
     (note ? `\nGHI CHÚ NGƯỜI DÙNG (nguồn thật, ưu tiên dùng):\n${note}\n` : "") +

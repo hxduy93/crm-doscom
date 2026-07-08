@@ -162,14 +162,19 @@
           <div class="field"><label class="lab">Giá bán <span class="req">*</span></label><div class="price-wrap"><input class="inp money" id="priceInp" placeholder="4.500.000"/><span class="cur">₫</span></div></div>
           <div class="field"><label class="lab">Giá gốc <span style="color:var(--text-2);font-weight:700">(gạch)</span></label><div class="price-wrap"><input class="inp money" id="oldInp" placeholder="5.900.000"/><span class="cur">₫</span></div></div>
         </div>
+        <div class="row2">
+          <div class="field"><label class="lab">Tồn kho</label><input class="inp money" id="stockInp" value="100" placeholder="100"/></div>
+          <div class="field"><label class="lab">Đã bán <span style="color:var(--text-2);font-weight:700">(vd 15000)</span></label><input class="inp money" id="soldInp" placeholder="15000"/></div>
+        </div>
         <div class="field">
           <label class="lab">Ảnh sản phẩm <span class="req">*</span> <span style="color:var(--text-2);font-weight:700">— chọn folder đã xử lý</span></label>
           <div class="dz" id="dz">
             <div class="dz-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5-5 5 5"/><path d="M12 5v12"/></svg></div>
-            <b>Bấm để chọn ảnh (nhiều ảnh)</b>
-            <p>JPG/PNG/WebP · ảnh đầu = ảnh đại diện · ảnh có bảng thông số sẽ được AI đọc chữ.</p>
+            <b>Bấm để chọn nhiều ảnh</b>
+            <p>hoặc <a href="#" id="pickDir" style="color:var(--brand);font-weight:800;text-decoration:underline">chọn cả thư mục</a> · JPG/PNG/WebP · bấm 1 ảnh để đặt làm <b>đại diện</b>.</p>
           </div>
           <input type="file" id="fileInp" accept="image/*" multiple style="display:none"/>
+          <input type="file" id="dirInp" webkitdirectory directory multiple style="display:none"/>
           <div class="thumbs" id="thumbs"></div>
           <div class="hint" id="imgHint" style="display:none"></div>
         </div>
@@ -209,6 +214,7 @@
           <div class="sh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg> Thông số AI đọc được</div>
           <ul id="specList"></ul>
         </div>
+        <div class="pv-field"><div class="fl"><label>Từ khóa chính (Rank Math)</label><span class="pill pill-ok">focus keyword</span></div><div class="editable" contenteditable="true" id="focusKw" style="font-weight:800;color:var(--brand)"></div></div>
         <div class="pv-field"><div class="fl"><label>Tên SEO</label><span class="cnt" id="seoCnt"></span></div><div class="editable title" contenteditable="true" id="seoTitle"></div></div>
         <div class="pv-field"><div class="fl"><label>Mô tả ngắn</label><span class="pill pill-ai">AI</span></div><div class="editable" contenteditable="true" id="shortDesc"></div></div>
         <div class="pv-field"><div class="fl"><label>Bài viết (mô tả dài) — ảnh chèn theo đoạn</label><span class="cnt" id="wordCnt"></span></div><div class="article" contenteditable="true" id="longDesc"></div></div>
@@ -264,8 +270,10 @@ async function loadCats(site){
 // ---------- images ----------
 function readFile(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
 function downscale(dataURL, maxDim){ return new Promise(res=>{ const img=new Image(); img.onload=()=>{ let {width:w,height:h}=img; const sc=Math.min(1,maxDim/Math.max(w,h)); w=Math.round(w*sc); h=Math.round(h*sc); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h); res(cv.toDataURL('image/jpeg',0.85).split(',')[1]); }; img.onerror=()=>res(dataURL.split(',')[1]||''); img.src=dataURL; }); }
+function syncCardImg(){ if($('pvResult').classList.contains('show')) $('pcImg').src = state.imgs[0]?state.imgs[0].url:''; }
 async function onFiles(files){
-  for(const f of files){ if(!f.type.startsWith('image/')) continue; if(state.imgs.length>=12){ toast('Tối đa 12 ảnh',true); break; }
+  const list=[...files].filter(f=>f.type.startsWith('image/')).sort((a,b)=>(a.name||'').localeCompare(b.name||'','vi'));
+  for(const f of list){ if(state.imgs.length>=20){ toast('Tối đa 20 ảnh',true); break; }
     const dataURL=await readFile(f); const small=await downscale(dataURL,1152);
     state.imgs.push({ url:dataURL, full:dataURL.split(',')[1], small, media_type:f.type||'image/jpeg', name:f.name });
   }
@@ -318,8 +326,8 @@ async function generate(regen){
 function catName(){ const sel=$('catSel'); return sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent.replace(/\s*\(\d+\)\s*$/,'').replace(/^—\s*/,'') : ''; }
 
 function previewFigure(url,alt,caption){ return '<figure><img src="'+url+'" alt="'+esc(alt)+'"/>'+(caption?'<figcaption>'+esc(caption)+'</figcaption>':'')+'</figure>'; }
-function injectPreview(html, placements){
-  (placements||[]).forEach(p=>{ if(p.role==='featured') return; const im=state.imgs[p.index]; if(!im) return; const fig=previewFigure(im.url,p.alt||'',p.caption||'');
+function injectPreview(html){
+  state.imgs.forEach((im,idx)=>{ const p=im.pl; if(idx===0||!p) return; const fig=previewFigure(im.url,p.alt||'',p.caption||'');
     if(!p.after_heading){ html+=fig; return; }
     const norm=String(p.after_heading).trim().toLowerCase().slice(0,30);
     const re=/<h[23][^>]*>([\s\S]*?)<\/h[23]>/gi; let m,done=false;
@@ -330,11 +338,16 @@ function injectPreview(html, placements){
 }
 function renderResult(){
   const g=state.gen;
+  // Gắn vị trí (placement) vào từng ảnh + đưa ảnh featured lên đầu → kéo/xoá không lệch.
+  (g.image_placements||[]).forEach(p=>{ if(state.imgs[p.index]) state.imgs[p.index].pl=p; });
+  const fi=state.imgs.findIndex(im=>im.pl&&im.pl.role==='featured'); if(fi>0){ const m=state.imgs.splice(fi,1)[0]; state.imgs.unshift(m); }
+  renderThumbs();
   $('pvGen').style.display='none';
   $('specList').innerHTML=(g.specs_read||[]).map(s=>'<li>'+esc(s)+'</li>').join('') || '<li style="color:var(--text-2)">(AI không trích được thông số — cân nhắc thêm ảnh bảng thông số hoặc ghi chú)</li>';
+  $('focusKw').textContent=g.primary_keyword||'';
   $('seoTitle').textContent=g.seo_title||''; const len=(g.seo_title||'').length; $('seoCnt').textContent=len+' ký tự'; $('seoCnt').className='cnt '+(len>=45&&len<=65?'good':'warn');
   $('shortDesc').innerHTML=g.short_description||'';
-  $('longDesc').innerHTML=injectPreview(g.long_html||'', g.image_placements);
+  $('longDesc').innerHTML=injectPreview(g.long_html||'');
   const words=(g.long_html||'').replace(/<[^>]+>/g,' ').trim().split(/\s+/).filter(Boolean).length; $('wordCnt').textContent=words+' từ';
   $('tagChips').innerHTML=(g.tags||[]).map((t,i)=>'<span class="chip">'+esc(t)+'<span class="x" data-ti="'+i+'">×</span></span>').join('');
   $('metaDesc').textContent=g.meta_description||'';
@@ -354,11 +367,12 @@ function getToken(){ return localStorage.getItem('products_token')||''; }
 function askToken(){ const t=prompt('Nhập MÃ XUẤT BẢN (khớp secret PRODUCTS_TOKEN trên CRM). Bỏ trống nếu đã bật đăng nhập Access:', getToken()); if(t!==null) localStorage.setItem('products_token',t.trim()); return getToken(); }
 function cleanHtml(){ return $('longDesc').innerHTML.replace(/<figure[\s\S]*?<\/figure>/gi,'').trim(); }
 function collectTags(){ return Array.prototype.map.call($('tagChips').querySelectorAll('.chip'), c=>c.childNodes[0].textContent.trim()).filter(Boolean); }
-function buildImages(){ return state.imgs.map((im,i)=>{ const p=(state.gen.image_placements||[]).find(x=>x.index===i)||{}; return {data:im.full, media_type:im.media_type, role:i===0?'featured':p.role, after_heading:p.after_heading||'', alt:p.alt||$('nameInp').value, caption:p.caption||''}; }); }
+function buildImages(){ return state.imgs.map((im,i)=>{ const p=im.pl||{}; return {data:im.full, media_type:im.media_type, role:i===0?'featured':undefined, after_heading:i===0?'':(p.after_heading||''), alt:p.alt||$('nameInp').value, caption:p.caption||''}; }); }
 async function publish(){
   if(!state.gen){ toast('Chưa có bài viết',true); return; }
   const catId=$('catSel').value; if(!catId){ toast('Chọn danh mục',true); return; }
   const body={ site:state.site, name:$('nameInp').value.trim(), price:$('priceInp').value, old_price:$('oldInp').value,
+    stock:$('stockInp').value, sold:$('soldInp').value, primary_keyword:$('focusKw').textContent.trim(),
     status:state.pubStatus, seo_title:$('seoTitle').textContent.trim(), short_description:$('shortDesc').innerHTML.trim(),
     long_html:cleanHtml(), meta_description:$('metaDesc').textContent.trim(), tags:collectTags(), images:buildImages() };
   if(state.site==='both') body.categories={doscom:$('catSel').value, noma:$('catSel2').value}; else body.category_id=catId;
@@ -379,9 +393,15 @@ async function publish(){
 
 // ---------- events ----------
 $('siteSwitch').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; [...$('siteSwitch').querySelectorAll('button')].forEach(x=>x.classList.remove('on')); b.classList.add('on'); loadSite(b.dataset.site); });
-$('dz').onclick=()=>$('fileInp').click();
+$('dz').onclick=e=>{ if(e.target.id==='pickDir'){ e.preventDefault(); $('dirInp').click(); return; } $('fileInp').click(); };
 $('fileInp').onchange=e=>{ onFiles(e.target.files); e.target.value=''; };
-$('thumbs').addEventListener('click',e=>{ const b=e.target.closest('.rm'); if(!b)return; state.imgs.splice(+b.dataset.i,1); renderThumbs(); });
+$('dirInp').onchange=e=>{ onFiles(e.target.files); e.target.value=''; };
+$('thumbs').addEventListener('click',e=>{
+  const rm=e.target.closest('.rm'); if(rm){ state.imgs.splice(+rm.dataset.i,1); renderThumbs(); syncCardImg(); return; }
+  const th=e.target.closest('.thumb'); if(!th)return;
+  const i=[...$('thumbs').children].indexOf(th);
+  if(i>0){ const m=state.imgs.splice(i,1)[0]; state.imgs.unshift(m); renderThumbs(); syncCardImg(); toast('Đã đặt làm ảnh đại diện'); }
+});
 $('genBtn').onclick=()=>generate(false); $('regenBtn').onclick=()=>generate(true);
 $('statusChoice').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; [...$('statusChoice').children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); state.pubStatus=b.dataset.st; updatePubLabel(); });
 $('tagChips').addEventListener('click',e=>{ const x=e.target.closest('.x'); if(x) x.parentElement.remove(); });
