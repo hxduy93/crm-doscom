@@ -1,0 +1,14 @@
+# Không cache các trang HTML (SPA + trang standalone nạp iframe) để deploy mới hiện ngay,
+# tránh iframe kẹt bản cũ. Static asset (ảnh/js trong data) vẫn cache bình thường.
+/
+  Cache-Control: no-cache, must-revalidate
+/index.html
+  Cache-Control: no-cache, must-revalidate
+/product-publisher
+  Cache-Control: no-cache, must-revalidate
+/ads-creator
+  Cache-Control: no-cache, must-revalidate
+/agent-geo-doscom
+  Cache-Control: no-cache, must-revalidate
+/agent-hermes-chat
+  Cache-Control: no-cache, must-revalidate

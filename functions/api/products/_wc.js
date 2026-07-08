@@ -28,6 +28,15 @@ export function isConfigured(c) {
 const wpAuth = (u, p) => "Basic " + btoa(`${u}:${p}`);
 const wcAuth = (ck, cs) => "Basic " + btoa(`${ck}:${cs}`);
 
+// Suy ra từ khóa dự phòng từ tên sản phẩm khi AI không trả primary_keyword
+// (để focus keyword Rank Math KHÔNG BAO GIỜ rỗng → không bị N/A).
+export function deriveKeyword(name) {
+  let s = String(name || "").split(/[-–—|(]/)[0];                     // bỏ phần model/biến thể sau gạch
+  s = s.replace(/\b\d+[\s.]*(ml|l|g|kg|gb|tb|w|mah|cm|mm|inch|")?\b/gi, " "); // bỏ số + đơn vị
+  s = s.replace(/\s+/g, " ").trim().toLowerCase();
+  return s.split(" ").filter(Boolean).slice(0, 6).join(" ");
+}
+
 export function slugify(s) {
   return String(s || "").toLowerCase()
     .normalize("NFD").replace(/[̀-ͯ]/g, "")

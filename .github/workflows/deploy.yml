@@ -34,6 +34,7 @@ jobs:
         run: |
           rm -rf dist && mkdir dist
           cp index.html dist/
+          if [ -f _headers ]; then cp _headers dist/; fi
           cp -r data dist/data
           if [ -d demos ]; then cp -r demos dist/demos; fi
           # Hermes chat widget — inject vào index.html qua <script src="/hermes-widget.js">.

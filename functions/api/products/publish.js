@@ -16,7 +16,7 @@
 import { getIdentity } from "../../lib/access.js";
 import {
   siteCreds, isConfigured, uploadMedia, createProduct,
-  slugify, b64ToBytes, priceFields, injectFigure,
+  slugify, b64ToBytes, priceFields, injectFigure, deriveKeyword,
 } from "./_wc.js";
 
 function json(o, s = 200) {
@@ -33,7 +33,7 @@ async function publishToSite(site, env, data) {
   const images = Array.isArray(data.images) ? data.images.slice(0, 20) : [];
   if (!images.length) throw new Error("Chưa có ảnh sản phẩm");
 
-  const kw = String(data.primary_keyword || "").trim();
+  const kw = String(data.primary_keyword || "").trim() || deriveKeyword(data.name);
   let featIdx = images.findIndex((im) => im.role === "featured");
   if (featIdx < 0) featIdx = 0;
 

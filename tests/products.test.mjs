@@ -7,7 +7,14 @@ import {
   injectFigure,
   siteCreds,
   isConfigured,
+  deriveKeyword,
 } from "../functions/api/products/_wc.js";
+
+test("deriveKeyword: fallback keyword sạch từ tên (bỏ model + đơn vị)", () => {
+  assert.equal(deriveKeyword("Bọt vệ sinh đa năng - Noma680"), "bọt vệ sinh đa năng");
+  assert.equal(deriveKeyword("Bọt vệ sinh đa năng Noma 680 – 650ml"), "bọt vệ sinh đa năng noma");
+  assert.ok(deriveKeyword("Máy dò sóng Doscom D5").length > 0);
+});
 
 test("slugify: bỏ dấu tiếng Việt, đ→d, kebab-case", () => {
   assert.equal(slugify("Máy dò sóng Doscom D5"), "may-do-song-doscom-d5");

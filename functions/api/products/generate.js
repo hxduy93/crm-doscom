@@ -13,7 +13,7 @@
 // Chống bịa (red line): AI chỉ dùng thông số có trong ảnh + ghi chú, thiếu thì để trống.
 // Cache KV (red line): cùng input trong ngày → không tốn credit; regenerate=true để bỏ qua.
 import { callClaude } from "../geo/_utils/claude.js";
-import { slugify, SITE_URL } from "./_wc.js";
+import { slugify, SITE_URL, deriveKeyword } from "./_wc.js";
 
 function json(o, s = 200) {
   return new Response(JSON.stringify(o), {
@@ -85,7 +85,7 @@ export async function onRequestPost({ request, env }) {
 
   // ---- cache theo input + ngày VN ----
   const dateVN = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-  const cacheKey = `prodgen:v3:${site}:${slugify(name)}:${note.length}:${images.length}:${dateVN}`;
+  const cacheKey = `prodgen:v4:${site}:${slugify(name)}:${note.length}:${images.length}:${dateVN}`;
   if (!body.regenerate && env.INVENTORY) {
     const hit = await env.INVENTORY.get(cacheKey).catch(() => null);
     if (hit) { try { return json({ ok: true, cached: true, generated: JSON.parse(hit) }); } catch {} }
@@ -122,6 +122,7 @@ export async function onRequestPost({ request, env }) {
     if (!g || !g.seo_title || !g.long_html) {
       return json({ ok: false, error: "AI không trả đúng cấu trúc bài viết" }, 502);
     }
+    g.primary_keyword = String(g.primary_keyword || "").trim() || deriveKeyword(name);
     g.tags = Array.isArray(g.tags) ? g.tags : [];
     g.specs_read = Array.isArray(g.specs_read) ? g.specs_read : [];
     g.image_placements = Array.isArray(g.image_placements) ? g.image_placements : [];
