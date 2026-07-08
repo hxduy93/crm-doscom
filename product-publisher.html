@@ -189,6 +189,10 @@
           <textarea class="inp" id="noteInp" rows="4" placeholder="Dán mọi thông tin bạn có: thông số kỹ thuật, xuất xứ, bảo hành, khuyến mãi, điểm khác biệt so với đối thủ, đối tượng dùng… Càng chi tiết, bài càng chuẩn."></textarea>
           <div class="hint"><b style="color:var(--teal)">AI coi đây là nguồn thật</b> — chỉ viết theo thông số trong ảnh + ghi chú này, không bịa thêm.</div>
         </div>
+        <label style="display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:700;color:var(--text-2);margin-bottom:11px;cursor:pointer">
+          <input type="checkbox" id="autoBg" checked style="width:17px;height:17px;accent-color:var(--brand);cursor:pointer"/>
+          Tự động tách nền ảnh chụp sản phẩm → tạo ảnh nền trắng làm đại diện
+        </label>
         <button class="btn btn-gen" id="genBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5 10.1 10.9 5.5 9l4.6-1.4L12 3z"/></svg>
           Gen bài viết bằng AI
@@ -374,6 +378,8 @@ function renderResult(){
   const g=state.gen;
   // Gắn vị trí (placement) vào từng ảnh + đưa ảnh featured lên đầu → kéo/xoá không lệch.
   (g.image_placements||[]).forEach(p=>{ if(state.imgs[p.index]) state.imgs[p.index].pl=p; });
+  const psi=Number(g.product_shot_index);
+  state._shotImg = (Number.isFinite(psi) && psi>=0) ? state.imgs[psi] : null;
   const fi=state.imgs.findIndex(im=>im.pl&&im.pl.role==='featured'); if(fi>0){ const m=state.imgs.splice(fi,1)[0]; state.imgs.unshift(m); }
   renderThumbs();
   $('pvGen').style.display='none';
@@ -393,6 +399,20 @@ function renderResult(){
   if(state.site==='both'){ $('dualBanner').style.display='flex'; const dc=$('catSel').options[$('catSel').selectedIndex]?.textContent.replace(/\s*\(\d+\)/,'').replace(/^—\s*/,'')||''; const nc=$('catSel2').options[$('catSel2').selectedIndex]?.textContent.replace(/\s*\(\d+\)/,'').replace(/^—\s*/,'')||''; $('dualBanner').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 17H7A5 5 0 017 7h2"/><path d="M15 7h2a5 5 0 010 10h-2"/><path d="M8 12h8"/></svg><span>Đăng lên <b>2 web</b> · doscom.vn → '+esc(dc)+' &nbsp;+&nbsp; noma.vn → '+esc(nc)+'</span>'; }
   else $('dualBanner').style.display='none';
   $('pvResult').classList.add('show'); $('pubbar').style.display='flex'; updatePubLabel();
+  maybeAutoBg();
+}
+function maybeAutoBg(){
+  if(!$('autoBg').checked) return;
+  // đã có ảnh nền trắng ở đầu (làm rồi) → khỏi lặp
+  if(state.imgs[0] && /^nen-trang/.test(state.imgs[0].name||'')) return;
+  const target=state._shotImg;
+  if(!target){
+    if(state.gen && Number(state.gen.product_shot_index)===-1)
+      toast('AI không thấy ảnh chụp sản phẩm rõ để tách nền — thêm 1 ảnh chụp sản phẩm hoặc bấm nút “nền” thủ công.');
+    return;
+  }
+  const idx=state.imgs.indexOf(target);
+  if(idx>=0) removeBg(idx);
 }
 
 // ---------- publish ----------

@@ -64,7 +64,8 @@ TRẢ VỀ DUY NHẤT JSON đúng schema:
   "image_placements": [
     { "index": 0, "role": "featured", "alt": "...", "caption": "..." },
     { "index": 1, "after_heading": "chữ trong <h2>", "alt": "...", "caption": "..." }
-  ]
+  ],
+  "product_shot_index": <index của ẢNH CHỤP sản phẩm rõ nhất (sản phẩm chiếm phần lớn khung, ít/không chữ, nền đơn giản) phù hợp để TÁCH NỀN làm ảnh đại diện nền trắng; trả -1 nếu KHÔNG có ảnh nào phù hợp (vd toàn poster/banner nhiều chữ)>
 }`;
 
 export async function onRequestPost({ request, env }) {
@@ -84,7 +85,7 @@ export async function onRequestPost({ request, env }) {
 
   // ---- cache theo input + ngày VN ----
   const dateVN = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-  const cacheKey = `prodgen:v2:${site}:${slugify(name)}:${note.length}:${images.length}:${dateVN}`;
+  const cacheKey = `prodgen:v3:${site}:${slugify(name)}:${note.length}:${images.length}:${dateVN}`;
   if (!body.regenerate && env.INVENTORY) {
     const hit = await env.INVENTORY.get(cacheKey).catch(() => null);
     if (hit) { try { return json({ ok: true, cached: true, generated: JSON.parse(hit) }); } catch {} }
