@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Đăng sản phẩm — CRM Doscom</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --primary:#3257E6;--primary-700:#2440C4;--secondary:#5B8DEF;--accent:#F59E0B;--violet:#8B5CF6;
+    --teal:#14B8A6;--green:#16A34A;--red:#E5484D;
+    --bg:#F5F7FB;--surface:#FFFFFF;--surface-2:#FBFCFE;--text:#111A2E;--text-2:#5A6478;--muted:#EEF2FA;--border:#E6ECF6;
+    --radius:16px;--t:.2s cubic-bezier(.4,0,.2,1);--shadow-sm:0 1px 2px rgba(16,26,46,.06);--shadow:0 12px 30px -18px rgba(16,26,46,.28);
+    --font:'Nunito',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--brand:var(--primary);--brand-2:var(--violet);
+  }
+  @media (prefers-color-scheme:dark){:root{--primary:#5B8DEF;--primary-700:#3257E6;--bg:#0A1020;--surface:#121A2E;--surface-2:#0F1626;--text:#EAF0FB;--text-2:#94A2BF;--muted:#1A2440;--border:#243049;--shadow:0 14px 34px -20px rgba(0,0,0,.7)}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .wrap{padding:20px;max-width:1240px;margin:0 auto}
+  .phead{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+  .phead h1{margin:0;font-size:22px;font-weight:900;letter-spacing:-.02em}
+  .phead p{margin:5px 0 0;color:var(--text-2);font-size:13px;max-width:520px}
+  .site-switch{display:flex;gap:5px;padding:5px;background:var(--muted);border-radius:13px;border:1px solid var(--border);align-items:center}
+  .site-switch .ss-lab{font-size:11px;font-weight:800;color:var(--text-2);padding:0 3px 0 7px;text-transform:uppercase;letter-spacing:.04em}
+  .site-switch button{border:0;background:none;font-family:var(--font);font-weight:800;font-size:13px;color:var(--text-2);padding:8px 14px;border-radius:9px;cursor:pointer;transition:var(--t);display:flex;align-items:center;gap:7px}
+  .site-switch button .dot{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.5}
+  .site-switch button.on{background:var(--surface);color:var(--brand);box-shadow:var(--shadow-sm)}
+  .site-switch button.on .dot{opacity:1}
+  .work{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1fr);gap:18px;align-items:start}
+  @media (max-width:900px){.work{grid-template-columns:1fr}}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .card-h{display:flex;align-items:center;gap:10px;padding:14px 17px;border-bottom:1px solid var(--border)}
+  .card-h .ic{width:31px;height:31px;border-radius:9px;display:grid;place-items:center;color:#fff;background:linear-gradient(140deg,var(--brand),var(--brand-2));flex:none}
+  .card-h .ic svg{width:16px;height:16px}
+  .card-h h2{margin:0;font-size:14px;font-weight:900}.card-h .s{font-size:11.5px;color:var(--text-2);font-weight:700}
+  .card-b{padding:17px}
+  .field{margin-bottom:14px}.field:last-child{margin-bottom:0}
+  label.lab{display:block;font-size:12px;font-weight:800;color:var(--text-2);margin-bottom:6px}
+  label.lab .req{color:var(--red)}
+  .inp,select.inp,textarea.inp{width:100%;border:1px solid var(--border);background:var(--surface-2);border-radius:11px;padding:10px 12px;font-family:var(--font);font-size:13.5px;font-weight:600;color:var(--text);transition:var(--t);outline:none}
+  .inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 18%,transparent);background:var(--surface)}
+  select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235A6478' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:560px){.row2{grid-template-columns:1fr}}
+  .hint{font-size:11px;color:var(--text-2);margin-top:5px;font-weight:600}
+  .price-wrap{position:relative}.price-wrap .cur{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:800;color:var(--text-2)}
+  .inp.money{font-variant-numeric:tabular-nums;padding-right:34px}
+  .dz{border:2px dashed var(--border);border-radius:13px;padding:16px;text-align:center;cursor:pointer;transition:var(--t);background:var(--surface-2)}
+  .dz:hover{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 5%,var(--surface-2))}
+  .dz .dz-ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;margin:0 auto 7px;color:var(--brand);background:color-mix(in srgb,var(--brand) 12%,transparent)}
+  .dz b{font-size:13px}.dz p{margin:3px 0 0;font-size:11.5px;color:var(--text-2);font-weight:600}
+  .thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:11px}
+  .thumb{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;border:1px solid var(--border);background:var(--muted)}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb .rm{position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:0;cursor:pointer;font-weight:900;font-size:12px;line-height:1;display:grid;place-items:center}
+  .thumb .fbadge{position:absolute;left:3px;bottom:3px;font-size:8px;font-weight:800;color:#fff;background:var(--green);padding:2px 5px;border-radius:4px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;cursor:pointer;font-family:var(--font);font-weight:800;font-size:13.5px;padding:12px 16px;transition:var(--t)}
+  .btn svg{width:17px;height:17px}.btn:disabled{opacity:.55;cursor:not-allowed}
+  .btn-gen{width:100%;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));box-shadow:0 12px 24px -12px var(--brand);margin-top:4px}
+  .btn-gen:not(:disabled):hover{filter:brightness(1.06)}
+  .btn-ghost{background:var(--muted);color:var(--text)}.btn-ghost:hover{background:var(--border)}
+  .btn-pub{color:#fff;background:linear-gradient(135deg,var(--green),#0E8A45);box-shadow:0 12px 24px -12px var(--green)}
+  .btn-pub:not(:disabled):hover{filter:brightness(1.06)}
+  .pv-empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:11px;padding:50px 24px;color:var(--text-2)}
+  .pv-empty .e-ic{width:58px;height:58px;border-radius:17px;display:grid;place-items:center;color:var(--brand);background:color-mix(in srgb,var(--brand) 10%,transparent)}
+  .pv-empty b{color:var(--text);font-size:15px}.pv-empty p{margin:0;max-width:320px;font-size:12.5px;line-height:1.6}
+  .genning{padding:20px}
+  .gen-status{display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:800;color:var(--brand);margin-bottom:15px}
+  .spin{width:16px;height:16px;border:2.5px solid color-mix(in srgb,var(--brand) 30%,transparent);border-top-color:var(--brand);border-radius:50%;animation:rot .7s linear infinite}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  .shimmer{height:13px;border-radius:7px;background:linear-gradient(90deg,var(--muted) 25%,var(--border) 37%,var(--muted) 63%);background-size:400% 100%;animation:sh 1.3s ease-in-out infinite;margin-bottom:10px}
+  @keyframes sh{0%{background-position:100% 0}100%{background-position:-100% 0}}
+  .pv{padding:17px;display:none}.pv.show{display:block}
+  .dual-banner{display:flex;align-items:center;gap:9px;padding:10px 13px;border-radius:12px;margin-bottom:13px;font-size:12px;font-weight:700;line-height:1.4;background:linear-gradient(135deg,color-mix(in srgb,var(--primary) 13%,var(--surface)),color-mix(in srgb,var(--violet) 13%,var(--surface)));border:1px solid color-mix(in srgb,var(--violet) 32%,var(--border));color:var(--text)}
+  .dual-banner svg{width:17px;height:17px;color:var(--violet);flex:none}.dual-banner b{color:var(--primary)}
+  .spec-read{background:color-mix(in srgb,var(--teal) 9%,var(--surface-2));border:1px solid color-mix(in srgb,var(--teal) 32%,var(--border));border-radius:12px;padding:11px 13px;margin-bottom:15px}
+  .spec-read .sh{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:800;color:var(--teal);margin-bottom:7px}
+  .spec-read .sh svg{width:15px;height:15px}
+  .spec-read ul{margin:0;padding-left:18px;display:grid;gap:3px}.spec-read li{font-size:12px;color:var(--text);font-weight:600}
+  .pv-field{margin-bottom:14px}.pv-field .fl{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .pv-field .fl label{font-size:11.5px;font-weight:800;color:var(--text-2)}
+  .pill{font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px}
+  .pill-ai{color:var(--violet);background:color-mix(in srgb,var(--violet) 14%,transparent)}
+  .pill-ok{color:var(--green);background:color-mix(in srgb,var(--green) 14%,transparent)}
+  .cnt{font-size:10.5px;color:var(--text-2);font-weight:700;font-variant-numeric:tabular-nums}
+  .cnt.good{color:var(--green)}.cnt.warn{color:var(--accent)}
+  .editable{border:1px solid var(--border);border-radius:10px;padding:9px 11px;font-size:13px;font-weight:600;color:var(--text);background:var(--surface-2);transition:var(--t)}
+  .editable:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 16%,transparent);background:var(--surface)}
+  .editable.title{font-weight:800;font-size:14px}
+  .article{border:1px solid var(--border);border-radius:10px;padding:13px 15px;background:var(--surface-2);max-height:280px;overflow:auto;font-size:12.5px;line-height:1.6}
+  .article h2,.article h3{font-size:13.5px;margin:11px 0 5px;font-weight:900;color:var(--text)}
+  .article p{margin:0 0 8px;color:var(--text-2)}.article ul{margin:0 0 8px;padding-left:18px;color:var(--text-2)}
+  .article figure{margin:11px auto;text-align:center;max-width:80%}
+  .article figure img{width:100%;border-radius:9px;border:1px solid var(--border);display:block}
+  .article figure figcaption{font-size:10.5px;font-style:italic;color:var(--text-2);margin-top:5px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--muted);color:var(--text);border:1px solid var(--border);display:flex;align-items:center;gap:5px}
+  .chip .x{color:var(--text-2);cursor:pointer;font-weight:900}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media (max-width:560px){.grid2{grid-template-columns:1fr}}
+  .divider{height:1px;background:var(--border);margin:15px 0}
+  .prodcard{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surface)}
+  .prodcard .pc-img{aspect-ratio:16/10;background:var(--muted);position:relative}
+  .prodcard .pc-img img{width:100%;height:100%;object-fit:cover;display:block}
+  .prodcard .pc-cat{position:absolute;top:9px;left:9px;font-size:10px;font-weight:800;color:#fff;background:var(--brand);padding:3px 9px;border-radius:20px}
+  .prodcard .pc-b{padding:12px 14px}.prodcard .pc-b h4{margin:0 0 6px;font-size:14px;font-weight:900;line-height:1.3}
+  .prodcard .pc-price{display:flex;align-items:baseline;gap:9px}
+  .prodcard .pc-now{font-size:18px;font-weight:900;color:var(--red);font-variant-numeric:tabular-nums}
+  .prodcard .pc-old{font-size:12.5px;color:var(--text-2);text-decoration:line-through;font-variant-numeric:tabular-nums}
+  .pubbar{position:sticky;bottom:0;display:flex;align-items:center;gap:11px;padding:13px 17px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--border);flex-wrap:wrap}
+  .status-choice{display:flex;gap:5px;padding:4px;background:var(--muted);border-radius:10px;border:1px solid var(--border)}
+  .status-choice button{border:0;background:none;font-family:var(--font);font-weight:800;font-size:12px;color:var(--text-2);padding:6px 11px;border-radius:7px;cursor:pointer}
+  .status-choice button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow-sm)}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(140%);background:var(--text);color:var(--bg);padding:13px 18px;border-radius:12px;font-weight:700;font-size:13px;box-shadow:0 18px 40px -12px rgba(0,0,0,.5);max-width:90%;transition:transform .35s cubic-bezier(.2,.9,.3,1.2);z-index:50}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .toast a{color:var(--secondary);text-decoration:underline;font-weight:800}
+  .toast.err{background:var(--red);color:#fff}
+  .msg{font-size:12px;font-weight:700;padding:9px 12px;border-radius:10px;margin-bottom:12px}
+  .msg.err{background:color-mix(in srgb,var(--red) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--red) 40%,var(--border));color:var(--red)}
+  .keybtn{margin-left:auto;font-size:11px;font-weight:700;color:var(--text-2);background:none;border:0;cursor:pointer;text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="phead">
+    <div>
+      <h1>Đăng sản phẩm mới</h1>
+      <p>Nhập thông tin + chọn ảnh đã xử lý. AI đọc thông số trong ảnh và tự viết bài chuẩn SEO — bạn duyệt rồi xuất bản.</p>
+    </div>
+    <div class="site-switch" id="siteSwitch">
+      <span class="ss-lab">Đăng lên</span>
+      <button class="on" data-site="doscom"><span class="dot"></span>doscom.vn</button>
+      <button data-site="noma"><span class="dot"></span>noma.vn</button>
+      <button data-site="both"><span class="dot"></span>Cả 2 web</button>
+    </div>
+  </div>
+
+  <div id="topmsg"></div>
+
+  <div class="work">
+    <!-- FORM -->
+    <section class="card">
+      <div class="card-h">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></div>
+        <div><h2>Thông tin sản phẩm</h2><div class="s">Bạn nhập — AI không đụng vào giá</div></div>
+      </div>
+      <div class="card-b">
+        <div class="field">
+          <label class="lab" id="catLabel">Danh mục <span class="req">*</span></label>
+          <select class="inp" id="catSel"><option>Đang tải…</option></select>
+          <div class="hint" id="catHint"></div>
+        </div>
+        <div class="field" id="catField2" style="display:none">
+          <label class="lab">Danh mục trên <b style="color:var(--green)">noma.vn</b> <span class="req">*</span></label>
+          <select class="inp" id="catSel2"></select>
+        </div>
+        <div class="field">
+          <label class="lab">Tên sản phẩm <span class="req">*</span></label>
+          <input class="inp" id="nameInp" placeholder="VD: Máy dò sóng Doscom D5"/>
+        </div>
+        <div class="row2">
+          <div class="field"><label class="lab">Giá bán <span class="req">*</span></label><div class="price-wrap"><input class="inp money" id="priceInp" placeholder="4.500.000"/><span class="cur">₫</span></div></div>
+          <div class="field"><label class="lab">Giá gốc <span style="color:var(--text-2);font-weight:700">(gạch)</span></label><div class="price-wrap"><input class="inp money" id="oldInp" placeholder="5.900.000"/><span class="cur">₫</span></div></div>
+        </div>
+        <div class="field">
+          <label class="lab">Ảnh sản phẩm <span class="req">*</span> <span style="color:var(--text-2);font-weight:700">— chọn folder đã xử lý</span></label>
+          <div class="dz" id="dz">
+            <div class="dz-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5-5 5 5"/><path d="M12 5v12"/></svg></div>
+            <b>Bấm để chọn ảnh (nhiều ảnh)</b>
+            <p>JPG/PNG/WebP · ảnh đầu = ảnh đại diện · ảnh có bảng thông số sẽ được AI đọc chữ.</p>
+          </div>
+          <input type="file" id="fileInp" accept="image/*" multiple style="display:none"/>
+          <div class="thumbs" id="thumbs"></div>
+          <div class="hint" id="imgHint" style="display:none"></div>
+        </div>
+        <div class="field">
+          <label class="lab">Thông tin thêm cho AI viết bài <span style="color:var(--text-2);font-weight:700">(khuyến khích điền)</span></label>
+          <textarea class="inp" id="noteInp" rows="4" placeholder="Dán mọi thông tin bạn có: thông số kỹ thuật, xuất xứ, bảo hành, khuyến mãi, điểm khác biệt so với đối thủ, đối tượng dùng… Càng chi tiết, bài càng chuẩn."></textarea>
+          <div class="hint"><b style="color:var(--teal)">AI coi đây là nguồn thật</b> — chỉ viết theo thông số trong ảnh + ghi chú này, không bịa thêm.</div>
+        </div>
+        <button class="btn btn-gen" id="genBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5 10.1 10.9 5.5 9l4.6-1.4L12 3z"/></svg>
+          Gen bài viết bằng AI
+        </button>
+      </div>
+    </section>
+
+    <!-- PREVIEW -->
+    <section class="card">
+      <div class="card-h">
+        <div class="ic" style="background:linear-gradient(140deg,var(--violet),var(--brand))"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+        <div><h2>Bản xem trước &amp; sửa</h2><div class="s">AI sinh — bạn chỉnh trực tiếp trước khi đăng</div></div>
+      </div>
+
+      <div id="pvEmpty" class="pv-empty">
+        <div class="e-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/><path d="M9 13h6M9 17h4"/></svg></div>
+        <b>Chưa có bài viết</b>
+        <p>Nhập thông tin bên trái, chọn ảnh rồi bấm <b>Gen bài viết bằng AI</b>.</p>
+      </div>
+
+      <div id="pvGen" class="genning" style="display:none">
+        <div class="gen-status"><div class="spin"></div><span id="genMsg">Đang gửi ảnh cho Claude…</span></div>
+        <div class="shimmer" style="width:70%"></div><div class="shimmer" style="width:100%"></div><div class="shimmer" style="width:92%"></div><div class="shimmer" style="width:96%"></div><div class="shimmer" style="width:60%"></div>
+      </div>
+
+      <div id="pvResult" class="pv">
+        <div class="dual-banner" id="dualBanner" style="display:none"></div>
+        <div class="spec-read">
+          <div class="sh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg> Thông số AI đọc được</div>
+          <ul id="specList"></ul>
+        </div>
+        <div class="pv-field"><div class="fl"><label>Tên SEO</label><span class="cnt" id="seoCnt"></span></div><div class="editable title" contenteditable="true" id="seoTitle"></div></div>
+        <div class="pv-field"><div class="fl"><label>Mô tả ngắn</label><span class="pill pill-ai">AI</span></div><div class="editable" contenteditable="true" id="shortDesc"></div></div>
+        <div class="pv-field"><div class="fl"><label>Bài viết (mô tả dài) — ảnh chèn theo đoạn</label><span class="cnt" id="wordCnt"></span></div><div class="article" contenteditable="true" id="longDesc"></div></div>
+        <div class="grid2">
+          <div class="pv-field" style="margin:0"><div class="fl"><label>Tags</label><span class="pill pill-ai">AI đề xuất</span></div><div class="chips" id="tagChips"></div></div>
+          <div class="pv-field" style="margin:0"><div class="fl"><label>Meta description (SEO)</label><span class="pill pill-ok">SEO</span></div><div class="editable" contenteditable="true" id="metaDesc" style="font-size:12px"></div></div>
+        </div>
+        <div class="divider"></div>
+        <div class="pv-field" style="margin:0">
+          <div class="fl"><label>Xem như trên web</label><span class="pill" id="catBadge" style="background:var(--muted);color:var(--text-2)"></span></div>
+          <div class="prodcard"><div class="pc-img"><img id="pcImg" alt=""/><span class="pc-cat" id="pcCat"></span></div>
+            <div class="pc-b"><h4 id="pcName"></h4><div class="pc-price"><span class="pc-now" id="pcNow">—</span><span class="pc-old" id="pcOld"></span></div></div></div>
+        </div>
+      </div>
+
+      <div class="pubbar" id="pubbar" style="display:none">
+        <div class="status-choice" id="statusChoice"><button class="on" data-st="draft">Lưu nháp</button><button data-st="publish">Đăng ngay</button></div>
+        <button class="btn btn-ghost" id="regenBtn" style="padding:11px 13px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-2.6-6.4"/><path d="M21 3v6h-6"/></svg>Gen lại</button>
+        <button class="btn btn-pub" id="pubBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg><span id="pubLabel">Lưu nháp</span></button>
+        <button class="keybtn" id="keyBtn" title="Đặt mã xuất bản">🔑 mã</button>
+      </div>
+    </section>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const state = { site:'doscom', csite:'doscom', cats:{doscom:null,noma:null}, imgs:[], gen:null, pubStatus:'draft' };
+
+// ---------- helpers ----------
+async function api(path, opts){ const r = await fetch(path, opts); let d; try{ d = await r.json(); }catch{ d = {ok:false,error:'Phản hồi không phải JSON ('+r.status+')'}; } return {status:r.status, d}; }
+function toast(html, err){ const t=$('toast'); t.innerHTML=html; t.className='toast show'+(err?' err':''); clearTimeout(t._t); t._t=setTimeout(()=>t.className='toast',err?7000:5000); }
+function topmsg(html){ $('topmsg').innerHTML = html ? '<div class="msg err">'+html+'</div>' : ''; }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function money(v){ const n=String(v||'').replace(/[^\d]/g,''); return n.replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+
+// ---------- categories ----------
+function catTree(list){
+  const byId={}, roots=[]; list.forEach(c=>byId[c.id]={...c,children:[]});
+  list.forEach(c=>{ const n=byId[c.id]; if(c.parent && byId[c.parent]) byId[c.parent].children.push(n); else roots.push(n); });
+  const out=[]; (function walk(nodes,d){ nodes.sort((a,b)=>a.name.localeCompare(b.name,'vi')).forEach(n=>{ out.push({id:n.id, label:(d?'— '.repeat(d):'')+n.name+(n.count?'  ('+n.count+')':'')}); walk(n.children,d+1); }); })(roots,0);
+  return out;
+}
+function fillSelect(sel, list){ sel.innerHTML=''; if(!list||!list.length){ sel.innerHTML='<option value="">(không có danh mục)</option>'; return; } catTree(list).forEach(o=>{ const op=document.createElement('option'); op.value=o.id; op.textContent=o.label; sel.appendChild(op); }); }
+async function loadCats(site){
+  if(state.cats[site]) return state.cats[site];
+  const {d} = await api('/api/products/categories?site='+site);
+  if(!d.ok){ topmsg('Không tải được danh mục '+site+'.vn: '+esc(d.error||'')); return []; }
+  state.cats[site]=d.categories||[]; return state.cats[site];
+}
+
+// ---------- images ----------
+function readFile(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
+function downscale(dataURL, maxDim){ return new Promise(res=>{ const img=new Image(); img.onload=()=>{ let {width:w,height:h}=img; const sc=Math.min(1,maxDim/Math.max(w,h)); w=Math.round(w*sc); h=Math.round(h*sc); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h); res(cv.toDataURL('image/jpeg',0.85).split(',')[1]); }; img.onerror=()=>res(dataURL.split(',')[1]||''); img.src=dataURL; }); }
+async function onFiles(files){
+  for(const f of files){ if(!f.type.startsWith('image/')) continue; if(state.imgs.length>=12){ toast('Tối đa 12 ảnh',true); break; }
+    const dataURL=await readFile(f); const small=await downscale(dataURL,1152);
+    state.imgs.push({ url:dataURL, full:dataURL.split(',')[1], small, media_type:f.type||'image/jpeg', name:f.name });
+  }
+  renderThumbs();
+}
+function renderThumbs(){
+  const wrap=$('thumbs'); wrap.innerHTML='';
+  state.imgs.forEach((im,i)=>{ const d=document.createElement('div'); d.className='thumb';
+    d.innerHTML='<img src="'+im.url+'" alt=""/>'+(i===0?'<span class="fbadge">đại diện</span>':'')+'<button class="rm" data-i="'+i+'" title="Xoá">×</button>';
+    wrap.appendChild(d); });
+  const n=state.imgs.length;
+  $('imgHint').style.display = n?'block':'none';
+  $('imgHint').innerHTML = n? ('<b style="color:var(--teal)">'+n+' ảnh</b> — tất cả sẽ được dùng trong bài (đại diện + chèn theo đoạn).') : '';
+}
+
+// ---------- site switch ----------
+async function loadSite(s){
+  state.site=s; state.csite=(s==='both')?'doscom':s;
+  const both=s==='both';
+  const [a,b] = (s==='noma')?['#16A34A','#14B8A6']:['#3257E6','#8B5CF6'];
+  document.documentElement.style.setProperty('--brand',a); document.documentElement.style.setProperty('--brand-2',b);
+  $('catField2').style.display = both?'block':'none';
+  $('catLabel').innerHTML = both ? 'Danh mục trên <b style="color:#3257E6">doscom.vn</b> <span class="req">*</span>' : 'Danh mục <span class="req">*</span>';
+  const primary = both?'doscom':s;
+  fillSelect($('catSel'), await loadCats(primary));
+  if(both) fillSelect($('catSel2'), await loadCats('noma'));
+  $('catHint').textContent = both ? 'Sản phẩm lên CẢ 2 web — chọn danh mục riêng cho từng site.' : ((state.cats[s]||[]).length+' danh mục · kéo trực tiếp từ '+s+'.vn');
+  resetPreview();
+}
+function resetPreview(){ $('pvEmpty').style.display='flex'; $('pvGen').style.display='none'; $('pvResult').classList.remove('show'); $('pubbar').style.display='none'; }
+
+// ---------- generate ----------
+async function generate(regen){
+  if(!$('nameInp').value.trim()){ toast('Nhập tên sản phẩm đã',true); return; }
+  if(!state.imgs.length){ toast('Chọn ít nhất 1 ảnh',true); return; }
+  topmsg(''); $('pvEmpty').style.display='none'; $('pvResult').classList.remove('show'); $('pubbar').style.display='none'; $('pvGen').style.display='block';
+  $('genBtn').disabled=true; $('regenBtn') && ($('regenBtn').disabled=true);
+  const steps=['Đang gửi ảnh cho Claude…','Đọc thông số trong ảnh…','Viết tiêu đề SEO + bài viết…','Sắp xếp ảnh vào đoạn…']; let si=0; const iv=setInterval(()=>{ $('genMsg').textContent=steps[si=(si+1)%steps.length]; },1400);
+  try{
+    const {d} = await api('/api/products/generate',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
+      site:state.csite, name:$('nameInp').value.trim(), category_name:catName(), note:$('noteInp').value.trim(),
+      images: state.imgs.map(im=>({data:im.small, media_type:'image/jpeg'})), regenerate:!!regen
+    })});
+    clearInterval(iv);
+    if(!d.ok){ $('pvGen').style.display='none'; $('pvEmpty').style.display='flex'; toast('Gen lỗi: '+esc(d.error||''),true); return; }
+    state.gen=d.generated; renderResult();
+  }catch(e){ clearInterval(iv); $('pvGen').style.display='none'; $('pvEmpty').style.display='flex'; toast('Lỗi mạng khi gen',true); }
+  finally{ $('genBtn').disabled=false; $('regenBtn') && ($('regenBtn').disabled=false); }
+}
+function catName(){ const sel=$('catSel'); return sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent.replace(/\s*\(\d+\)\s*$/,'').replace(/^—\s*/,'') : ''; }
+
+function previewFigure(url,alt,caption){ return '<figure><img src="'+url+'" alt="'+esc(alt)+'"/>'+(caption?'<figcaption>'+esc(caption)+'</figcaption>':'')+'</figure>'; }
+function injectPreview(html, placements){
+  (placements||[]).forEach(p=>{ if(p.role==='featured') return; const im=state.imgs[p.index]; if(!im) return; const fig=previewFigure(im.url,p.alt||'',p.caption||'');
+    if(!p.after_heading){ html+=fig; return; }
+    const norm=String(p.after_heading).trim().toLowerCase().slice(0,30);
+    const re=/<h[23][^>]*>([\s\S]*?)<\/h[23]>/gi; let m,done=false;
+    while((m=re.exec(html))!==null){ const t=m[1].replace(/<[^>]+>/g,'').trim().toLowerCase(); if(t&&(t.includes(norm)||norm.includes(t.slice(0,30)))){ const ins=m.index+m[0].length; const after=html.slice(ins); const pe=after.search(/<\/p>/i); const pos=pe>-1?ins+pe+4:ins; html=html.slice(0,pos)+fig+html.slice(pos); done=true; break; } }
+    if(!done) html+=fig;
+  });
+  return html;
+}
+function renderResult(){
+  const g=state.gen;
+  $('pvGen').style.display='none';
+  $('specList').innerHTML=(g.specs_read||[]).map(s=>'<li>'+esc(s)+'</li>').join('') || '<li style="color:var(--text-2)">(AI không trích được thông số — cân nhắc thêm ảnh bảng thông số hoặc ghi chú)</li>';
+  $('seoTitle').textContent=g.seo_title||''; const len=(g.seo_title||'').length; $('seoCnt').textContent=len+' ký tự'; $('seoCnt').className='cnt '+(len>=45&&len<=65?'good':'warn');
+  $('shortDesc').innerHTML=g.short_description||'';
+  $('longDesc').innerHTML=injectPreview(g.long_html||'', g.image_placements);
+  const words=(g.long_html||'').replace(/<[^>]+>/g,' ').trim().split(/\s+/).filter(Boolean).length; $('wordCnt').textContent=words+' từ';
+  $('tagChips').innerHTML=(g.tags||[]).map((t,i)=>'<span class="chip">'+esc(t)+'<span class="x" data-ti="'+i+'">×</span></span>').join('');
+  $('metaDesc').textContent=g.meta_description||'';
+  // product card
+  $('pcName').textContent=$('nameInp').value||'';
+  $('pcNow').textContent=money($('priceInp').value)+'₫'; $('pcOld').textContent=$('oldInp').value?money($('oldInp').value)+'₫':'';
+  $('pcImg').src=state.imgs[0]?state.imgs[0].url:''; $('pcCat').textContent=catName(); $('catBadge').textContent='Danh mục: '+catName();
+  // dual banner
+  if(state.site==='both'){ $('dualBanner').style.display='flex'; const dc=$('catSel').options[$('catSel').selectedIndex]?.textContent.replace(/\s*\(\d+\)/,'').replace(/^—\s*/,'')||''; const nc=$('catSel2').options[$('catSel2').selectedIndex]?.textContent.replace(/\s*\(\d+\)/,'').replace(/^—\s*/,'')||''; $('dualBanner').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 17H7A5 5 0 017 7h2"/><path d="M15 7h2a5 5 0 010 10h-2"/><path d="M8 12h8"/></svg><span>Đăng lên <b>2 web</b> · doscom.vn → '+esc(dc)+' &nbsp;+&nbsp; noma.vn → '+esc(nc)+'</span>'; }
+  else $('dualBanner').style.display='none';
+  $('pvResult').classList.add('show'); $('pubbar').style.display='flex'; updatePubLabel();
+}
+
+// ---------- publish ----------
+function updatePubLabel(){ const v=state.pubStatus==='draft'?'Lưu nháp':'Đăng ngay'; $('pubLabel').textContent = state.site==='both'? v+' · 2 web' : v; }
+function getToken(){ return localStorage.getItem('products_token')||''; }
+function askToken(){ const t=prompt('Nhập MÃ XUẤT BẢN (khớp secret PRODUCTS_TOKEN trên CRM). Bỏ trống nếu đã bật đăng nhập Access:', getToken()); if(t!==null) localStorage.setItem('products_token',t.trim()); return getToken(); }
+function cleanHtml(){ return $('longDesc').innerHTML.replace(/<figure[\s\S]*?<\/figure>/gi,'').trim(); }
+function collectTags(){ return Array.prototype.map.call($('tagChips').querySelectorAll('.chip'), c=>c.childNodes[0].textContent.trim()).filter(Boolean); }
+function buildImages(){ return state.imgs.map((im,i)=>{ const p=(state.gen.image_placements||[]).find(x=>x.index===i)||{}; return {data:im.full, media_type:im.media_type, role:i===0?'featured':p.role, after_heading:p.after_heading||'', alt:p.alt||$('nameInp').value, caption:p.caption||''}; }); }
+async function publish(){
+  if(!state.gen){ toast('Chưa có bài viết',true); return; }
+  const catId=$('catSel').value; if(!catId){ toast('Chọn danh mục',true); return; }
+  const body={ site:state.site, name:$('nameInp').value.trim(), price:$('priceInp').value, old_price:$('oldInp').value,
+    status:state.pubStatus, seo_title:$('seoTitle').textContent.trim(), short_description:$('shortDesc').innerHTML.trim(),
+    long_html:cleanHtml(), meta_description:$('metaDesc').textContent.trim(), tags:collectTags(), images:buildImages() };
+  if(state.site==='both') body.categories={doscom:$('catSel').value, noma:$('catSel2').value}; else body.category_id=catId;
+  const headers={'content-type':'application/json'}; const tok=getToken(); if(tok) headers['X-Products-Token']=tok;
+  $('pubBtn').disabled=true; const old=$('pubLabel').textContent; $('pubLabel').textContent='Đang đăng…';
+  try{
+    let {status,d}=await api('/api/products/publish',{method:'POST',headers,body:JSON.stringify(body)});
+    if(status===401){ const t=askToken(); if(t){ headers['X-Products-Token']=t; ({status,d}=await api('/api/products/publish',{method:'POST',headers,body:JSON.stringify(body)})); } }
+    if(!d || (!d.ok && !Array.isArray(d.results))){ toast('Đăng lỗi: '+esc((d&&d.error)||'không rõ'),true); return; }
+    const oks=(d.results||[]).filter(r=>r.ok), bad=(d.results||[]).filter(r=>!r.ok);
+    const verb=state.pubStatus==='draft'?'Đã lưu nháp':'Đã đăng';
+    let html=oks.map(r=>'<a href="'+r.url+'" target="_blank" rel="noopener">'+r.site+'.vn</a> ('+r.status+')').join(' · ');
+    if(bad.length) html+= (html?' — ':'')+'<b>lỗi:</b> '+bad.map(r=>r.site+': '+esc(r.error)).join('; ');
+    toast(verb+' · '+html, bad.length>0);
+  }catch(e){ toast('Lỗi mạng khi đăng',true); }
+  finally{ $('pubBtn').disabled=false; $('pubLabel').textContent=old; }
+}
+
+// ---------- events ----------
+$('siteSwitch').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; [...$('siteSwitch').querySelectorAll('button')].forEach(x=>x.classList.remove('on')); b.classList.add('on'); loadSite(b.dataset.site); });
+$('dz').onclick=()=>$('fileInp').click();
+$('fileInp').onchange=e=>{ onFiles(e.target.files); e.target.value=''; };
+$('thumbs').addEventListener('click',e=>{ const b=e.target.closest('.rm'); if(!b)return; state.imgs.splice(+b.dataset.i,1); renderThumbs(); });
+$('genBtn').onclick=()=>generate(false); $('regenBtn').onclick=()=>generate(true);
+$('statusChoice').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; [...$('statusChoice').children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); state.pubStatus=b.dataset.st; updatePubLabel(); });
+$('tagChips').addEventListener('click',e=>{ const x=e.target.closest('.x'); if(x) x.parentElement.remove(); });
+$('pubBtn').onclick=publish; $('keyBtn').onclick=askToken;
+['nameInp','priceInp','oldInp'].forEach(id=>$(id).addEventListener('input',()=>{ if(!$('pvResult').classList.contains('show'))return; $('pcName').textContent=$('nameInp').value; $('pcNow').textContent=money($('priceInp').value)+'₫'; $('pcOld').textContent=$('oldInp').value?money($('oldInp').value)+'₫':''; }));
+
+loadSite('doscom');
+</script>
+</body>
+</html>
