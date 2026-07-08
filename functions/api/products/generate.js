@@ -84,7 +84,7 @@ export async function onRequestPost({ request, env }) {
 
   // ---- cache theo input + ngày VN ----
   const dateVN = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-  const cacheKey = `prodgen:v1:${site}:${slugify(name)}:${note.length}:${images.length}:${dateVN}`;
+  const cacheKey = `prodgen:v2:${site}:${slugify(name)}:${note.length}:${images.length}:${dateVN}`;
   if (!body.regenerate && env.INVENTORY) {
     const hit = await env.INVENTORY.get(cacheKey).catch(() => null);
     if (hit) { try { return json({ ok: true, cached: true, generated: JSON.parse(hit) }); } catch {} }
