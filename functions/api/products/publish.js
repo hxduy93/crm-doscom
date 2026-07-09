@@ -9,6 +9,7 @@
 //   site: "doscom" | "noma" | "nomaauto" | "all",
 //   categories: { doscom?: id, noma?: id, nomaauto?: id },   // hoặc category_id cho 1 site
 //   nomaauto = bản tiếng Anh: tự dịch nội dung + đổi giá VND→USD (÷ env.VND_USD_RATE, mặc định 26500)
+//             + CHỈ đăng ảnh đại diện (nền trắng), bỏ ảnh phụ/poster + không chèn ảnh inline vào bài
 //   name, price, old_price,
 //   status: "draft" | "publish",              // mặc định draft
 //   seo_title, short_description, long_html, meta_description, tags: [],
@@ -77,13 +78,18 @@ async function publishToSite(site, env, data) {
   }
 
   const kw = String(content.primary_keyword || "").trim() || deriveKeyword(content.name);
-  let featIdx = images.findIndex((im) => im.role === "featured");
+
+  // nomaauto.us: CHỈ đăng ảnh đại diện (nền trắng) + text — bỏ toàn bộ ảnh phụ/poster.
+  const workImages = isEN
+    ? [images.find((im) => im.role === "featured") || images[0]].filter(Boolean)
+    : images;
+  let featIdx = workImages.findIndex((im) => im.role === "featured");
   if (featIdx < 0) featIdx = 0;
 
   // 1) Upload ảnh. Ảnh đại diện có alt chứa keyword (tiêu chí Rank Math).
   const uploaded = [];
-  for (let i = 0; i < images.length; i++) {
-    const im = images[i];
+  for (let i = 0; i < workImages.length; i++) {
+    const im = workImages[i];
     const mime = im.media_type || "image/jpeg";
     const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
     const alt = i === featIdx && kw ? (kw + (im.alt ? ` — ${im.alt}` : "")) : (im.alt || content.name);
