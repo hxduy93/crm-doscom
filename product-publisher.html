@@ -55,12 +55,12 @@
   .thumb img{width:100%;height:100%;object-fit:cover;display:block}
   .thumb .rm{position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:0;cursor:pointer;font-weight:900;font-size:12px;line-height:1;display:grid;place-items:center}
   .thumb .fbadge{position:absolute;left:3px;bottom:3px;font-size:8px;font-weight:800;color:#fff;background:var(--green);padding:2px 5px;border-radius:4px}
-  .thumb .bg{position:absolute;top:3px;left:3px;height:18px;padding:0 6px;border-radius:6px;background:rgba(0,0,0,.62);color:#fff;border:0;cursor:pointer;font-family:var(--font);font-weight:800;font-size:8.5px;display:flex;align-items:center;gap:3px}
-  .thumb .bg svg{width:10px;height:10px}
-  .thumb .bg:hover{background:var(--brand)}
-  .thumb.busy{pointer-events:none}
-  .thumb.busy::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center}
-  .thumb.busy::before{content:"";position:absolute;z-index:2;top:50%;left:50%;width:20px;height:20px;margin:-10px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:rot .7s linear infinite}
+  .dz.mini{padding:13px}
+  .dz.mini .dz-ic{width:36px;height:36px;margin-bottom:6px}
+  .mainthumb{position:relative;display:inline-block;border-radius:12px;overflow:hidden;border:2px solid var(--green);max-width:170px;margin-top:10px}
+  .mainthumb img{display:block;width:100%;max-height:170px;object-fit:contain;background:#fff}
+  .mainthumb .rm{position:absolute;top:5px;right:5px;width:21px;height:21px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:0;cursor:pointer;font-weight:900;font-size:13px;line-height:1;display:grid;place-items:center}
+  .mainthumb .fbadge{position:absolute;left:5px;bottom:5px;font-size:9px;font-weight:800;color:#fff;background:var(--green);padding:2px 7px;border-radius:5px}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;cursor:pointer;font-family:var(--font);font-weight:800;font-size:13.5px;padding:12px 16px;transition:var(--t)}
   .btn svg{width:17px;height:17px}.btn:disabled{opacity:.55;cursor:not-allowed}
   .btn-gen{width:100%;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));box-shadow:0 12px 24px -12px var(--brand);margin-top:4px}
@@ -173,11 +173,21 @@
           <div class="field"><label class="lab">Đã bán <span style="color:var(--text-2);font-weight:700">(vd 15000)</span></label><input class="inp money" id="soldInp" placeholder="15000"/></div>
         </div>
         <div class="field">
-          <label class="lab">Ảnh sản phẩm <span class="req">*</span> <span style="color:var(--text-2);font-weight:700">— chọn folder đã xử lý</span></label>
+          <label class="lab">Ảnh nền trắng (ảnh đại diện) <span style="color:var(--text-2);font-weight:700">— up ảnh sản phẩm đã tách nền trắng</span></label>
+          <div class="dz mini" id="mainDz">
+            <div class="dz-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></div>
+            <b>Bấm chọn ảnh nền trắng của sản phẩm</b>
+            <p>Ảnh này thành <b>ảnh sản phẩm + ảnh đầu tiên</b>. Không bắt buộc.</p>
+          </div>
+          <input type="file" id="mainInp" accept="image/*" style="display:none"/>
+          <div id="mainPrev"></div>
+        </div>
+        <div class="field">
+          <label class="lab">Ảnh sản phẩm (poster, chi tiết…) <span class="req">*</span></label>
           <div class="dz" id="dz">
             <div class="dz-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5-5 5 5"/><path d="M12 5v12"/></svg></div>
             <b>Bấm để chọn nhiều ảnh</b>
-            <p>hoặc <a href="#" id="pickDir" style="color:var(--brand);font-weight:800;text-decoration:underline">chọn cả thư mục</a> · JPG/PNG/WebP · bấm 1 ảnh để đặt làm <b>đại diện</b>.</p>
+            <p>hoặc <a href="#" id="pickDir" style="color:var(--brand);font-weight:800;text-decoration:underline">chọn cả thư mục</a> · các ảnh này vào <b>bài viết</b> + thư viện ảnh.</p>
           </div>
           <input type="file" id="fileInp" accept="image/*" multiple style="display:none"/>
           <input type="file" id="dirInp" webkitdirectory directory multiple style="display:none"/>
@@ -189,10 +199,6 @@
           <textarea class="inp" id="noteInp" rows="4" placeholder="Dán mọi thông tin bạn có: thông số kỹ thuật, xuất xứ, bảo hành, khuyến mãi, điểm khác biệt so với đối thủ, đối tượng dùng… Càng chi tiết, bài càng chuẩn."></textarea>
           <div class="hint"><b style="color:var(--teal)">AI coi đây là nguồn thật</b> — chỉ viết theo thông số trong ảnh + ghi chú này, không bịa thêm.</div>
         </div>
-        <label style="display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:700;color:var(--text-2);margin-bottom:11px;cursor:pointer">
-          <input type="checkbox" id="autoBg" checked style="width:17px;height:17px;accent-color:var(--brand);cursor:pointer"/>
-          Tự động tách nền ảnh chụp sản phẩm → tạo ảnh nền trắng làm đại diện
-        </label>
         <button class="btn btn-gen" id="genBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5 10.1 10.9 5.5 9l4.6-1.4L12 3z"/></svg>
           Gen bài viết bằng AI
@@ -253,7 +259,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const state = { site:'doscom', csite:'doscom', cats:{doscom:null,noma:null}, imgs:[], gen:null, pubStatus:'draft' };
+const state = { site:'doscom', csite:'doscom', cats:{doscom:null,noma:null}, mainImg:null, imgs:[], gen:null, pubStatus:'draft' };
 
 // ---------- helpers ----------
 async function api(path, opts){ const r = await fetch(path, opts); let d; try{ d = await r.json(); }catch{ d = {ok:false,error:'Phản hồi không phải JSON ('+r.status+')'}; } return {status:r.status, d}; }
@@ -280,32 +286,20 @@ async function loadCats(site){
 // ---------- images ----------
 function readFile(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
 function downscale(dataURL, maxDim){ return new Promise(res=>{ const img=new Image(); img.onload=()=>{ let {width:w,height:h}=img; const sc=Math.min(1,maxDim/Math.max(w,h)); w=Math.round(w*sc); h=Math.round(h*sc); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h); res(cv.toDataURL('image/jpeg',0.85).split(',')[1]); }; img.onerror=()=>res(dataURL.split(',')[1]||''); img.src=dataURL; }); }
-function syncCardImg(){ if($('pvResult').classList.contains('show')) $('pcImg').src = state.imgs[0]?state.imgs[0].url:''; }
+function featuredUrl(){ return state.mainImg ? state.mainImg.url : (state.imgs[0]?state.imgs[0].url:''); }
+function syncCardImg(){ if($('pvResult').classList.contains('show')) $('pcImg').src = featuredUrl(); }
 
-// ---------- xóa nền (chạy trong trình duyệt, miễn phí) ----------
-let _bgMod=null;
-async function loadBgLib(){
-  if(_bgMod) return _bgMod;
-  toast('Đang tải model xóa nền lần đầu (vài chục MB, sau đó lưu cache)…');
-  _bgMod=await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.6.0/+esm');
-  return _bgMod;
+// ---------- ảnh nền trắng (ảnh đại diện, user tự up) ----------
+async function onMainFile(f){
+  if(!f || !f.type.startsWith('image/')) return;
+  const dataURL=await readFile(f);
+  state.mainImg={ url:dataURL, full:dataURL.split(',')[1], media_type:f.type||'image/jpeg', name:f.name };
+  renderMain(); renderThumbs(); syncCardImg();
 }
-function dataURLtoBlob(d){ const c=d.indexOf(','); const mime=(d.slice(0,c).match(/:(.*?);/)||[])[1]||'image/jpeg'; const bin=atob(d.slice(c+1)); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i); return new Blob([u],{type:mime}); }
-function whiteComposite(blob){ return new Promise((res,rej)=>{ const url=URL.createObjectURL(blob); const img=new Image(); img.onload=()=>{ const cv=document.createElement('canvas'); cv.width=img.naturalWidth||img.width; cv.height=img.naturalHeight||img.height; const ctx=cv.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,cv.width,cv.height); ctx.drawImage(img,0,0); URL.revokeObjectURL(url); res(cv.toDataURL('image/jpeg',0.92)); }; img.onerror=e=>{ URL.revokeObjectURL(url); rej(new Error('không đọc được ảnh kết quả')); }; img.src=url; }); }
-async function removeBg(i){
-  const im=state.imgs[i]; if(!im) return;
-  const t=$('thumbs').children[i]; if(t) t.classList.add('busy');
-  try{
-    const mod=await loadBgLib();
-    const fn=mod.removeBackground || (mod.default&&mod.default.removeBackground) || mod.default;
-    if(typeof fn!=='function') throw new Error('không nạp được thư viện xóa nền');
-    const outBlob=await fn(dataURLtoBlob(im.url));            // PNG trong suốt
-    const whiteURL=await whiteComposite(outBlob);            // ghép nền trắng
-    const small=await downscale(whiteURL,1152);
-    state.imgs.unshift({ url:whiteURL, full:whiteURL.split(',')[1], small, media_type:'image/jpeg', name:'nen-trang.jpg', pl:{role:'featured'} });
-    syncCardImg(); toast('Đã tạo ảnh nền trắng và đặt làm ảnh đại diện ✓');
-  }catch(e){ toast('Xóa nền lỗi: '+((e&&e.message)||e),true); }
-  finally{ renderThumbs(); }
+function renderMain(){
+  const el=$('mainPrev'), has=!!state.mainImg;
+  $('mainDz').style.display = has ? 'none' : 'block';
+  el.innerHTML = has ? ('<div class="mainthumb"><img src="'+state.mainImg.url+'" alt=""/><span class="fbadge">ảnh đầu tiên</span><button class="rm" id="mainRm" title="Xoá">×</button></div>') : '';
 }
 async function onFiles(files){
   const list=[...files].filter(f=>f.type.startsWith('image/')).sort((a,b)=>(a.name||'').localeCompare(b.name||'','vi'));
@@ -317,14 +311,14 @@ async function onFiles(files){
 }
 function renderThumbs(){
   const wrap=$('thumbs'); wrap.innerHTML='';
+  const showBadge = !state.mainImg;   // ảnh nền trắng có → nó mới là ảnh đại diện
   state.imgs.forEach((im,i)=>{ const d=document.createElement('div'); d.className='thumb';
-    d.innerHTML='<img src="'+im.url+'" alt=""/>'+(i===0?'<span class="fbadge">đại diện</span>':'')
-      +'<button class="bg" data-i="'+i+'" title="Tách nền → tạo ảnh nền trắng làm đại diện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2 2M16.4 16.4l2 2M5.6 18.4l2-2M16.4 7.6l2-2"/><circle cx="12" cy="12" r="3.2"/></svg>nền</button>'
+    d.innerHTML='<img src="'+im.url+'" alt=""/>'+(showBadge&&i===0?'<span class="fbadge">đại diện</span>':'')
       +'<button class="rm" data-i="'+i+'" title="Xoá">×</button>';
     wrap.appendChild(d); });
   const n=state.imgs.length;
   $('imgHint').style.display = n?'block':'none';
-  $('imgHint').innerHTML = n? ('<b style="color:var(--teal)">'+n+' ảnh</b> — tất cả được dùng trong bài. Bấm nút <b>“nền”</b> góc trái ảnh để tách nền → tạo ảnh nền trắng làm đại diện.') : '';
+  $('imgHint').innerHTML = n? ('<b style="color:var(--teal)">'+n+' ảnh</b> — tất cả được dùng trong bài viết + thư viện.'+(showBadge?' Bấm 1 ảnh để đặt làm đại diện.':'')) : '';
 }
 
 // ---------- site switch ----------
@@ -378,9 +372,8 @@ function renderResult(){
   const g=state.gen;
   // Gắn vị trí (placement) vào từng ảnh + đưa ảnh featured lên đầu → kéo/xoá không lệch.
   (g.image_placements||[]).forEach(p=>{ if(state.imgs[p.index]) state.imgs[p.index].pl=p; });
-  const psi=Number(g.product_shot_index);
-  state._shotImg = (Number.isFinite(psi) && psi>=0) ? state.imgs[psi] : null;
-  const fi=state.imgs.findIndex(im=>im.pl&&im.pl.role==='featured'); if(fi>0){ const m=state.imgs.splice(fi,1)[0]; state.imgs.unshift(m); }
+  // Không có ảnh nền trắng riêng → đưa ảnh AI chọn (featured) lên đầu gallery.
+  if(!state.mainImg){ const fi=state.imgs.findIndex(im=>im.pl&&im.pl.role==='featured'); if(fi>0){ const m=state.imgs.splice(fi,1)[0]; state.imgs.unshift(m); } }
   renderThumbs();
   $('pvGen').style.display='none';
   $('specList').innerHTML=(g.specs_read||[]).map(s=>'<li>'+esc(s)+'</li>').join('') || '<li style="color:var(--text-2)">(AI không trích được thông số — cân nhắc thêm ảnh bảng thông số hoặc ghi chú)</li>';
@@ -394,25 +387,11 @@ function renderResult(){
   // product card
   $('pcName').textContent=$('nameInp').value||'';
   $('pcNow').textContent=money($('priceInp').value)+'₫'; $('pcOld').textContent=$('oldInp').value?money($('oldInp').value)+'₫':'';
-  $('pcImg').src=state.imgs[0]?state.imgs[0].url:''; $('pcCat').textContent=catName(); $('catBadge').textContent='Danh mục: '+catName();
+  $('pcImg').src=featuredUrl(); $('pcCat').textContent=catName(); $('catBadge').textContent='Danh mục: '+catName();
   // dual banner
   if(state.site==='both'){ $('dualBanner').style.display='flex'; const dc=$('catSel').options[$('catSel').selectedIndex]?.textContent.replace(/\s*\(\d+\)/,'').replace(/^—\s*/,'')||''; const nc=$('catSel2').options[$('catSel2').selectedIndex]?.textContent.replace(/\s*\(\d+\)/,'').replace(/^—\s*/,'')||''; $('dualBanner').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 17H7A5 5 0 017 7h2"/><path d="M15 7h2a5 5 0 010 10h-2"/><path d="M8 12h8"/></svg><span>Đăng lên <b>2 web</b> · doscom.vn → '+esc(dc)+' &nbsp;+&nbsp; noma.vn → '+esc(nc)+'</span>'; }
   else $('dualBanner').style.display='none';
   $('pvResult').classList.add('show'); $('pubbar').style.display='flex'; updatePubLabel();
-  maybeAutoBg();
-}
-function maybeAutoBg(){
-  if(!$('autoBg').checked) return;
-  // đã có ảnh nền trắng ở đầu (làm rồi) → khỏi lặp
-  if(state.imgs[0] && /^nen-trang/.test(state.imgs[0].name||'')) return;
-  const target=state._shotImg;
-  if(!target){
-    if(state.gen && Number(state.gen.product_shot_index)===-1)
-      toast('AI không thấy ảnh chụp sản phẩm rõ để tách nền — thêm 1 ảnh chụp sản phẩm hoặc bấm nút “nền” thủ công.');
-    return;
-  }
-  const idx=state.imgs.indexOf(target);
-  if(idx>=0) removeBg(idx);
 }
 
 // ---------- publish ----------
@@ -421,7 +400,15 @@ function getToken(){ return localStorage.getItem('products_token')||''; }
 function askToken(){ const t=prompt('Nhập MÃ XUẤT BẢN (khớp secret PRODUCTS_TOKEN trên CRM). Bỏ trống nếu đã bật đăng nhập Access:', getToken()); if(t!==null) localStorage.setItem('products_token',t.trim()); return getToken(); }
 function cleanHtml(){ return $('longDesc').innerHTML.replace(/<figure[\s\S]*?<\/figure>/gi,'').trim(); }
 function collectTags(){ return Array.prototype.map.call($('tagChips').querySelectorAll('.chip'), c=>c.childNodes[0].textContent.trim()).filter(Boolean); }
-function buildImages(){ return state.imgs.map((im,i)=>{ const p=im.pl||{}; return {data:im.full, media_type:im.media_type, role:i===0?'featured':undefined, after_heading:i===0?'':(p.after_heading||''), alt:p.alt||$('nameInp').value, caption:p.caption||''}; }); }
+function buildImages(){
+  const gallery = state.imgs.map((im)=>{ const p=im.pl||{}; return {data:im.full, media_type:im.media_type, after_heading:p.after_heading||'', alt:p.alt||$('nameInp').value, caption:p.caption||''}; });
+  if(state.mainImg){
+    // ảnh nền trắng = ảnh đầu tiên + đại diện; poster theo sau (vào bài + gallery)
+    return [{ data:state.mainImg.full, media_type:state.mainImg.media_type, role:'featured', alt:($('focusKw').textContent.trim()||$('nameInp').value), caption:'' }, ...gallery];
+  }
+  if(gallery[0]) gallery[0].role='featured';   // không có ảnh nền trắng → ảnh poster đầu làm đại diện
+  return gallery;
+}
 async function publish(){
   if(!state.gen){ toast('Chưa có bài viết',true); return; }
   const catId=$('catSel').value; if(!catId){ toast('Chọn danh mục',true); return; }
@@ -450,10 +437,12 @@ $('siteSwitch').addEventListener('click',e=>{ const b=e.target.closest('button')
 $('dz').onclick=e=>{ if(e.target.id==='pickDir'){ e.preventDefault(); $('dirInp').click(); return; } $('fileInp').click(); };
 $('fileInp').onchange=e=>{ onFiles(e.target.files); e.target.value=''; };
 $('dirInp').onchange=e=>{ onFiles(e.target.files); e.target.value=''; };
+$('mainDz').onclick=()=>$('mainInp').click();
+$('mainInp').onchange=e=>{ onMainFile(e.target.files[0]); e.target.value=''; };
+$('mainPrev').addEventListener('click',e=>{ if(e.target.closest('#mainRm')){ state.mainImg=null; renderMain(); renderThumbs(); syncCardImg(); } });
 $('thumbs').addEventListener('click',e=>{
-  const bg=e.target.closest('.bg'); if(bg){ removeBg(+bg.dataset.i); return; }
   const rm=e.target.closest('.rm'); if(rm){ state.imgs.splice(+rm.dataset.i,1); renderThumbs(); syncCardImg(); return; }
-  const th=e.target.closest('.thumb'); if(!th)return;
+  const th=e.target.closest('.thumb'); if(!th || state.mainImg)return;   // có ảnh nền trắng thì không đổi đại diện bằng poster
   const i=[...$('thumbs').children].indexOf(th);
   if(i>0){ const m=state.imgs.splice(i,1)[0]; state.imgs.unshift(m); renderThumbs(); syncCardImg(); toast('Đã đặt làm ảnh đại diện'); }
 });
