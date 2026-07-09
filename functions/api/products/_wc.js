@@ -7,7 +7,27 @@
 // ENV cần (secret, KHÔNG hard-code): WC_DOSCOM_CK/CS/USER/APP_PWD, WC_NOMA_CK/CS/USER/APP_PWD.
 // URL site là công khai nên để hằng số.
 
-export const SITE_URL = { doscom: "https://doscom.vn", noma: "https://noma.vn" };
+export const SITE_URL = {
+  doscom: "https://doscom.vn",
+  noma: "https://noma.vn",
+  nomaauto: "https://nomaauto.us", // bản tiếng Anh (USD)
+};
+
+export const VND_USD_RATE = 26500;
+
+// Đổi giá VND (chuỗi có dấu chấm) → USD chuỗi 2 số lẻ.
+export function vndToUsd(vnd, rate) {
+  const n = Number(String(vnd || "").replace(/[^\d]/g, ""));
+  const r = Number(rate) || VND_USD_RATE;
+  return n ? (n / r).toFixed(2) : "";
+}
+
+// Trường giá WooCommerce cho site USD (nomaauto): quy đổi từ VND.
+export function usdPriceFields(price, oldPrice, rate) {
+  const p = vndToUsd(price, rate), o = vndToUsd(oldPrice, rate);
+  if (o && p && Number(o) > Number(p)) return { regular_price: o, sale_price: p };
+  return { regular_price: p || o || "" };
+}
 
 export function siteCreds(site, env) {
   const S = String(site || "").toUpperCase(); // DOSCOM | NOMA
@@ -92,6 +112,27 @@ export function injectFigure(html, afterHeading, url, alt, caption) {
     }
   }
   return html + fig;
+}
+
+// Chèn ảnh theo VỊ TRÍ (sau H2 thứ i) — dùng cho bài đã dịch sang tiếng Anh
+// (không match được after_heading tiếng Việt). figures = [{url, alt, caption}] theo thứ tự.
+export function injectByPosition(html, figures) {
+  let out = html;
+  for (let i = 0; i < (figures || []).length; i++) {
+    const fig = figureHtml(figures[i].url, figures[i].alt, figures[i].caption);
+    const re = /<\/h2>/gi;
+    let m, count = 0, hEnd = -1;
+    while ((m = re.exec(out)) !== null) {
+      if (count === i) { hEnd = m.index + m[0].length; break; }
+      count++;
+    }
+    if (hEnd < 0) { out += fig; continue; }
+    const after = out.slice(hEnd);
+    const pe = after.search(/<\/p>/i);
+    const pos = pe > -1 ? hEnd + pe + 4 : hEnd;
+    out = out.slice(0, pos) + fig + out.slice(pos);
+  }
+  return out;
 }
 
 export async function fetchCategories(c) {

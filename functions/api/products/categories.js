@@ -11,8 +11,8 @@ function json(o, s = 200) {
 
 export async function onRequestGet({ request, env }) {
   const site = String(new URL(request.url).searchParams.get("site") || "").toLowerCase();
-  if (site !== "doscom" && site !== "noma") {
-    return json({ ok: false, error: "Tham số site phải là doscom hoặc noma" }, 400);
+  if (!["doscom", "noma", "nomaauto"].includes(site)) {
+    return json({ ok: false, error: "Tham số site phải là doscom, noma hoặc nomaauto" }, 400);
   }
   const c = siteCreds(site, env);
   if (!isConfigured(c)) {

@@ -8,7 +8,36 @@ import {
   siteCreds,
   isConfigured,
   deriveKeyword,
+  vndToUsd,
+  usdPriceFields,
+  injectByPosition,
+  SITE_URL,
 } from "../functions/api/products/_wc.js";
+
+test("vndToUsd: đổi VND (có dấu chấm) → USD 2 số lẻ theo tỉ giá", () => {
+  assert.equal(vndToUsd("265.000", 26500), "10.00");
+  assert.equal(vndToUsd("99000", 26500), "3.74");
+  assert.equal(vndToUsd("", 26500), "");
+});
+
+test("usdPriceFields: giá gốc>bán → regular=gốc USD, sale=bán USD", () => {
+  assert.deepEqual(usdPriceFields("265000", "530000", 26500), { regular_price: "20.00", sale_price: "10.00" });
+  assert.deepEqual(usdPriceFields("265000", "", 26500), { regular_price: "10.00" });
+});
+
+test("injectByPosition: chèn ảnh sau H2 theo thứ tự (cho bài EN)", () => {
+  const html = "<h2>Overview</h2><p>Intro.</p><h2>How to use</h2><p>Steps.</p>";
+  const out = injectByPosition(html, [
+    { url: "a.jpg", alt: "a", caption: "" },
+    { url: "b.jpg", alt: "b", caption: "" },
+  ]);
+  assert.ok(out.indexOf("a.jpg") > out.indexOf("Intro.") && out.indexOf("a.jpg") < out.indexOf("How to use"), "ảnh 1 sau H2 đầu");
+  assert.ok(out.indexOf("b.jpg") > out.indexOf("Steps."), "ảnh 2 sau H2 hai");
+});
+
+test("SITE_URL có nomaauto.us", () => {
+  assert.equal(SITE_URL.nomaauto, "https://nomaauto.us");
+});
 
 test("deriveKeyword: fallback keyword sạch từ tên (bỏ model + đơn vị)", () => {
   assert.equal(deriveKeyword("Bọt vệ sinh đa năng - Noma680"), "bọt vệ sinh đa năng");

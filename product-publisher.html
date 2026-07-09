@@ -137,7 +137,8 @@
       <span class="ss-lab">Đăng lên</span>
       <button class="on" data-site="doscom"><span class="dot"></span>doscom.vn</button>
       <button data-site="noma"><span class="dot"></span>noma.vn</button>
-      <button data-site="both"><span class="dot"></span>Cả 2 web</button>
+      <button data-site="nomaauto"><span class="dot"></span>nomaauto.us&nbsp;<b style="font-size:9px;opacity:.75">EN</b></button>
+      <button data-site="all"><span class="dot"></span>Cả 3 web</button>
     </div>
   </div>
 
@@ -160,6 +161,10 @@
           <label class="lab">Danh mục trên <b style="color:var(--green)">noma.vn</b> <span class="req">*</span></label>
           <select class="inp" id="catSel2"></select>
         </div>
+        <div class="field" id="catField3" style="display:none">
+          <label class="lab">Danh mục trên <b style="color:#2563EB">nomaauto.us</b> (EN) <span class="req">*</span></label>
+          <select class="inp" id="catSel3"></select>
+        </div>
         <div class="field">
           <label class="lab">Tên sản phẩm <span class="req">*</span></label>
           <input class="inp" id="nameInp" placeholder="VD: Máy dò sóng Doscom D5"/>
@@ -168,6 +173,7 @@
           <div class="field"><label class="lab">Giá bán <span class="req">*</span></label><div class="price-wrap"><input class="inp money" id="priceInp" placeholder="4.500.000"/><span class="cur">₫</span></div></div>
           <div class="field"><label class="lab">Giá gốc <span style="color:var(--text-2);font-weight:700">(gạch)</span></label><div class="price-wrap"><input class="inp money" id="oldInp" placeholder="5.900.000"/><span class="cur">₫</span></div></div>
         </div>
+        <div class="hint" id="usdHint" style="display:none;color:var(--accent);font-weight:700;margin:-6px 0 12px">Giá nhập bằng VND — nomaauto.us sẽ tự đổi sang USD (÷ 26.500).</div>
         <div class="row2">
           <div class="field"><label class="lab">Tồn kho</label><input class="inp money" id="stockInp" value="100" placeholder="100"/></div>
           <div class="field"><label class="lab">Đã bán <span style="color:var(--text-2);font-weight:700">(vd 15000)</span></label><input class="inp money" id="soldInp" placeholder="15000"/></div>
@@ -259,7 +265,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const state = { site:'doscom', csite:'doscom', cats:{doscom:null,noma:null}, mainImg:null, imgs:[], gen:null, pubStatus:'draft' };
+const state = { site:'doscom', csite:'doscom', cats:{doscom:null,noma:null,nomaauto:null}, mainImg:null, imgs:[], gen:null, pubStatus:'draft' };
 
 // ---------- helpers ----------
 async function api(path, opts){ const r = await fetch(path, opts); let d; try{ d = await r.json(); }catch{ d = {ok:false,error:'Phản hồi không phải JSON ('+r.status+')'}; } return {status:r.status, d}; }
@@ -323,16 +329,25 @@ function renderThumbs(){
 
 // ---------- site switch ----------
 async function loadSite(s){
-  state.site=s; state.csite=(s==='both')?'doscom':s;
-  const both=s==='both';
-  const [a,b] = (s==='noma')?['#16A34A','#14B8A6']:['#3257E6','#8B5CF6'];
-  document.documentElement.style.setProperty('--brand',a); document.documentElement.style.setProperty('--brand-2',b);
-  $('catField2').style.display = both?'block':'none';
-  $('catLabel').innerHTML = both ? 'Danh mục trên <b style="color:#3257E6">doscom.vn</b> <span class="req">*</span>' : 'Danh mục <span class="req">*</span>';
-  const primary = both?'doscom':s;
+  state.site=s;
+  const all = s==='all';
+  // brand context cho AI (viết tiếng Việt): nomaauto (chăm sóc xe) → noma; all → doscom
+  state.csite = all ? 'doscom' : (s==='nomaauto' ? 'noma' : s);
+  const acc = s==='noma' ? ['#16A34A','#14B8A6'] : s==='nomaauto' ? ['#2563EB','#0EA5E9'] : ['#3257E6','#8B5CF6'];
+  document.documentElement.style.setProperty('--brand',acc[0]); document.documentElement.style.setProperty('--brand-2',acc[1]);
+  $('catField2').style.display = all?'block':'none';
+  $('catField3').style.display = all?'block':'none';
+  $('usdHint').style.display = (all || s==='nomaauto') ? 'block' : 'none';
+  const primary = all ? 'doscom' : s;
+  const primaryLabel = { doscom:'doscom.vn', noma:'noma.vn', nomaauto:'nomaauto.us (EN)' }[primary];
+  $('catLabel').innerHTML = all
+    ? 'Danh mục trên <b style="color:#3257E6">doscom.vn</b> <span class="req">*</span>'
+    : ('Danh mục trên <b>'+primaryLabel+'</b> <span class="req">*</span>');
   fillSelect($('catSel'), await loadCats(primary));
-  if(both) fillSelect($('catSel2'), await loadCats('noma'));
-  $('catHint').textContent = both ? 'Sản phẩm lên CẢ 2 web — chọn danh mục riêng cho từng site.' : ((state.cats[s]||[]).length+' danh mục · kéo trực tiếp từ '+s+'.vn');
+  if(all){ fillSelect($('catSel2'), await loadCats('noma')); fillSelect($('catSel3'), await loadCats('nomaauto')); }
+  $('catHint').textContent = all
+    ? 'Sản phẩm lên CẢ 3 web — chọn danh mục riêng cho từng site (nomaauto.us đăng bản tiếng Anh).'
+    : ((state.cats[primary]||[]).length+' danh mục · '+primaryLabel+(s==='nomaauto'?' — bài sẽ được dịch sang tiếng Anh':''));
   resetPreview();
 }
 function resetPreview(){ $('pvEmpty').style.display='flex'; $('pvGen').style.display='none'; $('pvResult').classList.remove('show'); $('pubbar').style.display='none'; }
@@ -388,14 +403,21 @@ function renderResult(){
   $('pcName').textContent=$('nameInp').value||'';
   $('pcNow').textContent=money($('priceInp').value)+'₫'; $('pcOld').textContent=$('oldInp').value?money($('oldInp').value)+'₫':'';
   $('pcImg').src=featuredUrl(); $('pcCat').textContent=catName(); $('catBadge').textContent='Danh mục: '+catName();
-  // dual banner
-  if(state.site==='both'){ $('dualBanner').style.display='flex'; const dc=$('catSel').options[$('catSel').selectedIndex]?.textContent.replace(/\s*\(\d+\)/,'').replace(/^—\s*/,'')||''; const nc=$('catSel2').options[$('catSel2').selectedIndex]?.textContent.replace(/\s*\(\d+\)/,'').replace(/^—\s*/,'')||''; $('dualBanner').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 17H7A5 5 0 017 7h2"/><path d="M15 7h2a5 5 0 010 10h-2"/><path d="M8 12h8"/></svg><span>Đăng lên <b>2 web</b> · doscom.vn → '+esc(dc)+' &nbsp;+&nbsp; noma.vn → '+esc(nc)+'</span>'; }
-  else $('dualBanner').style.display='none';
+  // banner đa web / tiếng Anh
+  const banner=$('dualBanner');
+  const nm=(sel)=>{ const o=sel.options[sel.selectedIndex]; return o?o.textContent.replace(/\s*\(\d+\)/,'').replace(/^—\s*/,''):''; };
+  if(state.site==='all'){
+    banner.style.display='flex';
+    banner.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 17H7A5 5 0 017 7h2"/><path d="M15 7h2a5 5 0 010 10h-2"/><path d="M8 12h8"/></svg><span>Đăng <b>3 web</b>: doscom.vn → '+esc(nm($('catSel')))+' · noma.vn → '+esc(nm($('catSel2')))+' · nomaauto.us <b>(EN, USD)</b> → '+esc(nm($('catSel3')))+'</span>';
+  } else if(state.site==='nomaauto'){
+    banner.style.display='flex';
+    banner.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/></svg><span>Đăng lên <b>nomaauto.us</b> — nội dung <b>dịch sang tiếng Anh</b> + giá đổi <b>USD</b> khi đăng.</span>';
+  } else banner.style.display='none';
   $('pvResult').classList.add('show'); $('pubbar').style.display='flex'; updatePubLabel();
 }
 
 // ---------- publish ----------
-function updatePubLabel(){ const v=state.pubStatus==='draft'?'Lưu nháp':'Đăng ngay'; $('pubLabel').textContent = state.site==='both'? v+' · 2 web' : v; }
+function updatePubLabel(){ const v=state.pubStatus==='draft'?'Lưu nháp':'Đăng ngay'; const suf = state.site==='all'?' · 3 web' : state.site==='nomaauto'?' · nomaauto.us' : ''; $('pubLabel').textContent = v+suf; }
 function getToken(){ return localStorage.getItem('products_token')||''; }
 function askToken(){ const t=prompt('Nhập MÃ XUẤT BẢN (khớp secret PRODUCTS_TOKEN trên CRM). Bỏ trống nếu đã bật đăng nhập Access:', getToken()); if(t!==null) localStorage.setItem('products_token',t.trim()); return getToken(); }
 function cleanHtml(){ return $('longDesc').innerHTML.replace(/<figure[\s\S]*?<\/figure>/gi,'').trim(); }
@@ -412,11 +434,12 @@ function buildImages(){
 async function publish(){
   if(!state.gen){ toast('Chưa có bài viết',true); return; }
   const catId=$('catSel').value; if(!catId){ toast('Chọn danh mục',true); return; }
+  if(state.site==='all' && (!$('catSel2').value || !$('catSel3').value)){ toast('Chọn danh mục cho cả 3 web',true); return; }
   const body={ site:state.site, name:$('nameInp').value.trim(), price:$('priceInp').value, old_price:$('oldInp').value,
     stock:$('stockInp').value, sold:$('soldInp').value, primary_keyword:$('focusKw').textContent.trim(),
     status:state.pubStatus, seo_title:$('seoTitle').textContent.trim(), short_description:$('shortDesc').innerHTML.trim(),
     long_html:cleanHtml(), meta_description:$('metaDesc').textContent.trim(), tags:collectTags(), images:buildImages() };
-  if(state.site==='both') body.categories={doscom:$('catSel').value, noma:$('catSel2').value}; else body.category_id=catId;
+  if(state.site==='all') body.categories={doscom:$('catSel').value, noma:$('catSel2').value, nomaauto:$('catSel3').value}; else body.category_id=catId;
   const headers={'content-type':'application/json'}; const tok=getToken(); if(tok) headers['X-Products-Token']=tok;
   $('pubBtn').disabled=true; const old=$('pubLabel').textContent; $('pubLabel').textContent='Đang đăng…';
   try{
