@@ -113,6 +113,16 @@
   .prodcard .pc-price{display:flex;align-items:baseline;gap:9px}
   .prodcard .pc-now{font-size:18px;font-weight:900;color:var(--red);font-variant-numeric:tabular-nums}
   .prodcard .pc-old{font-size:12.5px;color:var(--text-2);text-decoration:line-through;font-variant-numeric:tabular-nums}
+  .pubresult{margin:14px 17px 0;padding:13px 15px;border-radius:12px;background:color-mix(in srgb,var(--green) 9%,var(--surface));border:1px solid color-mix(in srgb,var(--green) 35%,var(--border))}
+  .pubresult .pr-h{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:900;color:var(--green);margin-bottom:4px}
+  .pubresult .pr-h svg{width:17px;height:17px;flex:none}
+  .pr-link{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;background:var(--surface);border:1px solid var(--border);margin-top:8px}
+  .pr-site{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:20px;color:#fff;background:var(--brand);white-space:nowrap}
+  .pr-url{flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pr-status{font-size:10px;font-weight:700}
+  .pr-view{font-size:11.5px;font-weight:800;color:#fff;background:var(--brand);border-radius:8px;padding:6px 12px;text-decoration:none;white-space:nowrap;flex:none}
+  .pr-view:hover{filter:brightness(1.08)}
+  .pr-bad{color:var(--red);font-size:12px;font-weight:700;margin-top:8px}
   .pubbar{position:sticky;bottom:0;display:flex;align-items:center;gap:11px;padding:13px 17px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--border);flex-wrap:wrap}
   .status-choice{display:flex;gap:5px;padding:4px;background:var(--muted);border-radius:10px;border:1px solid var(--border)}
   .status-choice button{border:0;background:none;font-family:var(--font);font-weight:800;font-size:12px;color:var(--text-2);padding:6px 11px;border-radius:7px;cursor:pointer}
@@ -252,6 +262,7 @@
         </div>
       </div>
 
+      <div class="pubresult" id="pubResult" style="display:none"></div>
       <div class="pubbar" id="pubbar" style="display:none">
         <div class="status-choice" id="statusChoice"><button class="on" data-st="draft">Lưu nháp</button><button data-st="publish">Đăng ngay</button></div>
         <button class="btn btn-ghost" id="regenBtn" style="padding:11px 13px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-2.6-6.4"/><path d="M21 3v6h-6"/></svg>Gen lại</button>
@@ -350,13 +361,13 @@ async function loadSite(s){
     : ((state.cats[primary]||[]).length+' danh mục · '+primaryLabel+(s==='nomaauto'?' — bài sẽ được dịch sang tiếng Anh':''));
   resetPreview();
 }
-function resetPreview(){ $('pvEmpty').style.display='flex'; $('pvGen').style.display='none'; $('pvResult').classList.remove('show'); $('pubbar').style.display='none'; }
+function resetPreview(){ $('pvEmpty').style.display='flex'; $('pvGen').style.display='none'; $('pvResult').classList.remove('show'); $('pubbar').style.display='none'; $('pubResult').style.display='none'; }
 
 // ---------- generate ----------
 async function generate(regen){
   if(!$('nameInp').value.trim()){ toast('Nhập tên sản phẩm đã',true); return; }
   if(!state.imgs.length){ toast('Chọn ít nhất 1 ảnh',true); return; }
-  topmsg(''); $('pvEmpty').style.display='none'; $('pvResult').classList.remove('show'); $('pubbar').style.display='none'; $('pvGen').style.display='block';
+  topmsg(''); $('pvEmpty').style.display='none'; $('pvResult').classList.remove('show'); $('pubbar').style.display='none'; $('pubResult').style.display='none'; $('pvGen').style.display='block';
   $('genBtn').disabled=true; $('regenBtn') && ($('regenBtn').disabled=true);
   const steps=['Đang gửi ảnh cho Claude…','Đọc thông số trong ảnh…','Viết tiêu đề SEO + bài viết…','Sắp xếp ảnh vào đoạn…']; let si=0; const iv=setInterval(()=>{ $('genMsg').textContent=steps[si=(si+1)%steps.length]; },1400);
   try{
@@ -418,6 +429,17 @@ function renderResult(){
 
 // ---------- publish ----------
 function updatePubLabel(){ const v=state.pubStatus==='draft'?'Lưu nháp':'Đăng ngay'; const suf = state.site==='all'?' · 3 web' : state.site==='nomaauto'?' · nomaauto.us' : ''; $('pubLabel').textContent = v+suf; }
+function siteLabel(s){ return s==='nomaauto'?'nomaauto.us':s+'.vn'; }
+function renderPubResult(results, verb){
+  const oks=results.filter(r=>r.ok), bad=results.filter(r=>!r.ok);
+  let h='<div class="pr-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>'+verb+' — '+oks.length+'/'+results.length+' web thành công</div>';
+  oks.forEach(r=>{
+    const st = r.status==='publish' ? '<span class="pr-status" style="color:var(--green)">Đã xuất bản</span>' : '<span class="pr-status" style="color:var(--accent)">Nháp</span>';
+    h+='<div class="pr-link"><span class="pr-site">'+siteLabel(r.site)+'</span><span class="pr-url">'+esc(r.url)+' &nbsp;'+st+'</span><a class="pr-view" href="'+esc(r.url)+'" target="_blank" rel="noopener">Xem bài ↗</a></div>';
+  });
+  bad.forEach(r=>{ h+='<div class="pr-bad">✕ '+siteLabel(r.site)+': '+esc(r.error)+'</div>'; });
+  const el=$('pubResult'); el.innerHTML=h; el.style.display='block'; el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
 function getToken(){ return localStorage.getItem('products_token')||''; }
 function askToken(){ const t=prompt('Nhập MÃ XUẤT BẢN (khớp secret PRODUCTS_TOKEN trên CRM). Bỏ trống nếu đã bật đăng nhập Access:', getToken()); if(t!==null) localStorage.setItem('products_token',t.trim()); return getToken(); }
 function cleanHtml(){ return $('longDesc').innerHTML.replace(/<figure[\s\S]*?<\/figure>/gi,'').trim(); }
@@ -446,11 +468,10 @@ async function publish(){
     let {status,d}=await api('/api/products/publish',{method:'POST',headers,body:JSON.stringify(body)});
     if(status===401){ const t=askToken(); if(t){ headers['X-Products-Token']=t; ({status,d}=await api('/api/products/publish',{method:'POST',headers,body:JSON.stringify(body)})); } }
     if(!d || (!d.ok && !Array.isArray(d.results))){ toast('Đăng lỗi: '+esc((d&&d.error)||'không rõ'),true); return; }
-    const oks=(d.results||[]).filter(r=>r.ok), bad=(d.results||[]).filter(r=>!r.ok);
+    const results=d.results||[]; const bad=results.filter(r=>!r.ok);
     const verb=state.pubStatus==='draft'?'Đã lưu nháp':'Đã đăng';
-    let html=oks.map(r=>'<a href="'+r.url+'" target="_blank" rel="noopener">'+r.site+'.vn</a> ('+r.status+')').join(' · ');
-    if(bad.length) html+= (html?' — ':'')+'<b>lỗi:</b> '+bad.map(r=>r.site+': '+esc(r.error)).join('; ');
-    toast(verb+' · '+html, bad.length>0);
+    renderPubResult(results, verb);
+    toast(verb + (bad.length? ' — có '+bad.length+' web lỗi' : ' ✓ (xem link bên dưới)'), bad.length>0);
   }catch(e){ toast('Lỗi mạng khi đăng',true); }
   finally{ $('pubBtn').disabled=false; $('pubLabel').textContent=old; }
 }
