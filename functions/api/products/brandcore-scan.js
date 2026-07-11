@@ -14,7 +14,7 @@
 //
 // Chống hại: chỉ đụng SP NOMA (isNomaProduct); AI được lệnh GIỮ NGUYÊN mọi phần khác, chỉ sửa cụm vi phạm.
 import { callClaude } from "../geo/_utils/claude.js";
-import { NOMA_BRAND_GUIDE, scanForbidden, applyFixes } from "../geo/_utils/noma-brandcore.js";
+import { NOMA_BRAND_GUIDE, NOMA_BRAND_GUIDE_EN, NOMA_FORBIDDEN_EN, scanForbidden, applyFixes } from "../geo/_utils/noma-brandcore.js";
 import { findSkuCode, skuSpecText } from "../geo/_utils/noma-sku-specs.js";
 import { siteCreds, isConfigured, listProducts, getProduct, isNomaProduct } from "./_wc.js";
 
@@ -41,18 +41,22 @@ TRẢ VỀ DUY NHẤT JSON hợp lệ (không markdown, không chữ ngoài JSON
   "violations": [ { "type": "loại vi phạm ngắn gọn", "original": "cụm gốc COPY NGUYÊN VĂN", "fixed": "cụm thay thế", "reason": "vì sao trái brand core" } ]
 }`;
 
+// nomaauto.us = bản tiếng Anh → dùng bộ từ cấm EN; doscom.vn/noma.vn = tiếng Việt.
+const forbiddenFor = (site) => (site === "nomaauto" ? NOMA_FORBIDDEN_EN : undefined);
+
 async function listNomaProducts(c, site) {
   const products = [];
   let scanned = 0;
   // doscom.vn trộn cả SP an ninh → search="NOMA" + lọc isNomaProduct.
   // noma.vn / nomaauto.us: MỌI SP đều là NOMA → không search, không lọc (khỏi sót SP không có chữ "noma" trong tên).
   const isMixed = site === "doscom";
+  const list = forbiddenFor(site);
   for (let page = 1; page <= 6; page++) {
     const { items, totalPages } = await listProducts(c, { search: isMixed ? "NOMA" : "", perPage: 50, page });
     scanned += items.length;
     for (const p of items) {
       if (isMixed && !isNomaProduct(p)) continue;
-      const flags = scanForbidden(`${p.name} ${p.short_description || ""} ${p.description || ""}`);
+      const flags = scanForbidden(`${p.name} ${p.short_description || ""} ${p.description || ""}`, list);
       products.push({ id: p.id, name: p.name, permalink: p.permalink, status: p.status, flags });
     }
     if (page >= totalPages || !items.length) break;
@@ -87,26 +91,33 @@ export async function onRequestPost({ request, env }) {
 
       const results = [];
       let cost = 0;
+      const isEN = site === "nomaauto";
+      const brandGuide = isEN ? NOMA_BRAND_GUIDE_EN : NOMA_BRAND_GUIDE;
+      const forbidden = forbiddenFor(site);
+      const langNote = isEN
+        ? `\n\n⚠️ NGÔN NGỮ: nội dung bài LÀ TIẾNG ANH (nomaauto.us). "original" và "fixed" trong JSON PHẢI bằng TIẾNG ANH, KHÔNG dịch sang tiếng Việt.`
+        : "";
       for (const id of ids) {
         let p;
         try { p = await getProduct(c, id); }
         catch (e) { results.push({ id, error: String(e.message || e) }); continue; }
         if (site === "doscom" && !isNomaProduct(p)) { results.push({ id, name: p.name, skipped: "không phải SP NOMA" }); continue; }
 
-        const regexFlags = scanForbidden(`${p.name} ${p.short_description || ""} ${p.description || ""}`);
-        const specCode = findSkuCode(p.name);
+        const regexFlags = scanForbidden(`${p.name} ${p.short_description || ""} ${p.description || ""}`, forbidden);
+        // Thông số chuẩn HDSD đang là tiếng Việt → chỉ nhét cho site tiếng Việt (bỏ với nomaauto EN).
+        const specCode = isEN ? null : findSkuCode(p.name);
         const specBlock = specCode ? `\n${skuSpecText(specCode)}\n\n` : "";
         const userPrompt =
           `TÊN SẢN PHẨM: ${p.name}\n\n` +
           specBlock +
           `MÔ TẢ NGẮN (short_description, HTML):\n${p.short_description || "(trống)"}\n\n` +
           `MÔ TẢ DÀI (description, HTML):\n${p.description || "(trống)"}\n\n` +
-          `Hãy trả JSON đúng schema. Sửa chỗ vi phạm brand core, và sửa HDSD/thời gian nếu lệch thông số chuẩn ở trên; giữ nguyên phần còn lại.`;
+          `Hãy trả JSON đúng schema. Sửa chỗ vi phạm brand core${specCode ? ", và sửa HDSD/thời gian nếu lệch thông số chuẩn ở trên" : ""}; giữ nguyên phần còn lại.`;
 
         try {
           const res = await callClaude(env, {
             model: "haiku",
-            systemPrompt: `${AUDIT_SYSTEM}\n\n${NOMA_BRAND_GUIDE}`,
+            systemPrompt: `${AUDIT_SYSTEM}${langNote}\n\n${brandGuide}`,
             userPrompt,
             maxTokens: 8000,
             jsonOutput: true,

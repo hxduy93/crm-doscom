@@ -99,6 +99,57 @@ export const NOMA_FORBIDDEN = [
   { type: "claim: kiểm định/tiêu chuẩn quốc tế (chỉ có MSDS)", re: /(kiem dinh quoc te|tieu chuan quoc te|\bsgs\b|intertek)/ },
 ];
 
+// Bộ từ cấm TIẾNG ANH — cho nomaauto.us (bản EN). Áp dụng cùng nguyên tắc brand core.
+export const NOMA_FORBIDDEN_EN = [
+  // Origin (nặng nhất)
+  { type: "origin: Made in USA", re: /made in( the)? usa/ },
+  { type: "origin: manufactured in USA", re: /manufactured in( the)? usa/ },
+  { type: "origin: American-made", re: /american[- ]made/ },
+  { type: "origin: US/American technology", re: /(us|american) technology/ },
+  { type: "origin: imported from USA", re: /imported (directly )?from( the)? usa/ },
+  // Absolute / lifetime claims
+  { type: "claim: absolutely/100% safe", re: /(absolutely safe|100% safe|completely safe)/ },
+  { type: "claim: 100%", re: /100 ?%/ },
+  { type: "claim: lifetime warranty", re: /lifetime (warranty|guarantee)/ },
+  { type: "claim: forever/permanent", re: /(protects? forever|lasts? forever|permanent protection)/ },
+  { type: "claim: completely removes", re: /(completely remove|remove(s)? completely|removes everything)/ },
+  // Superlatives
+  { type: "superlative: best / no.1", re: /(the best|no\.? ?1\b|number one|#1|world'?s best)/ },
+  { type: "superlative: superior/outstanding", re: /(superior|outstanding|unbeatable|unmatched)/ },
+  { type: "superlative: revolutionary/breakthrough", re: /(revolutionary|breakthrough|cutting[- ]edge|state[- ]of[- ]the[- ]art|most advanced)/ },
+  { type: "price: cheapest", re: /(cheapest|lowest price)/ },
+  // Certification beyond MSDS/GHS
+  { type: "cert: SGS/Intertek", re: /(\bsgs\b|intertek)/ },
+];
+
+// Bản brand core rút gọn TIẾNG ANH — nối vào system prompt khi rà/viết nội dung EN (nomaauto.us).
+export const NOMA_BRAND_GUIDE_EN = `═══ NOMA BRAND CORE v3 — MANDATORY FOR ENGLISH CONTENT (nomaauto.us) ═══
+This governs all NOMA content and overrides any other brand description. Violations = broken content.
+
+BRAND IDENTITY (state correctly, do not invent):
+- NOMA is a US-origin DIY car-care brand under NOMA Technologies LLC (a legal entity registered in the USA).
+- Products are manufactured through international OEM partners (ISO-certified), then imported through official channels.
+- NOMA Vietnam operates & distributes officially in Vietnam (NOT "a distributor of Noma USA").
+
+⛔ GOLDEN RULE ON ORIGIN (LAW — no exceptions):
+- Talking about the BRAND → "US-origin brand", "formulated to US detailing standards" is allowed.
+- Talking about the PRODUCT → be honest about OEM: "manufactured through international OEM partners".
+- NEVER write: "Made in USA", "manufactured in the USA", "American-made", "US technology", "imported from the USA", "genuine US-made".
+- "US standard / American detailing standard" = a TECHNICAL standard (formula + GHS safety + method), NOT country of manufacture.
+
+CORE MESSAGES:
+- Tagline: "Professional car care." · USP: "US-standard car care — anyone can do it at home."
+- Trust points (RTB): full GHS-compliant MSDS published; officially imported with full documents.
+
+TONE: straightforward, transparent (state limits too), practical, friendly. No hype ("advanced/superior/cutting-edge"), no fear-mongering, no talking down to beginners.
+
+⛔ BANNED WORDS / CLAIMS (never use):
+- "Made in USA", "American-made", "US technology", "absolutely/100% safe", "lifetime warranty", "permanent/forever protection", "completely removes", "the best", "No.1 / number one", "superior", "outstanding", "unbeatable", "revolutionary", "breakthrough", "cutting-edge", "cheapest".
+- Do NOT claim "international certification / tested to international standards / SGS / Intertek" — only "MSDS to GHS standard".
+- Do NOT name competitors to disparage. No health claims (causes/doesn't cause cancer) without a COA.
+
+⚠ SAFETY WARNINGS: do NOT touch — do not add/edit/remove safety warnings; leave as-is.`;
+
 // Bỏ dấu tiếng Việt + hạ thường (đ→d). Giữ độ dài 1:1 theo ký tự gốc NFC (để lấy quote đúng vị trí).
 export function foldVi(s) {
   return String(s || "")
@@ -128,12 +179,12 @@ export function applyFixes(html, violations) {
 
 // Quét text tìm cụm vi phạm brand core. Trả [{type, quote}] — quote = đoạn khớp lấy từ text GỐC.
 // Bỏ thẻ HTML trước khi quét để không dính vào tên class/thuộc tính.
-export function scanForbidden(text) {
+export function scanForbidden(text, list = NOMA_FORBIDDEN) {
   const orig = String(text || "").replace(/<[^>]+>/g, " ");
   const folded = foldVi(orig);
   const seen = new Set();
   const out = [];
-  for (const f of NOMA_FORBIDDEN) {
+  for (const f of list) {
     const m = folded.match(f.re);
     if (m && !seen.has(f.type)) {
       seen.add(f.type);

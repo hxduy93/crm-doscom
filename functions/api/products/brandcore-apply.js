@@ -13,7 +13,7 @@
 //   { mode: "revert", site, id, backup_key? }   // không có backup_key → lấy bản backup mới nhất
 //   → khôi phục description/short_description từ backup. Trả { ok, reverted, id }
 import { getIdentity } from "../../lib/access.js";
-import { scanForbidden, applyFixes } from "../geo/_utils/noma-brandcore.js";
+import { scanForbidden, applyFixes, NOMA_FORBIDDEN_EN } from "../geo/_utils/noma-brandcore.js";
 import { siteCreds, isConfigured, getProduct, updateProduct } from "./_wc.js";
 
 function json(o, s = 200) {
@@ -118,7 +118,7 @@ export async function onRequestPost(context) {
       applied++;
       fixedTotal += fixedTypes.length;
       for (const t of fixedTypes) summary[t] = (summary[t] || 0) + 1;
-      const residual = scanForbidden(`${newShort} ${newDesc}`); // còn sót cụm cấm nào không
+      const residual = scanForbidden(`${newShort} ${newDesc}`, site === "nomaauto" ? NOMA_FORBIDDEN_EN : undefined); // còn sót cụm cấm nào không
       items.push({
         id, name: orig.name, permalink: orig.permalink, applied: true,
         violations_fixed: fixedTypes, residual_flags: residual, backup_key: backupKey,

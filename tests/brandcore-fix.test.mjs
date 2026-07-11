@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   NOMA_FORBIDDEN,
+  NOMA_FORBIDDEN_EN,
+  NOMA_BRAND_GUIDE_EN,
   foldVi,
   scanForbidden,
   applyFixes,
@@ -90,6 +92,26 @@ test("applyFixes: cặp không khớp chữ gốc → BỎ QUA, không đụng g
   assert.equal(fixed, html);
   assert.equal(applied.length, 0);
   assert.equal(skipped.length, 1);
+});
+
+test("scanForbidden(list EN) bắt vi phạm tiếng Anh cho nomaauto.us", () => {
+  const types = (t) => scanForbidden(t, NOMA_FORBIDDEN_EN).map((x) => x.type);
+  assert.ok(types("Made in USA, premium quality").some((t) => /Made in USA/.test(t)));
+  assert.ok(types("Absolutely safe for your paint").some((t) => /safe/i.test(t)));
+  assert.ok(types("The best glass coating, No.1").some((t) => /best/i.test(t)));
+  assert.ok(types("Superior protection with breakthrough tech").length >= 1);
+  assert.ok(types("Lifetime warranty included").some((t) => /lifetime/i.test(t)));
+});
+
+test("scanForbidden(list EN) KHÔNG báo nhầm câu tiếng Anh hợp lệ", () => {
+  assert.deepEqual(scanForbidden("US-standard car care, made through international OEM partners", NOMA_FORBIDDEN_EN), []);
+  assert.deepEqual(scanForbidden("Full GHS-compliant MSDS published", NOMA_FORBIDDEN_EN), []);
+});
+
+test("NOMA_BRAND_GUIDE_EN nêu định danh + cấm Made in USA (tiếng Anh)", () => {
+  assert.ok(NOMA_BRAND_GUIDE_EN.includes("NOMA Technologies LLC"));
+  assert.ok(/OEM partner/i.test(NOMA_BRAND_GUIDE_EN));
+  assert.ok(NOMA_BRAND_GUIDE_EN.includes("Made in USA"));
 });
 
 test("isNomaProduct: đúng cho SP NOMA, sai cho SP Doscom", () => {
