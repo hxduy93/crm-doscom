@@ -28,6 +28,19 @@ test("scanForbidden bắt claim tuyệt đối + từ cấm", () => {
   assert.ok(scanForbidden("Xoá hoàn toàn mọi vết bẩn").length > 0);
 });
 
+test("scanForbidden bắt từ cấm mới (vượt trội / đột phá / tiên tiến) + claim chứng nhận", () => {
+  assert.ok(scanForbidden("ba khả năng vượt trội").some((x) => /vượt trội/.test(x.type)));
+  assert.ok(scanForbidden("Công nghệ 2 tầng đột phá").some((x) => /đột phá/.test(x.type)));
+  assert.ok(scanForbidden("Công nghệ tiên tiến").some((x) => /tiên tiến/.test(x.type)));
+  assert.ok(scanForbidden("Tiêu chuẩn Quốc tế, được kiểm định kỹ lưỡng").some((x) => /quốc tế/.test(x.type)));
+  assert.ok(scanForbidden("Đạt chứng nhận SGS").length > 0);
+});
+
+test("scanForbidden KHÔNG báo nhầm 'chuẩn quốc tế' (giá trị brand core hợp lệ)", () => {
+  assert.deepEqual(scanForbidden("Chất lượng chuẩn quốc tế, minh bạch"), []);
+  assert.deepEqual(scanForbidden("Giải pháp chăm xe đạt chuẩn quốc tế"), []);
+});
+
 test("scanForbidden KHÔNG báo nhầm các cụm brand core ĐÚNG (chuẩn Mỹ / gốc Mỹ / OEM quốc tế)", () => {
   assert.deepEqual(scanForbidden("Chăm xe chuẩn Mỹ, tự làm tại nhà"), []);
   assert.deepEqual(scanForbidden("Thương hiệu gốc Mỹ, sản xuất qua đối tác OEM quốc tế"), []);

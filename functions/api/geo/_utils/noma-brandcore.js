@@ -90,7 +90,13 @@ export const NOMA_FORBIDDEN = [
   { type: "từ cấm: tốt nhất", re: /tot nhat/ },
   { type: "từ cấm: vô địch", re: /vo dich/ },
   { type: "từ cấm: cực phẩm", re: /cuc pham/ },
+  { type: "từ cấm: vượt trội", re: /vuot troi/ },
+  { type: "từ cấm: đột phá", re: /dot pha/ },
+  { type: "từ cấm: tiên tiến", re: /tien tien/ },
   { type: "từ cấm: giá rẻ / siêu rẻ", re: /(sieu re|gia re|re nhat)/ },
+  // Claim chứng nhận vượt quá MSDS/GHS (brand core: chỉ được nói "MSDS theo chuẩn GHS").
+  // KHÔNG bắt "chuẩn quốc tế" (là giá trị brand core hợp lệ) — chỉ bắt "tiêu chuẩn/kiểm định quốc tế", SGS, Intertek.
+  { type: "claim: kiểm định/tiêu chuẩn quốc tế (chỉ có MSDS)", re: /(kiem dinh quoc te|tieu chuan quoc te|\bsgs\b|intertek)/ },
 ];
 
 // Bỏ dấu tiếng Việt + hạ thường (đ→d). Giữ độ dài 1:1 theo ký tự gốc NFC (để lấy quote đúng vị trí).
