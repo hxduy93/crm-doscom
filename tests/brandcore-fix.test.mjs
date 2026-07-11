@@ -4,6 +4,7 @@ import {
   NOMA_FORBIDDEN,
   foldVi,
   scanForbidden,
+  applyFixes,
 } from "../functions/api/geo/_utils/noma-brandcore.js";
 import { isNomaProduct } from "../functions/api/products/_wc.js";
 
@@ -62,6 +63,33 @@ test("NOMA_FORBIDDEN mỗi mục có type + regex", () => {
     assert.ok(typeof f.type === "string" && f.type.length > 0);
     assert.ok(f.re instanceof RegExp);
   }
+});
+
+test("applyFixes: thay chuỗi nhưng GIỮ NGUYÊN thẻ HTML / ảnh / xuống dòng", () => {
+  const html = `<h2>Điểm nổi bật</h2>\n<ul>\n<li>Chống UV vượt trội</li>\n<li>An toàn tuyệt đối cho sơn</li>\n</ul>\n<img src='a.jpg' alt='x'/>\n<p>Kết luận.</p>`;
+  const { fixed, applied } = applyFixes(html, [
+    { type: "vượt trội", original: "vượt trội", fixed: "hiệu quả" },
+    { type: "an toàn tuyệt đối", original: "An toàn tuyệt đối", fixed: "An toàn" },
+  ]);
+  // Cấu trúc thẻ giữ NGUYÊN: số lượng <li>, <img>, <p>, <h2>, xuống dòng không đổi
+  assert.equal((fixed.match(/<li>/g) || []).length, 2);
+  assert.equal((fixed.match(/<img /g) || []).length, 1);
+  assert.equal((fixed.match(/<\/p>/g) || []).length, 1);
+  assert.equal((fixed.match(/\n/g) || []).length, (html.match(/\n/g) || []).length);
+  assert.ok(fixed.includes("<img src='a.jpg' alt='x'/>"));
+  // Nội dung đã đổi
+  assert.ok(fixed.includes("Chống UV hiệu quả"));
+  assert.ok(fixed.includes("An toàn cho sơn"));
+  assert.ok(!/vượt trội/.test(fixed));
+  assert.equal(applied.length, 2);
+});
+
+test("applyFixes: cặp không khớp chữ gốc → BỎ QUA, không đụng gì", () => {
+  const html = "<p>Nội dung sạch.</p>";
+  const { fixed, applied, skipped } = applyFixes(html, [{ type: "x", original: "không tồn tại", fixed: "y" }]);
+  assert.equal(fixed, html);
+  assert.equal(applied.length, 0);
+  assert.equal(skipped.length, 1);
 });
 
 test("isNomaProduct: đúng cho SP NOMA, sai cho SP Doscom", () => {

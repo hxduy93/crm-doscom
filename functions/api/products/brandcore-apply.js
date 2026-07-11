@@ -13,7 +13,7 @@
 //   { mode: "revert", site, id, backup_key? }   // không có backup_key → lấy bản backup mới nhất
 //   → khôi phục description/short_description từ backup. Trả { ok, reverted, id }
 import { getIdentity } from "../../lib/access.js";
-import { scanForbidden } from "../geo/_utils/noma-brandcore.js";
+import { scanForbidden, applyFixes } from "../geo/_utils/noma-brandcore.js";
 import { siteCreds, isConfigured, getProduct, updateProduct } from "./_wc.js";
 
 function json(o, s = 200) {
@@ -26,17 +26,6 @@ function json(o, s = 200) {
 const KV_BACKUP = (site, id, ts) => `bcbackup:${site}:${id}:${ts}`;
 const KV_LATEST = (site, id) => `bcbackup_last:${site}:${id}`;
 const KV_REPORT = (site, ts) => `bcreport:${site}:${ts}`;
-
-// Loại vi phạm đã khắc phục = có ở bản gốc, hết ở bản sửa.
-function diffFlags(original, fixed) {
-  const o = scanForbidden(original);
-  const f = scanForbidden(fixed);
-  const fTypes = new Set(f.map((x) => x.type));
-  return {
-    fixed: o.filter((x) => !fTypes.has(x.type)).map((x) => x.type),
-    residual: f, // vẫn còn sau khi sửa (cảnh báo)
-  };
-}
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -91,25 +80,25 @@ export async function onRequestPost(context) {
   for (const fx of fixes) {
     const id = fx.id;
     if (!id) { skipped++; items.push({ id: null, applied: false, error: "thiếu id" }); continue; }
+    const violations = Array.isArray(fx.violations) ? fx.violations : [];
+    if (!violations.length) { skipped++; items.push({ id, applied: false, skipped: "không có cặp sửa" }); continue; }
 
     let orig;
     try { orig = await getProduct(c, id); }
     catch (e) { failed++; items.push({ id, applied: false, error: `đọc SP lỗi: ${String(e.message || e)}` }); continue; }
 
-    const newDesc = typeof fx.description === "string" ? fx.description : (orig.description || "");
-    const newShort = typeof fx.short_description === "string" ? fx.short_description : (orig.short_description || "");
+    // Áp cặp sửa bằng THAY CHUỖI NGUYÊN VĂN trên bản gốc mới nhất → giữ nguyên 100% layout.
+    const rd = applyFixes(orig.description || "", violations);
+    const rs = applyFixes(orig.short_description || "", violations);
+    const newDesc = rd.fixed, newShort = rs.fixed;
+    const fixedTypes = [...new Set([...rd.applied, ...rs.applied])];
 
-    // Không đổi gì → bỏ qua (khỏi tốn 1 lần ghi).
+    // Không đổi gì (không cặp nào khớp) → bỏ qua, không ghi.
     if (newDesc === (orig.description || "") && newShort === (orig.short_description || "")) {
       skipped++;
-      items.push({ id, name: orig.name, permalink: orig.permalink, applied: false, skipped: "không có thay đổi" });
+      items.push({ id, name: orig.name, permalink: orig.permalink, applied: false, skipped: "không cặp sửa nào khớp text gốc" });
       continue;
     }
-
-    const { fixed, residual } = diffFlags(
-      `${orig.short_description || ""} ${orig.description || ""}`,
-      `${newShort} ${newDesc}`
-    );
 
     // Backup nội dung gốc trước khi ghi đè (nếu có KV).
     let backupKey = null;
@@ -124,13 +113,15 @@ export async function onRequestPost(context) {
 
     try {
       // GIỮ nguyên status: KHÔNG gửi status → WooCommerce không đổi (SP không biến mất khỏi store).
+      // CHỈ ghi description + short_description (thay chuỗi) → KHÔNG đụng ảnh/gallery/thuộc tính khác.
       await updateProduct(c, id, { description: newDesc, short_description: newShort });
       applied++;
-      fixedTotal += fixed.length;
-      for (const t of fixed) summary[t] = (summary[t] || 0) + 1;
+      fixedTotal += fixedTypes.length;
+      for (const t of fixedTypes) summary[t] = (summary[t] || 0) + 1;
+      const residual = scanForbidden(`${newShort} ${newDesc}`); // còn sót cụm cấm nào không
       items.push({
         id, name: orig.name, permalink: orig.permalink, applied: true,
-        violations_fixed: fixed, residual_flags: residual, backup_key: backupKey,
+        violations_fixed: fixedTypes, residual_flags: residual, backup_key: backupKey,
       });
     } catch (e) {
       failed++;

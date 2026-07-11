@@ -107,6 +107,25 @@ export function foldVi(s) {
     .toLowerCase();
 }
 
+// Áp các cặp sửa {original -> fixed} vào HTML bằng THAY CHUỖI NGUYÊN VĂN.
+// Giữ nguyên 100% cấu trúc/thẻ/ảnh/xuống dòng — KHÔNG viết lại HTML nên không gộp đoạn,
+// không dời ảnh, không mất <br>/<li>. Cặp nào không tìm thấy chuỗi gốc → bỏ qua (skipped),
+// không đụng gì (an toàn hơn là đoán). Trả { fixed, applied[], skipped[] }.
+export function applyFixes(html, violations) {
+  let out = String(html || "");
+  const applied = [];
+  const skipped = [];
+  for (const v of (Array.isArray(violations) ? violations : [])) {
+    const o = v && typeof v.original === "string" ? v.original : "";
+    const f = v && typeof v.fixed === "string" ? v.fixed : "";
+    const label = (v && v.type) || o;
+    if (!o || o === f) continue;
+    if (out.includes(o)) { out = out.split(o).join(f); applied.push(label); }
+    else skipped.push(label);
+  }
+  return { fixed: out, applied, skipped };
+}
+
 // Quét text tìm cụm vi phạm brand core. Trả [{type, quote}] — quote = đoạn khớp lấy từ text GỐC.
 // Bỏ thẻ HTML trước khi quét để không dính vào tên class/thuộc tính.
 export function scanForbidden(text) {
