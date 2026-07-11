@@ -212,6 +212,35 @@ export async function getProduct(c, id) {
   return d;
 }
 
+// Lấy 1 sản phẩm ĐẦY ĐỦ (thêm giá + ảnh + danh mục) — dùng cho đồng bộ sang site khác.
+export async function getProductFull(c, id) {
+  const f = "id,name,slug,status,description,short_description,regular_price,sale_price,images,categories,stock_quantity,permalink";
+  const r = await fetch(`${c.url}/wp-json/wc/v3/products/${id}?_fields=${f}&_cb=${Date.now()}`, {
+    headers: { Authorization: wcAuth(c.ck, c.cs), "Cache-Control": "no-cache" },
+    signal: AbortSignal.timeout(25000),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(`WC get full ${r.status}: ${JSON.stringify(d).slice(0, 200)}`);
+  return d;
+}
+
+// Tải 1 ảnh từ URL công khai rồi upload sang WP Media của site đích (copy ảnh giữa 2 web).
+export async function copyImageFromUrl(targetCreds, srcUrl, { alt, title, filename }) {
+  const r = await fetch(srcUrl, { signal: AbortSignal.timeout(30000) });
+  if (!r.ok) throw new Error(`tải ảnh lỗi ${r.status}: ${srcUrl}`);
+  const bytes = new Uint8Array(await r.arrayBuffer());
+  const mime = r.headers.get("content-type") || "image/jpeg";
+  const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
+  return uploadMedia(targetCreds, {
+    bytes,
+    filename: `${filename || "product"}.${ext}`,
+    mime,
+    alt: alt || "",
+    caption: "",
+    title: title || "",
+  });
+}
+
 // Cập nhật 1 sản phẩm (PUT). Giữ nguyên status hiện tại nếu payload không đổi status.
 export async function updateProduct(c, id, payload) {
   const r = await fetch(`${c.url}/wp-json/wc/v3/products/${id}`, {

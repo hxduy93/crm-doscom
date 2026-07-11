@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Đồng bộ sang nomaauto.us</title>
+<style>
+  :root { --bg:#f6f7fb; --card:#fff; --ink:#1f2430; --mut:#6b7280; --line:#e6e8ef;
+          --blue:#2563eb; --red:#dc2626; --green:#16a34a; --amber:#d97706; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:'Nunito',system-ui,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--ink); font-size:14px; }
+  .wrap { max-width:980px; margin:0 auto; padding:18px; }
+  h1 { font-size:20px; margin:0 0 2px; }
+  .sub { color:var(--mut); margin:0 0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  select, input[type=text] { padding:9px 11px; border:1px solid var(--line); border-radius:10px; font:inherit; background:#fff; }
+  button { padding:9px 15px; border:0; border-radius:10px; font:inherit; font-weight:700; cursor:pointer; background:var(--blue); color:#fff; }
+  button.warn { background:var(--amber); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .muted { color:var(--mut); font-size:13px; }
+  .err { color:var(--red); font-weight:700; }
+  .prod { border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin:8px 0; }
+  .pill { display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px; font-weight:700; }
+  .pill.green { background:#e7f6ec; color:var(--green); }
+  .pill.red { background:#fde8e8; color:var(--red); }
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); font-size:13px; }
+  th { color:var(--mut); font-size:12px; text-transform:uppercase; }
+  .stat { display:flex; gap:12px; flex-wrap:wrap; margin:6px 0 12px; }
+  .stat .b { background:#f4f6fb; border-radius:12px; padding:12px 16px; min-width:120px; }
+  .stat .n { font-size:24px; font-weight:800; }
+  .stat .l { color:var(--mut); font-size:12px; }
+  a { color:var(--blue); }
+  .hide { display:none; }
+  .note { background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:10px 12px; font-size:13px; color:#92400e; margin-bottom:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Đồng bộ sản phẩm sang nomaauto.us</h1>
+  <p class="sub">So sánh SKU giữa web tiếng Việt và nomaauto.us → đăng bản tiếng Anh cho SP còn thiếu.</p>
+
+  <div class="note">
+    Mỗi SP: đọc bản gốc → <b>sửa brandcore</b> → <b>dịch sang tiếng Anh</b> → <b>đổi giá VND→USD</b> → copy ảnh đại diện → tạo sản phẩm.
+    Mặc định tạo ở trạng thái <b>Nháp (draft)</b> để bạn duyệt trên WP trước khi cho hiển thị. Không đụng gì tới SP nguồn.
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <label>Nguồn:
+        <select id="source">
+          <option value="noma">noma.vn</option>
+          <option value="doscom">doscom.vn</option>
+        </select>
+      </label>
+      <button id="btnCheck">Kiểm tra SP còn thiếu</button>
+      <input id="token" type="text" placeholder="X-Products-Token (nếu Access tắt)" style="flex:1;min-width:180px" />
+      <span id="info" class="muted"></span>
+    </div>
+  </div>
+
+  <div id="missCard" class="card hide">
+    <div class="row" style="justify-content:space-between">
+      <b id="missTitle"></b>
+      <div class="row">
+        <label>Danh mục US: <select id="cat"><option value="">(không đặt)</option></select></label>
+        <label>Trạng thái: <select id="status"><option value="draft">Nháp (duyệt sau)</option><option value="publish">Đăng luôn</option></select></label>
+        <button id="btnSync" class="warn">Đồng bộ (đã chọn)</button>
+      </div>
+    </div>
+    <div id="list"></div>
+  </div>
+
+  <div id="repCard" class="card hide">
+    <h1 style="font-size:18px">Báo cáo đồng bộ</h1>
+    <div id="repBody"></div>
+  </div>
+</div>
+
+<script>
+window.addEventListener("error", (e) => { try { document.getElementById("info").innerHTML = '<span style="color:#dc2626;font-weight:700">Lỗi JS: ' + (e.message||e) + '</span>'; } catch(_){} });
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const TK = "products_token";
+$("#token").value = localStorage.getItem(TK) || "";
+$("#token").addEventListener("change", () => localStorage.setItem(TK, $("#token").value.trim()));
+function headers(write) {
+  const h = { "content-type": "application/json" };
+  if (write) { const t = $("#token").value.trim(); if (t) h["X-Products-Token"] = t; }
+  return h;
+}
+const source = () => $("#source").value;
+let missing = [];
+
+// ---- Kiểm tra SP thiếu ----
+$("#btnCheck").onclick = async () => {
+  $("#btnCheck").disabled = true; $("#info").textContent = "Đang kiểm tra...";
+  $("#missCard").classList.add("hide"); $("#repCard").classList.add("hide");
+  try {
+    const r = await fetch("/api/products/sync-us", { method:"POST", headers:headers(false), body: JSON.stringify({ source: source(), mode:"list" }) });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || "lỗi");
+    missing = d.missing || [];
+    $("#info").textContent = `${source()}: ${d.source_count} SP NOMA · nomaauto.us: ${d.us_count} SP · thiếu ${missing.length}`;
+    $("#cat").innerHTML = '<option value="">(không đặt)</option>' + (d.us_categories||[]).map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("");
+    $("#missTitle").textContent = missing.length ? `${missing.length} sản phẩm CHƯA có trên nomaauto.us` : "nomaauto.us đã đủ sản phẩm ✓";
+    $("#list").innerHTML = missing.length ? missing.map((p, i) => `
+      <div class="prod"><label class="row">
+        <input type="checkbox" class="pick" data-i="${i}" checked />
+        <span><b>${esc(p.name)}</b> <span class="muted">#${p.id}${p.sku ? " · NOMA " + esc(p.sku) : ""}</span>
+        ${p.permalink ? `<br><a href="${esc(p.permalink)}" target="_blank" class="muted">Xem bản gốc ↗</a>` : ""}</span>
+      </label></div>`).join("") : `<p class="muted">Không có SP nào thiếu.</p>`;
+    $("#missCard").classList.remove("hide");
+  } catch (e) { $("#info").innerHTML = `<span class="err">Lỗi: ${esc(e.message)}</span>`; alert(e.message); }
+  $("#btnCheck").disabled = false;
+};
+
+// ---- Đồng bộ (từng SP một: dịch mất ~15-25s/SP) ----
+$("#btnSync").onclick = async () => {
+  const picks = [...document.querySelectorAll(".pick:checked")].map(cb => missing[+cb.dataset.i]);
+  if (!picks.length) return alert("Chọn ít nhất 1 sản phẩm.");
+  const st = $("#status").value;
+  if (!confirm(`Đồng bộ ${picks.length} SP sang nomaauto.us (trạng thái: ${st === "publish" ? "Đăng luôn" : "Nháp"})?`)) return;
+  $("#btnSync").disabled = true;
+  const items = []; let created = 0, failed = 0, cost = 0;
+  $("#repCard").classList.remove("hide"); $("#repCard").scrollIntoView({ behavior:"smooth" });
+  for (let i = 0; i < picks.length; i++) {
+    $("#btnSync").textContent = `Đang đồng bộ ${i + 1}/${picks.length}...`;
+    try {
+      const r = await fetch("/api/products/sync-us", { method:"POST", headers:headers(true), body: JSON.stringify({
+        source: source(), mode:"sync", ids:[picks[i].id], category_id: $("#cat").value || undefined, status: st }) });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error || "lỗi");
+      items.push(...(d.items || [])); created += d.created || 0; failed += d.failed || 0; cost += d.cost_usd || 0;
+    } catch (e) { failed++; items.push({ source_id: picks[i].id, source_name: picks[i].name, error: e.message }); }
+    renderRep({ created, failed, cost, items });
+  }
+  $("#btnSync").disabled = false; $("#btnSync").textContent = "Đồng bộ (đã chọn)";
+};
+
+function renderRep(d) {
+  const rows = d.items.map(it => {
+    const ok = !it.error;
+    const st = ok ? `<span class="pill green">${esc(it.status || "đã tạo")}</span>` : `<span class="pill red">Lỗi</span>`;
+    const link = it.us_url ? `<a href="${esc(it.us_url)}" target="_blank">${esc(it.us_name || "")}</a>` : esc(it.us_name || "—");
+    return `<tr>
+      <td>${esc(it.source_name || ("#" + it.source_id))}${it.sku ? ` <span class="muted">NOMA ${esc(it.sku)}</span>` : ""}</td>
+      <td>${st}</td>
+      <td>${link}${it.error ? `<div class="err" style="font-size:12px">${esc(it.error)}</div>` : ""}</td>
+      <td>${ok ? (it.image_copied ? "✓ ảnh" : "— không ảnh") : ""}</td>
+    </tr>`;
+  }).join("");
+  $("#repBody").innerHTML = `<div class="stat">
+      <div class="b"><div class="n">${d.created}</div><div class="l">SP đã tạo trên US</div></div>
+      <div class="b"><div class="n">${d.failed}</div><div class="l">Lỗi</div></div>
+      <div class="b"><div class="n">$${(d.cost||0).toFixed(3)}</div><div class="l">Chi phí dịch (AI)</div></div>
+    </div>
+    <table><thead><tr><th>SP nguồn</th><th>Trạng thái</th><th>Bản US</th><th>Ảnh</th></tr></thead><tbody>${rows}</tbody></table>
+    <p class="muted">Bản US tạo ở trạng thái Nháp → vào WP nomaauto.us duyệt lại (tiêu đề/giá/ảnh) rồi bấm Publish.</p>`;
+}
+</script>
+</body>
+</html>
