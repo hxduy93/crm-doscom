@@ -22,20 +22,28 @@ export const PRODUCT_CATALOG = {
     { name: "Doscom DV5",      use: "camera hành trình 4G 2 mắt cho ô tô" },
     { name: "Doscom chuông cửa thông minh", use: "chuông cửa có camera quan sát" },
   ],
-  // NOMA = hóa chất chăm sóc & làm sạch ô tô công nghệ Mỹ, pH trung tính.
+  // NOMA = hóa chất chăm sóc & làm sạch ô tô, thương hiệu gốc Mỹ (NOMA Technologies LLC),
+  // sản xuất OEM quốc tế. Danh mục = 17 SKU đồng bộ Brand Core NOMA v3 (xem [[noma-brandcore]]).
+  // 2 dòng: (1) Hoá chất bề mặt ngoại/nội thất — 12 SKU; (2) Bảo dưỡng cơ học & an toàn lái — 5 SKU.
   noma: [
-    { name: "NOMA 911", use: "tẩy ố và phủ chống bám nước trên kính ô tô" },
-    { name: "NOMA 310", use: "chống mờ hơi nước và vết nước trên kính" },
-    { name: "NOMA 890", use: "xịt làm bóng nhanh, phục hồi sơn" },
-    { name: "NOMA 955", use: "xóa vết xước sơn" },
+    // Dòng 1 — Hoá chất bề mặt (ngoại & nội thất)
+    { name: "NOMA 911", use: "tẩy ố và màng dầu trên kính ô tô" },
     { name: "NOMA 620", use: "phục hồi đèn pha bị ố vàng, mờ đục" },
+    { name: "NOMA 922", use: "phủ nano kính chống bám nước" },
+    { name: "NOMA 310", use: "chống mờ hơi nước (hấp hơi) trên kính" },
+    { name: "NOMA 890", use: "xịt phủ bóng, làm mới sơn xe" },
+    { name: "NOMA 955", use: "xóa vết trầy xước sơn xe" },
+    { name: "NOMA 880", use: "phủ tinh thể nano bảo vệ sơn xe" },
     { name: "NOMA 250", use: "phục hồi nhựa nhám/nhựa đen bạc màu" },
-    { name: "NOMA 692", use: "làm sạch ghế nỉ và ghế da" },
-    { name: "NOMA 686", use: "bộ vệ sinh & dưỡng ghế da" },
-    { name: "NOMA 668", use: "khử mùi nội thất ô tô" },
-    { name: "NOMA 350", use: "vệ sinh đĩa phanh, bụi phanh trên mâm" },
-    { name: "NOMA 330", use: "tẩy keo, decal, nhựa đường bám trên sơn" },
-    { name: "NOMA 988", use: "bọt vệ sinh nội thất" },
+    { name: "NOMA 230", use: "xịt dưỡng và đánh bóng nhựa nhám, taplo" },
+    { name: "NOMA 692", use: "làm sạch nội thất ghế da và nỉ" },
+    { name: "NOMA 686", use: "bộ vệ sinh và dưỡng ghế da" },
+    { name: "NOMA 680", use: "bọt tuyết vệ sinh đa năng (foam cleaner)" },
+    // Dòng 2 — Bảo dưỡng cơ học & an toàn lái
+    { name: "NOMA 120", use: "vệ sinh súc rửa kim phun (injector cleaner)" },
+    { name: "NOMA 110", use: "dầu tẩy rỉ và bôi trơn đa năng" },
+    { name: "NOMA 130", use: "xịt silicone dưỡng, làm mềm ron cao su" },
+    { name: "NOMA 350", use: "vệ sinh đĩa phanh, bụi phanh" },
     { name: "NOMA 998", use: "bơm và vá lốp khẩn cấp" },
   ],
 };
