@@ -49,6 +49,16 @@ function cleanBrandcore(html, list) {
   return applyFixes(html, pairs).fixed;
 }
 
+// Bỏ ẢNH CHÈN TRONG BÀI khi đồng bộ sang nomaauto.us.
+// Lý do: quy ước nomaauto.us = CHỈ text + ảnh đại diện. Nếu giữ <img> của bài gốc thì src vẫn
+// trỏ về noma.vn → trang US hotlink ảnh từ web VN (hỏng nếu web VN đổi/xoá ảnh). Chỉ bỏ thẻ ảnh,
+// giữ nguyên toàn bộ chữ + cấu trúc <p>/<h2>/<ul> của bài.
+export function stripInlineImages(html) {
+  return String(html || "")
+    .replace(/<figure\b[^>]*>[\s\S]*?<\/figure>/gi, "")
+    .replace(/<img\b[^>]*\/?>/gi, "");
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
   let body;
@@ -119,9 +129,10 @@ export async function onRequestPost(context) {
           cost += en.cost_usd || 0;
 
           // 3) Sửa brandcore trên bản EN (bắt cụm cấm tiếng Anh nếu dịch lỡ sinh ra).
+          //    + BỎ ảnh chèn trong bài (nomaauto.us = chỉ text + ảnh đại diện, không hotlink ảnh noma.vn).
           const enName = cleanBrandcore(en.name || vnName, NOMA_FORBIDDEN_EN);
-          const enShort = cleanBrandcore(en.short_description || "", NOMA_FORBIDDEN_EN);
-          const enHtml = cleanBrandcore(en.long_html || "", NOMA_FORBIDDEN_EN);
+          const enShort = stripInlineImages(cleanBrandcore(en.short_description || "", NOMA_FORBIDDEN_EN));
+          const enHtml = stripInlineImages(cleanBrandcore(en.long_html || "", NOMA_FORBIDDEN_EN));
           const enMeta = cleanBrandcore(en.meta_description || "", NOMA_FORBIDDEN_EN);
 
           const kw = String(en.primary_keyword || "").trim() || deriveKeyword(enName);
