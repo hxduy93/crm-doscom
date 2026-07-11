@@ -19,7 +19,7 @@ import { getIdentity } from "../../lib/access.js";
 import { translateToEN } from "./_translate.js";
 import {
   siteCreds, isConfigured, uploadMedia, createProduct,
-  slugify, b64ToBytes, priceFields, usdPriceFields, injectFigure, injectByPosition, deriveKeyword,
+  productSlug, b64ToBytes, priceFields, usdPriceFields, injectFigure, injectByPosition, deriveKeyword,
 } from "./_wc.js";
 
 function json(o, s = 200) {
@@ -53,6 +53,8 @@ async function publishToSite(site, env, data) {
   }
 
   const kw = String(content.primary_keyword || "").trim() || deriveKeyword(content.name);
+  // URL sản phẩm (cả 3 web): tên SP + công dụng. Bản EN dùng name/keyword đã dịch.
+  const slug = productSlug(content.name, kw);
 
   // nomaauto.us: CHỈ đăng ảnh đại diện (nền trắng) + text — bỏ toàn bộ ảnh phụ/poster.
   const workImages = isEN
@@ -70,7 +72,7 @@ async function publishToSite(site, env, data) {
     const alt = i === featIdx && kw ? (kw + (im.alt ? ` — ${im.alt}` : "")) : (im.alt || content.name);
     const media = await uploadMedia(c, {
       bytes: b64ToBytes(im.data),
-      filename: `${slugify(kw || content.name) || "product"}-${i + 1}.${ext}`,
+      filename: `${slug || "product"}-${i + 1}.${ext}`,
       mime, alt, caption: im.caption || "", title: content.name,
     });
     uploaded.push({ ...media, meta: im });
@@ -95,7 +97,7 @@ async function publishToSite(site, env, data) {
   const soldQty = Number(String(data.sold ?? "").replace(/[^\d]/g, ""));
   const payload = {
     name: content.name,
-    slug: slugify(kw || content.name),
+    slug,
     type: "simple",
     status: data.status === "publish" ? "publish" : "draft",
     ...pf,

@@ -11,8 +11,37 @@ import {
   vndToUsd,
   usdPriceFields,
   injectByPosition,
+  productSlug,
   SITE_URL,
 } from "../functions/api/products/_wc.js";
+
+test("productSlug: URL = tên SP + công dụng (dùng chung cho doscom.vn/noma.vn/nomaauto.us)", () => {
+  assert.equal(productSlug("NOMA 911", "phục hồi đèn pha"), "noma-911-phuc-hoi-den-pha");
+  assert.equal(productSlug("NOMA 911", "headlight restoration"), "noma-911-headlight-restoration");
+});
+
+test("productSlug: từ đã có trong tên thì không lặp lại", () => {
+  assert.equal(
+    productSlug("Bọt vệ sinh đa năng - Noma680", "bọt vệ sinh đa năng"),
+    "bot-ve-sinh-da-nang-noma680"
+  );
+  assert.equal(productSlug("NOMA 922 Phục hồi", "phục hồi đèn pha"), "noma-922-phuc-hoi-den-pha");
+});
+
+test("productSlug: thiếu công dụng hoặc thiếu tên → dùng phần còn lại", () => {
+  assert.equal(productSlug("NOMA 911", ""), "noma-911");
+  assert.equal(productSlug("", "phục hồi đèn pha"), "phuc-hoi-den-pha");
+});
+
+test("productSlug: slug dài bị cắt TRÒN TỪ, không đứt giữa chữ", () => {
+  const s = productSlug("Dung dịch phục hồi đèn pha ô tô chuyên dụng NOMA 911", "làm sạch bề mặt kính lái xe hơi");
+  assert.ok(s.length <= 80);
+  assert.ok(!s.endsWith("-"));
+  assert.ok(s.startsWith("dung-dich-phuc-hoi-den-pha"));
+  // không cắt cụt giữa 1 từ: mọi token cuối phải là từ nguyên vẹn có trong nguồn
+  const src = "dung dich phuc hoi den pha o to chuyen dung noma 911 lam sach be mat kinh lai xe hoi".split(" ");
+  assert.ok(s.split("-").every((t) => src.includes(t)));
+});
 
 test("vndToUsd: đổi VND (có dấu chấm) → USD 2 số lẻ theo tỉ giá", () => {
   assert.equal(vndToUsd("265.000", 26500), "10.00");

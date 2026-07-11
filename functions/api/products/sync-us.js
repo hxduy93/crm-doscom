@@ -26,7 +26,7 @@ import { findSkuCode } from "../geo/_utils/noma-sku-specs.js";
 import { applyFixes, deterministicFixes, NOMA_FORBIDDEN_EN } from "../geo/_utils/noma-brandcore.js";
 import {
   siteCreds, isConfigured, listProducts, getProductFull, createProduct,
-  copyImageFromUrl, fetchCategories, usdPriceFields, slugify, deriveKeyword, isNomaProduct,
+  copyImageFromUrl, fetchCategories, usdPriceFields, slugify, productSlug, deriveKeyword, isNomaProduct,
 } from "./_wc.js";
 import {
   listPosts, getPostFull, getMediaUrl, fetchPostCategories, resolveTags, createPost,
@@ -308,6 +308,8 @@ export async function onRequestPost(context) {
           const enMeta = cleanBrandcore(en.meta_description || "", NOMA_FORBIDDEN_EN);
 
           const kw = String(en.primary_keyword || "").trim() || deriveKeyword(enName);
+          // URL bản US cùng cấu trúc 2 web VN: tên SP (EN) + công dụng (EN).
+          const slug = productSlug(enName, kw);
 
           // 4) Giá VND → USD.
           const pf = usdPriceFields(p.regular_price || "", "", env.VND_USD_RATE);
@@ -322,7 +324,7 @@ export async function onRequestPost(context) {
             const m = await copyImageFromUrl(us, srcImg.src, {
               alt: kw || enName,
               title: enName,
-              filename: slugify(kw || enName) || `noma-${sku || id}`,
+              filename: slug || `noma-${sku || id}`,
             });
             imgIds.push({ id: m.id });
           }
@@ -330,7 +332,7 @@ export async function onRequestPost(context) {
           // 6) Tạo product trên nomaauto.us (mặc định DRAFT để duyệt).
           const np = await createProduct(us, {
             name: enName,
-            slug: slugify(kw || enName),
+            slug,
             type: "simple",
             status,
             ...pf,

@@ -65,6 +65,23 @@ export function slugify(s) {
     .slice(0, 80);
 }
 
+// Slug sản phẩm = TÊN SP (gồm mã model) + CÔNG DỤNG (primary_keyword), dùng chung cho cả 3 web
+// → URL luôn có dạng /san-pham/noma-911-phuc-hoi-den-pha thay vì chỉ /noma-911 hay chỉ công dụng.
+// Từ nào đã có trong tên thì không lặp lại (tránh "bot-ve-sinh-noma680-bot-ve-sinh").
+// Bản EN (nomaauto.us) truyền name/keyword tiếng Anh → ra slug tiếng Anh cùng cấu trúc.
+export function productSlug(name, keyword) {
+  const nameSlug = slugify(name);
+  const kwSlug = slugify(keyword);
+  if (!kwSlug) return nameSlug;
+  if (!nameSlug) return kwSlug;
+  const have = new Set(nameSlug.split("-"));
+  const extra = kwSlug.split("-").filter((t) => t && !have.has(t));
+  if (!extra.length) return nameSlug;
+  let s = [nameSlug, ...extra].join("-");
+  if (s.length > 80) s = s.slice(0, 80).replace(/-[^-]*$/, ""); // cắt tròn từ, không đứt giữa chữ
+  return s;
+}
+
 export function b64ToBytes(b64) {
   const raw = String(b64 || "");
   const bin = atob(raw.includes(",") ? raw.slice(raw.indexOf(",") + 1) : raw);
