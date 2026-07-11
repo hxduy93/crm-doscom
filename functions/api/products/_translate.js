@@ -9,9 +9,18 @@ RULES:
 - primary_keyword: a natural 2-4 word English search phrase.
 - Return ONLY one valid JSON object, no markdown, escape everything correctly.`;
 
-export async function translateToEN(env, vn) {
-  const user = `Translate this product content to English. Return JSON with EXACTLY these keys: name, seo_title, short_description, long_html, meta_description, tags (array of strings), primary_keyword.\n\nVietnamese content (JSON):\n${JSON.stringify(vn)}`;
-  const call = () => callClaude(env, { model: "haiku", systemPrompt: TRANSLATE_SYS, userPrompt: user, maxTokens: 8000, jsonOutput: true });
+// opts.kind = "product" (mặc định) | "post" (bài viết blog — dài hơn nên nới maxTokens).
+// Với bài viết, long_html có thể chứa src="__NOMA_IMG_0__" (placeholder ảnh) — bắt buộc giữ nguyên,
+// vì src thật chỉ được gắn lại SAU khi copy ảnh sang nomaauto.us.
+export async function translateToEN(env, vn, opts = {}) {
+  const isPost = opts.kind === "post";
+  const what = isPost ? "blog article" : "product";
+  const keep = isPost
+    ? " Keep every src attribute EXACTLY as-is (values like __NOMA_IMG_0__ are image placeholders — never translate, rename or drop them)."
+    : "";
+  const user = `Translate this ${what} content to English. Return JSON with EXACTLY these keys: name, seo_title, short_description, long_html, meta_description, tags (array of strings), primary_keyword.${keep}\n\nVietnamese content (JSON):\n${JSON.stringify(vn)}`;
+  const maxTokens = Number(opts.maxTokens) || (isPost ? 16000 : 8000);
+  const call = () => callClaude(env, { model: "haiku", systemPrompt: TRANSLATE_SYS, userPrompt: user, maxTokens, jsonOutput: true });
   let res;
   try { res = await call(); } catch { res = await call(); }
   const t = res.parsed || {};

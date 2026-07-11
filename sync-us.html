@@ -38,23 +38,26 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>Đồng bộ sản phẩm sang nomaauto.us</h1>
-  <p class="sub">So sánh SKU giữa web tiếng Việt và nomaauto.us → đăng bản tiếng Anh cho SP còn thiếu.</p>
+  <h1>Đồng bộ sang nomaauto.us</h1>
+  <p class="sub">So sánh web tiếng Việt với nomaauto.us → đăng bản tiếng Anh cho phần còn thiếu (sản phẩm hoặc bài viết).</p>
 
-  <div class="note">
-    Mỗi SP: đọc bản gốc → <b>sửa brandcore</b> → <b>dịch sang tiếng Anh</b> → <b>đổi giá VND→USD</b> → copy ảnh đại diện → tạo sản phẩm.
-    Mặc định tạo ở trạng thái <b>Nháp (draft)</b> để bạn duyệt trên WP trước khi cho hiển thị. Không đụng gì tới SP nguồn.
-  </div>
+  <div class="note" id="note"></div>
 
   <div class="card">
     <div class="row">
+      <label>Loại:
+        <select id="kind">
+          <option value="product">Sản phẩm</option>
+          <option value="post">Bài viết</option>
+        </select>
+      </label>
       <label>Nguồn:
         <select id="source">
           <option value="noma">noma.vn</option>
           <option value="doscom">doscom.vn</option>
         </select>
       </label>
-      <button id="btnCheck">Kiểm tra SP còn thiếu</button>
+      <button id="btnCheck">Kiểm tra phần còn thiếu</button>
       <input id="token" type="text" placeholder="X-Products-Token (nếu Access tắt)" style="flex:1;min-width:180px" />
       <span id="info" class="muted"></span>
     </div>
@@ -91,37 +94,65 @@ function headers(write) {
   return h;
 }
 const source = () => $("#source").value;
+const kind = () => $("#kind").value;
+const isPost = () => kind() === "post";
+const NOUN = () => (isPost() ? "bài viết" : "sản phẩm");
 let missing = [];
 
-// ---- Kiểm tra SP thiếu ----
+// Ghi chú thay đổi theo loại nội dung (2 pipeline khác nhau: SP có giá, bài viết có ảnh trong bài).
+function renderNote() {
+  $("#note").innerHTML = isPost()
+    ? `Mỗi bài: đọc bản gốc trên web tiếng Việt → <b>sửa brandcore</b> → <b>dịch sang tiếng Anh</b> →
+       <b>copy ảnh</b> (ảnh đại diện + ảnh trong bài) sang nomaauto.us → đăng bài kèm SEO title/meta/focus keyword tiếng Anh.
+       Ảnh được upload lại vào Media của nomaauto.us, <b>không hotlink</b> về noma.vn.
+       Mặc định tạo ở trạng thái <b>Nháp (draft)</b>. Không đụng gì tới bài gốc.`
+    : `Mỗi SP: đọc bản gốc → <b>sửa brandcore</b> → <b>dịch sang tiếng Anh</b> → <b>đổi giá VND→USD</b> → copy ảnh đại diện → tạo sản phẩm.
+       Mặc định tạo ở trạng thái <b>Nháp (draft)</b> để bạn duyệt trên WP trước khi cho hiển thị. Không đụng gì tới SP nguồn.`;
+  $("#missCard").classList.add("hide");
+  $("#repCard").classList.add("hide");
+  $("#info").textContent = "";
+  missing = [];
+}
+$("#kind").addEventListener("change", renderNote);
+renderNote();
+
+// ---- Kiểm tra phần còn thiếu ----
 $("#btnCheck").onclick = async () => {
   $("#btnCheck").disabled = true; $("#info").textContent = "Đang kiểm tra...";
   $("#missCard").classList.add("hide"); $("#repCard").classList.add("hide");
   try {
-    const r = await fetch("/api/products/sync-us", { method:"POST", headers:headers(false), body: JSON.stringify({ source: source(), mode:"list" }) });
+    const r = await fetch("/api/products/sync-us", { method:"POST", headers:headers(false), body: JSON.stringify({ source: source(), kind: kind(), mode:"list" }) });
     const d = await r.json();
     if (!d.ok) throw new Error(d.error || "lỗi");
     missing = d.missing || [];
-    $("#info").textContent = `${source()}: ${d.source_count} SP NOMA · nomaauto.us: ${d.us_count} SP · thiếu ${missing.length}`;
+    const unit = isPost() ? "bài" : "SP NOMA";
+    $("#info").textContent = `${source()}: ${d.source_count} ${unit} · đã có trên nomaauto.us: ${d.us_count} · thiếu ${missing.length}`;
     $("#cat").innerHTML = '<option value="">(không đặt)</option>' + (d.us_categories||[]).map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("");
-    $("#missTitle").textContent = missing.length ? `${missing.length} sản phẩm CHƯA có trên nomaauto.us` : "nomaauto.us đã đủ sản phẩm ✓";
-    $("#list").innerHTML = missing.length ? missing.map((p, i) => `
-      <div class="prod"><label class="row">
+    $("#missTitle").textContent = missing.length
+      ? `${missing.length} ${NOUN()} CHƯA có trên nomaauto.us`
+      : `nomaauto.us đã đủ ${NOUN()} ✓`;
+    $("#list").innerHTML = missing.length ? missing.map((p, i) => {
+      const sub = isPost()
+        ? `#${p.id}${p.date ? " · " + esc(String(p.date).slice(0, 10)) : ""}`
+        : `#${p.id}${p.sku ? " · NOMA " + esc(p.sku) : ""}`;
+      return `<div class="prod"><label class="row">
         <input type="checkbox" class="pick" data-i="${i}" checked />
-        <span><b>${esc(p.name)}</b> <span class="muted">#${p.id}${p.sku ? " · NOMA " + esc(p.sku) : ""}</span>
+        <span><b>${esc(p.name)}</b> <span class="muted">${sub}</span>
         ${p.permalink ? `<br><a href="${esc(p.permalink)}" target="_blank" class="muted">Xem bản gốc ↗</a>` : ""}</span>
-      </label></div>`).join("") : `<p class="muted">Không có SP nào thiếu.</p>`;
+      </label></div>`;
+    }).join("") : `<p class="muted">Không thiếu ${NOUN()} nào.</p>`;
     $("#missCard").classList.remove("hide");
   } catch (e) { $("#info").innerHTML = `<span class="err">Lỗi: ${esc(e.message)}</span>`; alert(e.message); }
   $("#btnCheck").disabled = false;
 };
 
-// ---- Đồng bộ (từng SP một: dịch mất ~15-25s/SP) ----
+// ---- Đồng bộ (từng mục một: dịch mất ~15-25s/SP, bài viết dài có thể lâu hơn) ----
 $("#btnSync").onclick = async () => {
   const picks = [...document.querySelectorAll(".pick:checked")].map(cb => missing[+cb.dataset.i]);
-  if (!picks.length) return alert("Chọn ít nhất 1 sản phẩm.");
+  if (!picks.length) return alert(`Chọn ít nhất 1 ${NOUN()}.`);
   const st = $("#status").value;
-  if (!confirm(`Đồng bộ ${picks.length} SP sang nomaauto.us (trạng thái: ${st === "publish" ? "Đăng luôn" : "Nháp"})?`)) return;
+  const k = kind(); // chốt loại tại thời điểm bấm, tránh người dùng đổi select giữa chừng
+  if (!confirm(`Đồng bộ ${picks.length} ${NOUN()} sang nomaauto.us (trạng thái: ${st === "publish" ? "Đăng luôn" : "Nháp"})?`)) return;
   $("#btnSync").disabled = true;
   const items = []; let created = 0, failed = 0, cost = 0;
   $("#repCard").classList.remove("hide"); $("#repCard").scrollIntoView({ behavior:"smooth" });
@@ -129,35 +160,41 @@ $("#btnSync").onclick = async () => {
     $("#btnSync").textContent = `Đang đồng bộ ${i + 1}/${picks.length}...`;
     try {
       const r = await fetch("/api/products/sync-us", { method:"POST", headers:headers(true), body: JSON.stringify({
-        source: source(), mode:"sync", ids:[picks[i].id], category_id: $("#cat").value || undefined, status: st }) });
+        source: source(), kind: k, mode:"sync", ids:[picks[i].id], category_id: $("#cat").value || undefined, status: st }) });
       const d = await r.json();
       if (!d.ok) throw new Error(d.error || "lỗi");
       items.push(...(d.items || [])); created += d.created || 0; failed += d.failed || 0; cost += d.cost_usd || 0;
     } catch (e) { failed++; items.push({ source_id: picks[i].id, source_name: picks[i].name, error: e.message }); }
-    renderRep({ created, failed, cost, items });
+    renderRep({ created, failed, cost, items, kind: k });
   }
   $("#btnSync").disabled = false; $("#btnSync").textContent = "Đồng bộ (đã chọn)";
 };
 
 function renderRep(d) {
+  const post = d.kind === "post";
   const rows = d.items.map(it => {
     const ok = !it.error;
     const st = ok ? `<span class="pill green">${esc(it.status || "đã tạo")}</span>` : `<span class="pill red">Lỗi</span>`;
     const link = it.us_url ? `<a href="${esc(it.us_url)}" target="_blank">${esc(it.us_name || "")}</a>` : esc(it.us_name || "—");
+    let img = "";
+    if (ok) {
+      const feat = it.image_copied ? "✓ ảnh đại diện" : "— không ảnh đại diện";
+      img = post ? `${feat}${it.images_in_body ? ` · ${it.images_in_body} ảnh trong bài` : ""}` : feat;
+    }
     return `<tr>
       <td>${esc(it.source_name || ("#" + it.source_id))}${it.sku ? ` <span class="muted">NOMA ${esc(it.sku)}</span>` : ""}</td>
       <td>${st}</td>
       <td>${link}${it.error ? `<div class="err" style="font-size:12px">${esc(it.error)}</div>` : ""}</td>
-      <td>${ok ? (it.image_copied ? "✓ ảnh" : "— không ảnh") : ""}</td>
+      <td>${img}</td>
     </tr>`;
   }).join("");
   $("#repBody").innerHTML = `<div class="stat">
-      <div class="b"><div class="n">${d.created}</div><div class="l">SP đã tạo trên US</div></div>
+      <div class="b"><div class="n">${d.created}</div><div class="l">${post ? "Bài" : "SP"} đã tạo trên US</div></div>
       <div class="b"><div class="n">${d.failed}</div><div class="l">Lỗi</div></div>
       <div class="b"><div class="n">$${(d.cost||0).toFixed(3)}</div><div class="l">Chi phí dịch (AI)</div></div>
     </div>
-    <table><thead><tr><th>SP nguồn</th><th>Trạng thái</th><th>Bản US</th><th>Ảnh</th></tr></thead><tbody>${rows}</tbody></table>
-    <p class="muted">Bản US tạo ở trạng thái Nháp → vào WP nomaauto.us duyệt lại (tiêu đề/giá/ảnh) rồi bấm Publish.</p>`;
+    <table><thead><tr><th>${post ? "Bài nguồn" : "SP nguồn"}</th><th>Trạng thái</th><th>Bản US</th><th>Ảnh</th></tr></thead><tbody>${rows}</tbody></table>
+    <p class="muted">Bản US tạo ở trạng thái Nháp → vào WP nomaauto.us duyệt lại (${post ? "tiêu đề/nội dung/ảnh" : "tiêu đề/giá/ảnh"}) rồi bấm Publish.</p>`;
 }
 </script>
 </body>
