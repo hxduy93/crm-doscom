@@ -160,19 +160,28 @@ $("#btnCheckAll").onclick = () => {
 };
 
 // ---------- NẤC 1b: RÀ BẰNG AI (xem trước) ----------
+// Rà TỪNG SP một (mỗi request 1 SP ~10-15s) thay vì gộp nhiều SP vào 1 request (dễ treo/timeout
+// vì Claude ~90s/lần × nhiều SP > giới hạn ~100s của Cloudflare). Kết quả đổ dần + hiện tiến độ.
 $("#btnAudit").onclick = async () => {
   const ids = [...document.querySelectorAll(".pick:checked")].map(cb => scanned[+cb.dataset.i].id);
   if (!ids.length) return alert("Chọn ít nhất 1 sản phẩm để rà.");
-  $("#btnAudit").disabled = true; $("#btnAudit").textContent = `Đang rà ${ids.length} SP...`;
-  try {
-    const r = await fetch("/api/products/brandcore-scan", { method:"POST", headers:headers(false), body: JSON.stringify({ site: site(), mode:"audit", ids }) });
-    const d = await r.json();
-    if (!d.ok) throw new Error(d.error || "lỗi rà");
-    proposals = (d.results || []).filter(x => x.has_violations && !x.error && !x.skipped);
-    renderProposals(d.results || [], d.cost_usd);
-    $("#applyCard").classList.remove("hide");
-    $("#applyCard").scrollIntoView({ behavior:"smooth" });
-  } catch (e) { alert(e.message); }
+  $("#btnAudit").disabled = true;
+  $("#applyCard").classList.remove("hide");
+  $("#applyCard").scrollIntoView({ behavior:"smooth" });
+  const allResults = [];
+  let cost = 0;
+  for (let i = 0; i < ids.length; i++) {
+    $("#btnAudit").textContent = `Đang rà ${i + 1}/${ids.length}...`;
+    try {
+      const r = await fetch("/api/products/brandcore-scan", { method:"POST", headers:headers(false), body: JSON.stringify({ site: site(), mode:"audit", ids: [ids[i]] }) });
+      const d = await r.json();
+      if (d.ok && Array.isArray(d.results)) { allResults.push(...d.results); cost += d.cost_usd || 0; }
+      else allResults.push({ id: ids[i], error: d.error || "lỗi rà" });
+    } catch (e) { allResults.push({ id: ids[i], error: e.message }); }
+    // đổ kết quả dần sau mỗi SP để không phải chờ hết mới thấy gì
+    proposals = allResults.filter(x => x.has_violations && !x.error && !x.skipped);
+    renderProposals(allResults, cost);
+  }
   $("#btnAudit").disabled = false; $("#btnAudit").textContent = "Rà bằng AI (đã chọn)";
 };
 
