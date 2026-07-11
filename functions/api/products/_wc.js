@@ -275,6 +275,40 @@ export async function copyImageFromUrl(targetCreds, srcUrl, { alt, title, filena
   });
 }
 
+// Liệt kê thư viện media WP (ảnh) — dùng cho menu "Sửa ảnh hỏng" để tìm ảnh thay thế cùng tên.
+// Đọc qua Application Password: REST không auth có thể trả THIẾU (đã gặp trên noma.vn).
+export async function listMedia(c, { maxPages = 12, perPage = 100 } = {}) {
+  const out = [];
+  for (let page = 1; page <= maxPages; page++) {
+    const u = `${c.url}/wp-json/wp/v2/media?per_page=${perPage}&page=${page}&media_type=image&_fields=id,source_url&_cb=${Date.now()}`;
+    const r = await fetch(u, {
+      headers: { Authorization: wpAuth(c.user, c.pwd), "Cache-Control": "no-cache" },
+      signal: AbortSignal.timeout(25000),
+    });
+    if (r.status === 400) break; // hết trang (WP trả 400 khi page vượt tổng số trang)
+    if (!r.ok) throw new Error(`WP media list ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    const arr = await r.json();
+    if (!Array.isArray(arr) || !arr.length) break;
+    out.push(...arr);
+    if (arr.length < perPage) break;
+  }
+  return out;
+}
+
+// Ảnh còn sống không? HEAD trước (rẻ); host nào chặn HEAD thì thử lại bằng GET.
+export async function imageAlive(url) {
+  try {
+    const r = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(15000) });
+    if (r.status === 405 || r.status === 501) {
+      const g = await fetch(url, { method: "GET", signal: AbortSignal.timeout(20000) });
+      return g.ok;
+    }
+    return r.ok;
+  } catch {
+    return true; // timeout/đứt mạng → KHÔNG kết luận là chết → không đụng vào (an toàn hơn sửa nhầm)
+  }
+}
+
 // Cập nhật 1 sản phẩm (PUT). Giữ nguyên status hiện tại nếu payload không đổi status.
 export async function updateProduct(c, id, payload) {
   const r = await fetch(`${c.url}/wp-json/wc/v3/products/${id}`, {

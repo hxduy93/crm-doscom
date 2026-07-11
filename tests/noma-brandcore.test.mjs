@@ -38,3 +38,26 @@ test("NOMA_BRAND_GUIDE có cảnh báo an toàn SKU (620 ăn mòn da, 922 dễ c
   assert.ok(/ăn mòn da/i.test(NOMA_BRAND_GUIDE), "620 phải ghi ăn mòn da");
   assert.ok(/dễ cháy/i.test(NOMA_BRAND_GUIDE), "922 phải ghi dễ cháy");
 });
+
+// ── applyFixes: KHÔNG được đụng vào bên trong thẻ HTML ──
+// Bom hẹn giờ đã vá: luật "claim: 100%" thay "100%" bằng RỖNG, mà tool đăng bài chèn ảnh với
+// style="max-width:100%" → nếu thay cả trong thẻ thì style hỏng thành "max-width:;" → ảnh vỡ.
+test("applyFixes chỉ sửa CHỮ, không đụng src/style/alt trong thẻ (ảnh không bị phá)", async () => {
+  const { applyFixes } = await import("../functions/api/geo/_utils/noma-brandcore.js");
+  const html = '<p>Bảo vệ 100% bề mặt sơn.</p>'
+    + '<figure><img src="https://noma.vn/wp-content/uploads/2026/03/noma-890.webp" alt="phủ bóng 100%"'
+    + ' style="display:block;max-width:100%;height:auto"/></figure>';
+  const { fixed, applied } = applyFixes(html, [{ type: "claim: 100%", original: "100%", fixed: "" }]);
+  assert.ok(applied.includes("claim: 100%"), "vẫn phải sửa được cụm trong chữ");
+  assert.ok(!fixed.includes("Bảo vệ 100% bề mặt"), "chữ vi phạm phải bị thay");
+  assert.ok(fixed.includes('style="display:block;max-width:100%;height:auto"'), "style ảnh phải NGUYÊN VẸN");
+  assert.ok(fixed.includes('src="https://noma.vn/wp-content/uploads/2026/03/noma-890.webp"'), "src ảnh phải nguyên vẹn");
+  assert.ok(!fixed.includes("max-width:;"), "không được để lại style hỏng");
+});
+
+test("applyFixes giữ nguyên layout: chỉ đổi đúng cụm chữ, không mất thẻ", async () => {
+  const { applyFixes } = await import("../functions/api/geo/_utils/noma-brandcore.js");
+  const html = "<h2>Ưu điểm</h2><ul><li>Hiệu quả vượt trội</li><li>Bền</li></ul>";
+  const { fixed } = applyFixes(html, [{ type: "từ cấm: vượt trội", original: "vượt trội", fixed: "hiệu quả" }]);
+  assert.equal(fixed, "<h2>Ưu điểm</h2><ul><li>Hiệu quả hiệu quả</li><li>Bền</li></ul>");
+});

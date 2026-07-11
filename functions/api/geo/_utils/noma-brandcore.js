@@ -176,8 +176,13 @@ export function deterministicFixes(text, list = NOMA_FORBIDDEN) {
 // Giữ nguyên 100% cấu trúc/thẻ/ảnh/xuống dòng — KHÔNG viết lại HTML nên không gộp đoạn,
 // không dời ảnh, không mất <br>/<li>. Cặp nào không tìm thấy chuỗi gốc → bỏ qua (skipped),
 // không đụng gì (an toàn hơn là đoán). Trả { fixed, applied[], skipped[] }.
+//
+// CHỈ thay trong phần CHỮ, KHÔNG thay bên trong thẻ HTML (src/style/alt/class).
+// Lý do: cặp sửa "100%" → "" (rỗng) từng có thể ăn vào style ảnh `max-width:100%` mà tool đăng bài
+// tự chèn → hỏng ảnh. Vi phạm brand core luôn nằm ở chữ người đọc thấy, nên không cần đụng thẻ.
 export function applyFixes(html, violations) {
-  let out = String(html || "");
+  // Tách xen kẽ: phần tử chỉ số CHẴN = chữ, LẺ = thẻ HTML (giữ nguyên tuyệt đối).
+  const parts = String(html || "").split(/(<[^>]*>)/);
   const applied = [];
   const skipped = [];
   for (const v of (Array.isArray(violations) ? violations : [])) {
@@ -185,10 +190,14 @@ export function applyFixes(html, violations) {
     const f = v && typeof v.fixed === "string" ? v.fixed : "";
     const label = (v && v.type) || o;
     if (!o || o === f) continue;
-    if (out.includes(o)) { out = out.split(o).join(f); applied.push(label); }
+    let hit = false;
+    for (let i = 0; i < parts.length; i += 2) {
+      if (parts[i].includes(o)) { parts[i] = parts[i].split(o).join(f); hit = true; }
+    }
+    if (hit) applied.push(label);
     else skipped.push(label);
   }
-  return { fixed: out, applied, skipped };
+  return { fixed: parts.join(""), applied, skipped };
 }
 
 // Quét text tìm cụm vi phạm brand core. Trả [{type, quote}] — quote = đoạn khớp lấy từ text GỐC.
