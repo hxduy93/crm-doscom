@@ -32,7 +32,8 @@ NGUYÊN TẮC SỬA (bắt buộc):
 2. GIỮ NGUYÊN cấu trúc HTML, thẻ, thứ tự đoạn, từ khoá SEO, link. Sửa tối thiểu — thay cụm vi phạm bằng cách nói ĐÚNG brand core (vd "Made in USA" → "thương hiệu gốc Mỹ, sản xuất qua đối tác OEM quốc tế"; "an toàn tuyệt đối" → "an toàn khi dùng đúng hướng dẫn"; "vượt trội/đột phá" → bỏ hoặc "hiệu quả").
 3. ĐỐI CHIẾU THÔNG SỐ CHUẨN (nếu phần user prompt có): nếu HƯỚNG DẪN SỬ DỤNG hoặc THỜI GIAN trên bài SAI/THIẾU so với thông số chuẩn (vd bài nói "xong trong 5 phút" nhưng chuẩn phải "đợi 4 tiếng"; bài chà "dọc-ngang" nhưng chuẩn "1 đường thẳng cùng hướng") → SỬA HDSD/thời gian cho khớp thông số chuẩn. Đây là NGOẠI LỆ được phép chỉnh nội dung HDSD (ghi type "HDSD sai/thiếu so với chuẩn").
 4. Nếu bài KHÔNG có vi phạm và HDSD đã khớp chuẩn: has_violations=false, để nguyên fixed_description = mô tả gốc.
-5. ⚠️ TRONG HTML dùng nháy ĐƠN ' cho MỌI thuộc tính (href/style/class...). TUYỆT ĐỐI không dùng nháy kép " bên trong HTML (làm hỏng JSON).
+5. ⚠️ CẢNH BÁO AN TOÀN: TUYỆT ĐỐI KHÔNG đụng tới cảnh báo an toàn — KHÔNG thêm cảnh báo còn thiếu, KHÔNG sửa, KHÔNG xóa. Nếu bài thiếu cảnh báo an toàn thì CỨ ĐỂ NGUYÊN, KHÔNG coi đó là vi phạm.
+6. ⚠️ TRONG HTML dùng nháy ĐƠN ' cho MỌI thuộc tính (href/style/class...). TUYỆT ĐỐI không dùng nháy kép " bên trong HTML (làm hỏng JSON).
 
 TRẢ VỀ DUY NHẤT JSON hợp lệ (không markdown, không chữ ngoài JSON):
 {
