@@ -99,6 +99,8 @@
 </div>
 
 <script>
+// Bắt mọi lỗi JS để hiện rõ (tránh "bấm không thấy gì").
+window.addEventListener("error", (e) => { try { document.getElementById("scanInfo").innerHTML = '<span style="color:#dc2626;font-weight:700">Lỗi JS: ' + (e.message||e) + '</span>'; } catch(_){} });
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 const TK = "products_token";
@@ -127,7 +129,10 @@ $("#btnScan").onclick = async () => {
     $("#scanInfo").textContent = `Quét ${d.scanned} SP · ${d.noma_count} SP NOMA · ${d.flagged_count} SP có cờ vi phạm`;
     renderList();
     $("#scanCard").classList.remove("hide");
-  } catch (e) { $("#scanInfo").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+  } catch (e) {
+    $("#scanInfo").innerHTML = `<span class="err">Lỗi: ${esc(e.message)}</span>`;
+    alert("Quét lỗi: " + e.message + "\n\nNếu là lỗi 401/Access, dán X-Products-Token vào ô rồi thử lại.");
+  }
   $("#btnScan").disabled = false;
 };
 
@@ -249,3 +254,6 @@ async function revert(id, key, btn) {
   } catch (e) { alert(e.message); btn.disabled = false; btn.textContent = "Hoàn tác"; }
 }
 window.revert = revert;
+</script>
+</body>
+</html>
