@@ -15,6 +15,7 @@
 import { callClaude } from "../geo/_utils/claude.js";
 import { slugify, SITE_URL, deriveKeyword } from "./_wc.js";
 import { NOMA_BRAND, NOMA_BRAND_GUIDE } from "../geo/_utils/noma-brandcore.js";
+import { findSkuCode, skuSpecText } from "../geo/_utils/noma-sku-specs.js";
 
 function json(o, s = 200) {
   return new Response(JSON.stringify(o), {
@@ -95,11 +96,17 @@ export async function onRequestPost({ request, env }) {
   }
 
   // ---- dựng content vision (mảng block: text + image) ----
+  // NOMA: nếu tên SP có mã SKU (vd NOMA 922) → nhét THÔNG SỐ CHUẨN (công dụng + HDSD + thời gian)
+  // từ tài liệu 17 SKU để agent viết đúng, không rút gọn/sai HDSD (vd 922 phải "đợi 4 tiếng").
+  const skuCode = site === "noma" ? findSkuCode(name) : null;
+  const skuBlock = skuCode ? `\n${skuSpecText(skuCode)}\n` : "";
+
   const intro =
     `Thương hiệu: ${brand.name} — ${brand.voice}\n` +
     `Website (dùng cho liên kết nội bộ): ${SITE_URL[site] || ""}\n` +
     `Tên sản phẩm: ${name}\n` +
     (catName ? `Danh mục: ${catName}\n` : "") +
+    skuBlock +
     (note ? `\nGHI CHÚ NGƯỜI DÙNG (nguồn thật, ưu tiên dùng):\n${note}\n` : "") +
     `\nSố ảnh đính kèm: ${images.length}. Đọc kỹ chữ/thông số trong từng ảnh dưới đây.`;
 

@@ -15,6 +15,7 @@
 // Chống hại: chỉ đụng SP NOMA (isNomaProduct); AI được lệnh GIỮ NGUYÊN mọi phần khác, chỉ sửa cụm vi phạm.
 import { callClaude } from "../geo/_utils/claude.js";
 import { NOMA_BRAND_GUIDE, scanForbidden } from "../geo/_utils/noma-brandcore.js";
+import { findSkuCode, skuSpecText } from "../geo/_utils/noma-sku-specs.js";
 import { siteCreds, isConfigured, listProducts, getProduct, isNomaProduct } from "./_wc.js";
 
 function json(o, s = 200) {
@@ -27,10 +28,11 @@ function json(o, s = 200) {
 const AUDIT_SYSTEM = `Bạn là biên tập viên tuân thủ thương hiệu NOMA. Nhiệm vụ: soát 1 bài mô tả sản phẩm NOMA đã đăng và SỬA ĐÚNG những chỗ VI PHẠM Brand Core, GIỮ NGUYÊN mọi phần còn lại.
 
 NGUYÊN TẮC SỬA (bắt buộc):
-1. CHỈ sửa cụm vi phạm brand core (xuất xứ sai kiểu "Made in USA/sản xuất tại Mỹ/công nghệ Mỹ/hàng Mỹ về", claim tuyệt đối "an toàn tuyệt đối/100%/vĩnh viễn/xoá hoàn toàn/bảo hành trọn đời", từ cấm "số 1/tốt nhất/vô địch/giá rẻ", "Noma USA"). KHÔNG viết lại cả bài, KHÔNG đổi giọng, KHÔNG thêm/bớt mục.
-2. GIỮ NGUYÊN cấu trúc HTML, thẻ, thứ tự đoạn, thông số, từ khoá SEO, link. Sửa tối thiểu — thay cụm vi phạm bằng cách nói ĐÚNG brand core (vd "Made in USA" → "thương hiệu gốc Mỹ, sản xuất qua đối tác OEM quốc tế"; "an toàn tuyệt đối" → "an toàn khi dùng đúng hướng dẫn").
-3. Nếu bài KHÔNG có vi phạm: has_violations=false, để nguyên fixed_description = mô tả gốc.
-4. ⚠️ TRONG HTML dùng nháy ĐƠN ' cho MỌI thuộc tính (href/style/class...). TUYỆT ĐỐI không dùng nháy kép " bên trong HTML (làm hỏng JSON).
+1. Sửa các cụm vi phạm brand core (xuất xứ sai kiểu "Made in USA/sản xuất tại Mỹ/công nghệ Mỹ/hàng Mỹ về", claim tuyệt đối "an toàn tuyệt đối/100%/vĩnh viễn/xoá hoàn toàn/bảo hành trọn đời", từ cấm "số 1/tốt nhất/vô địch/vượt trội/đột phá/tiên tiến/giá rẻ", claim "tiêu chuẩn/kiểm định quốc tế/SGS/Intertek", "Noma USA"). KHÔNG viết lại cả bài, KHÔNG đổi giọng.
+2. GIỮ NGUYÊN cấu trúc HTML, thẻ, thứ tự đoạn, từ khoá SEO, link. Sửa tối thiểu — thay cụm vi phạm bằng cách nói ĐÚNG brand core (vd "Made in USA" → "thương hiệu gốc Mỹ, sản xuất qua đối tác OEM quốc tế"; "an toàn tuyệt đối" → "an toàn khi dùng đúng hướng dẫn"; "vượt trội/đột phá" → bỏ hoặc "hiệu quả").
+3. ĐỐI CHIẾU THÔNG SỐ CHUẨN (nếu phần user prompt có): nếu HƯỚNG DẪN SỬ DỤNG hoặc THỜI GIAN trên bài SAI/THIẾU so với thông số chuẩn (vd bài nói "xong trong 5 phút" nhưng chuẩn phải "đợi 4 tiếng"; bài chà "dọc-ngang" nhưng chuẩn "1 đường thẳng cùng hướng") → SỬA HDSD/thời gian cho khớp thông số chuẩn. Đây là NGOẠI LỆ được phép chỉnh nội dung HDSD (ghi type "HDSD sai/thiếu so với chuẩn").
+4. Nếu bài KHÔNG có vi phạm và HDSD đã khớp chuẩn: has_violations=false, để nguyên fixed_description = mô tả gốc.
+5. ⚠️ TRONG HTML dùng nháy ĐƠN ' cho MỌI thuộc tính (href/style/class...). TUYỆT ĐỐI không dùng nháy kép " bên trong HTML (làm hỏng JSON).
 
 TRẢ VỀ DUY NHẤT JSON hợp lệ (không markdown, không chữ ngoài JSON):
 {
@@ -93,11 +95,14 @@ export async function onRequestPost({ request, env }) {
         if (site === "doscom" && !isNomaProduct(p)) { results.push({ id, name: p.name, skipped: "không phải SP NOMA" }); continue; }
 
         const regexFlags = scanForbidden(`${p.name} ${p.short_description || ""} ${p.description || ""}`);
+        const specCode = findSkuCode(p.name);
+        const specBlock = specCode ? `\n${skuSpecText(specCode)}\n\n` : "";
         const userPrompt =
           `TÊN SẢN PHẨM: ${p.name}\n\n` +
+          specBlock +
           `MÔ TẢ NGẮN (short_description, HTML):\n${p.short_description || "(trống)"}\n\n` +
           `MÔ TẢ DÀI (description, HTML):\n${p.description || "(trống)"}\n\n` +
-          `Hãy trả JSON đúng schema. Chỉ sửa chỗ vi phạm brand core, giữ nguyên phần còn lại.`;
+          `Hãy trả JSON đúng schema. Sửa chỗ vi phạm brand core, và sửa HDSD/thời gian nếu lệch thông số chuẩn ở trên; giữ nguyên phần còn lại.`;
 
         try {
           const res = await callClaude(env, {
