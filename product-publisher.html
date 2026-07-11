@@ -302,7 +302,7 @@ async function loadCats(site){
 
 // ---------- images ----------
 function readFile(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
-function downscale(dataURL, maxDim){ return new Promise(res=>{ const img=new Image(); img.onload=()=>{ let {width:w,height:h}=img; const sc=Math.min(1,maxDim/Math.max(w,h)); w=Math.round(w*sc); h=Math.round(h*sc); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h); res(cv.toDataURL('image/jpeg',0.85).split(',')[1]); }; img.onerror=()=>res(dataURL.split(',')[1]||''); img.src=dataURL; }); }
+function downscale(dataURL, maxDim, type){ return new Promise(res=>{ const img=new Image(); img.onload=()=>{ let {width:w,height:h}=img; const sc=Math.min(1,maxDim/Math.max(w,h)); w=Math.round(w*sc); h=Math.round(h*sc); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h); res(cv.toDataURL(type||'image/jpeg',0.85).split(',')[1]); }; img.onerror=()=>res(dataURL.split(',')[1]||''); img.src=dataURL; }); }
 function featuredUrl(){ return state.mainImg ? state.mainImg.url : (state.imgs[0]?state.imgs[0].url:''); }
 function syncCardImg(){ if($('pvResult').classList.contains('show')) $('pcImg').src = featuredUrl(); }
 
@@ -444,11 +444,23 @@ function getToken(){ return localStorage.getItem('products_token')||''; }
 function askToken(){ const t=prompt('Nhập MÃ XUẤT BẢN (khớp secret PRODUCTS_TOKEN trên CRM). Bỏ trống nếu đã bật đăng nhập Access:', getToken()); if(t!==null) localStorage.setItem('products_token',t.trim()); return getToken(); }
 function cleanHtml(){ return $('longDesc').innerHTML.replace(/<figure[\s\S]*?<\/figure>/gi,'').trim(); }
 function collectTags(){ return Array.prototype.map.call($('tagChips').querySelectorAll('.chip'), c=>c.childNodes[0].textContent.trim()).filter(Boolean); }
-function buildImages(){
-  const gallery = state.imgs.map((im)=>{ const p=im.pl||{}; return {data:im.full, media_type:im.media_type, after_heading:p.after_heading||'', alt:p.alt||$('nameInp').value, caption:p.caption||''}; });
+// Ảnh gửi đi tối đa 1600px cạnh dài. Ảnh gốc từ máy ảnh/điện thoại (4000px, vài MB) làm origin
+// noma.vn resize thumbnail quá lâu → Cloudflare cắt bằng lỗi 520. 1600px vẫn dư cho WooCommerce.
+// Giữ PNG là PNG (ảnh nền trong suốt), còn lại xuất JPEG.
+const PUB_MAXDIM = 1600;
+async function toPubImage(im){
+  const png = (im.media_type||'').includes('png');
+  return { data: await downscale(im.url, PUB_MAXDIM, png?'image/png':'image/jpeg'), media_type: png?'image/png':'image/jpeg' };
+}
+async function buildImages(){
+  const gallery=[];
+  for(const im of state.imgs){
+    const p=im.pl||{};
+    gallery.push({ ...(await toPubImage(im)), after_heading:p.after_heading||'', alt:p.alt||$('nameInp').value, caption:p.caption||'' });
+  }
   if(state.mainImg){
     // ảnh nền trắng = ảnh đầu tiên + đại diện; poster theo sau (vào bài + gallery)
-    return [{ data:state.mainImg.full, media_type:state.mainImg.media_type, role:'featured', alt:($('focusKw').textContent.trim()||$('nameInp').value), caption:'' }, ...gallery];
+    return [{ ...(await toPubImage(state.mainImg)), role:'featured', alt:($('focusKw').textContent.trim()||$('nameInp').value), caption:'' }, ...gallery];
   }
   if(gallery[0]) gallery[0].role='featured';   // không có ảnh nền trắng → ảnh poster đầu làm đại diện
   return gallery;
@@ -460,7 +472,7 @@ async function publish(){
   const body={ site:state.site, name:$('nameInp').value.trim(), price:$('priceInp').value, old_price:$('oldInp').value,
     stock:$('stockInp').value, sold:$('soldInp').value, primary_keyword:$('focusKw').textContent.trim(),
     status:state.pubStatus, seo_title:$('seoTitle').textContent.trim(), short_description:$('shortDesc').innerHTML.trim(),
-    long_html:cleanHtml(), meta_description:$('metaDesc').textContent.trim(), tags:collectTags(), images:buildImages() };
+    long_html:cleanHtml(), meta_description:$('metaDesc').textContent.trim(), tags:collectTags(), images:await buildImages() };
   if(state.site==='all') body.categories={doscom:$('catSel').value, noma:$('catSel2').value, nomaauto:$('catSel3').value}; else body.category_id=catId;
   const headers={'content-type':'application/json'}; const tok=getToken(); if(tok) headers['X-Products-Token']=tok;
   $('pubBtn').disabled=true; const old=$('pubLabel').textContent; $('pubLabel').textContent='Đang đăng…';

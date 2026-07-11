@@ -165,19 +165,36 @@ export async function fetchCategories(c) {
   return out;
 }
 
-export async function uploadMedia(c, { bytes, filename, mime, alt, caption, title }) {
-  const r = await fetch(`${c.url}/wp-json/wp/v2/media`, {
-    method: "POST",
-    headers: {
-      Authorization: wpAuth(c.user, c.pwd),
-      "Content-Type": mime || "image/jpeg",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-    },
-    body: bytes,
-    signal: AbortSignal.timeout(45000),
-  });
-  if (!r.ok) throw new Error(`WP media ${r.status}: ${(await r.text()).slice(0, 300)}`);
-  const m = await r.json();
+// Lỗi tạm thời khi upload ảnh: origin WP xử lý ảnh (resize thumbnail) lâu → Cloudflare trả 520/504,
+// hoặc host chập chờn (502/503/429). Các mã này retry được; 4xx (sai quyền, file cấm) thì không.
+const RETRYABLE = new Set([429, 500, 502, 503, 504, 520, 521, 522, 524]);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+export async function uploadMedia(c, { bytes, filename, mime, alt, caption, title }, { retries = 2 } = {}) {
+  let m, lastErr = "";
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (attempt) await sleep(2000 * attempt); // 2s, 4s — cho origin kịp hồi
+    let r;
+    try {
+      r = await fetch(`${c.url}/wp-json/wp/v2/media`, {
+        method: "POST",
+        headers: {
+          Authorization: wpAuth(c.user, c.pwd),
+          "Content-Type": mime || "image/jpeg",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+        },
+        body: bytes,
+        signal: AbortSignal.timeout(60000),
+      });
+    } catch (e) { // timeout/đứt mạng → thử lại
+      lastErr = `WP media (${c.site}): ${String(e.message || e)}`;
+      continue;
+    }
+    if (r.ok) { m = await r.json(); break; }
+    lastErr = `WP media ${r.status} (${c.site}): ${(await r.text()).slice(0, 200)}`;
+    if (!RETRYABLE.has(r.status)) break;
+  }
+  if (!m) throw new Error(lastErr || "WP media: upload thất bại");
   if (alt || caption || title) {
     await fetch(`${c.url}/wp-json/wp/v2/media/${m.id}`, {
       method: "POST",
