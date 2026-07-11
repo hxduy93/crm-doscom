@@ -64,3 +64,56 @@ GIỌNG (Tone of Voice) — "người anh biết xe":
 - NOMA 692 & 310 (nội thất / chống mờ kính): tổn thương mắt → "tránh xịt vào mắt".
 - NOMA 250 (phục hồi nhựa): kích ứng da → "rửa tay sau khi dùng".
 - NOMA 890, 911, 955: không phân loại nguy hại GHS — không cần cảnh báo đặc biệt.`;
+
+// ── Bộ QUÉT VI PHẠM (regex, không tốn AI) — dùng cho menu "Sửa brandcore" ──
+// Phát hiện nhanh bài NOMA đã đăng có cụm vi phạm brand core để đưa vào diện cần sửa.
+// Match trên bản đã BỎ DẤU (foldVi) để không phải viết class Unicode dễ sai; mỗi mục có nhãn `type`.
+export const NOMA_FORBIDDEN = [
+  // Xuất xứ sai (nặng nhất — trái nguyên tắc vàng)
+  { type: "xuất xứ: Made in USA", re: /made in usa/ },
+  { type: "xuất xứ: sản xuất tại Mỹ", re: /san xuat (tai|o) my\b/ },
+  { type: "xuất xứ: hàng Mỹ về", re: /hang my ve\b/ },
+  { type: "xuất xứ: nhập khẩu từ Mỹ", re: /nhap ?(khau ?)?(truc tiep ?)?tu my\b/ },
+  { type: "xuất xứ: công nghệ Mỹ", re: /cong nghe my\b/ },
+  { type: "xuất xứ: chính hãng Mỹ", re: /chinh hang my\b/ },
+  { type: "xuất xứ: nhà máy ở Mỹ", re: /nha may o my\b/ },
+  { type: "xuất xứ: nhà phân phối của Noma USA", re: /nha phan phoi.{0,20}noma usa/ },
+  { type: "xuất xứ: Noma USA", re: /noma usa/ },
+  // Claim tuyệt đối / vĩnh viễn
+  { type: "claim: an toàn tuyệt đối", re: /(an toan tuyet doi|tuyet doi an toan)/ },
+  { type: "claim: 100%", re: /100 ?%/ },
+  { type: "claim: bảo hành trọn đời", re: /bao hanh tron doi/ },
+  { type: "claim: vĩnh viễn", re: /vinh vien/ },
+  { type: "claim: xoá hoàn toàn", re: /xo?a hoan toan/ },
+  // Từ ngữ cấm
+  { type: "từ cấm: số 1", re: /so (1|mot)\b/ },
+  { type: "từ cấm: tốt nhất", re: /tot nhat/ },
+  { type: "từ cấm: vô địch", re: /vo dich/ },
+  { type: "từ cấm: cực phẩm", re: /cuc pham/ },
+  { type: "từ cấm: giá rẻ / siêu rẻ", re: /(sieu re|gia re|re nhat)/ },
+];
+
+// Bỏ dấu tiếng Việt + hạ thường (đ→d). Giữ độ dài 1:1 theo ký tự gốc NFC (để lấy quote đúng vị trí).
+export function foldVi(s) {
+  return String(s || "")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/đ/g, "d").replace(/Đ/g, "d")
+    .toLowerCase();
+}
+
+// Quét text tìm cụm vi phạm brand core. Trả [{type, quote}] — quote = đoạn khớp lấy từ text GỐC.
+// Bỏ thẻ HTML trước khi quét để không dính vào tên class/thuộc tính.
+export function scanForbidden(text) {
+  const orig = String(text || "").replace(/<[^>]+>/g, " ");
+  const folded = foldVi(orig);
+  const seen = new Set();
+  const out = [];
+  for (const f of NOMA_FORBIDDEN) {
+    const m = folded.match(f.re);
+    if (m && !seen.has(f.type)) {
+      seen.add(f.type);
+      out.push({ type: f.type, quote: orig.slice(m.index, m.index + m[0].length).trim() });
+    }
+  }
+  return out;
+}

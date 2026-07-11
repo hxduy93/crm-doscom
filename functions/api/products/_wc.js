@@ -171,6 +171,59 @@ export async function uploadMedia(c, { bytes, filename, mime, alt, caption, titl
   return { id: m.id, source_url: m.source_url };
 }
 
+// Nhận diện sản phẩm NOMA (để menu "Sửa brandcore" chỉ áp brand core cho SP NOMA,
+// bỏ qua SP Doscom trên cùng 1 web). Khớp "noma" trong tên/mô tả (không phân biệt hoa thường).
+export function isNomaProduct(p) {
+  const hay = `${p?.name || ""} ${p?.short_description || ""} ${p?.description || ""}`.toLowerCase();
+  return /\bnoma\b/.test(hay);
+}
+
+// Liệt kê sản phẩm WooCommerce (1 trang). Trả { items, total, totalPages }.
+export async function listProducts(c, { search = "", perPage = 50, page = 1, status = "publish" } = {}) {
+  const params = new URLSearchParams({
+    per_page: String(perPage),
+    page: String(page),
+    _fields: "id,name,permalink,status,description,short_description,categories",
+  });
+  if (search) params.set("search", search);
+  if (status) params.set("status", status);
+  const r = await fetch(`${c.url}/wp-json/wc/v3/products?${params}`, {
+    headers: { Authorization: wcAuth(c.ck, c.cs) },
+    signal: AbortSignal.timeout(25000),
+  });
+  if (!r.ok) throw new Error(`WC list ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  const arr = await r.json();
+  return {
+    items: Array.isArray(arr) ? arr : [],
+    total: Number(r.headers.get("X-WP-Total") || 0),
+    totalPages: Number(r.headers.get("X-WP-TotalPages") || 1),
+  };
+}
+
+// Lấy 1 sản phẩm đầy đủ (dùng để backup trước khi ghi đè).
+export async function getProduct(c, id) {
+  const r = await fetch(`${c.url}/wp-json/wc/v3/products/${id}?_fields=id,name,permalink,status,description,short_description`, {
+    headers: { Authorization: wcAuth(c.ck, c.cs) },
+    signal: AbortSignal.timeout(20000),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(`WC get ${r.status}: ${JSON.stringify(d).slice(0, 200)}`);
+  return d;
+}
+
+// Cập nhật 1 sản phẩm (PUT). Giữ nguyên status hiện tại nếu payload không đổi status.
+export async function updateProduct(c, id, payload) {
+  const r = await fetch(`${c.url}/wp-json/wc/v3/products/${id}`, {
+    method: "PUT",
+    headers: { Authorization: wcAuth(c.ck, c.cs), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(30000),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(`WC update ${r.status}: ${JSON.stringify(d).slice(0, 300)}`);
+  return d;
+}
+
 export async function createProduct(c, payload) {
   const r = await fetch(`${c.url}/wp-json/wc/v3/products`, {
     method: "POST",

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sửa brandcore — NOMA</title>
+<style>
+  :root { --bg:#f6f7fb; --card:#fff; --ink:#1f2430; --mut:#6b7280; --line:#e6e8ef;
+          --blue:#2563eb; --purple:#7c3aed; --red:#dc2626; --green:#16a34a; --amber:#d97706; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:'Nunito',system-ui,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--ink); font-size:14px; }
+  .wrap { max-width:1000px; margin:0 auto; padding:18px; }
+  h1 { font-size:20px; margin:0 0 2px; }
+  .sub { color:var(--mut); margin:0 0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  select, input[type=text] { padding:9px 11px; border:1px solid var(--line); border-radius:10px; font:inherit; background:#fff; }
+  button { padding:9px 15px; border:0; border-radius:10px; font:inherit; font-weight:700; cursor:pointer; background:var(--blue); color:#fff; }
+  button.sec { background:#eef1f8; color:var(--ink); }
+  button.warn { background:var(--amber); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .pill { display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px; font-weight:700; }
+  .pill.red { background:#fde8e8; color:var(--red); }
+  .pill.green { background:#e7f6ec; color:var(--green); }
+  .pill.grey { background:#eef1f8; color:var(--mut); }
+  .muted { color:var(--mut); font-size:13px; }
+  .prod { border:1px solid var(--line); border-radius:12px; padding:12px; margin:10px 0; }
+  .prod h3 { margin:0 0 4px; font-size:15px; }
+  .flags { display:flex; gap:6px; flex-wrap:wrap; margin:6px 0; }
+  .flag { background:#fde8e8; color:var(--red); border-radius:8px; padding:2px 8px; font-size:12px; font-weight:700; }
+  .cmp { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px; }
+  .cmp .box { border:1px solid var(--line); border-radius:10px; padding:8px; max-height:180px; overflow:auto; font-size:12px; white-space:pre-wrap; word-break:break-word; background:#fbfbfd; }
+  .cmp .lab { font-weight:700; font-size:12px; margin-bottom:4px; color:var(--mut); }
+  .box.old { background:#fff7f7; }
+  .box.new { background:#f4fbf6; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); font-size:13px; vertical-align:top; }
+  th { color:var(--mut); font-size:12px; text-transform:uppercase; letter-spacing:.03em; }
+  .stat { display:flex; gap:12px; flex-wrap:wrap; margin:6px 0 12px; }
+  .stat .b { background:#f4f6fb; border-radius:12px; padding:12px 16px; min-width:120px; }
+  .stat .n { font-size:24px; font-weight:800; }
+  .stat .l { color:var(--mut); font-size:12px; }
+  a { color:var(--blue); }
+  .err { color:var(--red); font-weight:700; }
+  .hide { display:none; }
+  .note { background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:10px 12px; font-size:13px; color:#92400e; margin-bottom:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Sửa brandcore — NOMA</h1>
+  <p class="sub">Quét sản phẩm NOMA đã đăng → tìm chỗ vi phạm Brand Core v3 → sửa đúng chỗ đó. Không đụng sản phẩm Doscom.</p>
+
+  <div class="note">
+    Quy trình an toàn: <b>Quét</b> (không tốn AI) → <b>Rà bằng AI</b> để xem bản sửa trước → <b>Áp bản sửa</b> (backup gốc, giữ trạng thái đăng). Có nút Hoàn tác trong báo cáo.
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <label>Website:
+        <select id="site">
+          <option value="doscom">doscom.vn</option>
+          <option value="noma">noma.vn</option>
+          <option value="nomaauto">nomaauto.us (EN)</option>
+        </select>
+      </label>
+      <button id="btnScan">Quét sản phẩm NOMA</button>
+      <input id="token" type="text" placeholder="X-Products-Token (nếu Access tắt)" style="flex:1;min-width:180px" />
+      <span id="scanInfo" class="muted"></span>
+    </div>
+  </div>
+
+  <!-- KẾT QUẢ QUÉT + RÀ AI -->
+  <div id="scanCard" class="card hide">
+    <div class="row" style="justify-content:space-between">
+      <b id="scanTitle"></b>
+      <div class="row">
+        <button id="btnCheckAll" class="sec">Chọn tất cả có cờ</button>
+        <button id="btnAudit">Rà bằng AI (đã chọn)</button>
+      </div>
+    </div>
+    <div id="list"></div>
+  </div>
+
+  <!-- ÁP BẢN SỬA -->
+  <div id="applyCard" class="card hide">
+    <div class="row" style="justify-content:space-between">
+      <b>Bản sửa đề xuất — tick sản phẩm muốn áp</b>
+      <button id="btnApply" class="warn">Áp bản sửa (đã duyệt)</button>
+    </div>
+    <div id="proposals"></div>
+  </div>
+
+  <!-- BÁO CÁO -->
+  <div id="reportCard" class="card hide">
+    <h1 style="font-size:18px">Báo cáo sửa brandcore</h1>
+    <div id="reportBody"></div>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const TK = "products_token";
+$("#token").value = localStorage.getItem(TK) || "";
+$("#token").addEventListener("change", () => localStorage.setItem(TK, $("#token").value.trim()));
+
+function headers(write) {
+  const h = { "content-type": "application/json" };
+  if (write) { const t = $("#token").value.trim(); if (t) h["X-Products-Token"] = t; }
+  return h;
+}
+const site = () => $("#site").value;
+
+let scanned = [];    // [{id,name,permalink,flags}]
+let proposals = [];  // [{id,name,permalink,has_violations,violations,fixed_description,fixed_short_description,...}]
+
+// ---------- NẤC 1: QUÉT ----------
+$("#btnScan").onclick = async () => {
+  $("#btnScan").disabled = true; $("#scanInfo").textContent = "Đang quét...";
+  $("#scanCard").classList.add("hide"); $("#applyCard").classList.add("hide"); $("#reportCard").classList.add("hide");
+  try {
+    const r = await fetch("/api/products/brandcore-scan", { method:"POST", headers:headers(false), body: JSON.stringify({ site: site(), mode:"list" }) });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || "lỗi quét");
+    scanned = d.products || [];
+    $("#scanInfo").textContent = `Quét ${d.scanned} SP · ${d.noma_count} SP NOMA · ${d.flagged_count} SP có cờ vi phạm`;
+    renderList();
+    $("#scanCard").classList.remove("hide");
+  } catch (e) { $("#scanInfo").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+  $("#btnScan").disabled = false;
+};
+
+function renderList() {
+  $("#scanTitle").textContent = `${scanned.length} sản phẩm NOMA`;
+  scanned.sort((a,b) => (b.flags.length - a.flags.length));
+  $("#list").innerHTML = scanned.map((p, i) => {
+    const flags = p.flags.length
+      ? `<div class="flags">${p.flags.map(f => `<span class="flag">${esc(f.type)}</span>`).join("")}</div>`
+      : `<span class="pill green">Chưa thấy vi phạm (regex)</span>`;
+    return `<div class="prod">
+      <label class="row" style="align-items:flex-start">
+        <input type="checkbox" class="pick" data-i="${i}" ${p.flags.length ? "checked" : ""} style="margin-top:3px" />
+        <span style="flex:1">
+          <h3>${esc(p.name)} <span class="muted">#${p.id}</span></h3>
+          ${flags}
+          <a href="${esc(p.permalink)}" target="_blank" class="muted">Mở trên web ↗</a>
+        </span>
+      </label></div>`;
+  }).join("");
+}
+
+$("#btnCheckAll").onclick = () => {
+  document.querySelectorAll(".pick").forEach(cb => { cb.checked = scanned[+cb.dataset.i].flags.length > 0; });
+};
+
+// ---------- NẤC 1b: RÀ BẰNG AI (xem trước) ----------
+$("#btnAudit").onclick = async () => {
+  const ids = [...document.querySelectorAll(".pick:checked")].map(cb => scanned[+cb.dataset.i].id);
+  if (!ids.length) return alert("Chọn ít nhất 1 sản phẩm để rà.");
+  $("#btnAudit").disabled = true; $("#btnAudit").textContent = `Đang rà ${ids.length} SP...`;
+  try {
+    const r = await fetch("/api/products/brandcore-scan", { method:"POST", headers:headers(false), body: JSON.stringify({ site: site(), mode:"audit", ids }) });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || "lỗi rà");
+    proposals = (d.results || []).filter(x => x.has_violations && !x.error && !x.skipped);
+    renderProposals(d.results || [], d.cost_usd);
+    $("#applyCard").classList.remove("hide");
+    $("#applyCard").scrollIntoView({ behavior:"smooth" });
+  } catch (e) { alert(e.message); }
+  $("#btnAudit").disabled = false; $("#btnAudit").textContent = "Rà bằng AI (đã chọn)";
+};
+
+function renderProposals(results, cost) {
+  const clean = results.filter(x => !x.has_violations && !x.error && !x.skipped).length;
+  const errs = results.filter(x => x.error).length;
+  const head = `<p class="muted">${proposals.length} SP có vi phạm · ${clean} SP sạch · ${errs} lỗi · chi phí AI ~$${(cost||0).toFixed(4)}</p>`;
+  $("#proposals").innerHTML = head + proposals.map((p, i) => {
+    const vio = (p.violations||[]).map(v =>
+      `<tr><td><span class="flag">${esc(v.type)}</span></td><td>${esc(v.original)}</td><td>${esc(v.fixed)}</td></tr>`).join("");
+    return `<div class="prod">
+      <label class="row"><input type="checkbox" class="applypick" data-i="${i}" checked />
+        <b>${esc(p.name)} <span class="muted">#${p.id}</span></b></label>
+      <table><thead><tr><th>Loại vi phạm</th><th>Gốc</th><th>Sửa thành</th></tr></thead><tbody>${vio}</tbody></table>
+      <div class="cmp">
+        <div><div class="lab">Mô tả dài — GỐC</div><div class="box old">${esc(stripHtml(p.original_description || ""))}</div></div>
+        <div><div class="lab">Mô tả dài — ĐÃ SỬA</div><div class="box new">${esc(stripHtml(p.fixed_description || ""))}</div></div>
+      </div>
+      <a href="${esc(p.permalink)}" target="_blank" class="muted">Mở trên web ↗</a>
+    </div>`;
+  }).join("") || `<p class="muted">Không có SP nào cần sửa trong nhóm đã chọn.</p>`;
+}
+function stripHtml(h){ return String(h).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim(); }
+
+// ---------- NẤC 2: ÁP BẢN SỬA ----------
+$("#btnApply").onclick = async () => {
+  const picks = [...document.querySelectorAll(".applypick:checked")].map(cb => proposals[+cb.dataset.i]);
+  if (!picks.length) return alert("Chọn ít nhất 1 sản phẩm để áp.");
+  if (!confirm(`Áp bản sửa cho ${picks.length} sản phẩm trên ${site()}? (đã backup, có thể hoàn tác)`)) return;
+  $("#btnApply").disabled = true; $("#btnApply").textContent = "Đang áp...";
+  try {
+    const fixes = picks.map(p => ({ id: p.id, description: p.fixed_description, short_description: p.fixed_short_description }));
+    const r = await fetch("/api/products/brandcore-apply", { method:"POST", headers:headers(true), body: JSON.stringify({ site: site(), fixes }) });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || "lỗi áp");
+    renderReport(d);
+    $("#reportCard").classList.remove("hide");
+    $("#reportCard").scrollIntoView({ behavior:"smooth" });
+  } catch (e) { alert(e.message); }
+  $("#btnApply").disabled = false; $("#btnApply").textContent = "Áp bản sửa (đã duyệt)";
+};
+
+// ---------- BÁO CÁO ----------
+function renderReport(d) {
+  const byType = Object.entries(d.summary_by_type || {}).sort((a,b)=>b[1]-a[1]);
+  const stat = `<div class="stat">
+    <div class="b"><div class="n">${d.applied}</div><div class="l">SP đã sửa</div></div>
+    <div class="b"><div class="n">${d.fixed_total}</div><div class="l">Lỗi brandcore khắc phục</div></div>
+    <div class="b"><div class="n">${d.skipped}</div><div class="l">Bỏ qua (không đổi)</div></div>
+    <div class="b"><div class="n">${d.failed}</div><div class="l">Lỗi ghi</div></div>
+  </div>`;
+  const typeTable = byType.length
+    ? `<h3>Theo loại vi phạm</h3><table><thead><tr><th>Loại</th><th>Số SP</th></tr></thead><tbody>${
+        byType.map(([t,n])=>`<tr><td>${esc(t)}</td><td>${n}</td></tr>`).join("")}</tbody></table>` : "";
+  const rows = (d.items||[]).map(it => {
+    const status = it.applied ? `<span class="pill green">Đã sửa</span>`
+      : it.error ? `<span class="pill red">Lỗi</span>` : `<span class="pill grey">Bỏ qua</span>`;
+    const fixedList = (it.violations_fixed||[]).map(t=>`<span class="flag">${esc(t)}</span>`).join(" ") || "—";
+    const residual = (it.residual_flags||[]).length ? `<div class="err" style="font-size:12px;margin-top:4px">⚠ Còn: ${it.residual_flags.map(f=>esc(f.type)).join(", ")}</div>` : "";
+    const revert = it.applied && it.backup_key
+      ? `<button class="sec" onclick="revert(${it.id},'${esc(it.backup_key)}',this)">Hoàn tác</button>` : "";
+    const link = it.permalink ? `<a href="${esc(it.permalink)}" target="_blank">${esc(it.name||("#"+it.id))}</a>` : esc(it.name||("#"+it.id));
+    return `<tr><td>${link} <span class="muted">#${it.id}</span>${it.error?`<div class="err" style="font-size:12px">${esc(it.error)}</div>`:""}</td>
+      <td>${status}</td><td>${fixedList}${residual}</td><td>${revert}</td></tr>`;
+  }).join("");
+  $("#reportBody").innerHTML = `<p class="muted">Website: <b>${esc(d.site)}</b> · lúc ${esc(d.generated_at)}</p>`
+    + stat + typeTable
+    + `<h3>Chi tiết từng sản phẩm</h3><table><thead><tr><th>Sản phẩm</th><th>Trạng thái</th><th>Đã khắc phục</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+async function revert(id, key, btn) {
+  if (!confirm("Khôi phục nội dung gốc cho sản phẩm này?")) return;
+  btn.disabled = true; btn.textContent = "Đang hoàn tác...";
+  try {
+    const r = await fetch("/api/products/brandcore-apply", { method:"POST", headers:headers(true), body: JSON.stringify({ mode:"revert", site: site(), id, backup_key: key }) });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || "lỗi");
+    btn.textContent = "Đã hoàn tác ✓";
+  } catch (e) { alert(e.message); btn.disabled = false; btn.textContent = "Hoàn tác"; }
+}
+window.revert = revert;
