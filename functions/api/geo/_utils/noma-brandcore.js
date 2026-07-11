@@ -68,58 +68,60 @@ GIỌNG (Tone of Voice) — "người anh biết xe":
 // ── Bộ QUÉT VI PHẠM (regex, không tốn AI) — dùng cho menu "Sửa brandcore" ──
 // Phát hiện nhanh bài NOMA đã đăng có cụm vi phạm brand core để đưa vào diện cần sửa.
 // Match trên bản đã BỎ DẤU (foldVi) để không phải viết class Unicode dễ sai; mỗi mục có nhãn `type`.
+// Mỗi mục: `type` (nhãn), `re` (regex trên bản bỏ dấu), `fix` (chuỗi thay thế mặc định —
+// dùng để tạo cặp sửa DETERMINISTIC, không phụ thuộc AI, đảm bảo cụm cấm luôn bị thay).
 export const NOMA_FORBIDDEN = [
   // Xuất xứ sai (nặng nhất — trái nguyên tắc vàng)
-  { type: "xuất xứ: Made in USA", re: /made in usa/ },
-  { type: "xuất xứ: sản xuất tại Mỹ", re: /san xuat (tai|o) my\b/ },
-  { type: "xuất xứ: hàng Mỹ về", re: /hang my ve\b/ },
-  { type: "xuất xứ: nhập khẩu từ Mỹ", re: /nhap ?(khau ?)?(truc tiep ?)?tu my\b/ },
-  { type: "xuất xứ: công nghệ Mỹ", re: /cong nghe my\b/ },
-  { type: "xuất xứ: chính hãng Mỹ", re: /chinh hang my\b/ },
-  { type: "xuất xứ: nhà máy ở Mỹ", re: /nha may o my\b/ },
-  { type: "xuất xứ: nhà phân phối của Noma USA", re: /nha phan phoi.{0,20}noma usa/ },
-  { type: "xuất xứ: Noma USA", re: /noma usa/ },
+  { type: "xuất xứ: Made in USA", re: /made in usa/, fix: "thương hiệu gốc Mỹ" },
+  { type: "xuất xứ: sản xuất tại Mỹ", re: /san xuat (tai|o) my\b/, fix: "sản xuất qua đối tác OEM quốc tế" },
+  { type: "xuất xứ: hàng Mỹ về", re: /hang my ve\b/, fix: "nhập khẩu chính ngạch" },
+  { type: "xuất xứ: nhập khẩu từ Mỹ", re: /nhap ?(khau ?)?(truc tiep ?)?tu my\b/, fix: "nhập khẩu chính ngạch" },
+  { type: "xuất xứ: công nghệ Mỹ", re: /cong nghe my\b/, fix: "công thức chuẩn Mỹ" },
+  { type: "xuất xứ: chính hãng Mỹ", re: /chinh hang my\b/, fix: "chính hãng" },
+  { type: "xuất xứ: nhà máy ở Mỹ", re: /nha may o my\b/, fix: "nhà máy đạt chuẩn ISO" },
+  { type: "xuất xứ: nhà phân phối của Noma USA", re: /nha phan phoi.{0,20}noma usa/, fix: "đơn vị vận hành và phân phối chính hãng" },
+  { type: "xuất xứ: Noma USA", re: /noma usa/, fix: "NOMA" },
   // Claim tuyệt đối / vĩnh viễn
-  { type: "claim: an toàn tuyệt đối", re: /(an toan tuyet doi|tuyet doi an toan)/ },
-  { type: "claim: 100%", re: /100 ?%/ },
-  { type: "claim: bảo hành trọn đời", re: /bao hanh tron doi/ },
-  { type: "claim: vĩnh viễn", re: /vinh vien/ },
-  { type: "claim: xoá hoàn toàn", re: /xo?a hoan toan/ },
+  { type: "claim: an toàn tuyệt đối", re: /(an toan tuyet doi|tuyet doi an toan)/, fix: "an toàn" },
+  { type: "claim: 100%", re: /100 ?%/, fix: "" },
+  { type: "claim: bảo hành trọn đời", re: /bao hanh tron doi/, fix: "bảo hành theo chính sách" },
+  { type: "claim: vĩnh viễn", re: /vinh vien/, fix: "lâu dài" },
+  { type: "claim: xoá hoàn toàn", re: /xo?a hoan toan/, fix: "làm sạch" },
   // Từ ngữ cấm
-  { type: "từ cấm: số 1", re: /so (1|mot)\b/ },
-  { type: "từ cấm: tốt nhất", re: /tot nhat/ },
-  { type: "từ cấm: vô địch", re: /vo dich/ },
-  { type: "từ cấm: cực phẩm", re: /cuc pham/ },
-  { type: "từ cấm: vượt trội", re: /vuot troi/ },
-  { type: "từ cấm: đột phá", re: /dot pha/ },
-  { type: "từ cấm: tiên tiến", re: /tien tien/ },
-  { type: "từ cấm: giá rẻ / siêu rẻ", re: /(sieu re|gia re|re nhat)/ },
+  { type: "từ cấm: số 1", re: /so (1|mot)\b/, fix: "hàng đầu" },
+  { type: "từ cấm: tốt nhất", re: /tot nhat/, fix: "cao" },
+  { type: "từ cấm: vô địch", re: /vo dich/, fix: "hàng đầu" },
+  { type: "từ cấm: cực phẩm", re: /cuc pham/, fix: "chất lượng cao" },
+  { type: "từ cấm: vượt trội", re: /vuot troi/, fix: "hiệu quả" },
+  { type: "từ cấm: đột phá", re: /dot pha/, fix: "hiện đại" },
+  { type: "từ cấm: tiên tiến", re: /tien tien/, fix: "hiện đại" },
+  { type: "từ cấm: giá rẻ / siêu rẻ", re: /(sieu re|gia re|re nhat)/, fix: "giá hợp lý" },
   // Claim chứng nhận vượt quá MSDS/GHS (brand core: chỉ được nói "MSDS theo chuẩn GHS").
   // KHÔNG bắt "chuẩn quốc tế" (là giá trị brand core hợp lệ) — chỉ bắt "tiêu chuẩn/kiểm định quốc tế", SGS, Intertek.
-  { type: "claim: kiểm định/tiêu chuẩn quốc tế (chỉ có MSDS)", re: /(kiem dinh quoc te|tieu chuan quoc te|\bsgs\b|intertek)/ },
+  { type: "claim: kiểm định/tiêu chuẩn quốc tế (chỉ có MSDS)", re: /(kiem dinh quoc te|tieu chuan quoc te|\bsgs\b|intertek)/, fix: "MSDS theo chuẩn GHS" },
 ];
 
 // Bộ từ cấm TIẾNG ANH — cho nomaauto.us (bản EN). Áp dụng cùng nguyên tắc brand core.
 export const NOMA_FORBIDDEN_EN = [
   // Origin (nặng nhất)
-  { type: "origin: Made in USA", re: /made in( the)? usa/ },
-  { type: "origin: manufactured in USA", re: /manufactured in( the)? usa/ },
-  { type: "origin: American-made", re: /american[- ]made/ },
-  { type: "origin: US/American technology", re: /(us|american) technology/ },
-  { type: "origin: imported from USA", re: /imported (directly )?from( the)? usa/ },
+  { type: "origin: Made in USA", re: /made in( the)? usa/, fix: "US-origin brand" },
+  { type: "origin: manufactured in USA", re: /manufactured in( the)? usa/, fix: "manufactured through international OEM partners" },
+  { type: "origin: American-made", re: /american[- ]made/, fix: "US-origin" },
+  { type: "origin: US/American technology", re: /(us|american) technology/, fix: "US-standard formula" },
+  { type: "origin: imported from USA", re: /imported (directly )?from( the)? usa/, fix: "officially imported" },
   // Absolute / lifetime claims
-  { type: "claim: absolutely/100% safe", re: /(absolutely safe|100% safe|completely safe)/ },
-  { type: "claim: 100%", re: /100 ?%/ },
-  { type: "claim: lifetime warranty", re: /lifetime (warranty|guarantee)/ },
-  { type: "claim: forever/permanent", re: /(protects? forever|lasts? forever|permanent protection)/ },
-  { type: "claim: completely removes", re: /(completely remove|remove(s)? completely|removes everything)/ },
+  { type: "claim: absolutely/100% safe", re: /(absolutely safe|100% safe|completely safe)/, fix: "safe when used as directed" },
+  { type: "claim: 100%", re: /100 ?%/, fix: "" },
+  { type: "claim: lifetime warranty", re: /lifetime (warranty|guarantee)/, fix: "warranty per policy" },
+  { type: "claim: forever/permanent", re: /(protects? forever|lasts? forever|permanent protection)/, fix: "long-lasting protection" },
+  { type: "claim: completely removes", re: /(completely remove|remove(s)? completely|removes everything)/, fix: "effectively cleans" },
   // Superlatives
-  { type: "superlative: best / no.1", re: /(the best|no\.? ?1\b|number one|#1|world'?s best)/ },
-  { type: "superlative: superior/outstanding", re: /(superior|outstanding|unbeatable|unmatched)/ },
-  { type: "superlative: revolutionary/breakthrough", re: /(revolutionary|breakthrough|cutting[- ]edge|state[- ]of[- ]the[- ]art|most advanced)/ },
-  { type: "price: cheapest", re: /(cheapest|lowest price)/ },
+  { type: "superlative: best / no.1", re: /(the best|no\.? ?1\b|number one|#1|world'?s best)/, fix: "leading" },
+  { type: "superlative: superior/outstanding", re: /(superior|outstanding|unbeatable|unmatched)/, fix: "effective" },
+  { type: "superlative: revolutionary/breakthrough", re: /(revolutionary|breakthrough|cutting[- ]edge|state[- ]of[- ]the[- ]art|most advanced)/, fix: "modern" },
+  { type: "price: cheapest", re: /(cheapest|lowest price)/, fix: "cost-effective" },
   // Certification beyond MSDS/GHS
-  { type: "cert: SGS/Intertek", re: /(\bsgs\b|intertek)/ },
+  { type: "cert: SGS/Intertek", re: /(\bsgs\b|intertek)/, fix: "GHS-compliant MSDS" },
 ];
 
 // Bản brand core rút gọn TIẾNG ANH — nối vào system prompt khi rà/viết nội dung EN (nomaauto.us).
@@ -156,6 +158,18 @@ export function foldVi(s) {
     .normalize("NFD").replace(/[̀-ͯ]/g, "")
     .replace(/đ/g, "d").replace(/Đ/g, "d")
     .toLowerCase();
+}
+
+// Tạo cặp sửa DETERMINISTIC cho mọi cụm regex bắt được (không cần AI): {type, original=quote, fixed=fix}.
+// original = cụm chữ gốc CHÍNH XÁC (từ scanForbidden) → applyFixes chắc chắn khớp và thay được.
+export function deterministicFixes(text, list = NOMA_FORBIDDEN) {
+  const fixByType = new Map(list.map((f) => [f.type, typeof f.fix === "string" ? f.fix : ""]));
+  return scanForbidden(text, list).map((f) => ({
+    type: f.type,
+    original: f.quote,
+    fixed: fixByType.get(f.type) ?? "",
+    reason: "vi phạm brand core (dò tự động)",
+  }));
 }
 
 // Áp các cặp sửa {original -> fixed} vào HTML bằng THAY CHUỖI NGUYÊN VĂN.

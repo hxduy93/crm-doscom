@@ -7,6 +7,7 @@ import {
   foldVi,
   scanForbidden,
   applyFixes,
+  deterministicFixes,
 } from "../functions/api/geo/_utils/noma-brandcore.js";
 import { isNomaProduct } from "../functions/api/products/_wc.js";
 
@@ -112,6 +113,32 @@ test("NOMA_BRAND_GUIDE_EN nêu định danh + cấm Made in USA (tiếng Anh)", 
   assert.ok(NOMA_BRAND_GUIDE_EN.includes("NOMA Technologies LLC"));
   assert.ok(/OEM partner/i.test(NOMA_BRAND_GUIDE_EN));
   assert.ok(NOMA_BRAND_GUIDE_EN.includes("Made in USA"));
+});
+
+test("deterministicFixes: sửa được ca THẬT 'Tiêu chuẩn Quốc tế' (AI hay bỏ qua → apply báo bỏ qua)", () => {
+  const html = "<p><strong>Tiêu chuẩn Quốc tế:</strong> Sản phẩm được kiểm định kỹ lưỡng.</p>";
+  const pairs = deterministicFixes(html);
+  assert.ok(pairs.length >= 1, "phải sinh ít nhất 1 cặp sửa");
+  const { fixed, applied } = applyFixes(html, pairs);
+  assert.ok(applied.length >= 1, "phải áp được");
+  assert.ok(!/Tiêu chuẩn Quốc tế/.test(fixed), "cụm cấm phải biến mất");
+  assert.ok(fixed.includes("MSDS theo chuẩn GHS"));
+  // layout giữ nguyên
+  assert.ok(fixed.includes("<strong>") && fixed.includes("</p>"));
+  // quét lại phải SẠCH
+  assert.deepEqual(scanForbidden(fixed), []);
+});
+
+test("deterministicFixes: sửa hết vượt trội/đột phá/an toàn tuyệt đối → quét lại sạch", () => {
+  const html = "<p>Bảo vệ vượt trội, công nghệ đột phá, an toàn tuyệt đối.</p>";
+  const { fixed } = applyFixes(html, deterministicFixes(html));
+  assert.deepEqual(scanForbidden(fixed), [], "sau khi sửa phải hết cụm cấm");
+});
+
+test("deterministicFixes (EN) cho nomaauto: Made in USA / superior → sạch", () => {
+  const html = "<p>Made in USA. Superior protection.</p>";
+  const { fixed } = applyFixes(html, deterministicFixes(html, NOMA_FORBIDDEN_EN));
+  assert.deepEqual(scanForbidden(fixed, NOMA_FORBIDDEN_EN), []);
 });
 
 test("isNomaProduct: đúng cho SP NOMA, sai cho SP Doscom", () => {

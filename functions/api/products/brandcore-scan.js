@@ -14,7 +14,7 @@
 //
 // Chống hại: chỉ đụng SP NOMA (isNomaProduct); AI được lệnh GIỮ NGUYÊN mọi phần khác, chỉ sửa cụm vi phạm.
 import { callClaude } from "../geo/_utils/claude.js";
-import { NOMA_BRAND_GUIDE, NOMA_BRAND_GUIDE_EN, NOMA_FORBIDDEN_EN, scanForbidden, applyFixes } from "../geo/_utils/noma-brandcore.js";
+import { NOMA_BRAND_GUIDE, NOMA_BRAND_GUIDE_EN, NOMA_FORBIDDEN_EN, scanForbidden, applyFixes, deterministicFixes } from "../geo/_utils/noma-brandcore.js";
 import { findSkuCode, skuSpecText } from "../geo/_utils/noma-sku-specs.js";
 import { siteCreds, isConfigured, listProducts, getProduct, isNomaProduct } from "./_wc.js";
 
@@ -133,7 +133,16 @@ export async function onRequestPost({ request, env }) {
           });
           cost += res.cost_usd || 0;
           const g = res.parsed || {};
-          const violations = Array.isArray(g.violations) ? g.violations : [];
+          const aiViolations = Array.isArray(g.violations) ? g.violations : [];
+          // DETERMINISTIC: tạo cặp sửa cho MỌI cụm regex bắt được (đảm bảo sửa, không phụ thuộc AI
+          // — vì AI hay bỏ qua cụm "ranh giới" như "tiêu chuẩn quốc tế" khiến apply báo "bỏ qua").
+          const detPairs = deterministicFixes(editableText, forbidden || undefined);
+          const seenOrig = new Set(detPairs.map((v) => v.original));
+          // gộp: det trước (chắc chắn), thêm cặp AI không trùng original (AI bắt được cái regex bỏ sót/HDSD)
+          const violations = [
+            ...detPairs,
+            ...aiViolations.filter((v) => v && typeof v.original === "string" && v.original && !seenOrig.has(v.original)),
+          ];
           // TỰ thay chuỗi nguyên văn trên HTML gốc → giữ nguyên 100% layout (không rewrite HTML).
           const fd = applyFixes(p.description || "", violations);
           const fs = applyFixes(p.short_description || "", violations);
@@ -148,7 +157,9 @@ export async function onRequestPost({ request, env }) {
             });
           results.push({
             id, name: p.name, permalink: p.permalink, status: p.status,
-            has_violations: !!g.has_violations && violations.length > 0,
+            // dựa trên cặp sửa THẬT (gồm det) — KHÔNG phụ thuộc cờ has_violations của AI,
+            // vì AI hay báo "không vi phạm" với cụm ranh giới mà regex đã bắt được.
+            has_violations: violations.length > 0,
             violations,
             original_description: p.description || "",
             original_short_description: p.short_description || "",
