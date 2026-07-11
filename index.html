@@ -194,7 +194,8 @@
   .ag-tbl td{border:1px solid var(--border);padding:5px 8px}
   .ag-json{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:12px;overflow:auto;font-size:12px;white-space:pre-wrap;margin-top:10px}
   .ag-spin{color:var(--violet);font-weight:800}
-  @media (max-width:1080px){.app{grid-template-columns:1fr}.sidebar{display:none}.kpis{grid-template-columns:repeat(2,1fr)}.bento{grid-template-columns:1fr}.slots{grid-template-columns:1fr}}
+  /* Dưới 1080px vẫn GIỮ icon-rail (72px) để menu luôn dùng được khi cửa sổ thu nhỏ; chỉ xếp lại các lưới nội dung. */
+  @media (max-width:1080px){.kpis{grid-template-columns:repeat(2,1fr)}.bento{grid-template-columns:1fr}.slots{grid-template-columns:1fr}}
   @media (max-width:560px){.kpis{grid-template-columns:1fr}.content{padding:16px 14px 60px}}
 </style>
 </head>
