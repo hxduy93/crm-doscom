@@ -72,6 +72,13 @@ TRẢ VỀ DUY NHẤT JSON đúng schema:
   ]
 }`;
 
+// SP có phải NOMA không — quyết định theo TÊN trước, site sau. Lý do: NOMA bán trên cả noma.vn lẫn
+// doscom.vn, và UI khi chọn "Cả 3 web" gửi site="doscom" (product-publisher.html) → nếu chỉ nhìn site
+// thì bài NOMA mất brand core + mất thông số chuẩn 17 SKU.
+export function isNomaProductName(name, site) {
+  return site === "noma" || /\bnoma\b/i.test(String(name || ""));
+}
+
 export async function onRequestPost({ request, env }) {
   if (env.USE_CLAUDE === "false") {
     return json({ ok: false, error: "AI đang tắt (USE_CLAUDE=false)" }, 503);
@@ -82,23 +89,29 @@ export async function onRequestPost({ request, env }) {
   const site = String(body.site || "").toLowerCase();
   const name = String(body.name || "").trim();
   if (!name) return json({ ok: false, error: "Thiếu tên sản phẩm" }, 400);
-  const brand = BRAND[site] || BRAND.doscom;
+
+  // Nhận diện SP NOMA theo TÊN, không theo site: NOMA bán trên cả noma.vn lẫn doscom.vn, và khi
+  // UI chọn "Cả 3 web" nó gửi site="doscom" → nếu cứ theo site thì bài NOMA sẽ viết KHÔNG có
+  // brand core + KHÔNG có thông số chuẩn 17 SKU (đúng lỗi này trước đây).
+  const isNoma = isNomaProductName(name, site);
+  const brand = isNoma ? BRAND.noma : (BRAND[site] || BRAND.doscom);
   const note = String(body.note || "").trim();
   const catName = String(body.category_name || "").trim();
   const images = Array.isArray(body.images) ? body.images.slice(0, 10) : [];
 
   // ---- cache theo input + ngày VN ----
   const dateVN = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-  const cacheKey = `prodgen:v6:${site}:${slugify(name)}:${note.length}:${images.length}:${dateVN}`;
+  // v7: đổi version để BỎ cache bài NOMA sinh trước đây bằng prompt THIẾU brand core + thông số SKU.
+  const cacheKey = `prodgen:v7:${site}:${slugify(name)}:${note.length}:${images.length}:${dateVN}`;
   if (!body.regenerate && env.INVENTORY) {
     const hit = await env.INVENTORY.get(cacheKey).catch(() => null);
     if (hit) { try { return json({ ok: true, cached: true, generated: JSON.parse(hit) }); } catch {} }
   }
 
   // ---- dựng content vision (mảng block: text + image) ----
-  // NOMA: nếu tên SP có mã SKU (vd NOMA 922) → nhét THÔNG SỐ CHUẨN (công dụng + HDSD + thời gian)
+  // Tên SP có mã SKU (vd NOMA 922) → nhét THÔNG SỐ CHUẨN (công dụng + HDSD + thời gian)
   // từ tài liệu 17 SKU để agent viết đúng, không rút gọn/sai HDSD (vd 922 phải "đợi 4 tiếng").
-  const skuCode = site === "noma" ? findSkuCode(name) : null;
+  const skuCode = findSkuCode(name);
   const skuBlock = skuCode ? `\n${skuSpecText(skuCode)}\n` : "";
 
   const intro =
@@ -120,9 +133,9 @@ export async function onRequestPost({ request, env }) {
   });
   content.push({ type: "text", text: "Hãy trả về JSON đúng schema ở trên. Không thêm chữ nào ngoài JSON." });
 
-  // NOMA: nối Brand Core v3 vào system prompt để AI viết đúng định danh/giọng/red-line.
-  // Doscom: giữ nguyên (brand core này chỉ áp cho NOMA).
-  const systemPrompt = site === "noma" ? `${SYSTEM_PROMPT}\n\n${NOMA_BRAND_GUIDE}` : SYSTEM_PROMPT;
+  // SP NOMA: nối Brand Core v3 vào system prompt để AI viết đúng định danh/giọng/red-line —
+  // kể cả khi đăng lên doscom.vn hoặc "Cả 3 web". SP Doscom: giữ nguyên (brand core chỉ áp cho NOMA).
+  const systemPrompt = isNoma ? `${SYSTEM_PROMPT}\n\n${NOMA_BRAND_GUIDE}` : SYSTEM_PROMPT;
 
   const callOnce = () => callClaude(env, {
     model: "haiku",
