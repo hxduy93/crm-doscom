@@ -103,7 +103,15 @@ export async function onRequestPost({ request, env }) {
         catch (e) { results.push({ id, error: String(e.message || e) }); continue; }
         if (site === "doscom" && !isNomaProduct(p)) { results.push({ id, name: p.name, skipped: "không phải SP NOMA" }); continue; }
 
-        const regexFlags = scanForbidden(`${p.name} ${p.short_description || ""} ${p.description || ""}`, forbidden);
+        // Quét riêng phần SỬA ĐƯỢC (mô tả), KHÔNG gồm name — vì tool không sửa tên SP.
+        const editableText = `${p.short_description || ""} ${p.description || ""}`;
+        const editFlags = scanForbidden(editableText, forbidden);
+        const nameFlags = scanForbidden(p.name, forbidden); // lỗi nằm ở TÊN → không tự sửa được
+        const regexFlags = scanForbidden(`${p.name} ${editableText}`, forbidden);
+        // Ép AI phải tạo cặp sửa cho MỌI cụm regex bắt được trong mô tả (tránh AI bỏ sót → quét lại vẫn báo).
+        const mustFix = editFlags.length
+          ? `\nCÁC CỤM VI PHẠM ĐÃ DÒ ĐƯỢC trong mô tả (BẮT BUỘC tạo 1 cặp sửa cho MỖI cụm, "original" copy đúng cụm này): ${editFlags.map(f => `"${f.quote}"`).join(", ")}.\n`
+          : "";
         // Thông số chuẩn HDSD đang là tiếng Việt → chỉ nhét cho site tiếng Việt (bỏ với nomaauto EN).
         const specCode = isEN ? null : findSkuCode(p.name);
         const specBlock = specCode ? `\n${skuSpecText(specCode)}\n\n` : "";
@@ -111,8 +119,9 @@ export async function onRequestPost({ request, env }) {
           `TÊN SẢN PHẨM: ${p.name}\n\n` +
           specBlock +
           `MÔ TẢ NGẮN (short_description, HTML):\n${p.short_description || "(trống)"}\n\n` +
-          `MÔ TẢ DÀI (description, HTML):\n${p.description || "(trống)"}\n\n` +
-          `Hãy trả JSON đúng schema. Sửa chỗ vi phạm brand core${specCode ? ", và sửa HDSD/thời gian nếu lệch thông số chuẩn ở trên" : ""}; giữ nguyên phần còn lại.`;
+          `MÔ TẢ DÀI (description, HTML):\n${p.description || "(trống)"}\n` +
+          mustFix +
+          `\nHãy trả JSON đúng schema. Sửa HẾT chỗ vi phạm brand core${specCode ? ", và sửa HDSD/thời gian nếu lệch thông số chuẩn ở trên" : ""}; giữ nguyên phần còn lại.`;
 
         try {
           const res = await callClaude(env, {
@@ -147,6 +156,7 @@ export async function onRequestPost({ request, env }) {
             fixed_short_description: fs.fixed,
             not_applied: [...new Set(notApplied)],
             regex_flags: regexFlags,
+            name_flags: nameFlags.map(f => f.type), // lỗi nằm ở TÊN SP → tool KHÔNG tự sửa được (phải sửa tên tay trên WP)
           });
         } catch (e) {
           results.push({ id, name: p.name, permalink: p.permalink, error: String(e.message || e), regex_flags: regexFlags });

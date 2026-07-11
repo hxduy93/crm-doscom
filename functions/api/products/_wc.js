@@ -184,11 +184,12 @@ export async function listProducts(c, { search = "", perPage = 50, page = 1, sta
     per_page: String(perPage),
     page: String(page),
     _fields: "id,name,permalink,status,description,short_description,categories",
+    _cb: String(Date.now()), // cache-bust: tránh WP/CDN trả bản cũ sau khi vừa sửa
   });
   if (search) params.set("search", search);
   if (status) params.set("status", status);
   const r = await fetch(`${c.url}/wp-json/wc/v3/products?${params}`, {
-    headers: { Authorization: wcAuth(c.ck, c.cs) },
+    headers: { Authorization: wcAuth(c.ck, c.cs), "Cache-Control": "no-cache" },
     signal: AbortSignal.timeout(25000),
   });
   if (!r.ok) throw new Error(`WC list ${r.status}: ${(await r.text()).slice(0, 200)}`);
@@ -202,8 +203,8 @@ export async function listProducts(c, { search = "", perPage = 50, page = 1, sta
 
 // Lấy 1 sản phẩm đầy đủ (dùng để backup trước khi ghi đè).
 export async function getProduct(c, id) {
-  const r = await fetch(`${c.url}/wp-json/wc/v3/products/${id}?_fields=id,name,permalink,status,description,short_description`, {
-    headers: { Authorization: wcAuth(c.ck, c.cs) },
+  const r = await fetch(`${c.url}/wp-json/wc/v3/products/${id}?_fields=id,name,permalink,status,description,short_description&_cb=${Date.now()}`, {
+    headers: { Authorization: wcAuth(c.ck, c.cs), "Cache-Control": "no-cache" },
     signal: AbortSignal.timeout(20000),
   });
   const d = await r.json().catch(() => ({}));

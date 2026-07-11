@@ -194,10 +194,12 @@ function renderProposals(results, cost) {
       `<tr><td><span class="flag">${esc(v.type)}</span></td><td>${esc(v.original)}</td><td>${esc(v.fixed)}</td></tr>`).join("");
     const warn = (p.not_applied && p.not_applied.length)
       ? `<div class="err" style="font-size:12px;margin:4px 0">⚠ ${p.not_applied.length} cặp AI đề xuất KHÔNG khớp đúng chữ gốc → sẽ KHÔNG áp (an toàn, không đụng layout): ${p.not_applied.map(esc).join(", ")}</div>` : "";
+    const nameWarn = (p.name_flags && p.name_flags.length)
+      ? `<div class="err" style="font-size:12px;margin:4px 0">⚠ Lỗi nằm ở TÊN sản phẩm (tool KHÔNG sửa tên): ${p.name_flags.map(esc).join(", ")} — bạn sửa tên tay trên WP nếu muốn.</div>` : "";
     return `<div class="prod">
       <label class="row"><input type="checkbox" class="applypick" data-i="${i}" checked />
         <b>${esc(p.name)} <span class="muted">#${p.id}</span></b></label>
-      <table><thead><tr><th>Loại vi phạm</th><th>Gốc</th><th>Sửa thành</th></tr></thead><tbody>${vio}</tbody></table>${warn}
+      <table><thead><tr><th>Loại vi phạm</th><th>Gốc</th><th>Sửa thành</th></tr></thead><tbody>${vio}</tbody></table>${warn}${nameWarn}
       <div class="cmp">
         <div><div class="lab">Mô tả dài — GỐC</div><div class="box old">${esc(stripHtml(p.original_description || ""))}</div></div>
         <div><div class="lab">Mô tả dài — ĐÃ SỬA</div><div class="box new">${esc(stripHtml(p.fixed_description || ""))}</div></div>
