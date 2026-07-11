@@ -14,6 +14,7 @@
 // Cache KV (red line): cùng input trong ngày → không tốn credit; regenerate=true để bỏ qua.
 import { callClaude } from "../geo/_utils/claude.js";
 import { slugify, SITE_URL, deriveKeyword } from "./_wc.js";
+import { NOMA_BRAND, NOMA_BRAND_GUIDE } from "../geo/_utils/noma-brandcore.js";
 
 function json(o, s = 200) {
   return new Response(JSON.stringify(o), {
@@ -27,9 +28,11 @@ const BRAND = {
     name: "Doscom",
     voice: "thiết bị an ninh & giám sát cá nhân/gia đình (camera an ninh, máy dò camera ẩn - nghe lén, máy ghi âm, chống ghi âm, định vị GPS). Giọng tin cậy, nhấn mạnh bảo mật - an toàn - dễ dùng.",
   },
+  // NOMA: lấy từ Brand Core v3 (functions/api/geo/_utils/noma-brandcore.js) — không mô tả tay
+  // nữa vì bản cũ ("công nghệ sản xuất từ Mỹ", "an toàn tuyệt đối") vi phạm red line brand core.
   noma: {
-    name: "NOMA",
-    voice: "sản phẩm chăm sóc & làm sạch ô tô công nghệ Mỹ, pH trung tính. Giọng thực tế, nhấn mạnh hiệu quả nhanh, an toàn cho xe và người dùng, tự làm tại nhà.",
+    name: NOMA_BRAND.name,
+    voice: NOMA_BRAND.voice,
   },
 };
 
@@ -110,9 +113,13 @@ export async function onRequestPost({ request, env }) {
   });
   content.push({ type: "text", text: "Hãy trả về JSON đúng schema ở trên. Không thêm chữ nào ngoài JSON." });
 
+  // NOMA: nối Brand Core v3 vào system prompt để AI viết đúng định danh/giọng/red-line.
+  // Doscom: giữ nguyên (brand core này chỉ áp cho NOMA).
+  const systemPrompt = site === "noma" ? `${SYSTEM_PROMPT}\n\n${NOMA_BRAND_GUIDE}` : SYSTEM_PROMPT;
+
   const callOnce = () => callClaude(env, {
     model: "haiku",
-    systemPrompt: SYSTEM_PROMPT,
+    systemPrompt,
     userPrompt: content,
     maxTokens: 8000,
     jsonOutput: true,

@@ -11,6 +11,7 @@
 
 import { callClaude } from "./_utils/claude.js";
 import { catalogText, findProductsInText } from "./_utils/product-catalog.js";
+import { NOMA_BRAND, NOMA_BRAND_GUIDE } from "./_utils/noma-brandcore.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -28,13 +29,15 @@ const BRAND_CONTEXT = {
     audience: "cá nhân & gia đình cần bảo vệ an ninh, chống theo dõi/nghe lén, giám sát nhà cửa - xe cộ tại Việt Nam",
     usp: "thiết bị chính hãng đa dạng dòng an ninh, dễ lắp dùng, hỗ trợ tư vấn tiếng Việt",
   },
+  // NOMA: lấy từ Brand Core v3 (./_utils/noma-brandcore.js). Bản cũ ("công nghệ sản xuất từ Mỹ",
+  // "an toàn tuyệt đối") vi phạm red line brand core → không mô tả tay nữa.
   noma: {
-    name: "NOMA",
-    short: "NOMA",
-    site: "https://noma.vn",
-    products: "sản phẩm chăm sóc & làm sạch ô tô công nghệ Mỹ (phục hồi nhựa nhám, chống bám hơi nước/mốc kính, phục hồi đèn pha ố vàng, dung dịch pH trung tính)",
-    audience: "chủ xe ô tô tự chăm sóc xe tại nhà, người dùng quan tâm bảo dưỡng nội/ngoại thất xe tại Việt Nam",
-    usp: "công nghệ sản xuất từ Mỹ, pH trung tính an toàn tuyệt đối cho người dùng và chi tiết xe, dễ tự dùng tại nhà, hiệu quả nhanh",
+    name: NOMA_BRAND.name,
+    short: NOMA_BRAND.short,
+    site: NOMA_BRAND.site,
+    products: NOMA_BRAND.products,
+    audience: NOMA_BRAND.audience,
+    usp: NOMA_BRAND.usp,
   },
 };
 
@@ -391,6 +394,10 @@ export async function onRequestPost(context) {
 
   try {
     const userPrompt = buildContentPrompt({ article, brand: article.brand, targetWords });
+    // NOMA: nối Brand Core v3 vào system prompt để bài viết đúng định danh/giọng/red-line.
+    const systemPrompt = article.brand === "noma"
+      ? `${CONTENT_SYSTEM_PROMPT}\n\n${NOMA_BRAND_GUIDE}`
+      : CONTENT_SYSTEM_PROMPT;
 
     // GUARDRAIL: bài viết PHẢI gắn sản phẩm thật — cả TITLE lẫn THÂN BÀI đều phải chứa
     // ít nhất 1 sản phẩm trong danh mục. Không đạt → retry (tối đa 2 lượt). Vẫn không đạt
@@ -407,7 +414,7 @@ export async function onRequestPost(context) {
       try {
         result = await callClaude(env, {
           model,
-          systemPrompt: CONTENT_SYSTEM_PROMPT,
+          systemPrompt,
           userPrompt,
           maxTokens: 16000,
           jsonOutput: true,
