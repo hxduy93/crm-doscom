@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-12 18:05",
+  "generated_at": "2026-07-12 19:12",
   "source_data_date_range": {
     "start_7d": "2026-07-05",
     "end": "2026-07-11",
@@ -1722,19 +1722,6 @@
         ]
       },
       {
-        "search_term": "thiết bị chống ghi âm nghe lén",
-        "spend_30d": 16308.0,
-        "clicks_30d": 5,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1351,
-        "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
         "search_term": "máy ghi âm cuộc họp",
         "spend_30d": 68627.0,
         "clicks_30d": 13,
@@ -1758,6 +1745,20 @@
           "BROAD",
           "NEAR_PHRASE",
           "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "thiết bị nghe lén mini",
+        "spend_30d": 52049.0,
+        "clicks_30d": 10,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1099,
+        "match_types": [
+          "BROAD",
+          "NEAR_PHRASE"
         ],
         "statuses": [
           "NONE"
@@ -2312,12 +2313,6 @@
         "conversions_30d": 4.5,
         "term_count": 67
       },
-      "BROAD": {
-        "spend_30d": 13118840.0,
-        "clicks_30d": 1588,
-        "conversions_30d": 17.25,
-        "term_count": 2291
-      },
       "PHRASE": {
         "spend_30d": 4666101.0,
         "clicks_30d": 810,
@@ -2330,6 +2325,12 @@
         "conversions_30d": 9.5,
         "term_count": 684
       },
+      "BROAD": {
+        "spend_30d": 13118840.0,
+        "clicks_30d": 1588,
+        "conversions_30d": 17.25,
+        "term_count": 2291
+      },
       "NEAR_EXACT": {
         "spend_30d": 51435.0,
         "clicks_30d": 13,
@@ -2340,14 +2341,14 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 13573,
-      "total_spend_30d": 14386635.0
+      "total_unique_placements": 13572,
+      "total_spend_30d": 14385989.0
     },
     "network_breakdown": {
       "CONTENT": {
-        "spend_30d": 14387355.0,
-        "clicks_30d": 8661,
-        "impressions_30d": 653298,
+        "spend_30d": 14386708.0,
+        "clicks_30d": 8660,
+        "impressions_30d": 653297,
         "ctr_30d": 0.0133,
         "cpc_30d": 1661.0,
         "campaign_count": 5
@@ -2363,11 +2364,11 @@
     },
     "placement_type_breakdown": {
       "WEBSITE": {
-        "spend_30d": 14386635.0,
-        "clicks_30d": 8660,
-        "impressions_30d": 631074,
+        "spend_30d": 14385989.0,
+        "clicks_30d": 8659,
+        "impressions_30d": 631073,
         "ctr_30d": 0.0137,
-        "placement_count": 13573
+        "placement_count": 13572
       }
     },
     "top_waste_placements": [],
