@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-14 02:15",
+  "generated_at": "2026-07-14 03:36",
   "source_data_date_range": {
     "start_7d": "2026-07-06",
     "end": "2026-07-12",
@@ -1647,7 +1647,7 @@
   "search_term_insights": {
     "summary": {
       "total_unique_terms": 3483,
-      "terms_with_conversions": 31,
+      "terms_with_conversions": 32,
       "conv_rate_terms": 0.009,
       "total_spend_30d": 20497445.0
     },
@@ -1690,6 +1690,32 @@
         ],
         "statuses": [
           "NONE"
+        ]
+      },
+      {
+        "search_term": "máy chống ghi âm",
+        "spend_30d": 59734.0,
+        "clicks_30d": 20,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.2326,
+        "match_types": [
+          "EXACT"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
+        "search_term": "thiết bị chống ghi âm nghe lén",
+        "spend_30d": 16308.0,
+        "clicks_30d": 5,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1471,
+        "match_types": [
+          "EXACT"
+        ],
+        "statuses": [
+          "ADDED"
         ]
       },
       {
@@ -1746,38 +1772,11 @@
         ]
       },
       {
-        "search_term": "thiết bị nghe lén mini",
-        "spend_30d": 52049.0,
-        "clicks_30d": 10,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1053,
-        "match_types": [
-          "BROAD",
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
         "search_term": "camera doscom",
         "spend_30d": 64716.0,
         "clicks_30d": 11,
         "conversions_30d": 1.0,
         "ctr_30d": 0.2619,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera quan sát",
-        "spend_30d": 289632.0,
-        "clicks_30d": 17,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.027,
         "match_types": [
           "BROAD"
         ],
@@ -2295,6 +2294,12 @@
         "conversions_30d": 4.5,
         "term_count": 68
       },
+      "BROAD": {
+        "spend_30d": 13122596.0,
+        "clicks_30d": 1600,
+        "conversions_30d": 19.25,
+        "term_count": 2332
+      },
       "PHRASE": {
         "spend_30d": 4702092.0,
         "clicks_30d": 808,
@@ -2304,14 +2309,8 @@
       "NEAR_PHRASE": {
         "spend_30d": 4197961.0,
         "clicks_30d": 838,
-        "conversions_30d": 9.5,
+        "conversions_30d": 10.5,
         "term_count": 687
-      },
-      "BROAD": {
-        "spend_30d": 13122596.0,
-        "clicks_30d": 1600,
-        "conversions_30d": 18.25,
-        "term_count": 2332
       },
       "NEAR_EXACT": {
         "spend_30d": 60285.0,
@@ -2323,7 +2322,7 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 13139,
+      "total_unique_placements": 13140,
       "total_spend_30d": 13804484.0
     },
     "network_breakdown": {
@@ -2348,9 +2347,9 @@
       "WEBSITE": {
         "spend_30d": 13804484.0,
         "clicks_30d": 8250,
-        "impressions_30d": 601795,
+        "impressions_30d": 601800,
         "ctr_30d": 0.0137,
-        "placement_count": 13139
+        "placement_count": 13140
       }
     },
     "top_waste_placements": [],
@@ -2562,12 +2561,12 @@
   "ad_insights": {
     "summary": {
       "total_ads": 93,
-      "total_spend_30d": 48006683.0
+      "total_spend_30d": 48002567.0
     },
     "format_breakdown": {
       "DISPLAY_BANNER": {
-        "spend_30d": 3550744.0,
-        "clicks_30d": 2405,
+        "spend_30d": 3546628.0,
+        "clicks_30d": 2404,
         "impressions_30d": 201837,
         "ctr_30d": 0.0119,
         "ad_count": 5
@@ -2597,8 +2596,8 @@
         "ad_group_name": "Ad group 1",
         "ad_name": "300x250.gif",
         "ad_format": "DISPLAY_BANNER",
-        "spend_30d": 1527042.0,
-        "clicks_30d": 1393,
+        "spend_30d": 1522926.0,
+        "clicks_30d": 1392,
         "ctr_30d": 0.0103
       },
       {
