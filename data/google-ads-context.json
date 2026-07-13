@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-13 15:58",
+  "generated_at": "2026-07-13 19:18",
   "source_data_date_range": {
     "start_7d": "2026-07-06",
     "end": "2026-07-12",
@@ -60,16 +60,16 @@
     "orders_30d": 85,
     "by_status": {
       "delivered": {
-        "revenue": 135957440.0,
-        "orders": 64
+        "revenue": 138656440.0,
+        "orders": 66
       },
       "canceled": {
         "revenue": 7600000.0,
         "orders": 4
       },
       "other": {
-        "revenue": 23275000.0,
-        "orders": 17
+        "revenue": 20576000.0,
+        "orders": 15
       }
     },
     "by_source": {
@@ -1647,8 +1647,8 @@
   "search_term_insights": {
     "summary": {
       "total_unique_terms": 3483,
-      "terms_with_conversions": 29,
-      "conv_rate_terms": 0.008,
+      "terms_with_conversions": 31,
+      "conv_rate_terms": 0.009,
       "total_spend_30d": 20497445.0
     },
     "top_converting_terms": [
@@ -1700,6 +1700,19 @@
         "ctr_30d": 0.2143,
         "match_types": [
           "NEAR_PHRASE",
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm nghe từ xa",
+        "spend_30d": 127199.0,
+        "clicks_30d": 15,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.12,
+        "match_types": [
           "PHRASE"
         ],
         "statuses": [
@@ -1770,19 +1783,6 @@
         ],
         "statuses": [
           "NONE"
-        ]
-      },
-      {
-        "search_term": "camera viettel",
-        "spend_30d": 18275.0,
-        "clicks_30d": 2,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0444,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "EXCLUDED"
         ]
       }
     ],
@@ -1960,22 +1960,6 @@
         ]
       },
       {
-        "search_term": "máy ghi âm nghe từ xa",
-        "spend_30d": 127199.0,
-        "clicks_30d": 15,
-        "conversions_30d": 0.0,
-        "ctr_30d": 0.12,
-        "match_types": [
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ],
-        "campaigns": [
-          "8/5/2025 Search - TB Ghi Âm"
-        ]
-      },
-      {
         "search_term": "camera không dây",
         "spend_30d": 125666.0,
         "clicks_30d": 23,
@@ -2039,6 +2023,23 @@
         ],
         "campaigns": [
           "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
+        "search_term": "mua camera",
+        "spend_30d": 108673.0,
+        "clicks_30d": 7,
+        "conversions_30d": 0.0,
+        "ctr_30d": 0.0972,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "NONE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
         ]
       }
     ],
@@ -2193,21 +2194,6 @@
         ]
       },
       {
-        "search_term": "máy ghi âm nghe từ xa",
-        "spend_30d": 127199.0,
-        "clicks_30d": 15,
-        "conversions_30d": 0.0,
-        "match_types": [
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ],
-        "campaigns": [
-          "8/5/2025 Search - TB Ghi Âm"
-        ]
-      },
-      {
         "search_term": "camera không dây",
         "spend_30d": 125666.0,
         "clicks_30d": 23,
@@ -2285,6 +2271,21 @@
           "8/5/2025 Search - TB Chống Ghi Âm",
           "8/5/2025 Search - TB Ghi Âm"
         ]
+      },
+      {
+        "search_term": "mua máy ghi âm ở hà nội",
+        "spend_30d": 90799.0,
+        "clicks_30d": 10,
+        "conversions_30d": 0.0,
+        "match_types": [
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
       }
     ],
     "match_type_breakdown": {
@@ -2297,7 +2298,7 @@
       "PHRASE": {
         "spend_30d": 4702092.0,
         "clicks_30d": 808,
-        "conversions_30d": 14.25,
+        "conversions_30d": 16.25,
         "term_count": 608
       },
       "NEAR_PHRASE": {
@@ -2309,7 +2310,7 @@
       "BROAD": {
         "spend_30d": 13122596.0,
         "clicks_30d": 1600,
-        "conversions_30d": 17.25,
+        "conversions_30d": 18.25,
         "term_count": 2332
       },
       "NEAR_EXACT": {
@@ -2322,7 +2323,7 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 13132,
+      "total_unique_placements": 13135,
       "total_spend_30d": 13804484.0
     },
     "network_breakdown": {
@@ -2347,9 +2348,9 @@
       "WEBSITE": {
         "spend_30d": 13804484.0,
         "clicks_30d": 8250,
-        "impressions_30d": 601737,
+        "impressions_30d": 601759,
         "ctr_30d": 0.0137,
-        "placement_count": 13132
+        "placement_count": 13135
       }
     },
     "top_waste_placements": [],
