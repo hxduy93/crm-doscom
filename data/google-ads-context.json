@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-15 18:36",
+  "generated_at": "2026-07-15 20:19",
   "source_data_date_range": {
     "start_7d": "2026-07-08",
     "end": "2026-07-14",
@@ -1664,74 +1664,7 @@
           "PHRASE"
         ],
         "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera doscom",
-        "spend_30d": 84017.0,
-        "clicks_30d": 11,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.275,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera mini kết nối điện thoại không cần wifi",
-        "spend_30d": 15939.0,
-        "clicks_30d": 3,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.2143,
-        "match_types": [
-          "BROAD",
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera quan sát",
-        "spend_30d": 289632.0,
-        "clicks_30d": 17,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0273,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera viettel",
-        "spend_30d": 18275.0,
-        "clicks_30d": 2,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0488,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "EXCLUDED"
-        ]
-      },
-      {
-        "search_term": "ezviz camera",
-        "spend_30d": 87187.0,
-        "clicks_30d": 8,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0808,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "EXCLUDED",
-          "NONE"
+          "ADDED"
         ]
       },
       {
@@ -1745,7 +1678,7 @@
           "PHRASE"
         ],
         "statuses": [
-          "NONE"
+          "ADDED"
         ]
       },
       {
@@ -1772,6 +1705,77 @@
           "PHRASE"
         ],
         "statuses": [
+          "ADDED"
+        ]
+      },
+      {
+        "search_term": "thiết bị ghi âm ghi hình bí mật",
+        "spend_30d": 2565.0,
+        "clicks_30d": 1,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.0714,
+        "match_types": [
+          "BROAD",
+          "NEAR_PHRASE",
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera mini kết nối điện thoại không cần wifi",
+        "spend_30d": 15939.0,
+        "clicks_30d": 3,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.2143,
+        "match_types": [
+          "BROAD",
+          "PHRASE"
+        ],
+        "statuses": [
+          "ADDED",
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera quan sát",
+        "spend_30d": 289632.0,
+        "clicks_30d": 17,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.0273,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "ezviz camera",
+        "spend_30d": 87187.0,
+        "clicks_30d": 8,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.0808,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "EXCLUDED",
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera doscom",
+        "spend_30d": 84017.0,
+        "clicks_30d": 11,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.275,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "ADDED",
           "NONE"
         ]
       }
@@ -1805,8 +1809,7 @@
           "EXACT"
         ],
         "statuses": [
-          "ADDED",
-          "NONE"
+          "ADDED"
         ],
         "campaigns": [
           "8/5/2025 Search - Cam mini",
@@ -2048,24 +2051,6 @@
         ]
       },
       {
-        "search_term": "camera mini",
-        "spend_30d": 325134.0,
-        "clicks_30d": 51,
-        "conversions_30d": 0.0,
-        "match_types": [
-          "BROAD",
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED",
-          "NONE"
-        ],
-        "campaigns": [
-          "8/5/2025 Search - Cam mini",
-          "8/5/2025 Search - Sim 4G"
-        ]
-      },
-      {
         "search_term": "camera năng lượng mặt trời",
         "spend_30d": 300204.0,
         "clicks_30d": 55,
@@ -2273,20 +2258,30 @@
         "campaigns": [
           "8/5/2025 Search - TB Ghi Âm"
         ]
+      },
+      {
+        "search_term": "doscom",
+        "spend_30d": 84483.0,
+        "clicks_30d": 42,
+        "conversions_30d": 0.0,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "NONE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ]
       }
     ],
     "match_type_breakdown": {
-      "BROAD": {
-        "spend_30d": 12981182.0,
-        "clicks_30d": 1578,
-        "conversions_30d": 19.25,
-        "term_count": 2351
-      },
-      "PHRASE": {
-        "spend_30d": 4920751.0,
-        "clicks_30d": 824,
-        "conversions_30d": 16.25,
-        "term_count": 603
+      "EXACT": {
+        "spend_30d": 2131267.0,
+        "clicks_30d": 340,
+        "conversions_30d": 4.5,
+        "term_count": 67
       },
       "NEAR_PHRASE": {
         "spend_30d": 4367456.0,
@@ -2294,30 +2289,36 @@
         "conversions_30d": 9.5,
         "term_count": 700
       },
+      "PHRASE": {
+        "spend_30d": 4920751.0,
+        "clicks_30d": 824,
+        "conversions_30d": 16.25,
+        "term_count": 603
+      },
+      "BROAD": {
+        "spend_30d": 12981182.0,
+        "clicks_30d": 1578,
+        "conversions_30d": 19.25,
+        "term_count": 2351
+      },
       "NEAR_EXACT": {
         "spend_30d": 60285.0,
         "clicks_30d": 14,
         "conversions_30d": 0.0,
         "term_count": 1
-      },
-      "EXACT": {
-        "spend_30d": 2131267.0,
-        "clicks_30d": 340,
-        "conversions_30d": 4.5,
-        "term_count": 67
       }
     }
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 12460,
-      "total_spend_30d": 12882479.0
+      "total_unique_placements": 12464,
+      "total_spend_30d": 12876683.0
     },
     "network_breakdown": {
       "CONTENT": {
-        "spend_30d": 12883198.0,
-        "clicks_30d": 7526,
-        "impressions_30d": 570489,
+        "spend_30d": 12877402.0,
+        "clicks_30d": 7523,
+        "impressions_30d": 570487,
         "ctr_30d": 0.0132,
         "cpc_30d": 1712.0,
         "campaign_count": 5
@@ -2333,11 +2334,11 @@
     },
     "placement_type_breakdown": {
       "WEBSITE": {
-        "spend_30d": 12882479.0,
-        "clicks_30d": 7525,
-        "impressions_30d": 550409,
+        "spend_30d": 12876683.0,
+        "clicks_30d": 7522,
+        "impressions_30d": 550433,
         "ctr_30d": 0.0137,
-        "placement_count": 12460
+        "placement_count": 12464
       }
     },
     "top_waste_placements": [],
@@ -2549,7 +2550,7 @@
   "ad_insights": {
     "summary": {
       "total_ads": 93,
-      "total_spend_30d": 47669934.0
+      "total_spend_30d": 47666918.0
     },
     "format_breakdown": {
       "DISPLAY_BANNER": {
@@ -2560,8 +2561,8 @@
         "ad_count": 5
       },
       "OTHER": {
-        "spend_30d": 44269814.0,
-        "clicks_30d": 10499,
+        "spend_30d": 44266798.0,
+        "clicks_30d": 10498,
         "impressions_30d": 729472,
         "ctr_30d": 0.0144,
         "ad_count": 88
