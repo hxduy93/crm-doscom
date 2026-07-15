@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-15 09:43",
+  "generated_at": "2026-07-15 12:23",
   "source_data_date_range": {
     "start_7d": "2026-07-08",
     "end": "2026-07-14",
@@ -60,16 +60,16 @@
     "orders_30d": 93,
     "by_status": {
       "delivered": {
-        "revenue": 130954440.0,
-        "orders": 64
+        "revenue": 135204440.0,
+        "orders": 66
       },
       "canceled": {
         "revenue": 7600000.0,
         "orders": 4
       },
       "other": {
-        "revenue": 29568000.0,
-        "orders": 25
+        "revenue": 25318000.0,
+        "orders": 23
       }
     },
     "by_source": {
@@ -1634,18 +1634,18 @@
   },
   "search_term_insights": {
     "summary": {
-      "total_unique_terms": 3503,
+      "total_unique_terms": 3500,
       "terms_with_conversions": 32,
       "conv_rate_terms": 0.009,
-      "total_spend_30d": 20560451.0
+      "total_spend_30d": 20635244.0
     },
     "top_converting_terms": [
       {
         "search_term": "camera",
-        "spend_30d": 3586049.0,
-        "clicks_30d": 266,
-        "conversions_30d": 10.0,
-        "ctr_30d": 0.0506,
+        "spend_30d": 3662901.0,
+        "clicks_30d": 269,
+        "conversions_30d": 9.0,
+        "ctr_30d": 0.0508,
         "match_types": [
           "BROAD"
         ],
@@ -1672,9 +1672,23 @@
         "spend_30d": 84017.0,
         "clicks_30d": 11,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.2683,
+        "ctr_30d": 0.275,
         "match_types": [
           "BROAD"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera mini kết nối điện thoại không cần wifi",
+        "spend_30d": 15939.0,
+        "clicks_30d": 3,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.2143,
+        "match_types": [
+          "BROAD",
+          "PHRASE"
         ],
         "statuses": [
           "NONE"
@@ -1685,7 +1699,7 @@
         "spend_30d": 289632.0,
         "clicks_30d": 17,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.0271,
+        "ctr_30d": 0.0273,
         "match_types": [
           "BROAD"
         ],
@@ -1698,7 +1712,7 @@
         "spend_30d": 18275.0,
         "clicks_30d": 2,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.0465,
+        "ctr_30d": 0.0488,
         "match_types": [
           "BROAD"
         ],
@@ -1711,7 +1725,7 @@
         "spend_30d": 87187.0,
         "clicks_30d": 8,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.0825,
+        "ctr_30d": 0.0808,
         "match_types": [
           "BROAD"
         ],
@@ -1721,37 +1735,11 @@
         ]
       },
       {
-        "search_term": "máy chống ghi âm",
-        "spend_30d": 55741.0,
-        "clicks_30d": 18,
+        "search_term": "máy dò camera nghe lén",
+        "spend_30d": 12815.0,
+        "clicks_30d": 4,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.2143,
-        "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
-        "search_term": "máy ghi",
-        "spend_30d": 37828.0,
-        "clicks_30d": 6,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1818,
-        "match_types": [
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
-          "EXCLUDED"
-        ]
-      },
-      {
-        "search_term": "máy ghi âm cuộc họp",
-        "spend_30d": 68627.0,
-        "clicks_30d": 13,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.13,
+        "ctr_30d": 0.1429,
         "match_types": [
           "NEAR_PHRASE",
           "PHRASE"
@@ -1761,11 +1749,25 @@
         ]
       },
       {
-        "search_term": "máy ghi âm nguyễn kim",
-        "spend_30d": 23877.0,
+        "search_term": "máy ghi âm nghe lén từ xa",
+        "spend_30d": 22191.0,
         "clicks_30d": 4,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.25,
+        "ctr_30d": 0.1481,
+        "match_types": [
+          "BROAD",
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm nghe từ xa",
+        "spend_30d": 146569.0,
+        "clicks_30d": 18,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1343,
         "match_types": [
           "PHRASE"
         ],
@@ -1780,7 +1782,7 @@
         "spend_30d": 713516.0,
         "clicks_30d": 71,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.1036,
+        "ctr_30d": 0.1033,
         "match_types": [
           "BROAD"
         ],
@@ -1794,10 +1796,10 @@
       },
       {
         "search_term": "camera mini",
-        "spend_30d": 310118.0,
-        "clicks_30d": 49,
+        "spend_30d": 325134.0,
+        "clicks_30d": 51,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.1289,
+        "ctr_30d": 0.1314,
         "match_types": [
           "BROAD",
           "EXACT"
@@ -1813,10 +1815,10 @@
       },
       {
         "search_term": "camera năng lượng mặt trời",
-        "spend_30d": 304243.0,
-        "clicks_30d": 56,
+        "spend_30d": 300204.0,
+        "clicks_30d": 55,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.1349,
+        "ctr_30d": 0.1316,
         "match_types": [
           "BROAD"
         ],
@@ -1830,26 +1832,10 @@
       },
       {
         "search_term": "máy ghi âm giấu kín",
-        "spend_30d": 239767.0,
-        "clicks_30d": 32,
+        "spend_30d": 262296.0,
+        "clicks_30d": 36,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.1576,
-        "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED"
-        ],
-        "campaigns": [
-          "8/5/2025 Search - TB Ghi Âm"
-        ]
-      },
-      {
-        "search_term": "mua máy ghi âm",
-        "spend_30d": 188446.0,
-        "clicks_30d": 24,
-        "conversions_30d": 0.0,
-        "ctr_30d": 0.338,
+        "ctr_30d": 0.1659,
         "match_types": [
           "EXACT"
         ],
@@ -1862,29 +1848,42 @@
       },
       {
         "search_term": "thiết bị ghi âm",
-        "spend_30d": 184451.0,
-        "clicks_30d": 20,
+        "spend_30d": 195397.0,
+        "clicks_30d": 22,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.155,
+        "ctr_30d": 0.1583,
         "match_types": [
-          "BROAD",
           "EXACT"
         ],
         "statuses": [
-          "ADDED",
-          "NONE"
+          "ADDED"
         ],
         "campaigns": [
-          "8/5/2025 Search - TB Chống Ghi Âm",
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
+        "search_term": "mua máy ghi âm",
+        "spend_30d": 194162.0,
+        "clicks_30d": 25,
+        "conversions_30d": 0.0,
+        "ctr_30d": 0.3205,
+        "match_types": [
+          "EXACT"
+        ],
+        "statuses": [
+          "ADDED"
+        ],
+        "campaigns": [
           "8/5/2025 Search - TB Ghi Âm"
         ]
       },
       {
         "search_term": "camera ip",
-        "spend_30d": 164330.0,
-        "clicks_30d": 11,
+        "spend_30d": 141836.0,
+        "clicks_30d": 10,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.0293,
+        "ctr_30d": 0.0286,
         "match_types": [
           "BROAD"
         ],
@@ -1900,7 +1899,7 @@
         "spend_30d": 139421.0,
         "clicks_30d": 15,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.0725,
+        "ctr_30d": 0.0746,
         "match_types": [
           "NEAR_PHRASE",
           "PHRASE"
@@ -1914,10 +1913,10 @@
       },
       {
         "search_term": "máy nghe lén",
-        "spend_30d": 137630.0,
+        "spend_30d": 135093.0,
         "clicks_30d": 31,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.1925,
+        "ctr_30d": 0.195,
         "match_types": [
           "BROAD",
           "NEAR_PHRASE"
@@ -1935,7 +1934,7 @@
         "spend_30d": 133462.0,
         "clicks_30d": 11,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.0598,
+        "ctr_30d": 0.0601,
         "match_types": [
           "BROAD"
         ],
@@ -1952,7 +1951,7 @@
         "spend_30d": 128881.0,
         "clicks_30d": 25,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.1016,
+        "ctr_30d": 0.102,
         "match_types": [
           "PHRASE"
         ],
@@ -1964,11 +1963,28 @@
         ]
       },
       {
+        "search_term": "máy ghi âm nhỏ",
+        "spend_30d": 125137.0,
+        "clicks_30d": 21,
+        "conversions_30d": 0.0,
+        "ctr_30d": 0.1099,
+        "match_types": [
+          "NEAR_PHRASE",
+          "PHRASE"
+        ],
+        "statuses": [
+          "ADDED"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
         "search_term": "camera không dây",
-        "spend_30d": 125666.0,
+        "spend_30d": 122950.0,
         "clicks_30d": 23,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.0987,
+        "ctr_30d": 0.0975,
         "match_types": [
           "BROAD"
         ],
@@ -1981,14 +1997,13 @@
         ]
       },
       {
-        "search_term": "máy ghi âm nhỏ",
-        "spend_30d": 125137.0,
-        "clicks_30d": 21,
+        "search_term": "máy ghi âm mini pin khủng",
+        "spend_30d": 116010.0,
+        "clicks_30d": 9,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.1135,
+        "ctr_30d": 0.1765,
         "match_types": [
-          "NEAR_PHRASE",
-          "PHRASE"
+          "EXACT"
         ],
         "statuses": [
           "ADDED"
@@ -2002,7 +2017,7 @@
         "spend_30d": 112561.0,
         "clicks_30d": 12,
         "conversions_30d": 0.0,
-        "ctr_30d": 0.25,
+        "ctr_30d": 0.2609,
         "match_types": [
           "NEAR_PHRASE",
           "PHRASE"
@@ -2012,23 +2027,6 @@
         ],
         "campaigns": [
           "8/5/2025 Search - TB Ghi Âm"
-        ]
-      },
-      {
-        "search_term": "mua camera",
-        "spend_30d": 108673.0,
-        "clicks_30d": 7,
-        "conversions_30d": 0.0,
-        "ctr_30d": 0.1029,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ],
-        "campaigns": [
-          "8/5/2025 Search - Cam mini",
-          "8/5/2025 Search - Sim 4G"
         ]
       }
     ],
@@ -2051,8 +2049,8 @@
       },
       {
         "search_term": "camera mini",
-        "spend_30d": 310118.0,
-        "clicks_30d": 49,
+        "spend_30d": 325134.0,
+        "clicks_30d": 51,
         "conversions_30d": 0.0,
         "match_types": [
           "BROAD",
@@ -2069,8 +2067,8 @@
       },
       {
         "search_term": "camera năng lượng mặt trời",
-        "spend_30d": 304243.0,
-        "clicks_30d": 56,
+        "spend_30d": 300204.0,
+        "clicks_30d": 55,
         "conversions_30d": 0.0,
         "match_types": [
           "BROAD"
@@ -2084,27 +2082,9 @@
         ]
       },
       {
-        "search_term": "thiết bị ghi âm",
-        "spend_30d": 184451.0,
-        "clicks_30d": 20,
-        "conversions_30d": 0.0,
-        "match_types": [
-          "BROAD",
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED",
-          "NONE"
-        ],
-        "campaigns": [
-          "8/5/2025 Search - TB Chống Ghi Âm",
-          "8/5/2025 Search - TB Ghi Âm"
-        ]
-      },
-      {
         "search_term": "camera ip",
-        "spend_30d": 164330.0,
-        "clicks_30d": 11,
+        "spend_30d": 141836.0,
+        "clicks_30d": 10,
         "conversions_30d": 0.0,
         "match_types": [
           "BROAD"
@@ -2134,7 +2114,7 @@
       },
       {
         "search_term": "máy nghe lén",
-        "spend_30d": 137630.0,
+        "spend_30d": 135093.0,
         "clicks_30d": 31,
         "conversions_30d": 0.0,
         "match_types": [
@@ -2166,23 +2146,6 @@
         ]
       },
       {
-        "search_term": "xem camera",
-        "spend_30d": 131920.0,
-        "clicks_30d": 13,
-        "conversions_30d": 0.0,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "EXCLUDED",
-          "NONE"
-        ],
-        "campaigns": [
-          "8/5/2025 Search - Cam mini",
-          "8/5/2025 Search - Sim 4G"
-        ]
-      },
-      {
         "search_term": "camera năng lượng mặt trời sim 4g",
         "spend_30d": 128881.0,
         "clicks_30d": 25,
@@ -2199,13 +2162,30 @@
       },
       {
         "search_term": "camera không dây",
-        "spend_30d": 125666.0,
+        "spend_30d": 122950.0,
         "clicks_30d": 23,
         "conversions_30d": 0.0,
         "match_types": [
           "BROAD"
         ],
         "statuses": [
+          "NONE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - Cam mini",
+          "8/5/2025 Search - Sim 4G"
+        ]
+      },
+      {
+        "search_term": "xem camera",
+        "spend_30d": 119253.0,
+        "clicks_30d": 12,
+        "conversions_30d": 0.0,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "EXCLUDED",
           "NONE"
         ],
         "campaigns": [
@@ -2246,9 +2226,26 @@
         ]
       },
       {
+        "search_term": "mua máy ghi âm ở hà nội",
+        "spend_30d": 105477.0,
+        "clicks_30d": 12,
+        "conversions_30d": 0.0,
+        "match_types": [
+          "BROAD",
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Chống Ghi Âm",
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
         "search_term": "máy nghe lén từ xa",
-        "spend_30d": 102980.0,
-        "clicks_30d": 27,
+        "spend_30d": 99032.0,
+        "clicks_30d": 26,
         "conversions_30d": 0.0,
         "match_types": [
           "BROAD",
@@ -2263,59 +2260,57 @@
         ]
       },
       {
-        "search_term": "mua máy ghi âm ở hà nội",
-        "spend_30d": 90799.0,
-        "clicks_30d": 10,
+        "search_term": "máy ghi âm dung lượng cao",
+        "spend_30d": 86243.0,
+        "clicks_30d": 5,
         "conversions_30d": 0.0,
         "match_types": [
-          "BROAD",
           "PHRASE"
         ],
         "statuses": [
           "NONE"
         ],
         "campaigns": [
-          "8/5/2025 Search - TB Chống Ghi Âm",
           "8/5/2025 Search - TB Ghi Âm"
         ]
       }
     ],
     "match_type_breakdown": {
       "BROAD": {
-        "spend_30d": 13226029.0,
-        "clicks_30d": 1608,
-        "conversions_30d": 20.25,
-        "term_count": 2361
+        "spend_30d": 12981182.0,
+        "clicks_30d": 1578,
+        "conversions_30d": 19.25,
+        "term_count": 2351
       },
       "PHRASE": {
-        "spend_30d": 4795019.0,
-        "clicks_30d": 815,
-        "conversions_30d": 15.25,
-        "term_count": 605
-      },
-      "EXACT": {
-        "spend_30d": 2092219.0,
-        "clicks_30d": 332,
-        "conversions_30d": 4.5,
-        "term_count": 68
+        "spend_30d": 4920751.0,
+        "clicks_30d": 824,
+        "conversions_30d": 16.25,
+        "term_count": 603
       },
       "NEAR_PHRASE": {
-        "spend_30d": 4370310.0,
-        "clicks_30d": 859,
-        "conversions_30d": 10.5,
-        "term_count": 691
+        "spend_30d": 4367456.0,
+        "clicks_30d": 861,
+        "conversions_30d": 9.5,
+        "term_count": 700
       },
       "NEAR_EXACT": {
         "spend_30d": 60285.0,
         "clicks_30d": 14,
         "conversions_30d": 0.0,
         "term_count": 1
+      },
+      "EXACT": {
+        "spend_30d": 2131267.0,
+        "clicks_30d": 340,
+        "conversions_30d": 4.5,
+        "term_count": 67
       }
     }
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 12452,
+      "total_unique_placements": 12458,
       "total_spend_30d": 12882479.0
     },
     "network_breakdown": {
@@ -2328,11 +2323,11 @@
         "campaign_count": 5
       },
       "SEARCH": {
-        "spend_30d": 34803235.0,
-        "clicks_30d": 5200,
-        "impressions_30d": 45347,
-        "ctr_30d": 0.1147,
-        "cpc_30d": 6693.0,
+        "spend_30d": 34787299.0,
+        "clicks_30d": 5198,
+        "impressions_30d": 45348,
+        "ctr_30d": 0.1146,
+        "cpc_30d": 6692.0,
         "campaign_count": 5
       }
     },
@@ -2340,9 +2335,9 @@
       "WEBSITE": {
         "spend_30d": 12882479.0,
         "clicks_30d": 7525,
-        "impressions_30d": 550305,
+        "impressions_30d": 550369,
         "ctr_30d": 0.0137,
-        "placement_count": 12452
+        "placement_count": 12458
       }
     },
     "top_waste_placements": [],
@@ -2554,21 +2549,21 @@
   "ad_insights": {
     "summary": {
       "total_ads": 93,
-      "total_spend_30d": 47740932.0
+      "total_spend_30d": 47669934.0
     },
     "format_breakdown": {
       "DISPLAY_BANNER": {
-        "spend_30d": 3472093.0,
-        "clicks_30d": 2313,
-        "impressions_30d": 194059,
+        "spend_30d": 3400120.0,
+        "clicks_30d": 2222,
+        "impressions_30d": 186366,
         "ctr_30d": 0.0119,
         "ad_count": 5
       },
       "OTHER": {
-        "spend_30d": 44268839.0,
-        "clicks_30d": 10739,
-        "impressions_30d": 759271,
-        "ctr_30d": 0.0141,
+        "spend_30d": 44269814.0,
+        "clicks_30d": 10499,
+        "impressions_30d": 729472,
+        "ctr_30d": 0.0144,
         "ad_count": 88
       }
     },
@@ -2579,9 +2574,9 @@
         "ad_group_name": "Ad group 1",
         "ad_name": "300x600.gif",
         "ad_format": "DISPLAY_BANNER",
-        "spend_30d": 1864474.0,
-        "clicks_30d": 940,
-        "ctr_30d": 0.0195
+        "spend_30d": 1850608.0,
+        "clicks_30d": 925,
+        "ctr_30d": 0.0197
       },
       {
         "ad_id": "752128818624",
@@ -2589,9 +2584,9 @@
         "ad_group_name": "Ad group 1",
         "ad_name": "300x250.gif",
         "ad_format": "DISPLAY_BANNER",
-        "spend_30d": 1448895.0,
-        "clicks_30d": 1301,
-        "ctr_30d": 0.0101
+        "spend_30d": 1396523.0,
+        "clicks_30d": 1226,
+        "ctr_30d": 0.01
       },
       {
         "ad_id": "752128818630",
@@ -2599,9 +2594,9 @@
         "ad_group_name": "Ad group 1",
         "ad_name": "320x50.gif",
         "ad_format": "DISPLAY_BANNER",
-        "spend_30d": 99589.0,
+        "spend_30d": 95617.0,
         "clicks_30d": 44,
-        "ctr_30d": 0.0037
+        "ctr_30d": 0.0038
       },
       {
         "ad_id": "752128818633",
@@ -2609,9 +2604,9 @@
         "ad_group_name": "Ad group 1",
         "ad_name": "728x90.gif",
         "ad_format": "DISPLAY_BANNER",
-        "spend_30d": 47209.0,
-        "clicks_30d": 23,
-        "ctr_30d": 0.0044
+        "spend_30d": 45446.0,
+        "clicks_30d": 22,
+        "ctr_30d": 0.0043
       },
       {
         "ad_id": "752128818621",
@@ -2621,7 +2616,7 @@
         "ad_format": "DISPLAY_BANNER",
         "spend_30d": 11926.0,
         "clicks_30d": 5,
-        "ctr_30d": 0.0129
+        "ctr_30d": 0.013
       }
     ],
     "worst_performing_banners": [],
