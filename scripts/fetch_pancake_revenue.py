@@ -580,19 +580,16 @@ def _num(v, default=0.0):
 
 def order_revenue(order):
     """
-    Doanh thu per order = GIÁ TRỊ HÀNG (không gồm phí ship), khớp cột "doanh số"
-    trên Pancake POS. (QUYẾT 2026-07-15 — trước đây ưu tiên cod nhưng cod = tiền
-    thực thu gồm phí ship, làm nguồn Website/giao-xa cao hơn doanh số Pancake.)
-    Fallback chain:
-      1. total_price_after_sub_discount              → tổng hàng sau giảm giá đơn (không ship)
-      2. total_price                                 → tổng hàng chưa giảm (không ship)
-      3. cod / cod_amount / total_cod                → chỉ khi thiếu 2 trường trên (gồm ship)
-    Trả về float (giữ số lẻ). Fix "doanh thu làm tròn".
+    Doanh thu per order = SỐ TIỀN COD của đơn (đúng cột "doanh số" trên Pancake POS).
+    (QUYẾT 2026-07-15, đã kiểm chứng trên data thật cả 3 nguồn Duy/Phương Nam/Website:
+     sum(cod) khớp Pancake TUYỆT ĐỐI.)
+    Dùng THẲNG trường cod — kể cả cod=0 (đơn trả trước / giá trị 0) thì tính 0,
+    KHÔNG fallback sang total_price/after_sub (fallback sẽ thổi các đơn cod=0 lên,
+    làm Website lệch +497k so Pancake). Trả về float (giữ số lẻ).
     """
-    for key in ("total_price_after_sub_discount", "total_price",
-                "cod", "cod_amount", "total_cod"):
+    for key in ("cod", "cod_amount", "total_cod"):
         v = order.get(key)
-        if v is not None and _num(v, 0) > 0:
+        if v is not None:
             return _num(v)
     return 0.0
 
