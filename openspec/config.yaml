@@ -58,7 +58,7 @@ context: |
   ## LUẬT TÍNH DỮ LIỆU (đã từng sai — bắt buộc tuân thủ)
   - Chi phí quảng cáo = `accounts.daily.spend` (FB) + `google_ads.by_category` (Google).
   - Lợi nhuận = Doanh thu − VAT 10% − chi phí QC − giá vốn (units × gia_nhap_vnd).
-  - Doanh thu theo nhân sự/nguồn = loại trạng thái returning/returned/canceled (afterReturns).
+  - Doanh thu & giá vốn theo nhân sự/nguồn = GỘP mọi trạng thái (gồm returning/returned/canceled) để khớp "doanh số" Pancake POS; đồng bộ với KPI Doanh thu tổng (pkRevenue vốn đã gộp). Cột ĐƠN cũng đếm mọi trạng thái → hai cột cùng gốc. (QUYẾT 2026-07-15, đảo lại quy tắc afterReturns cũ theo yêu cầu chủ dự án.)
   - Bảng lợi nhuận dùng `revenue.products` (gộp mọi trạng thái = revenueByProd).
   - Doanh thu Facebook brand tính CẤP ĐƠN (order-level), KHÔNG per-SKU
     (combo Noma đúng ≈ 244k/đơn khớp Pancake, sai thành ~200k nếu tính per-SKU).

@@ -289,13 +289,13 @@
           </div>
         </div>
         <div class="mod">
-          <div class="mod-h"><div class="t"><i style="background:#16A34A"></i><h3>Doanh thu theo nguồn</h3></div><span class="s">đã loại đơn hoàn/huỷ</span></div>
+          <div class="mod-h"><div class="t"><i style="background:#16A34A"></i><h3>Doanh thu theo nguồn</h3></div><span class="s">gồm mọi trạng thái (khớp Pancake)</span></div>
           <div class="mod-b"><div class="bars" id="src-bars"></div></div>
         </div>
       </section>
 
       <section class="mod wide" style="margin-bottom:16px" id="sec-staff">
-        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo nhân sự</h3></div><span class="s">Website/Hotline = gộp Website + Zalo + Hotline (kênh Google) · DT &amp; Giá vốn đã loại đơn hoàn/huỷ · LN = DT − Chi phí QC − Giá vốn</span></div>
+        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo nhân sự</h3></div><span class="s">Website/Hotline = gộp Website + Zalo + Hotline (kênh Google) · DT &amp; Giá vốn gồm mọi trạng thái (kể cả hoàn/huỷ, khớp Pancake) · LN = DT − Chi phí QC − Giá vốn</span></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
             <thead><tr><th>Nhân sự / Nguồn</th><th class="num">Chi phí QC</th><th class="num">Doanh thu</th><th class="num">Giá vốn</th><th class="num">ROAS</th><th class="num">Đơn</th><th class="num">Lợi nhuận (DT−CP−GV)</th></tr></thead>
@@ -305,7 +305,7 @@
       </section>
 
       <section class="mod wide" style="margin-bottom:16px" id="sec-brand-cost">
-        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo brand × nhân sự</h3></div><span class="s">Noma = SP "Noma…", Doscom = còn lại · DT đã loại đơn hoàn/huỷ, tính cấp đơn (Noma = tổng đơn − Doscom per-SP) · CIR = Chi phí ÷ Doanh thu (thấp = tốt)</span></div>
+        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo brand × nhân sự</h3></div><span class="s">Noma = SP "Noma…", Doscom = còn lại · DT gồm mọi trạng thái (khớp Pancake), tính cấp đơn (Noma = tổng đơn − Doscom per-SP) · CIR = Chi phí ÷ Doanh thu (thấp = tốt)</span></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
             <thead>
@@ -882,7 +882,10 @@
   function num(n){ return (Number(n)||0).toLocaleString('vi-VN'); }
   function set(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; }
 
-  var EXCL={returning:1,returned:1,canceled:1};
+  // Doanh thu/giá vốn theo nguồn tính GỘP mọi trạng thái (gồm hoàn/huỷ) để khớp Pancake POS
+  // — đồng bộ với KPI "Doanh thu" tổng (pkRevenue) vốn đã tính mọi trạng thái.
+  // Để rỗng = không loại trạng thái nào. (QUYẾT 2026-07-15)
+  var EXCL={};
   var SOURCES=[
     {key:'DUY',label:'Duy',ad:'DUY',color:'#3257E6'},
     {key:'PHUONG_NAM',label:'Phương Nam',ad:'PHUONG_NAM',color:'#8B5CF6'},
@@ -979,7 +982,7 @@
 
   // Ma trận Chi phí & Doanh thu theo BRAND × NHÂN SỰ — đúng LUẬT tính dữ liệu:
   //  · Chi phí: FB = ad_spend_by_staff (tài khoản×SP, split theo tên SP), Google = by_category.
-  //  · Doanh thu: CẤP ĐƠN (order-level), đã loại hoàn/huỷ (EXCL) — khớp bảng "theo nhân sự" ở trên.
+  //  · Doanh thu: CẤP ĐƠN (order-level), gồm mọi trạng thái (EXCL rỗng) — khớp bảng "theo nhân sự" ở trên.
   //    Doscom = Σ SP không-Noma (per-product); Noma = tổng đơn nguồn − Doscom (residual, combo về đúng Noma).
   function renderBrandCost(){
     var el=document.getElementById('brand-cost-rows'); if(!el||!D) return;
@@ -1048,7 +1051,7 @@
     return d; }
 
   function fmtShort(n){ n=Number(n)||0; if(n>=1e9)return (n/1e9).toFixed(1).replace('.',',')+'tỷ'; if(n>=1e6)return Math.round(n/1e6)+'tr'; if(n>=1e3)return Math.round(n/1e3)+'K'; return Math.round(n).toString(); }
-  // doanh số/ngày theo nguồn (đã loại đơn hoàn/huỷ)
+  // doanh số/ngày theo nguồn (gồm mọi trạng thái, khớp Pancake)
   function srcRevByDate(key){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return {}; var r=g.order_revenue_by_status_by_date||{},out={}; for(var st in r){ if(EXCL[st])continue; var pd=r[st]; for(var d in pd){ if(inR(d)) out[d]=(out[d]||0)+(Number(pd[d])||0); } } return out; }
 
   function drawDayChart(){
