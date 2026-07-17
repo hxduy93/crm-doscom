@@ -1,4 +1,6 @@
-// Test cấu trúc ad set cho luồng "1 creative = 1 ad set" (adset_per_ad).
+// Test cấu trúc ad set cho cả 2 luồng:
+//   - MẶC ĐỊNH (adset_per_ad=false): 1 campaign → 1 ad set → N creative.
+//   - adset_per_ad=true: 1 creative = 1 ad set ngân sách riêng (vẫn giữ cho luồng thủ công).
 // Chỉ test 2 helper thuần buildAdsetBase / withAdsetBudget — không gọi Meta API.
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -44,6 +46,17 @@ test("buildAdsetBase giữ promoted_object + targeting + pacing", () => {
 test("CBO: KHÔNG gắn bid_strategy ở ad set (nằm ở campaign)", () => {
   const body = buildAdsetBase(baseCfg, "camp_1", true, "PAUSED");
   assert.equal(body.bid_strategy, undefined);
+});
+
+test("mặc định: N creative chung 1 ad set, ad set giữ TRỌN budget_amount", () => {
+  // Luồng auto (ads-creator.html) gửi adset_per_ad=false → backend chỉ dựng 1 ad set,
+  // budget_amount là ngân sách CẢ campaign chứ không nhân lên theo số creative.
+  const cfg = { ...baseCfg, budget_amount: 400000 };
+  const body = buildAdsetBase(cfg, "camp_1", false, "PAUSED");
+  body.name = "6/7 - NOMA 911";
+  withAdsetBudget(body, cfg, cfg.budget_amount);
+  assert.equal(body.daily_budget, 400000, "1 ad set chung = trọn 400k, không × số creative");
+  assert.equal(body.campaign_id, "camp_1");
 });
 
 test("3 creative → 3 ad set, tổng = 3 × budget_amount", () => {

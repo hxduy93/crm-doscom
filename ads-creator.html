@@ -139,7 +139,8 @@ function AdsCreatorPanel() {
   const [autoPixel, setAutoPixel] = useState("24397685376567889")
   const [autoCopyProduct, setAutoCopyProduct] = useState("Noma 911") // SP trong catalog để AI viết caption
   const [autoLink, setAutoLink] = useState("https://www.noma.io.vn/nm911d")
-  const [autoBudget, setAutoBudget] = useState("100000")
+  // Ngân sách CẢ campaign (1 ad set dùng chung cho mọi creative) — trước đây là mỗi ad set.
+  const [autoBudget, setAutoBudget] = useState("400000")
   const [autoRunner, setAutoRunner] = useState("") // tên người chạy → vào tên campaign + UTM
   const [autoCta, setAutoCta] = useState("ORDER_NOW")
   const [autoAgeMin, setAutoAgeMin] = useState(30)
@@ -705,7 +706,11 @@ function AdsCreatorPanel() {
     }
   }
 
-  const MAX_CREATIVES = 3  // Luật: tối đa 3 creative (video) mỗi campaign.
+  // Ngưỡng cảnh báo số creative trong 1 ad set. KHÔNG còn cắt thành nhiều campaign —
+  // mọi video mới của 1 sản phẩm gộp vào 1 campaign → 1 ad set → N ad.
+  // 4 là mức hợp lý với ngân sách ~400k/ngày: cả ad set cần ~50 conversion/tuần để thoát
+  // learning phase, chia cho quá nhiều creative thì không cái nào đủ dữ liệu.
+  const MAX_CREATIVES = 4
 
   const handleAutoRun = async () => {
     if (autoBusy || autoGroups.length === 0) return
@@ -727,16 +732,15 @@ function AdsCreatorPanel() {
           pushLog(`▶ "${g.product}" — bỏ qua (tất cả video đã có ad)`)
           continue
         }
-        // Chia nhỏ thành các campaign tối đa MAX_CREATIVES video. >3 video → nhiều campaign.
-        const chunks = []
-        for (let s = 0; s < newFiles.length; s += MAX_CREATIVES) chunks.push(newFiles.slice(s, s + MAX_CREATIVES))
-        pushLog(`▶ Sản phẩm "${g.product}" — ${newFiles.length} video mới → ${chunks.length} campaign (mỗi video 1 ad set, tối đa ${MAX_CREATIVES} ad set/campaign)`)
-        for (let ci = 0; ci < chunks.length; ci++) {
-        const files = chunks[ci]
-        const partLabel = chunks.length > 1 ? ` #${ci + 1}` : ""
+        // 1 sản phẩm = 1 campaign, mọi video mới thành creative bên trong cùng 1 ad set.
+        const files = newFiles
+        pushLog(`▶ Sản phẩm "${g.product}" — ${files.length} video mới → 1 campaign, 1 ad set, ${files.length} creative`)
+        if (files.length > MAX_CREATIVES) {
+          pushLog(`  ⚠ ${files.length} creative chung 1 ad set (khuyến nghị ≤ ${MAX_CREATIVES}) — ngân sách chia mỏng, có creative sẽ không tiêu được tiền.`)
+        }
         // UTM: cả 4 field (source/medium/campaign/id) BẰNG NHAU = "d/m-sảnphẩm-ngườichạy"
         // (đúng cấu trúc user đang dùng, vd "6/7-noma911-thangthattha").
-        const utmVal = [dm, slugCompact(g.product), runnerSlug].filter(Boolean).join("-") + (chunks.length > 1 ? `-${ci + 1}` : "")
+        const utmVal = [dm, slugCompact(g.product), runnerSlug].filter(Boolean).join("-")
         const utmStr = ["utm_source", "utm_medium", "utm_campaign", "utm_id"].map(k => `${k}=${utmVal}`).join("&")
         const adsArr = []
         const skipped = []
@@ -781,8 +785,8 @@ function AdsCreatorPanel() {
               const ud = await ur.json()
               if (!ur.ok || !ud.ok) throw new Error(`[${ud.step || "?"}] ${ud.error || ur.status}`)
               adsArr.push({
-                // Tên ad = tên ad set = tên creative: "d/m - sản phẩm - tên video".
-                ad_name: `${dm} - ${g.product}${partLabel} - ${baseName}`,
+                // Tên ad = tên creative: "d/m - sản phẩm - tên video".
+                ad_name: `${dm} - ${g.product} - ${baseName}`,
                 headline, ad_copy: adCopy, cta: autoCta, link: autoLink,
                 url_tags: utmStr, video_id: ud.video_id, thumbnail_url: ud.thumbnail_url,
                 filename: file.name, // để ghi sổ uploaded_videos sau khi tạo ad
@@ -795,12 +799,12 @@ function AdsCreatorPanel() {
           }
           if (skipped.length) pushLog(`  ⚠ ${skipped.length} video lỗi — giữ trạng thái "mới" để thử lại sau: ${skipped.join(", ")}`)
           if (adsArr.length === 0) throw new Error(`cả ${files.length} video đều upload lỗi — không tạo campaign`)
-          // 3) Tạo campaign cho cả nhóm (1 campaign → 1 adset → nhiều ad)
-          pushLog(`  • Tạo campaign "${g.product}${partLabel}" với ${adsArr.length} ad set (mỗi ad set 1 creative)...`)
+          // 3) Tạo campaign cho cả nhóm (1 campaign → 1 ad set → nhiều ad)
+          pushLog(`  • Tạo campaign "${g.product}" — 1 ad set, ${adsArr.length} creative...`)
           const config = {
-            // Campaign: "d/m - sản phẩm - người chạy". Ad set lấy theo tên từng ad (video).
-            campaign_name: `${dm} - ${g.product}${partLabel} - ${runner || "NA"}`,
-            adset_name: `${dm} - ${g.product}${partLabel}`,
+            // Campaign: "d/m - sản phẩm - người chạy". Ad set dùng chung cho mọi creative.
+            campaign_name: `${dm} - ${g.product} - ${runner || "NA"}`,
+            adset_name: `${dm} - ${g.product}`,
             objective: "OUTCOME_SALES",
             buying_type: "AUCTION",
             account_id: autoAccount,
@@ -814,8 +818,9 @@ function AdsCreatorPanel() {
             launch_status: "PAUSED",
             budget_level: "adset",
             budget_type: "daily",
+            // Ngân sách của CẢ ad set — mọi creative dùng chung, Meta tự chia.
             budget_amount: Number(autoBudget),
-            adset_per_ad: true, // 1 creative = 1 ad set (ngân sách riêng) → FB phân phối đủ mọi creative
+            adset_per_ad: false, // 1 ad set dùng chung, N creative bên trong
             targeting: {
               geo_locations: { countries: ["VN"] },
               age_min: Number(autoAgeMin) || 18,
@@ -828,7 +833,7 @@ function AdsCreatorPanel() {
           const cr = await fetch("/api/create-campaign", { method: "POST", body: fd2 })
           const cd = await cr.json()
           if (!cr.ok || !cd.success) throw new Error(`[${cd.step || "?"}] ${cd.error || "lỗi tạo camp"}`)
-          pushLog(`  ✓ Xong campaign "${g.product}${partLabel}" (PAUSED)`)
+          pushLog(`  ✓ Xong campaign "${g.product}" — ${adsArr.length} creative trong 1 ad set (PAUSED)`)
           // 4) Ghi sổ video đã upload (để lần quét sau bỏ qua). cd.ads cùng thứ tự adsArr.
           try {
             const records = adsArr.map((a, idx) => ({
@@ -852,13 +857,12 @@ function AdsCreatorPanel() {
           } catch (recErr) {
             pushLog(`    ⚠ tạo ad OK nhưng ghi sổ lỗi: ${recErr.message} (lần quét sau có thể trùng)`)
           }
-          results.push({ product: `${g.product}${partLabel}`, ok: true, campaign_id: cd.campaign_id, ads_created: (cd.ads || []).length, skipped: skipped.length, ads_manager_url: cd.ads_manager_url })
+          results.push({ product: g.product, ok: true, campaign_id: cd.campaign_id, ads_created: (cd.ads || []).length, skipped: skipped.length, ads_manager_url: cd.ads_manager_url })
         } catch (err) {
-          pushLog(`  ✗ "${g.product}${partLabel}" lỗi: ${err.message}`)
-          results.push({ product: `${g.product}${partLabel}`, ok: false, error: err.message })
+          pushLog(`  ✗ "${g.product}" lỗi: ${err.message}`)
+          results.push({ product: g.product, ok: false, error: err.message })
         }
         setAutoResults([...results])
-        }
       }
       pushLog(`■ Hoàn tất: ${results.filter(r => r.ok).length}/${results.length} campaign tạo thành công.`)
     } finally {
@@ -1130,7 +1134,7 @@ function AdsCreatorPanel() {
                 <input className={inputClass} value={autoLink} onChange={e => setAutoLink(e.target.value)} />
               </div>
               <div>
-                <label className={labelClass}>Ngân sách / ad set (VND/ngày)</label>
+                <label className={labelClass}>Ngân sách / campaign (VND/ngày)</label>
                 <input className={inputClass} type="number" value={autoBudget} onChange={e => setAutoBudget(e.target.value)} />
               </div>
               <div>
