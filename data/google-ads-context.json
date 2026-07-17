@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-18 00:58",
+  "generated_at": "2026-07-18 02:37",
   "source_data_date_range": {
     "start_7d": "2026-07-10",
     "end": "2026-07-16",
@@ -1669,61 +1669,6 @@
         ]
       },
       {
-        "search_term": "camera doscom",
-        "spend_30d": 85197.0,
-        "clicks_30d": 11,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.275,
-        "match_types": [
-          "BROAD",
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED",
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera mini theo dõi",
-        "spend_30d": 11872.0,
-        "clicks_30d": 3,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.375,
-        "match_types": [
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera quan sát",
-        "spend_30d": 289632.0,
-        "clicks_30d": 17,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0272,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera viettel",
-        "spend_30d": 13103.0,
-        "clicks_30d": 1,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0278,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "ADDED",
-          "EXCLUDED"
-        ]
-      },
-      {
         "search_term": "dò định vị xe máy",
         "spend_30d": 17122.0,
         "clicks_30d": 5,
@@ -1731,33 +1676,6 @@
         "ctr_30d": 0.3846,
         "match_types": [
           "PHRASE"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
-        "search_term": "ezviz camera",
-        "spend_30d": 66463.0,
-        "clicks_30d": 6,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0638,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "EXCLUDED",
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "máy chống ghi âm",
-        "spend_30d": 48043.0,
-        "clicks_30d": 14,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1772,
-        "match_types": [
-          "EXACT"
         ],
         "statuses": [
           "ADDED"
@@ -1775,6 +1693,88 @@
         ],
         "statuses": [
           "ADDED"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm cuộc họp",
+        "spend_30d": 73685.0,
+        "clicks_30d": 13,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1275,
+        "match_types": [
+          "EXACT",
+          "NEAR_PHRASE",
+          "PHRASE"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm nghe lén từ xa",
+        "spend_30d": 15919.0,
+        "clicks_30d": 3,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1154,
+        "match_types": [
+          "BROAD",
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm nghe từ xa",
+        "spend_30d": 167038.0,
+        "clicks_30d": 22,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1583,
+        "match_types": [
+          "EXACT",
+          "PHRASE"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm nguyễn kim",
+        "spend_30d": 23239.0,
+        "clicks_30d": 4,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.2222,
+        "match_types": [
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "thiết bị nghe lén pin lâu",
+        "spend_30d": 69409.0,
+        "clicks_30d": 15,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1579,
+        "match_types": [
+          "NEAR_PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera mini theo dõi",
+        "spend_30d": 11872.0,
+        "clicks_30d": 3,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.375,
+        "match_types": [
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
         ]
       }
     ],
@@ -2252,17 +2252,11 @@
       }
     ],
     "match_type_breakdown": {
-      "BROAD": {
-        "spend_30d": 13253601.0,
-        "clicks_30d": 1628,
-        "conversions_30d": 21.25,
-        "term_count": 2323
-      },
-      "PHRASE": {
-        "spend_30d": 5635899.0,
-        "clicks_30d": 925,
-        "conversions_30d": 15.58,
-        "term_count": 624
+      "EXACT": {
+        "spend_30d": 2428417.0,
+        "clicks_30d": 376,
+        "conversions_30d": 10.5,
+        "term_count": 69
       },
       "NEAR_PHRASE": {
         "spend_30d": 4660716.0,
@@ -2270,17 +2264,23 @@
         "conversions_30d": 9.5,
         "term_count": 711
       },
+      "PHRASE": {
+        "spend_30d": 5635899.0,
+        "clicks_30d": 925,
+        "conversions_30d": 15.58,
+        "term_count": 624
+      },
+      "BROAD": {
+        "spend_30d": 13253601.0,
+        "clicks_30d": 1628,
+        "conversions_30d": 21.25,
+        "term_count": 2323
+      },
       "NEAR_EXACT": {
         "spend_30d": 64651.0,
         "clicks_30d": 15,
         "conversions_30d": 0.0,
         "term_count": 4
-      },
-      "EXACT": {
-        "spend_30d": 2428417.0,
-        "clicks_30d": 376,
-        "conversions_30d": 10.5,
-        "term_count": 69
       }
     }
   },
@@ -2525,7 +2525,7 @@
   "ad_insights": {
     "summary": {
       "total_ads": 93,
-      "total_spend_30d": 46369067.0
+      "total_spend_30d": 46367534.0
     },
     "format_breakdown": {
       "DISPLAY_BANNER": {
@@ -2536,8 +2536,8 @@
         "ad_count": 5
       },
       "OTHER": {
-        "spend_30d": 43113369.0,
-        "clicks_30d": 9745,
+        "spend_30d": 43111836.0,
+        "clicks_30d": 9744,
         "impressions_30d": 648987,
         "ctr_30d": 0.015,
         "ad_count": 88
