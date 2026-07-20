@@ -23,7 +23,13 @@ binding = "AI"
 #   - FB_ACCESS_TOKEN    (Meta token có quyền trên TK 927390616363424 — cho /api/optimizer/* + tạo camp)
 #   - OPTIMIZER_TOKEN    (mật khẩu để LƯU danh sách bảo vệ / shadow / killswitch từ UI)
 #   - FB_EXPORT_TOKEN    (Bearer token cho /api/export/fb-ad-spend — đối tác facebook-data-sync kéo data)
+#   - LARK_APP_ID        (App ID custom app Lark — cho /api/lark/*)
+#   - LARK_APP_SECRET    (App Secret Lark)
 [vars]
 CF_ACCOUNT_ID = "cffb0c35f8c649872436b2087a64b7bc"
 # URL Worker agent tối ưu (để UI xem agent vừa làm gì).
 OPTIMIZER_WORKER_URL = "https://fb-ads-auto-agent.doscom-vietnam.workers.dev"
+# Lark Base "Hiep_Tiktokshop_Auto" (dữ liệu TikTok Shop). Base nằm trong WIKI nên
+# đây là NODE TOKEN, không phải app_token — lib/lark.js tự đổi qua app_token
+# (Sdv5b0LfoaEiIZsS6yHlTX41gid) rồi cache KV 24h. Không phải secret (nằm sẵn trên URL).
+LARK_WIKI_TOKEN = "JBVvwm5veis1lbkUpTZlMqhFg6e"
