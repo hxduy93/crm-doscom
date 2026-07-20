@@ -19,7 +19,7 @@
 //
 // Endpoint nằm sau Cloudflare Access nên không gate thêm token.
 
-import { listRecords, resolveAppToken } from "../../lib/lark.js";
+import { listRecords, resolveAppToken, redactSensitive } from "../../lib/lark.js";
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
@@ -64,14 +64,25 @@ export async function onRequestGet(context) {
       fieldNames: fieldsRaw ? fieldsRaw.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
     });
 
+    // Che cột nhạy cảm (token/secret/...) — Base này có bảng chứa credential
+    // TikTok Shop thật, mà endpoint đọc được BẤT KỲ bảng nào theo tham số URL.
+    let redactedCount = 0;
+    const records = out.records.map((r) => {
+      const { fields, redacted } = redactSensitive(r.fields);
+      redactedCount += redacted;
+      return { record_id: r.record_id, fields };
+    });
+
     return json({
       ok: true,
       base: resolved.appToken,
       table: tableId,
-      count: out.records.length,
+      count: records.length,
       total: out.total,
       has_more: out.has_more,
-      records: out.records,
+      // > 0 nghĩa là có cột bị che — báo ra để không tưởng dữ liệu bị thiếu.
+      redacted_fields: redactedCount,
+      records,
     });
   } catch (e) {
     return json({ ok: false, error: String(e.message || e), code: e.code ?? null }, 502);

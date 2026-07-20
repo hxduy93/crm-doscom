@@ -115,6 +115,77 @@ export async function getTenantToken(env, kv) {
   return token;
 }
 
+// ─── Chuẩn hoá giá trị field ────────────────────────────────────────────────
+// 2 endpoint của Lark trả CÙNG một cột theo 2 ĐỊNH DẠNG KHÁC NHAU:
+//
+//              | GET /records            | POST /records/search
+//   số         | "4118543" (chuỗi)       | 4118543 (số)
+//   text       | "Tiêu đề"               | [{text:"Tiêu đề",type:"text"}]
+//   link video | [{text:"...",...}]      | {type:1,value:[{text:"..."}]}
+//   liên kết   | [{text:"Noma Auto",...}]| {link_record_ids:["rec..."]}  ← MẤT tên!
+//
+// Không chuẩn hoá thì tiêu đề in ra "[object Object]". Dùng chung 2 hàm dưới
+// cho cả 2 đường để khỏi phải nhớ đang gọi endpoint nào.
+
+// Mọi dạng text → chuỗi thường (null nếu không có).
+export function larkText(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "string") return v || null;
+  if (typeof v === "number") return String(v);
+  if (Array.isArray(v)) {
+    const s = v.map((x) => (x && typeof x === "object" ? x.text || "" : String(x ?? ""))).join("");
+    return s || null;
+  }
+  if (typeof v === "object") {
+    if (Array.isArray(v.value)) return larkText(v.value);
+    if (v.text) return String(v.text);
+  }
+  return null;
+}
+
+// Mọi dạng số → number (0 nếu không đọc được). Lark hay trả số dưới dạng chuỗi.
+export function larkNum(v) {
+  if (v === null || v === undefined) return 0;
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  const n = parseFloat(String(larkText(v) ?? v).replace(/,/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+// Cột liên kết bảng khác → danh sách record_id.
+export function larkLinkIds(v) {
+  if (!v) return [];
+  if (Array.isArray(v)) return v.flatMap((x) => (x && x.record_ids) || []);
+  if (typeof v === "object") {
+    if (Array.isArray(v.link_record_ids)) return v.link_record_ids;
+    if (Array.isArray(v.record_ids)) return v.record_ids;
+  }
+  return [];
+}
+
+// ─── Che dữ liệu nhạy cảm ───────────────────────────────────────────────────
+// Base này có bảng `tiktok_shop_credentials` chứa access_token / app_secret /
+// refresh_token / shop_cipher THẬT của TikTok Shop. Endpoint đọc chung
+// /api/lark/records có thể trỏ vào bất kỳ bảng nào → nếu không che thì secret
+// sẽ chảy ra trình duyệt và log. CRM có Cloudflare Access chắn sẵn, nhưng
+// không nên để lộ nhiều lớp phòng thủ chỉ vì một tham số URL.
+const SENSITIVE_FIELD_RE = /(token|secret|password|passwd|cipher|credential|api[_-]?key|private[_-]?key)/i;
+
+// Trả bản sao fields với các cột nhạy cảm thay bằng "***". Không sửa vật gốc.
+export function redactSensitive(fields) {
+  if (!fields || typeof fields !== "object") return fields;
+  const out = {};
+  let redacted = 0;
+  for (const [k, v] of Object.entries(fields)) {
+    if (SENSITIVE_FIELD_RE.test(k)) {
+      out[k] = "***";
+      redacted++;
+    } else {
+      out[k] = v;
+    }
+  }
+  return { fields: out, redacted };
+}
+
 // Bóc token từ URL Lark. Chấp nhận cả 2 dạng (dán thẳng URL cho tiện):
 //   .../wiki/<node_token>?table=tbl...&view=vew...   → Base nằm trong Wiki
 //   .../base/<app_token>?table=tbl...&view=vew...    → Base độc lập
@@ -202,6 +273,71 @@ export async function listTables(env, kv, appToken) {
     name: t.name,
     revision: t.revision,
   }));
+}
+
+// Đọc bản ghi có LỌC THEO NGÀY, qua endpoint /records/search (POST).
+//
+// Vì sao cần: bảng hieu_suat_video ~6.000 dòng, quét hết mất ~24s → Cloudflare
+// Pages Function hết giờ. Lọc 14 ngày gần nhất chỉ còn ~700 dòng, chạy ~2s.
+// Lọc đặt Ở PHÍA LARK nên không tốn băng thông kéo về rồi mới bỏ.
+//
+// dateField: tên cột ngày (vd "Ngày dữ liệu"). sinceMs: epoch ms mốc bắt đầu.
+// Trả cùng dạng listRecords: { records, total, has_more, pages_fetched }
+export async function searchRecordsSince(env, kv, appToken, tableId, dateField, sinceMs, opts = {}) {
+  if (!appToken) throw new Error("Thiếu app_token của Base");
+  if (!tableId) throw new Error("Thiếu table_id");
+  if (!dateField) throw new Error("Thiếu tên cột ngày để lọc");
+
+  const token = await getTenantToken(env, kv);
+  const pageSize = Math.min(Number(opts.pageSize) || MAX_PAGE_SIZE, MAX_PAGE_SIZE);
+  const maxRecords = Number(opts.maxRecords) || MAX_PAGES * pageSize;
+
+  const payload = {
+    filter: {
+      conjunction: "and",
+      conditions: [{
+        field_name: dateField,
+        operator: "isGreater",
+        value: ["ExactDate", String(Math.floor(sinceMs))],
+      }],
+    },
+  };
+  if (Array.isArray(opts.fieldNames) && opts.fieldNames.length) {
+    payload.field_names = opts.fieldNames;
+  }
+
+  const records = [];
+  let pageToken = null, hasMore = false, pages = 0, total = 0;
+
+  do {
+    const qs = new URLSearchParams({ page_size: String(pageSize) });
+    if (pageToken) qs.set("page_token", pageToken);
+
+    const body = await larkFetch(
+      env,
+      `/bitable/v1/apps/${encodeURIComponent(appToken)}/tables/${encodeURIComponent(tableId)}/records/search?${qs}`,
+      { method: "POST", body: JSON.stringify(payload) },
+      token
+    );
+    const data = body.data || {};
+
+    for (const it of data.items || []) {
+      records.push({ record_id: it.record_id, fields: it.fields || {} });
+    }
+    total = Number(data.total) || records.length;
+    pageToken = data.page_token || null;
+    hasMore = Boolean(data.has_more);
+    pages++;
+
+    if (!hasMore || records.length >= maxRecords || pages >= MAX_PAGES) break;
+  } while (pageToken);
+
+  return {
+    records: records.slice(0, maxRecords),
+    total,
+    has_more: hasMore || records.length > maxRecords,
+    pages_fetched: pages,
+  };
 }
 
 // Đọc bản ghi 1 bảng. Tự lật trang tới khi hết HOẶC chạm trần.
