@@ -562,7 +562,7 @@
             </select>
           </div>
           <p style="margin:0 0 10px;color:var(--text-2);font-size:12.5px;line-height:1.5">
-            Tick video muốn đem chạy Facebook Ads → bấm <b>Tải danh sách</b> → chạy script tải video (không watermark) về máy → mở <b>Tạo Ads tự động</b> chọn thư mục vừa tải.
+            Tick video muốn chạy Facebook Ads → bấm <b>Tải video về máy</b> → chọn thư mục lưu → video (không watermark) tự tải và xếp theo thư mục sản phẩm → mở <b>Tạo Ads tự động</b> chọn đúng thư mục đó.
             <br>Khai báo kênh của công ty vào ô dưới để phân biệt với creator ngoài (video của creator cần xin phép trước khi chạy quảng cáo).
           </p>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
@@ -2245,10 +2245,91 @@
     cartEl.style.display='';
     cartEl.innerHTML='<span>Đã chọn <b>'+n+'</b> video'+
       (ext?' · <span style="color:#8a5a00"><b>'+ext+'</b> của creator ngoài — cần xin phép trước khi chạy</span>':'')+'</span>'+
-      '<button class="btn-cl" id="tt-dl" type="button">⬇ Tải danh sách (.json)</button>'+
-      '<button class="btn-cl" id="tt-clear" type="button">Bỏ chọn hết</button>';
+      '<button class="btn-cl" id="tt-dlv" type="button" style="font-weight:800">⬇ Tải video về máy</button>'+
+      '<button class="btn-cl" id="tt-dl" type="button">Tải danh sách (.json)</button>'+
+      '<button class="btn-cl" id="tt-clear" type="button">Bỏ chọn hết</button>'+
+      '<div id="tt-prog" style="flex-basis:100%;font-size:12.5px;color:var(--text-2);margin-top:2px"></div>';
+    document.getElementById('tt-dlv').addEventListener('click',downloadVideos);
     document.getElementById('tt-dl').addEventListener('click',exportList);
     document.getElementById('tt-clear').addEventListener('click',function(){ picked.clear(); renderVideos(); });
+  }
+
+  // ── Tải video thẳng trong trình duyệt ─────────────────────────────────────
+  // Vì sao làm ở TRÌNH DUYỆT chứ không ở server: đã đo thực tế trên hạ tầng
+  // Cloudflare — CDN TikTok tải được bình thường, NHƯNG khâu giải link bị chặn
+  // ("Free Api Limit" vì IP Cloudflare dùng chung đã hết hạn ngạch), còn tự bóc
+  // từ trang TikTok thì trang trả về không kèm dữ liệu video. Gọi từ máy bạn
+  // (IP nhà, hạn ngạch riêng) thì chạy tốt. Cả 2 dịch vụ đều cho CORS '*'.
+  var RESOLVER='https://tikwm.com/api/?url=';
+
+  function slugFolder(s){
+    return String(s||'chua-phan-loai')
+      .normalize('NFD').replace(/[̀-ͯ]/g,'')
+      .replace(/đ/g,'d').replace(/Đ/g,'D')
+      .replace(/[<>:"/\\|?*]+/g,' ').replace(/\s+/g,' ').trim().slice(0,60) || 'chua-phan-loai';
+  }
+  function videoId(link){ var m=String(link||'').match(/\/video\/(\d+)/); return m?m[1]:String(Date.now()); }
+
+  async function downloadVideos(){
+    var list=[]; picked.forEach(function(v){ if(v.link) list.push(v); });
+    if(!list.length) return;
+    var ext=list.filter(function(v){ return !isOwn(v.username); }).length;
+    if(ext && !confirm(ext+'/'+list.length+' video là của creator ngoài (không phải kênh nhà).\n\n'+
+       'Video của creator thuộc bản quyền của họ — chạy quảng cáo trả tiền khi chưa có thoả thuận '+
+       'có thể bị khiếu nại hoặc Facebook gỡ quảng cáo.\n\nVẫn tải tất cả?')) return;
+
+    var prog=document.getElementById('tt-prog');
+    var btn=document.getElementById('tt-dlv');
+    btn.disabled=true;
+    var root=null, useFS=typeof window.showDirectoryPicker==='function';
+
+    if(useFS){
+      try{ root=await window.showDirectoryPicker({mode:'readwrite'}); }
+      catch(e){ btn.disabled=false; prog.textContent='Đã huỷ chọn thư mục.'; return; }
+    } else {
+      prog.innerHTML='Trình duyệt này không cho ghi thẳng vào thư mục — sẽ tải từng file vào Downloads. '+
+        '<b>Dùng Chrome hoặc Edge</b> để video tự xếp theo thư mục sản phẩm.';
+    }
+
+    var ok=0, fail=0, dirs={};
+    for(var i=0;i<list.length;i++){
+      var v=list[i], folder=slugFolder(v.product), name=videoId(v.link)+'.mp4';
+      prog.innerHTML='Đang tải <b>'+(i+1)+'/'+list.length+'</b>: '+esc(String(v.title).slice(0,48))+'…';
+      try{
+        // 1) giải link -> URL không watermark
+        var rj=await (await fetch(RESOLVER+encodeURIComponent(v.link))).json();
+        if(rj.code!==0||!rj.data) throw new Error(rj.msg||'không giải được link');
+        var src=rj.data.hdplay||rj.data.play;
+        if(!src) throw new Error('không có bản không watermark');
+        // 2) tải bytes
+        var blob=await (await fetch(src)).blob();
+        if(blob.size<10240) throw new Error('file tải về quá nhỏ, có thể hỏng');
+        // 3) ghi ra đĩa
+        if(useFS){
+          if(!dirs[folder]) dirs[folder]=await root.getDirectoryHandle(folder,{create:true});
+          var fh=await dirs[folder].getFileHandle(name,{create:true});
+          var w=await fh.createWritable(); await w.write(blob); await w.close();
+        } else {
+          var a=document.createElement('a');
+          a.href=URL.createObjectURL(blob); a.download=folder+'__'+name;
+          document.body.appendChild(a); a.click();
+          setTimeout(function(h){ return function(){ URL.revokeObjectURL(h); }; }(a.href),4000);
+          a.remove();
+          await new Promise(function(r){ setTimeout(r,900); });   // tránh trình duyệt chặn tải hàng loạt
+        }
+        ok++;
+      }catch(e){
+        fail++;
+        prog.innerHTML='<span style="color:#b3261e">Lỗi ở "'+esc(String(v.title).slice(0,40))+'": '+esc(e.message)+'</span>';
+        await new Promise(function(r){ setTimeout(r,1200); });
+      }
+    }
+
+    btn.disabled=false;
+    prog.innerHTML='<b>Xong.</b> Tải được '+ok+'/'+list.length+' video'+(fail?', lỗi '+fail:'')+'. '+
+      (useFS?'Giờ mở <b>Tạo Ads tự động</b> và chọn đúng thư mục vừa lưu.'
+            :'File nằm trong Downloads, cần tự xếp vào thư mục theo sản phẩm trước khi dùng.')+
+      (fail?'<br>Video lỗi thường do dịch vụ giải link hết hạn ngạch — đợi vài phút rồi thử lại, hoặc dùng "Tải danh sách (.json)" + script.':'');
   }
 
   // Xuất file JSON cho script scripts/tiktok-to-ads.mjs chạy tại máy.
