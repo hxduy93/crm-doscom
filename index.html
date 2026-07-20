@@ -561,6 +561,16 @@
               <option value="30">30 ngày</option>
             </select>
           </div>
+          <p style="margin:0 0 10px;color:var(--text-2);font-size:12.5px;line-height:1.5">
+            Tick video muốn đem chạy Facebook Ads → bấm <b>Tải danh sách</b> → chạy script tải video (không watermark) về máy → mở <b>Tạo Ads tự động</b> chọn thư mục vừa tải.
+            <br>Khai báo kênh của công ty vào ô dưới để phân biệt với creator ngoài (video của creator cần xin phép trước khi chạy quảng cáo).
+          </p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+            <input id="tt-own" class="btn-cl" style="flex:1;min-width:230px;padding:7px 10px;font-size:12.5px"
+                   placeholder="Kênh nhà, cách nhau dấu phẩy (vd: toanmanshop, shopnhatom79)">
+            <span id="tt-own-n" class="tt-sub"></span>
+          </div>
+          <div id="tt-cart" class="tt-cart" style="display:none"></div>
           <div id="tt-videos"><div class="tt-empty">Đang tải…</div></div>
         </div>
 
@@ -590,6 +600,13 @@
           #view-tiktok .tt-vm{font-size:11.5px;color:var(--text-2);margin-top:2px}
           #view-tiktok a{color:var(--primary);text-decoration:none}
           #view-tiktok a:hover{text-decoration:underline}
+          #view-tiktok .tt-cart{background:color-mix(in srgb,var(--primary) 8%,var(--bg-1,#fff));border:1px solid color-mix(in srgb,var(--primary) 30%,transparent);border-radius:12px;padding:10px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px}
+          #view-tiktok .tt-cart b{font-size:15px}
+          #view-tiktok .tt-badge{font-size:10px;font-weight:800;border-radius:99px;padding:2px 7px;margin-left:6px;text-transform:uppercase;letter-spacing:.03em}
+          #view-tiktok .tt-badge.own{background:#e9f7ef;color:#0f7b43}
+          #view-tiktok .tt-badge.ext{background:#fdf3e7;color:#8a5a00}
+          #view-tiktok td.ck{width:34px;text-align:center}
+          #view-tiktok td.ck input{width:16px;height:16px;cursor:pointer}
         </style>
       </div><!-- /view-tiktok -->
       <div class="view" id="view-heatmap">
@@ -2132,8 +2149,20 @@
       dailyEl=document.getElementById('tt-daily'), dailyN=document.getElementById('tt-daily-n'),
       vidsEl=document.getElementById('tt-videos'), vidSub=document.getElementById('tt-vid-sub'),
       daysSel=document.getElementById('tt-days'), vidDaysSel=document.getElementById('tt-vid-days'),
-      refreshBtn=document.getElementById('tt-refresh');
+      refreshBtn=document.getElementById('tt-refresh'),
+      ownEl=document.getElementById('tt-own'), ownN=document.getElementById('tt-own-n'),
+      cartEl=document.getElementById('tt-cart');
   var loaded=false;
+  var lastVideos=[];              // kết quả lần tải gần nhất, để đối chiếu khi tick
+  var picked=new Map();           // link video → bản ghi đã chọn (giữ khi đổi khoảng ngày)
+
+  // Danh sách kênh nhà lưu ở máy (localStorage) — chỉ để gắn nhãn, không gửi lên server.
+  function ownSet(){
+    var raw='';
+    try{ raw=localStorage.getItem('tt_own_accounts')||''; }catch(e){}
+    return new Set(raw.split(',').map(function(s){return s.trim().replace(/^@/,'').toLowerCase();}).filter(Boolean));
+  }
+  function isOwn(u){ return u ? ownSet().has(String(u).replace(/^@/,'').toLowerCase()) : false; }
 
   function vnd(n){ return Math.round(Number(n)||0).toLocaleString('vi-VN'); }
   // Tiền VND rất dài → rút gọn cho thẻ tổng quan đỡ tràn.
@@ -2184,6 +2213,64 @@
 
   function card(k,v,s){ return '<div class="tt-card"><div class="k">'+k+'</div><div class="v">'+v+'</div><div class="s">'+(s||'')+'</div></div>'; }
 
+  function renderVideos(){
+    if(!lastVideos.length){ vidsEl.innerHTML='<div class="tt-empty">Không có video trong khoảng này.</div>'; renderCart(); return; }
+    vidsEl.innerHTML='<div class="tt-scroll"><table><thead><tr><th class="ck"></th><th>Video</th><th>GMV</th><th>Đơn</th><th>Lượt xem</th></tr></thead><tbody>'+
+      lastVideos.map(function(v,i){
+        var link=v.link?('https://'+String(v.link).replace(/^https?:\/\//,'')):null;
+        var own=isOwn(v.username);
+        var badge=v.username ? '<span class="tt-badge '+(own?'own':'ext')+'">'+(own?'kênh nhà':'creator')+'</span>' : '';
+        return '<tr><td class="ck"><input type="checkbox" data-i="'+i+'"'+(picked.has(v.link||v.title)?' checked':'')+(v.link?'':' disabled title="Không có link, không tải được"')+'></td>'+
+          '<td class="t"><div class="tt-vt">'+(link?'<a href="'+esc(link)+'" target="_blank" rel="noopener">':'')+esc(v.title)+(link?'</a>':'')+'</div>'+
+          '<div class="tt-vm">'+esc(v.shop)+(v.username?' · @'+esc(v.username):'')+badge+
+          (v.product?'<br>SP: '+esc(String(v.product).slice(0,70)):'')+'</div></td>'+
+          '<td><b>'+money(v.gmv)+'</b></td><td>'+vnd(v.orders)+'</td><td>'+vnd(v.views)+'</td></tr>';
+      }).join('')+'</tbody></table></div>';
+
+    Array.prototype.forEach.call(vidsEl.querySelectorAll('input[type=checkbox]'),function(cb){
+      cb.addEventListener('change',function(){
+        var v=lastVideos[+cb.getAttribute('data-i')]; if(!v) return;
+        var k=v.link||v.title;
+        if(cb.checked) picked.set(k,v); else picked.delete(k);
+        renderCart();
+      });
+    });
+    renderCart();
+  }
+
+  function renderCart(){
+    var n=picked.size;
+    if(!n){ cartEl.style.display='none'; return; }
+    var ext=0; picked.forEach(function(v){ if(!isOwn(v.username)) ext++; });
+    cartEl.style.display='';
+    cartEl.innerHTML='<span>Đã chọn <b>'+n+'</b> video'+
+      (ext?' · <span style="color:#8a5a00"><b>'+ext+'</b> của creator ngoài — cần xin phép trước khi chạy</span>':'')+'</span>'+
+      '<button class="btn-cl" id="tt-dl" type="button">⬇ Tải danh sách (.json)</button>'+
+      '<button class="btn-cl" id="tt-clear" type="button">Bỏ chọn hết</button>';
+    document.getElementById('tt-dl').addEventListener('click',exportList);
+    document.getElementById('tt-clear').addEventListener('click',function(){ picked.clear(); renderVideos(); });
+  }
+
+  // Xuất file JSON cho script scripts/tiktok-to-ads.mjs chạy tại máy.
+  // Không lưu lên server: chọn xong tải luôn, tránh thêm chỗ giữ trạng thái.
+  function exportList(){
+    var items=[]; picked.forEach(function(v){
+      items.push({
+        link: v.link ? 'https://'+String(v.link).replace(/^https?:\/\//,'') : null,
+        title: v.title, product: v.product||v.shop||'chua-phan-loai',
+        shop: v.shop, username: v.username, own_channel: isOwn(v.username),
+        gmv: v.gmv, orders: v.orders, views: v.views,
+      });
+    });
+    var payload={ generated_at:new Date().toISOString(), days:vidDaysSel.value, count:items.length, videos:items };
+    var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='tiktok-ads-'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },1000);
+  }
+
   function loadMain(){
     cards.innerHTML=''; srcEl.style.display='none';
     shopsEl.innerHTML=dailyEl.innerHTML='<div class="tt-empty">Đang tải…</div>';
@@ -2200,23 +2287,28 @@
       .then(function(j){
         if(!j.ok) throw new Error(j.error||'lỗi');
         vidSub.textContent='· từ '+dm(j.since)+' · '+vnd(j.unique_videos)+' video'+(j.cached?' · bộ nhớ đệm':'');
-        vidsEl.innerHTML = (j.videos||[]).length ?
-          '<div class="tt-scroll"><table><thead><tr><th>Video</th><th>GMV</th><th>Đơn</th><th>Lượt xem</th></tr></thead><tbody>'+
-          j.videos.map(function(v){
-            var link=v.link?('https://'+String(v.link).replace(/^https?:\/\//,'')):null;
-            return '<tr><td class="t"><div class="tt-vt">'+(link?'<a href="'+esc(link)+'" target="_blank" rel="noopener">':'')+esc(v.title)+(link?'</a>':'')+'</div>'+
-              '<div class="tt-vm">'+esc(v.shop)+(v.username?' · @'+esc(v.username):'')+'</div></td>'+
-              '<td><b>'+money(v.gmv)+'</b></td><td>'+vnd(v.orders)+'</td><td>'+vnd(v.views)+'</td></tr>';
-          }).join('')+'</tbody></table></div>'
-          : '<div class="tt-empty">Không có video trong khoảng này.</div>';
+        lastVideos=j.videos||[];
+        renderVideos();
       })
       .catch(function(e){ vidSub.textContent=''; errBox(vidsEl,e.message); });
+  }
+
+  function syncOwn(){
+    var n=ownSet().size;
+    ownN.textContent = n ? n+' kênh nhà' : 'chưa khai kênh nhà';
+    if(lastVideos.length) renderVideos();   // vẽ lại nhãn kênh nhà/creator
   }
 
   nav.addEventListener('click',function(){ if(loaded)return; loaded=true; loadMain(); loadVideos(); });
   daysSel.addEventListener('change',loadMain);
   vidDaysSel.addEventListener('change',loadVideos);
   refreshBtn.addEventListener('click',function(){ loadMain(); loadVideos(); });
+  try{ ownEl.value=localStorage.getItem('tt_own_accounts')||''; }catch(e){}
+  ownEl.addEventListener('input',function(){
+    try{ localStorage.setItem('tt_own_accounts',ownEl.value); }catch(e){}
+    syncOwn();
+  });
+  syncOwn();
 })();
 </script>
 <!-- Banner cảnh báo token/key chết. Trước nằm trong widget Hermes (đã gỡ) → tách riêng

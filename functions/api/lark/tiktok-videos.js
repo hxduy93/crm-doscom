@@ -22,6 +22,9 @@ const CACHE_TTL = 1800;                    // 30 phút
 const FIELDS = [
   "Tiêu đề video", "GMV", "Số đơn", "Lượt xem video", "Ngày dữ liệu",
   "Link video", "Username", "Shop", "Tỷ lệ click (%)", "Ngày đăng video",
+  // Tên SP dùng làm TÊN THƯ MỤC khi tải video về → ads-creator lấy tên thư mục
+  // làm tên sản phẩm trong tên campaign. Lấy sẵn ở đây để khỏi gõ tay.
+  "Tên SP đính kèm",
 ];
 
 function json(obj, status = 200) {
@@ -109,6 +112,7 @@ export async function onRequestGet(context) {
           title, link,
           username: larkText(f["Username"]),
           shop: larkLinkIds(f["Shop"]).map((id) => shops[id]).filter(Boolean)[0] || "—",
+          product: larkText(f["Tên SP đính kèm"]),
           gmv: 0, orders: 0, views: 0,
           last_date: null,
           posted: toVnDate(f["Ngày đăng video"]),
