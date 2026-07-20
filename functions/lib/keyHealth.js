@@ -91,7 +91,7 @@ export function summarize(items) {
   return s;
 }
 
-// ── Soạn thông điệp cảnh báo cho Hermes (null = không có gì để báo) ────────────
+// ── Soạn thông điệp cho banner cảnh báo (null = không có gì để báo) ────────────
 export function buildAlertMessage(items) {
   const hard = items.filter((it) => HARD_STATUS.has(it.status));
   const warn = items.filter((it) => WARN_STATUS.has(it.status));

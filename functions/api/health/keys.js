@@ -52,7 +52,7 @@ export async function onRequestGet(context) {
     alert: alertMsg ? { active: true, msg: alertMsg } : { active: false },
   };
 
-  // 3. Ghi cache (cả khi không có vấn đề — để widget Hermes/UI đọc nhanh)
+  // 3. Ghi cache (cả khi không có vấn đề — để banner cảnh báo/UI đọc nhanh)
   try {
     if (kv) await kv.put(CACHE_KEY, JSON.stringify(payload), { expirationTtl: CACHE_TTL });
   } catch { /* KV lỗi → vẫn trả kết quả */ }
