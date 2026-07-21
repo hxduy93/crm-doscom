@@ -354,6 +354,16 @@
         </div>
       </section>
 
+      <section class="mod wide" style="margin-bottom:16px" id="lead-landing-mod">
+        <div class="mod-h"><div class="t"><i style="background:#0EA5E9"></i><h3>Lead theo landing &amp; nhân sự</h3></div><span class="s">Mọi landing đang chạy trên Cloudflare · lead = lượt điền form thành công · theo đúng khoảng ngày đang lọc</span></div>
+        <div class="mod-b" style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Nhân sự</th><th>Landing</th><th>Sản phẩm</th><th class="num">Lead</th><th class="num">Tỉ trọng</th></tr></thead>
+            <tbody id="lead-landing-rows"><tr><td colspan="5" style="color:var(--text-2);padding:18px">Đang tải…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
       <section class="mod wide" style="margin-bottom:16px" id="noma-mod">
         <div class="mod-h"><div class="t"><i style="background:#0EA5E9"></i><h3>Đơn đăng ký Noma911 — theo combo &amp; landing</h3></div><span class="s" id="noma-range">…</span></div>
         <div class="mod-b" id="noma-body"><div class="skl">Đang tải dữ liệu noma911…</div></div>
@@ -1733,6 +1743,67 @@
       t.textContent=failed?'—':num(tot);
       t.style.color=failed?'var(--text-2)':'var(--text)';
     }
+    renderLeadLanding();
+  }
+
+  // ===== Bảng "Lead theo landing & nhân sự" — gộp 2 nguồn =====
+  // NOMA 911: /api/noma911/stats chỉ trả tổng theo staff, KHÔNG kèm đường dẫn
+  //   landing. Nhưng NOMA là 1 nhân sự ↔ 1 landing nên suy ra được (bảng dưới).
+  // D1 / DR1: /api/landing-leads trả sẵn by_landing[] có đủ landing+staff+product.
+  var STAFF_META={ duy:{label:'Duy',color:'#3257E6'}, pn:{label:'Phương Nam',color:'#8B5CF6'} };
+  var NOMA_LANDING={ duy:'noma.io.vn/nm911d', pn:'noma.io.vn/911tpn' };
+  // Landing của project khác nằm trên domain riêng — map để hiện đủ tên miền.
+  function landingDomain(path){
+    var p=String(path||'');
+    if(/^\/d1/.test(p)) return 'doscom.click'+p;
+    if(/^\/dr1/.test(p)) return 'senso.io.vn'+p;
+    return p.replace(/^\//,'');
+  }
+
+  function renderLeadLanding(){
+    var el=document.getElementById('lead-landing-rows'); if(!el) return;
+    var nomaOk=NOMA_LEADS && !NOMA_LEADS.__failed && NOMA_LEADS.by_staff;
+    var otherOk=OTHER_LEADS && !OTHER_LEADS.__failed;
+    if(!nomaOk && !otherOk){
+      el.innerHTML='<tr><td colspan="5" style="color:var(--text-2);padding:18px">Chưa tải được dữ liệu lead.</td></tr>';
+      return;
+    }
+    var items=[];
+    if(nomaOk) (NOMA_LEADS.by_staff||[]).forEach(function(r){
+      if(!NOMA_LANDING[r.staff]) return;
+      items.push({staff:r.staff, landing:NOMA_LANDING[r.staff], product:'NOMA 911', leads:Number(r.orders)||0});
+    });
+    if(otherOk) (OTHER_LEADS.by_landing||[]).forEach(function(r){
+      items.push({staff:r.staff, landing:landingDomain(r.landing),
+                  product:r.product||'—', leads:Number(r.leads)||0});
+    });
+    if(!items.length){
+      el.innerHTML='<tr><td colspan="5" style="color:var(--text-2);padding:18px">Chưa có lead nào trong khoảng này.</td></tr>';
+      return;
+    }
+    var grand=items.reduce(function(t,x){return t+x.leads;},0)||1;
+    var html='';
+    // Nhóm theo nhân sự, trong nhóm xếp lead giảm dần.
+    ['duy','pn'].forEach(function(sk){
+      var rows=items.filter(function(x){return x.staff===sk;}).sort(function(a,b){return b.leads-a.leads;});
+      if(!rows.length) return;
+      var sub=rows.reduce(function(t,x){return t+x.leads;},0);
+      var m=STAFF_META[sk]||{label:sk,color:'#888'};
+      rows.forEach(function(x,i){
+        html+='<tr>'+
+          (i===0?'<td rowspan="'+rows.length+'" style="vertical-align:top"><span class="who"><i style="background:'+m.color+'"></i>'+m.label+'</span><div style="font-size:11.5px;color:var(--text-2);font-weight:700;margin-top:3px">'+num(sub)+' lead</div></td>':'')+
+          '<td style="font-size:12.5px">'+x.landing+'</td>'+
+          '<td style="font-size:12.5px;color:var(--text-2);font-weight:700">'+x.product+'</td>'+
+          '<td class="num tnum" style="font-weight:800">'+num(x.leads)+'</td>'+
+          '<td class="num tnum" style="color:var(--text-2)">'+(x.leads/grand*100).toFixed(1)+'%</td></tr>';
+      });
+    });
+    var tot=items.reduce(function(t,x){return t+x.leads;},0);
+    html+='<tr class="tot"><td colspan="3">Tổng '+items.length+' landing</td><td class="num tnum">'+num(tot)+'</td><td class="num">100%</td></tr>';
+    if(!otherOk){
+      html+='<tr><td colspan="5" style="font-size:11.5px;color:#8a5a00;padding:8px 8px 2px">⚠ Chưa tải được lead của landing Máy dò D1 / Ghi âm DR1 — bảng đang thiếu 2 sản phẩm này.</td></tr>';
+    }
+    el.innerHTML=html;
   }
   function noKpi(label,val,color,tip){ return '<div title="'+(tip||'').replace(/"/g,'&quot;')+'" style="background:var(--surface-2);border:1px solid var(--border);border-radius:13px;padding:13px'+(tip?';cursor:help':'')+'"><div style="font-size:12px;color:var(--text-2);font-weight:700">'+label+(tip?' <span style="opacity:.5">ⓘ</span>':'')+'</div><div style="font-size:19px;font-weight:800;margin-top:4px;color:'+color+'">'+val+'</div></div>'; }
   function renderNoma(N){
