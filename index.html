@@ -563,6 +563,7 @@
           </div>
           <p style="margin:0 0 10px;color:var(--text-2);font-size:12.5px;line-height:1.5">
             Tick video muốn chạy Facebook Ads → bấm <b>Tải video về máy</b> → chọn thư mục lưu → video (không watermark) tự tải và xếp theo thư mục sản phẩm → mở <b>Tạo Ads tự động</b> chọn đúng thư mục đó.
+            <br>Khi chọn thư mục, phải chọn <b>một thư mục con</b> (vd <code>D:\video-ads</code>) — Chrome không cho chọn ổ đĩa gốc <code>C:\</code>, <code>D:\</code> hay thư mục hệ thống.
             <br>Khai báo kênh của công ty vào ô dưới để phân biệt với creator ngoài (video của creator cần xin phép trước khi chạy quảng cáo).
           </p>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
@@ -2270,22 +2271,41 @@
   }
   function videoId(link){ var m=String(link||'').match(/\/video\/(\d+)/); return m?m[1]:String(Date.now()); }
 
-  async function downloadVideos(){
+  // forceDownloads=true → bỏ qua bước chọn thư mục, tải thẳng vào Downloads.
+  async function downloadVideos(forceDownloads){
     var list=[]; picked.forEach(function(v){ if(v.link) list.push(v); });
     if(!list.length) return;
     var ext=list.filter(function(v){ return !isOwn(v.username); }).length;
-    if(ext && !confirm(ext+'/'+list.length+' video là của creator ngoài (không phải kênh nhà).\n\n'+
+    // Đã hỏi ở lần bấm trước rồi thì không hỏi lại khi chuyển sang tải vào Downloads.
+    if(!forceDownloads && ext && !confirm(ext+'/'+list.length+' video là của creator ngoài (không phải kênh nhà).\n\n'+
        'Video của creator thuộc bản quyền của họ — chạy quảng cáo trả tiền khi chưa có thoả thuận '+
        'có thể bị khiếu nại hoặc Facebook gỡ quảng cáo.\n\nVẫn tải tất cả?')) return;
 
     var prog=document.getElementById('tt-prog');
     var btn=document.getElementById('tt-dlv');
     btn.disabled=true;
-    var root=null, useFS=typeof window.showDirectoryPicker==='function';
+    var root=null, useFS=!forceDownloads && typeof window.showDirectoryPicker==='function';
 
     if(useFS){
-      try{ root=await window.showDirectoryPicker({mode:'readwrite'}); }
-      catch(e){ btn.disabled=false; prog.textContent='Đã huỷ chọn thư mục.'; return; }
+      try{
+        // startIn:'videos' mở sẵn thư mục Videos — nằm ngoài danh sách chặn của Chrome
+        // nên đỡ rơi vào lỗi "thư mục chứa tệp hệ thống".
+        root=await window.showDirectoryPicker({mode:'readwrite', startIn:'videos'});
+      }catch(e){
+        btn.disabled=false;
+        // Chrome CHẶN chọn: ổ đĩa gốc (C:\, D:\), thư mục Windows/Program Files,
+        // và thư mục người dùng gốc (C:\Users\<tên>). Người dùng hay chọn ngay ổ D:\
+        // rồi gặp báo "thư mục này chứa tệp hệ thống" — không phải lỗi của mình.
+        var aborted = e && e.name==='AbortError';
+        prog.innerHTML = '<span style="color:#b3261e">Chưa chọn được thư mục'+(aborted?'':': '+esc(e.message))+'.</span>'+
+          '<br>Chrome không cho chọn <b>ổ đĩa gốc</b> (C:\\, D:\\), thư mục <b>Windows / Program Files</b>, '+
+          'hay thư mục người dùng gốc (C:\\Users\\'+'tên). Hãy <b>tạo một thư mục con</b> rồi chọn nó — '+
+          'ví dụ <code>D:\\video-ads</code> hoặc <code>Videos\\tiktok-ads</code>.'+
+          '<br>Không muốn chọn thư mục? <a href="#" id="tt-nofs">Tải thẳng vào Downloads</a> (file kèm tiền tố tên sản phẩm, tự xếp lại sau).';
+        var alt=document.getElementById('tt-nofs');
+        if(alt) alt.addEventListener('click',function(ev){ ev.preventDefault(); downloadVideos(true); });
+        return;
+      }
     } else {
       prog.innerHTML='Trình duyệt này không cho ghi thẳng vào thư mục — sẽ tải từng file vào Downloads. '+
         '<b>Dùng Chrome hoặc Edge</b> để video tự xếp theo thư mục sản phẩm.';
