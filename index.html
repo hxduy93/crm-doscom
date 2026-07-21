@@ -296,10 +296,10 @@
       </section>
 
       <section class="mod wide" style="margin-bottom:16px" id="sec-staff">
-        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo nhân sự</h3></div><span class="s">Website/Hotline = gộp Website + Zalo + Hotline (kênh Google) · DT &amp; Giá vốn gồm mọi trạng thái (kể cả hoàn/huỷ, khớp Pancake) · LN = DT − Chi phí QC − Giá vốn</span></div>
+        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo nhân sự</h3></div><span class="s">Website/Hotline = gộp Website + Zalo + Hotline (kênh Google) · DT &amp; Giá vốn gồm mọi trạng thái (kể cả hoàn/huỷ, khớp Pancake) · LN = DT − Chi phí QC − Giá vốn · Lead = đăng ký từ landing NOMA 911 trên Cloudflare (nm911d = Duy, 911tpn = Phương Nam)</span></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
-            <thead><tr><th>Nhân sự / Nguồn</th><th class="num">Chi phí QC</th><th class="num">Doanh thu</th><th class="num">Giá vốn</th><th class="num">ROAS</th><th class="num">Đơn</th><th class="num">Lợi nhuận (DT−CP−GV)</th></tr></thead>
+            <thead><tr><th>Nhân sự / Nguồn</th><th class="num">Chi phí QC</th><th class="num">Doanh thu</th><th class="num">Giá vốn</th><th class="num">ROAS</th><th class="num" title="Số đăng ký từ landing page NOMA 911 (D1 Cloudflare), theo đúng khoảng ngày đang lọc">Lead</th><th class="num">Đơn</th><th class="num">Lợi nhuận (DT−CP−GV)</th></tr></thead>
             <tbody id="staff-rows"></tbody>
           </table>
         </div>
@@ -1033,11 +1033,14 @@
     }).join('');
     // bảng theo nhân sự
     // Gộp Website + Zalo OA + Hotline = 1 kênh inbound (cùng do Google Ads kéo về)
+    // leadKey = mã staff trong bảng noma911_orders (D1) → cột Lead.
+    // Chỉ 2 landing NOMA 911 có lead: nm911d (Duy) và 911tpn (Phương Nam).
+    // Website/Hotline + Page Facebook không qua landing nên để trống.
     var STAFF_GROUPS=[
-      {label:'Duy', color:'#3257E6', keys:['DUY'], ad:'DUY'},
-      {label:'Phương Nam', color:'#8B5CF6', keys:['PHUONG_NAM'], ad:'PHUONG_NAM'},
-      {label:'Website / Hotline', color:'#16A34A', keys:['WEBSITE','ZALO_OA','HOTLINE'], ad:'GOOGLE'},
-      {label:'Page Facebook', color:'#F472B6', keys:['FB_PAGE'], ad:null}
+      {label:'Duy', color:'#3257E6', keys:['DUY'], ad:'DUY', leadKey:'duy'},
+      {label:'Phương Nam', color:'#8B5CF6', keys:['PHUONG_NAM'], ad:'PHUONG_NAM', leadKey:'pn'},
+      {label:'Website / Hotline', color:'#16A34A', keys:['WEBSITE','ZALO_OA','HOTLINE'], ad:'GOOGLE', leadKey:null},
+      {label:'Page Facebook', color:'#F472B6', keys:['FB_PAGE'], ad:null, leadKey:null}
     ];
     var tRev=0,tSp=0,tOrd=0,tCogs=0;
     var rows=STAFF_GROUPS.map(function(s){
@@ -1052,12 +1055,17 @@
         '<td class="num tnum">'+vnd(rv)+'</td>'+
         '<td class="num tnum">'+(cg>0?vnd(cg):'—')+'</td>'+
         '<td class="num roas" style="color:'+(roas==null?'var(--text-2)':(roas>=1.5?'#16A34A':(roas>=1?'#E08600':'#E5484D')))+'">'+(roas!=null?roas.toFixed(2)+'×':'—')+'</td>'+
+        // Lead điền sau khi /api/noma911/stats trả về (fillStaffLeads) — bảng này
+        // vẽ đồng bộ còn lead phải gọi API nên chưa có ngay.
+        '<td class="num tnum" data-lead="'+(s.leadKey||'')+'" style="color:var(--text-2)">'+(s.leadKey?'…':'—')+'</td>'+
         '<td class="num tnum">'+num(od)+'</td>'+
         '<td class="num tnum" style="color:'+(ln>=0?'#16A34A':'#E5484D')+'">'+vnd(ln)+'</td></tr>';
     }).join('');
     var tRoas=tSp>0?(tRev/tSp):null, tLn=tRev-tSp-tCogs;
-    rows+='<tr class="tot"><td>Tổng</td><td class="num tnum">'+vnd(tSp)+'</td><td class="num tnum">'+vnd(tRev)+'</td><td class="num tnum">'+vnd(tCogs)+'</td><td class="num">'+(tRoas!=null?tRoas.toFixed(2)+'×':'—')+'</td><td class="num tnum">'+num(tOrd)+'</td><td class="num tnum" style="color:'+(tLn>=0?'#16A34A':'#E5484D')+'">'+vnd(tLn)+'</td></tr>';
+    rows+='<tr class="tot"><td>Tổng</td><td class="num tnum">'+vnd(tSp)+'</td><td class="num tnum">'+vnd(tRev)+'</td><td class="num tnum">'+vnd(tCogs)+'</td><td class="num">'+(tRoas!=null?tRoas.toFixed(2)+'×':'—')+'</td><td class="num tnum" id="lead-total" style="color:var(--text-2)">…</td><td class="num tnum">'+num(tOrd)+'</td><td class="num tnum" style="color:'+(tLn>=0?'#16A34A':'#E5484D')+'">'+vnd(tLn)+'</td></tr>';
     document.getElementById('staff-rows').innerHTML=rows;
+    // Bảng vừa vẽ lại → nếu lead đã tải trước đó thì điền ngay, khỏi chờ API lần nữa.
+    if(NOMA_LEADS) fillStaffLeads(NOMA_LEADS);
     // chi phí QC tách theo brand
     renderBrandCost();
     // biểu đồ ngày theo nhân sự
@@ -1695,6 +1703,30 @@
 
   // ===== Module Noma911 — đơn đăng ký landing theo combo + 2 landing (đọc data/noma911.json) =====
   var NOMA_STAFF={ duy:{label:'Duy', slug:'nm911d', color:'#3257E6'}, pn:{label:'Phương Nam', slug:'911tpn', color:'#8B5CF6'} };
+
+  // Lead theo nhân sự dùng CHUNG cho bảng "Chi phí & doanh thu theo nhân sự".
+  // Giữ lại bản tải gần nhất để khi bảng vẽ lại (đổi bộ lọc) khỏi phải gọi API 2 lần.
+  var NOMA_LEADS=null;
+  function fillStaffLeads(N){
+    var wrap=document.getElementById('staff-rows'); if(!wrap) return;
+    var failed=!N || N.__failed || !N.by_staff;
+    var by={}; if(!failed) (N.by_staff||[]).forEach(function(r){ by[r.staff]=Number(r.orders)||0; });
+    var tot=0;
+    Array.prototype.forEach.call(wrap.querySelectorAll('td[data-lead]'),function(td){
+      var k=td.getAttribute('data-lead');
+      if(!k){ td.textContent='—'; return; }           // nguồn không qua landing
+      if(failed){ td.textContent='—'; td.title='Không tải được số lead'; return; }
+      var n=by[k]||0; tot+=n;
+      td.textContent=num(n);
+      td.style.color=n>0?'var(--text)':'var(--text-2)';
+      td.style.fontWeight=n>0?'800':'';
+    });
+    var t=document.getElementById('lead-total');
+    if(t){
+      t.textContent=failed?'—':num(tot);
+      t.style.color=failed?'var(--text-2)':'var(--text)';
+    }
+  }
   function noKpi(label,val,color,tip){ return '<div title="'+(tip||'').replace(/"/g,'&quot;')+'" style="background:var(--surface-2);border:1px solid var(--border);border-radius:13px;padding:13px'+(tip?';cursor:help':'')+'"><div style="font-size:12px;color:var(--text-2);font-weight:700">'+label+(tip?' <span style="opacity:.5">ⓘ</span>':'')+'</div><div style="font-size:19px;font-weight:800;margin-top:4px;color:'+color+'">'+val+'</div></div>'; }
   function renderNoma(N){
     var body=document.getElementById('noma-body'), rng=document.getElementById('noma-range');
@@ -1732,7 +1764,9 @@
   function loadNoma(from,to){
     document.getElementById('noma-range').textContent='đang tải…';
     fetch('/api/noma911/stats?from='+from+'&to='+to,{cache:'no-store'})
-      .then(function(r){return r.ok?r.json():null;}).then(renderNoma).catch(function(){renderNoma(null);});
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(N){ NOMA_LEADS=N||{__failed:true}; renderNoma(N); fillStaffLeads(NOMA_LEADS); })
+      .catch(function(){ NOMA_LEADS={__failed:true}; renderNoma(null); fillStaffLeads(NOMA_LEADS); });
   }
 
   // ===== AGENT PHÂN TÍCH FB ADS — gọi /api/agent-fb-ai (Claude Haiku) =====
