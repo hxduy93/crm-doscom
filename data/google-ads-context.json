@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-22 00:50",
+  "generated_at": "2026-07-22 02:11",
   "source_data_date_range": {
     "start_7d": "2026-07-14",
     "end": "2026-07-20",
@@ -1645,6 +1645,19 @@
         ]
       },
       {
+        "search_term": "máy chống ghi âm",
+        "spend_30d": 59248.0,
+        "clicks_30d": 21,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.253,
+        "match_types": [
+          "EXACT"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
         "search_term": "máy ghi âm cuộc họp",
         "spend_30d": 79217.0,
         "clicks_30d": 14,
@@ -1687,19 +1700,6 @@
         ]
       },
       {
-        "search_term": "máy ghi hình mini",
-        "spend_30d": 2165.0,
-        "clicks_30d": 1,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.5,
-        "match_types": [
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
         "search_term": "camera ezviz",
         "spend_30d": 142430.0,
         "clicks_30d": 11,
@@ -1727,13 +1727,13 @@
         ]
       },
       {
-        "search_term": "máy chống ghi âm",
-        "spend_30d": 59248.0,
-        "clicks_30d": 21,
+        "search_term": "máy ghi hình mini",
+        "spend_30d": 2165.0,
+        "clicks_30d": 1,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.253,
+        "ctr_30d": 0.5,
         "match_types": [
-          "EXACT"
+          "NEAR_PHRASE"
         ],
         "statuses": [
           "ADDED"
@@ -2221,6 +2221,12 @@
       }
     ],
     "match_type_breakdown": {
+      "PHRASE": {
+        "spend_30d": 5543655.0,
+        "clicks_30d": 917,
+        "conversions_30d": 12.58,
+        "term_count": 633
+      },
       "BROAD": {
         "spend_30d": 13714109.0,
         "clicks_30d": 1693,
@@ -2232,12 +2238,6 @@
         "clicks_30d": 947,
         "conversions_30d": 6.5,
         "term_count": 713
-      },
-      "PHRASE": {
-        "spend_30d": 5543655.0,
-        "clicks_30d": 917,
-        "conversions_30d": 12.58,
-        "term_count": 633
       },
       "EXACT": {
         "spend_30d": 2469592.0,
@@ -2494,7 +2494,7 @@
   "ad_insights": {
     "summary": {
       "total_ads": 93,
-      "total_spend_30d": 44818550.0
+      "total_spend_30d": 44817456.0
     },
     "format_breakdown": {
       "OTHER": {
@@ -2505,8 +2505,8 @@
         "ad_count": 88
       },
       "DISPLAY_BANNER": {
-        "spend_30d": 3160570.0,
-        "clicks_30d": 1848,
+        "spend_30d": 3159476.0,
+        "clicks_30d": 1847,
         "impressions_30d": 160249,
         "ctr_30d": 0.0115,
         "ad_count": 5
@@ -2519,8 +2519,8 @@
         "ad_group_name": "Ad group 1",
         "ad_name": "300x600.gif",
         "ad_format": "DISPLAY_BANNER",
-        "spend_30d": 1943903.0,
-        "clicks_30d": 957,
+        "spend_30d": 1942809.0,
+        "clicks_30d": 956,
         "ctr_30d": 0.0201
       },
       {
