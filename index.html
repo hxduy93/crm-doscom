@@ -2246,13 +2246,51 @@
     cartEl.style.display='';
     cartEl.innerHTML='<span>Đã chọn <b>'+n+'</b> video'+
       (ext?' · <span style="color:#8a5a00"><b>'+ext+'</b> của creator ngoài — cần xin phép trước khi chạy</span>':'')+'</span>'+
-      '<button class="btn-cl" id="tt-dlv" type="button" style="font-weight:800">⬇ Tải video về máy</button>'+
+      '<button class="btn-cl" id="tt-ads" type="button" style="font-weight:800;background:linear-gradient(135deg,var(--primary),var(--primary-700));color:#fff;border-color:transparent">▶ Chạy Ads luôn</button>'+
+      '<button class="btn-cl" id="tt-dlv" type="button">⬇ Tải video về máy</button>'+
       '<button class="btn-cl" id="tt-dl" type="button">Tải danh sách (.json)</button>'+
       '<button class="btn-cl" id="tt-clear" type="button">Bỏ chọn hết</button>'+
       '<div id="tt-prog" style="flex-basis:100%;font-size:12.5px;color:var(--text-2);margin-top:2px"></div>';
+    document.getElementById('tt-ads').addEventListener('click',sendToAdsCreator);
     document.getElementById('tt-dlv').addEventListener('click',downloadVideos);
     document.getElementById('tt-dl').addEventListener('click',exportList);
     document.getElementById('tt-clear').addEventListener('click',function(){ picked.clear(); renderVideos(); });
+  }
+
+  // ── Đẩy thẳng sang "Tạo Ads tự động" ──────────────────────────────────────
+  // KHÔNG qua đĩa: ads-creator tự tải video vào bộ nhớ rồi dựng File thật, nên
+  // toàn bộ luồng sẵn có (quét trùng → AI viết caption → upload FB → tạo camp)
+  // chạy nguyên vẹn, không phải sửa gì bên trong.
+  //
+  // Truyền qua sessionStorage vì ads-creator nằm trong iframe CÙNG ORIGIN.
+  // Kèm postMessage cho trường hợp iframe đã nạp sẵn từ trước (không tự đọc lại).
+  var ADS_QUEUE_KEY='tt_ads_queue';
+
+  function sendToAdsCreator(){
+    var list=[]; picked.forEach(function(v){ if(v.link) list.push(v); });
+    if(!list.length) return;
+    var ext=list.filter(function(v){ return !isOwn(v.username); }).length;
+    if(ext && !confirm(ext+'/'+list.length+' video là của creator ngoài (không phải kênh nhà).\n\n'+
+       'Video của creator thuộc bản quyền của họ — chạy quảng cáo trả tiền khi chưa có thoả thuận '+
+       'có thể bị khiếu nại hoặc Facebook gỡ quảng cáo.\n\nVẫn chuyển sang tạo Ads?')) return;
+
+    var payload={ at:Date.now(), videos:list.map(function(v){
+      return { link:v.link?'https://'+String(v.link).replace(/^https?:\/\//,''):null,
+               title:v.title, product:v.product||v.shop||'chua-phan-loai',
+               shop:v.shop, username:v.username, own_channel:isOwn(v.username),
+               gmv:v.gmv, orders:v.orders };
+    })};
+    try{ sessionStorage.setItem(ADS_QUEUE_KEY, JSON.stringify(payload)); }
+    catch(e){ document.getElementById('tt-prog').textContent='Không lưu được danh sách: '+e.message; return; }
+
+    // Bấm đúng nav item để dùng lại cơ chế lazy-load iframe + đổi view sẵn có.
+    var navAds=document.querySelector('.sidebar .nav-item[data-view="ads-creator"]');
+    if(navAds) navAds.click();
+    // iframe đã nạp trước đó thì không tự đọc lại sessionStorage → báo cho nó.
+    setTimeout(function(){
+      var f=document.getElementById('ads-frame');
+      if(f&&f.contentWindow) { try{ f.contentWindow.postMessage({type:'tt-ads-queue',payload:payload},window.location.origin); }catch(e){} }
+    },900);
   }
 
   // ── Tải video thẳng trong trình duyệt ─────────────────────────────────────
@@ -2317,6 +2355,8 @@
       prog.innerHTML='Đang tải <b>'+(i+1)+'/'+list.length+'</b>: '+esc(String(v.title).slice(0,48))+'…';
       try{
         // 1) giải link -> URL không watermark
+        // Dịch vụ chặn 1 request/giây → giãn ra, không thì video sau ăn lỗi hạn ngạch.
+        if(i>0) await new Promise(function(r){ setTimeout(r,1300); });
         var rj=await (await fetch(RESOLVER+encodeURIComponent(v.link))).json();
         if(rj.code!==0||!rj.data) throw new Error(rj.msg||'không giải được link');
         var src=rj.data.hdplay||rj.data.play;

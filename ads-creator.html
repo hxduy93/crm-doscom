@@ -153,6 +153,8 @@ function AdsCreatorPanel() {
   const [autoExisting, setAutoExisting] = useState(null) // null = chưa quét | Set(filename)
   const [autoScanBusy, setAutoScanBusy] = useState(false)
   const [autoScanMsg, setAutoScanMsg] = useState("")
+  // Video nhận từ menu TikTok Shop (không qua đĩa) — trạng thái tải về bộ nhớ.
+  const [ttFetch, setTtFetch] = useState(null) // null | { busy, done, total, msg, err }
   // Live: danh sách TKQC + Page + Pixel token có quyền (để chọn bất kỳ). null = chưa tải.
   const [fbRes, setFbRes] = useState(null)        // { accounts:[{id,name,status,pages,pixels}] }
   const [fbResErr, setFbResErr] = useState("")
@@ -676,6 +678,102 @@ function AdsCreatorPanel() {
     setAutoScanMsg("")
   }
 
+  // ══════════ NHẬN VIDEO TỪ MENU TIKTOK SHOP ══════════
+  // CRM (index.html) ghi danh sách vào sessionStorage rồi chuyển sang view này.
+  // Ở đây tải video KHÔNG watermark vào bộ nhớ và dựng File thật → nhét vào
+  // autoGroups y như khi người dùng chọn folder. Nhờ vậy mọi bước phía sau
+  // (quét trùng, AI caption, upload FB, tạo campaign) chạy nguyên vẹn.
+  //
+  // Tải ở TRÌNH DUYỆT vì đã đo: gọi dịch vụ giải link từ Cloudflare bị chặn
+  // hạn ngạch (IP dùng chung), còn từ máy người dùng thì chạy tốt.
+  const TT_RESOLVER = "https://tikwm.com/api/?url="
+  const TT_QUEUE_KEY = "tt_ads_queue"
+
+  const slugFolder = (s) => String(s || "chua-phan-loai")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/đ/g, "d").replace(/Đ/g, "D")
+    .replace(/[<>:"/\\|?*]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 60) || "chua-phan-loai"
+  const ttVideoId = (link) => {
+    const m = String(link || "").match(/\/video\/(\d+)/)
+    return m ? m[1] : String(Date.now())
+  }
+
+  const ingestTikTokQueue = async (payload) => {
+    const vids = (payload && payload.videos || []).filter(v => v && v.link)
+    if (!vids.length) return
+    setTtFetch({ busy: true, done: 0, total: vids.length, msg: "Đang lấy video từ TikTok…", err: [] })
+    setAutoResults([]); setAutoLog([]); setAutoExisting(null); setAutoScanMsg("")
+
+    const byProduct = {}
+    const errs = []
+    const heavy = []   // video vượt ngưỡng khuyến nghị — cảnh báo chứ không chặn
+    for (let i = 0; i < vids.length; i++) {
+      const v = vids[i]
+      setTtFetch(s => ({ ...s, done: i, msg: `Đang tải ${i + 1}/${vids.length}: ${String(v.title || "").slice(0, 42)}…` }))
+      try {
+        // Dịch vụ giải link chặn ở 1 request/giây → phải giãn ra, nếu không video
+        // thứ 2 trở đi ăn lỗi "Free Api Limit: 1 request/second".
+        if (i > 0) await new Promise(r => setTimeout(r, 1300))
+        const rj = await (await fetch(TT_RESOLVER + encodeURIComponent(v.link))).json()
+        if (rj.code !== 0 || !rj.data) throw new Error(rj.msg || "không giải được link")
+        // Ưu tiên bản THƯỜNG (play) chứ KHÔNG phải hdplay: /api/fb-upload-media chỉ
+        // có ~30s để upload + đợi FB encode, video càng nặng càng dễ hết giờ.
+        // Bản play vẫn KHÔNG watermark, chỉ nhẹ hơn. (Lối tải về đĩa thì lấy hdplay.)
+        const src = rj.data.play || rj.data.hdplay
+        if (!src) throw new Error("không có bản không watermark")
+        const blob = await (await fetch(src)).blob()
+        if (blob.size < 10240) throw new Error("file tải về quá nhỏ, có thể hỏng")
+        if (blob.size > 45 * 1048576) {
+          throw new Error(`video ${(blob.size / 1048576).toFixed(0)}MB — quá nặng để upload qua cloud, hãy nén lại rồi dùng chế độ chọn folder`)
+        }
+        // Tên file = id video → trùng với sổ uploaded_videos, quét trùng vẫn đúng.
+        const name = ttVideoId(v.link) + ".mp4"
+        const file = new File([blob], name, { type: "video/mp4" })
+        const product = slugFolder(v.product)
+        ;(byProduct[product] = byProduct[product] || []).push(file)
+        // Trên ngưỡng khuyến nghị của /api/fb-upload-media → vẫn thử, nhưng báo trước
+        // để nếu upload hết giờ thì biết ngay lý do.
+        if (blob.size > 30 * 1048576) {
+          heavy.push(`${name} nặng ${(blob.size / 1048576).toFixed(0)}MB (>30MB) — có thể hết giờ khi upload`)
+        }
+      } catch (e) {
+        errs.push(`${String(v.title || v.link).slice(0, 40)}: ${e.message}`)
+      }
+    }
+
+    const groups = Object.entries(byProduct).map(([product, files]) => ({ product, files }))
+    setAutoGroups(groups)
+    const okN = groups.reduce((n, g) => n + g.files.length, 0)
+    setTtFetch({
+      busy: false, done: okN, total: vids.length, err: errs.concat(heavy),
+      msg: okN
+        ? `Đã lấy ${okN}/${vids.length} video từ TikTok Shop. Chọn tài khoản/Page/Pixel bên dưới rồi bấm "Quét" và chạy.`
+        : "Không lấy được video nào.",
+    })
+  }
+
+  // Đọc hàng đợi lúc mở view + nghe postMessage (iframe đã nạp sẵn thì không tự đọc lại).
+  useEffect(() => {
+    const take = () => {
+      try {
+        const raw = sessionStorage.getItem(TT_QUEUE_KEY)
+        if (!raw) return
+        sessionStorage.removeItem(TT_QUEUE_KEY)   // dùng 1 lần, tránh nạp lại khi F5
+        ingestTikTokQueue(JSON.parse(raw))
+      } catch (e) { /* hàng đợi hỏng → bỏ qua, vẫn dùng được chế độ chọn folder */ }
+    }
+    take()
+    const onMsg = (ev) => {
+      if (ev.origin !== window.location.origin) return
+      if (ev.data && ev.data.type === "tt-ads-queue") {
+        try { sessionStorage.removeItem(TT_QUEUE_KEY) } catch (e) {}
+        ingestTikTokQueue(ev.data.payload)
+      }
+    }
+    window.addEventListener("message", onMsg)
+    return () => window.removeEventListener("message", onMsg)
+  }, [])
+
   const autoTotalVideos = autoGroups.reduce((n, g) => n + g.files.length, 0)
   const pushLog = (line) => setAutoLog(curr => [...curr, line])
 
@@ -1163,6 +1261,28 @@ function AdsCreatorPanel() {
 
           {/* Chọn folder + chạy */}
           <div className="bg-white rounded-xl border-2 border-gray-200 p-5 shadow-sm">
+            {ttFetch && (
+              <div className={`mb-4 rounded-lg border-2 p-3 text-sm ${ttFetch.busy ? "bg-indigo-50 border-indigo-200" : (ttFetch.done ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200")}`}>
+                <p className="font-semibold text-gray-800">
+                  {ttFetch.busy ? "🛍️ Đang lấy video từ TikTok Shop…" : (ttFetch.done ? "🛍️ Video từ TikTok Shop đã sẵn sàng" : "🛍️ Lấy video từ TikTok Shop thất bại")}
+                </p>
+                <p className="text-gray-600 mt-0.5">{ttFetch.msg}</p>
+                {ttFetch.busy && (
+                  <div className="h-1.5 bg-white rounded-full mt-2 overflow-hidden">
+                    <div className="h-full bg-indigo-500 rounded-full transition-all"
+                         style={{ width: `${Math.round((ttFetch.done / Math.max(1, ttFetch.total)) * 100)}%` }} />
+                  </div>
+                )}
+                {!ttFetch.busy && (ttFetch.err || []).length > 0 && (
+                  <details className="mt-2">
+                    <summary className="text-xs text-red-700 cursor-pointer">{ttFetch.err.length} video lỗi — xem chi tiết</summary>
+                    <ul className="text-xs text-red-700 mt-1 space-y-0.5">
+                      {ttFetch.err.map((e, i) => <li key={i}>• {e}</li>)}
+                    </ul>
+                  </details>
+                )}
+              </div>
+            )}
             <label className={labelClass}>Chọn folder sản phẩm (chứa video)</label>
             <input type="file" multiple webkitdirectory="" directory="" onChange={handleAutoFolderSelect}
               className="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-semibold hover:file:bg-indigo-100" />
