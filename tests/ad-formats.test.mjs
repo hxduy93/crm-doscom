@@ -268,12 +268,37 @@ test("cấm bịa lời chứng thực khách hàng ở mọi dạng", () => {
   assert.match(moc.skeleton, /KHÔNG DÙNG LỜI CHỨNG THỰC/);
 });
 
-test("headline: các dạng từng bị chê cụt/lạc đề nay có hướng dẫn rõ", () => {
-  assert.match(getFormat("huong_dan").headline, /TÊN SẢN PHẨM/,
-    "hướng dẫn dùng: headline phải nêu tên SP, không chỉ nêu thao tác");
-  assert.match(getFormat("huong_dan").skeleton, /GIỚI THIỆU SẢN PHẨM \(BẮT BUỘC/,
+test("headline: các dạng từng bị chê nay có hướng dẫn rõ (duyệt 2026-07-22)", () => {
+  const hd = getFormat("huong_dan");
+  assert.match(hd.headline, /TÊN SẢN PHẨM \+ VẤN ĐỀ được xử lý \+ CÁCH xử lý/,
+    "công thức headline đã được duyệt — giữ nguyên để model lặp lại được");
+  assert.match(hd.skeleton, /GIỚI THIỆU SẢN PHẨM \(BẮT BUỘC/,
     "phải có khối giới thiệu SP trước các bước");
-  assert.match(getFormat("so_sanh_cach_lam").headline, /KHÔNG phải câu so sánh mở/);
+
+  // Thiên thông số: headline cũ đọc như bảng giá, không mời được ai đọc.
+  const ts = getFormat("thong_so");
+  assert.match(ts.headline, /GỌI THẲNG người đang phân vân/);
+  assert.match(ts.skeleton, /gọi đúng người đang phân vân và mời đọc/);
+  assert.match(ts.skeleton, /KHÔNG\s*\n?\s*được thay bằng dãy thông số/);
+});
+
+test("dạng 'So với cách làm cũ' đã bị loại theo yêu cầu, không được thêm lại", () => {
+  assert.equal(getFormat("so_sanh_cach_lam"), null);
+  assert.equal(FORMAT_KEYS.includes("so_sanh_cach_lam"), false);
+  assert.equal(
+    AD_FORMATS.some((f) => /BẢNG SO SÁNH|Cách cũ:/i.test(f.skeleton)),
+    false,
+    "không dạng nào còn dựng bảng đối chiếu cách cũ / sản phẩm"
+  );
+});
+
+test("dạng trải nghiệm: cấm giải thích rồi bỏ lửng", () => {
+  const s = getFormat("trai_nghiem_theo_moc").skeleton;
+  assert.match(s, /NHẤN MẠNH gây ấn tượng/);
+  assert.match(s, /GIẢI PHÁP: nói thẳng/);
+  assert.match(s, /không được giải thích xong bỏ lửng/);
+  // Câu bị chê được đưa vào prompt làm ví dụ SAI để model tránh lặp lại.
+  assert.match(s, /không phải bụi bẩn, nên lau kiểu nào cũng\s*\n?\s*không hết/);
 });
 
 test("user prompt: nhét đúng khung của từng dạng + brandcore sản phẩm", () => {

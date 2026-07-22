@@ -107,9 +107,10 @@ KHÔNG dùng block bullet ✅ tính năng riêng — tính năng phải nằm tr
     key: "huong_dan",
     label: "Hướng dẫn dùng",
     bestFor: "Sản phẩm khách sợ 'mua về không biết dùng': dung dịch, thiết bị có thao tác.",
-    headline: `PHẢI có TÊN SẢN PHẨM + kết quả. Headline chỉ nêu thao tác là CỤT NGHĨA —
-người lướt không biết đang bán gì. ✅ "Noma 911 – kính sáng lại sau 5 phút".
-❌ "Tự tẩy ố kính tại nhà, 5 phút xong" (không biết sản phẩm nào).`,
+    headline: `TÊN SẢN PHẨM + VẤN ĐỀ được xử lý + CÁCH xử lý gọn. Công thức này đã
+được duyệt: người đọc thấy ngay mình đang gặp vấn đề đó và có lối giải quyết.
+✅ "Noma 911 – tự tẩy ố kính tại nhà"   ✅ "DR1 – ghi họp cả ngày không hết pin"
+❌ "Tự tẩy ố kính tại nhà, 5 phút xong" — cụt, không biết sản phẩm nào.`,
     skeleton: `1. HOOK: 1 dòng nêu kết quả + thời gian bỏ ra.
 2. GIỚI THIỆU SẢN PHẨM (BẮT BUỘC, 2-3 câu, đặt TRƯỚC các bước): đây là cái gì,
    xử lý được vấn đề gì, cơ chế nào làm được. Thiếu khối này thì bài chỉ là mẹo
@@ -132,8 +133,21 @@ KHÔNG dùng block bullet ✅ tính năng — tính năng thể hiện qua các 
 không "— Anh T.D, chủ xe Camry", không "khách phản hồi", không "nhiều người kể".
 Mọi câu viết ở thể KHẲNG ĐỊNH TRỰC TIẾP, chủ ngữ là hiện tượng hoặc sản phẩm.
 
-1. MỞ: 2-3 câu khẳng định mô tả đúng hiện trạng khách đang gặp và kết quả sau khi
-   xử lý. Viết như người biết việc nói ra sự thật, không như ai đó kể lại.
+1. MỞ (2-3 câu khẳng định): nêu hiện trạng khách đang gặp, rồi BẮT BUỘC chốt lại
+   bằng một trong hai — không được giải thích xong bỏ lửng:
+   (a) NHẤN MẠNH gây ấn tượng: hệ quả cụ thể nếu để nguyên, hoặc mức độ khó xử lý
+       (càng để lâu càng bám chặt, cách thông thường không ăn thua…), HOẶC
+   (b) GIẢI PHÁP: nói thẳng phải làm gì / sản phẩm làm được gì với cái đó.
+   ❌ SAI — giải thích rồi quăng đó, người đọc không thấy lối ra và không thấy
+      sản phẩm mạnh ở đâu:
+      "Đó là cặn canxi từ nước mưa chứ không phải bụi bẩn, nên lau kiểu nào cũng
+       không hết."
+   ✅ ĐÚNG — cùng thông tin đó nhưng chốt được thành vấn đề có lời giải:
+      "Đó là cặn canxi bám vào bề mặt kính. Khăn lau hay nước rửa thường không ăn
+       thua, càng để lâu càng bám chặt. Phải có dung dịch bóc được lớp khoáng đó
+       thì kính mới trong lại."
+   Nguyên tắc: mỗi đoạn giải thích phải kết thúc bằng một điều người đọc RÚT RA
+   ĐƯỢC — về mức nghiêm trọng, hoặc về việc sản phẩm xử lý được.
 2. DẪN: 1-2 câu giới thiệu SP và cơ chế xử lý.
 3. TRẢI NGHIỆM THEO MỐC — phần xương sống, 3 mốc:
    • Ngay sau khi dùng: [thứ thấy được ngay]
@@ -144,29 +158,23 @@ Mọi câu viết ở thể KHẲNG ĐỊNH TRỰC TIẾP, chủ ngữ là hiệ
 5. CAM KẾT (nếu SP có). 6. CTA + {{URL}}.`,
     guard: "Tuyệt đối không trích dẫn lời người dùng dưới mọi hình thức. Không gán câu nói cho nhân vật có thật hay hư cấu.",
   },
-  {
-    key: "so_sanh_cach_lam",
-    label: "So với cách làm cũ",
-    bestFor: "Khách đang dùng giải pháp thay thế: thuê dịch vụ, dùng điện thoại, dùng hàng chợ.",
-    headline: `Câu KHẲNG ĐỊNH nêu thẳng cái được, KHÔNG phải câu so sánh mở.
-Headline kiểu "A hay B?" / "Chọn cách nào?" làm loãng, không nhấn được gì.
-✅ "Noma 911 – tự tẩy ố kính, khỏi ra gara"   ❌ "Ra gara hay tự làm tại nhà?"`,
-    skeleton: `1. HOOK: 1 dòng nêu lựa chọn khách đang có + gợi ý có cách gọn hơn.
-2. BẢNG SO SÁNH dạng văn xuôi, 3-4 tiêu chí. Mỗi tiêu chí 1 khối 2 dòng:
-   [Tiêu chí — vd Thời gian / Công sức / Chủ động]
-   • Cách cũ: [mô tả trung thực]
-   • Với [SP]: [mô tả, có số liệu]
-3. 1 đoạn thừa nhận cách cũ vẫn có chỗ dùng — bài so sánh mà một chiều thì mất tin.
-4. ĐỐI TƯỢNG 💼. 5. CAM KẾT (chỉ khi SP có; + khuyến mãi nếu có). 6. CTA + {{URL}}.`,
-    guard: "CHỈ so về TÍNH NĂNG và công sức. TUYỆT ĐỐI không bịa giá dịch vụ/đối thủ nếu người dùng không cung cấp. Không nêu tên thương hiệu đối thủ.",
-  },
+  // ĐÃ BỎ dạng "so_sanh_cach_lam" (So với cách làm cũ) — chủ dự án duyệt content
+  // 2026-07-22: không dùng lối viết dựng bảng đối chiếu cách cũ / sản phẩm.
+  // Đừng thêm lại nếu chưa hỏi.
   {
     key: "thong_so",
     label: "Thiên thông số kỹ thuật",
     bestFor: "Khách lý trí, đã hiểu nhu cầu, đang so kỹ trước khi chốt.",
-    headline: "Thông số nổi bật nhất + bảo hành",
+    headline: `GỌI THẲNG người đang phân vân chọn mua và mời họ đọc — đừng liệt kê
+thông số ở headline, đọc như bảng giá thì không mời được ai. Tối đa 40 ký tự.
+✅ "Đang phân vân chọn tẩy ố kính?"  ✅ "Chọn máy ghi âm loại nào?"
+❌ "100ml – 2-3 xe – 199.000đ"`,
     skeleton: `Giọng chuyên gia, tiết chế cảm xúc, gần như không dùng tính từ cảm thán.
-1. HOOK: 1 dòng nêu 2-3 thông số mạnh nhất, ngăn bằng dấu "–".
+1. HOOK — 2 dòng:
+   Dòng 1: gọi đúng người đang phân vân và mời đọc, kiểu "Bạn nào đang phân vân
+   chọn [loại sản phẩm] thì xem ngay bài này." Đây là câu kéo người đọc, KHÔNG
+   được thay bằng dãy thông số.
+   Dòng 2: mới nêu 2-3 thông số mạnh nhất, ngăn bằng dấu "–".
 2. 1 câu nêu bài này dành cho ai đang so sánh kỹ.
 3. THÔNG SỐ theo NHÓM (3 nhóm, mỗi nhóm 1 tiêu đề in đậm + 2-3 dòng):
    ví dụ nhóm "Thu âm", "Nguồn & bộ nhớ", "Kích thước & thao tác".
