@@ -7,6 +7,12 @@
  *   GET  /api/uploaded-videos?account_id=<id>
  *        → { ok, account_id, files:[filename...], rows:[{filename,video_id,ad_id,...}] }
  *
+ *   GET  /api/uploaded-videos?scope=all      (không kèm account_id)
+ *        → { ok, scope:"all", accounts:[id...], files:[filename...], rows:[...] }
+ *        Dùng cho menu TikTok Shop: lọc "video đã lên camp / chưa lên camp" mà
+ *        không cần biết video được chạy ở TKQC nào. Chỉ trả các tài khoản người
+ *        gọi được xem (theo canAccess).
+ *
  *   POST /api/uploaded-videos        (ghi sổ sau khi tạo ad thành công)
  *        body { account_id, videos:[{ filename, video_id?, ad_id?, campaign_id?, product? }] }
  *        → { ok, inserted }
@@ -27,11 +33,36 @@ const acctOf = (v) => String(v || "").replace(/^act_/, "");
 
 export async function onRequestGet(context) {
   const { request, env } = context;
-  const acct = acctOf(new URL(request.url).searchParams.get("account_id"));
-  if (!acct) return json({ ok: false, error: "Thiếu ?account_id=" }, 400);
+  const q = new URL(request.url).searchParams;
+  const acct = acctOf(q.get("account_id"));
   if (!env.DB) return json({ ok: false, error: "D1 binding 'DB' missing" }, 500);
 
   const id = await getIdentity(context);
+
+  // scope=all: gộp mọi tài khoản người này được xem — chỉ để biết "video đã lên
+  // camp chưa", nên chỉ trả cột tối thiểu, không kèm ad_id/campaign_id của TKQC khác.
+  if (!acct && q.get("scope") === "all") {
+    const accounts = id.accounts || [];
+    if (!accounts.length) return json({ ok: true, scope: "all", accounts: [], files: [], rows: [] });
+    const holes = accounts.map(() => "?").join(",");
+    try {
+      const res = await env.DB.prepare(
+        `SELECT filename, account_id, product, created_at
+           FROM uploaded_videos
+          WHERE account_id IN (${holes})
+          ORDER BY created_at DESC`
+      ).bind(...accounts).all();
+      const rows = (res && res.results) || [];
+      return json({
+        ok: true, scope: "all", accounts,
+        files: [...new Set(rows.map((r) => r.filename))], rows,
+      });
+    } catch (err) {
+      return json({ ok: false, error: String(err?.message || err).slice(0, 300) }, 500);
+    }
+  }
+
+  if (!acct) return json({ ok: false, error: "Thiếu ?account_id= (hoặc dùng ?scope=all)" }, 400);
   if (!canAccess(id, acct)) return json({ ok: false, error: "Không có quyền trên tài khoản này" }, 403);
 
   try {

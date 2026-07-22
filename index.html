@@ -572,10 +572,29 @@
             </select>
           </div>
           <p style="margin:0 0 10px;color:var(--text-2);font-size:12.5px;line-height:1.5">
-            Tick video muốn chạy Facebook Ads → bấm <b>Tải video về máy</b> → chọn thư mục lưu → video (không watermark) tự tải và xếp theo thư mục sản phẩm → mở <b>Tạo Ads tự động</b> chọn đúng thư mục đó.
-            <br>Khi chọn thư mục, phải chọn <b>một thư mục con</b> (vd <code>D:\video-ads</code>) — Chrome không cho chọn ổ đĩa gốc <code>C:\</code>, <code>D:\</code> hay thư mục hệ thống.
+            Tick video muốn chạy Facebook Ads → bấm <b>Chạy Ads luôn</b> → chọn <b>ai chạy</b> trong popup → video được ghi tên người đó, người kia không tick được nữa (tránh 2 người chạy trùng 1 video). Bấm nhầm thì <b>gỡ được trong 1 phút</b>.
+            <br>Muốn tự tải file: bấm <b>Tải video về máy</b> → chọn thư mục lưu → mở <b>Tạo Ads tự động</b> chọn đúng thư mục đó. Chrome không cho chọn ổ đĩa gốc <code>C:\</code>, <code>D:\</code> hay thư mục hệ thống — phải chọn <b>một thư mục con</b> (vd <code>D:\video-ads</code>).
             <br>Khai báo kênh của công ty vào ô dưới để phân biệt với creator ngoài (video của creator cần xin phép trước khi chạy quảng cáo).
           </p>
+          <div id="tt-filters" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+            <select class="btn-cl" id="tt-sort" style="padding:6px 9px;font-size:12px">
+              <option value="gmv">↓ GMV cao nhất</option>
+              <option value="orders">↓ Nhiều đơn nhất</option>
+              <option value="views">↓ Lượt xem cao nhất</option>
+            </select>
+            <select class="btn-cl" id="tt-fcamp" style="padding:6px 9px;font-size:12px">
+              <option value="">Camp: tất cả</option>
+              <option value="no">Chưa lên camp</option>
+              <option value="yes">Đã lên camp</option>
+            </select>
+            <select class="btn-cl" id="tt-fstaff" style="padding:6px 9px;font-size:12px">
+              <option value="">Người nhận: tất cả</option>
+              <option value="free">Chưa ai nhận</option>
+              <option value="DUY">Duy nhận</option>
+              <option value="PHUONG_NAM">Nam nhận</option>
+            </select>
+            <span id="tt-filter-n" class="tt-sub"></span>
+          </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
             <input id="tt-own" class="btn-cl" style="flex:1;min-width:230px;padding:7px 10px;font-size:12.5px"
                    placeholder="Kênh nhà, cách nhau dấu phẩy (vd: toanmanshop, shopnhatom79)">
@@ -616,8 +635,24 @@
           #view-tiktok .tt-badge{font-size:10px;font-weight:800;border-radius:99px;padding:2px 7px;margin-left:6px;text-transform:uppercase;letter-spacing:.03em}
           #view-tiktok .tt-badge.own{background:#e9f7ef;color:#0f7b43}
           #view-tiktok .tt-badge.ext{background:#fdf3e7;color:#8a5a00}
+          /* Nhãn "ai đang giữ video" — của mình (xanh) vs người khác (đỏ, không tick được). */
+          #view-tiktok .tt-badge.mine{background:#e7f0fd;color:#1a4fa0}
+          #view-tiktok .tt-badge.other{background:#fdeced;color:#b3261e}
+          #view-tiktok .tt-badge.camp{background:#eceff1;color:#4a5560}
           #view-tiktok td.ck{width:34px;text-align:center}
           #view-tiktok td.ck input{width:16px;height:16px;cursor:pointer}
+          #view-tiktok tr.locked{opacity:.62}
+          /* Popup chọn nhân sự + toast gỡ nhận — dựng bằng JS, style để sẵn ở đây. */
+          .tt-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px}
+          .tt-modal{background:var(--bg-1,#fff);color:var(--text-1,#111);border-radius:16px;padding:20px 22px;max-width:460px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);font-size:13.5px;line-height:1.55}
+          .tt-modal h3{margin:0 0 6px;font-size:16px}
+          .tt-who{display:flex;gap:10px;margin:14px 0 4px}
+          .tt-who label{flex:1;border:2px solid var(--line,rgba(0,0,0,.12));border-radius:12px;padding:12px;text-align:center;cursor:pointer;font-weight:800}
+          .tt-who label.on{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 10%,transparent)}
+          .tt-who input{position:absolute;opacity:0;pointer-events:none}
+          .tt-modal .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+          .tt-toast{position:fixed;left:16px;bottom:16px;z-index:9998;background:#12321f;color:#fff;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.5;box-shadow:0 8px 28px rgba(0,0,0,.35);max-width:380px}
+          .tt-toast button{margin-left:10px;background:#fff;color:#12321f;border:0;border-radius:8px;padding:5px 10px;font-weight:800;cursor:pointer;font-size:12.5px}
         </style>
       </div><!-- /view-tiktok -->
       <div class="view" id="view-heatmap">
@@ -2269,10 +2304,36 @@
       daysSel=document.getElementById('tt-days'), vidDaysSel=document.getElementById('tt-vid-days'),
       refreshBtn=document.getElementById('tt-refresh'),
       ownEl=document.getElementById('tt-own'), ownN=document.getElementById('tt-own-n'),
-      cartEl=document.getElementById('tt-cart');
+      cartEl=document.getElementById('tt-cart'),
+      sortSel=document.getElementById('tt-sort'), fCampSel=document.getElementById('tt-fcamp'),
+      fStaffSel=document.getElementById('tt-fstaff'), filterN=document.getElementById('tt-filter-n');
   var loaded=false;
   var lastVideos=[];              // kết quả lần tải gần nhất, để đối chiếu khi tick
+  var shown=[];                   // lastVideos sau khi lọc + sắp xếp — data-i trỏ vào đây
   var picked=new Map();           // link video → bản ghi đã chọn (giữ khi đổi khoảng ngày)
+
+  // ── Sổ NHẬN video (server) ─────────────────────────────────────────────────
+  // 1 video chỉ 1 nhân sự chạy. Nguồn sự thật nằm ở D1 (/api/video-claims), KHÔNG
+  // ở localStorage — nếu để máy tự giữ thì xoá cache là mất, và người kia không
+  // thấy được ai đang giữ video nào.
+  var claims=new Map();           // video_key → { staff, staff_name, claimed_at }
+  var inCamp=new Set();           // video_key đã có ad (từ sổ uploaded_videos)
+  var STAFF_NAME={ DUY:'Duy', PHUONG_NAM:'Nam' };
+  var lastClaim=null;             // { staff, keys, at } — để hiện nút gỡ trong 60s
+  var RELEASE_S=60;
+  var claimsErr='';               // đọc sổ nhận hỏng → nói thẳng, đừng để tưởng "chưa ai nhận"
+
+  // Người đang dùng máy này (chỉ để tô màu "của bạn" + điền sẵn popup).
+  function myStaff(){ try{ return localStorage.getItem('tt_staff')||''; }catch(e){ return ''; } }
+  function setMyStaff(s){ try{ localStorage.setItem('tt_staff',s); }catch(e){} }
+  function crmToken(){ try{ return localStorage.getItem('doscom_opt_token')||''; }catch(e){ return ''; } }
+  function setCrmToken(t){ try{ localStorage.setItem('doscom_opt_token',t); }catch(e){} }
+
+  // Khoá của 1 video = id TikTok trong link. Không có link → không nhận được.
+  // (Khác videoId() bên dưới: hàm kia có fallback Date.now() để đặt tên file.)
+  function videoKey(link){ var m=String(link||'').match(/\/video\/(\d+)/); return m?m[1]:null; }
+  function claimOf(v){ var k=videoKey(v&&v.link); return k?claims.get(k)||null:null; }
+  function lockedByOther(v){ var c=claimOf(v); return !!(c && c.staff!==myStaff()); }
 
   // Danh sách kênh nhà lưu ở máy (localStorage) — chỉ để gắn nhãn, không gửi lên server.
   function ownSet(){
@@ -2331,29 +2392,66 @@
 
   function card(k,v,s){ return '<div class="tt-card"><div class="k">'+k+'</div><div class="v">'+v+'</div><div class="s">'+(s||'')+'</div></div>'; }
 
+  // Lọc + sắp xếp. API trả top 100 theo GMV; sắp xếp lại ở đây để "nhiều đơn nhất"
+  // là top thật trong 100 video đó, không phải chỉ xếp lại 20 video GMV cao.
+  function applyFilters(){
+    var sortKey=sortSel.value||'gmv', fCamp=fCampSel.value, fStaff=fStaffSel.value;
+    shown=lastVideos.filter(function(v){
+      var k=videoKey(v.link), c=k?claims.get(k):null;
+      if(fCamp==='yes' && !(k&&inCamp.has(k))) return false;
+      if(fCamp==='no'  &&  (k&&inCamp.has(k))) return false;
+      if(fStaff==='free' && c) return false;
+      if(fStaff && fStaff!=='free' && (!c || c.staff!==fStaff)) return false;
+      return true;
+    }).sort(function(a,b){ return (Number(b[sortKey])||0)-(Number(a[sortKey])||0); });
+    filterN.innerHTML = (shown.length===lastVideos.length
+      ? 'Hiện tất cả '+lastVideos.length+' video'
+      : 'Hiện '+shown.length+'/'+lastVideos.length+' video')+
+      (claimsErr ? ' · <span style="color:#b3261e">'+esc(claimsErr)+'</span>' : '');
+  }
+
   function renderVideos(){
+    applyFilters();
     if(!lastVideos.length){ vidsEl.innerHTML='<div class="tt-empty">Không có video trong khoảng này.</div>'; renderCart(); return; }
+    if(!shown.length){ vidsEl.innerHTML='<div class="tt-empty">Không video nào khớp bộ lọc. Nới bộ lọc ở trên để xem thêm.</div>'; renderCart(); return; }
+    var me=myStaff();
     vidsEl.innerHTML='<div class="tt-scroll"><table><thead><tr><th class="ck"></th><th>Video</th><th>GMV</th><th>Đơn</th><th>Lượt xem</th></tr></thead><tbody>'+
-      lastVideos.map(function(v,i){
+      shown.map(function(v,i){
         var link=v.link?('https://'+String(v.link).replace(/^https?:\/\//,'')):null;
         var own=isOwn(v.username);
         var badge=v.username ? '<span class="tt-badge '+(own?'own':'ext')+'">'+(own?'kênh nhà':'creator')+'</span>' : '';
-        return '<tr><td class="ck"><input type="checkbox" data-i="'+i+'"'+(picked.has(v.link||v.title)?' checked':'')+(v.link?'':' disabled title="Không có link, không tải được"')+'></td>'+
+        var k=videoKey(v.link), c=k?claims.get(k):null, mine=!!(c&&c.staff===me);
+        // Người khác đang giữ → KHOÁ ô tick. Đây chính là chốt chặn "2 người cùng
+        // chạy 1 video": không tick được thì không chạy ads, không tải, không xuất.
+        var locked=!!(c&&!mine);
+        var claimBadge=c ? '<span class="tt-badge '+(mine?'mine':'other')+'">👤 '+esc(c.staff_name||STAFF_NAME[c.staff]||c.staff)+(mine?' (bạn)':'')+'</span>' : '';
+        var campBadge=(k&&inCamp.has(k)) ? '<span class="tt-badge camp">đã lên camp</span>' : '';
+        var dis = !v.link ? ' disabled title="Không có link, không chạy được"'
+                : locked ? ' disabled title="'+esc(c.staff_name||c.staff)+' đã nhận video này"' : '';
+        return '<tr'+(locked?' class="locked"':'')+'><td class="ck"><input type="checkbox" data-i="'+i+'"'+(picked.has(v.link||v.title)?' checked':'')+dis+'></td>'+
           '<td class="t"><div class="tt-vt">'+(link?'<a href="'+esc(link)+'" target="_blank" rel="noopener">':'')+esc(v.title)+(link?'</a>':'')+'</div>'+
-          '<div class="tt-vm">'+esc(v.shop)+(v.username?' · @'+esc(v.username):'')+badge+
+          '<div class="tt-vm">'+esc(v.shop)+(v.username?' · @'+esc(v.username):'')+badge+claimBadge+campBadge+
           (v.product?'<br>SP: '+esc(String(v.product).slice(0,70)):'')+'</div></td>'+
           '<td><b>'+money(v.gmv)+'</b></td><td>'+vnd(v.orders)+'</td><td>'+vnd(v.views)+'</td></tr>';
       }).join('')+'</tbody></table></div>';
 
     Array.prototype.forEach.call(vidsEl.querySelectorAll('input[type=checkbox]'),function(cb){
       cb.addEventListener('change',function(){
-        var v=lastVideos[+cb.getAttribute('data-i')]; if(!v) return;
+        var v=shown[+cb.getAttribute('data-i')]; if(!v) return;
         var k=v.link||v.title;
         if(cb.checked) picked.set(k,v); else picked.delete(k);
         renderCart();
       });
     });
     renderCart();
+  }
+
+  // Video vừa bị người khác nhận (do tải lại sổ) → bỏ khỏi giỏ, không để lỡ tay chạy.
+  function dropLockedFromCart(){
+    var gone=[];
+    picked.forEach(function(v,k){ if(lockedByOther(v)) gone.push(k); });
+    gone.forEach(function(k){ picked.delete(k); });
+    return gone.length;
   }
 
   function renderCart(){
@@ -2364,6 +2462,7 @@
     cartEl.innerHTML='<span>Đã chọn <b>'+n+'</b> video'+
       (ext?' · <span style="color:#8a5a00"><b>'+ext+'</b> của creator ngoài — cần xin phép trước khi chạy</span>':'')+'</span>'+
       '<button class="btn-cl" id="tt-ads" type="button" style="font-weight:800;background:linear-gradient(135deg,var(--primary),var(--primary-700));color:#fff;border-color:transparent">▶ Chạy Ads luôn</button>'+
+      '<span class="tt-sub">— sẽ hỏi ai chạy trước khi chuyển</span>'+
       '<button class="btn-cl" id="tt-dlv" type="button">⬇ Tải video về máy</button>'+
       '<button class="btn-cl" id="tt-dl" type="button">Tải danh sách (.json)</button>'+
       '<button class="btn-cl" id="tt-clear" type="button">Bỏ chọn hết</button>'+
@@ -2383,6 +2482,9 @@
   // Kèm postMessage cho trường hợp iframe đã nạp sẵn từ trước (không tự đọc lại).
   var ADS_QUEUE_KEY='tt_ads_queue';
 
+  // Bấm "Chạy Ads luôn" → hỏi AI CHẠY trước, ghi sổ nhận, rồi mới chuyển view.
+  // Cố ý hỏi ở ĐÂY chứ không ở lúc tick: tick là thao tác xem/so sánh, bấm nhầm
+  // liên tục; còn bấm "Chạy Ads" mới là quyết định thật.
   function sendToAdsCreator(){
     var list=[]; picked.forEach(function(v){ if(v.link) list.push(v); });
     if(!list.length) return;
@@ -2391,6 +2493,148 @@
        'Video của creator thuộc bản quyền của họ — chạy quảng cáo trả tiền khi chưa có thoả thuận '+
        'có thể bị khiếu nại hoặc Facebook gỡ quảng cáo.\n\nVẫn chuyển sang tạo Ads?')) return;
 
+    openClaimModal(list, pushToAdsCreator);
+  }
+
+  // ── Popup chọn nhân sự ────────────────────────────────────────────────────
+  function openClaimModal(list, onDone){
+    var me=myStaff()||'DUY';
+    var bg=document.createElement('div');
+    bg.className='tt-modal-bg';
+    bg.innerHTML=
+      '<div class="tt-modal" role="dialog" aria-modal="true" aria-label="Chọn nhân sự chạy video">'+
+        '<h3>Ai sẽ chạy '+list.length+' video này?</h3>'+
+        '<p style="margin:0;color:var(--text-2)">Ghi nhận để người còn lại không chạy trùng. Xác nhận xong, '+
+        'video mang tên người này và người kia <b>không tick được nữa</b>. Bấm nhầm thì gỡ được trong <b>'+RELEASE_S+' giây</b>.</p>'+
+        '<div class="tt-who">'+
+          '<label data-s="DUY"><input type="radio" name="ttwho" value="DUY">Duy</label>'+
+          '<label data-s="PHUONG_NAM"><input type="radio" name="ttwho" value="PHUONG_NAM">Nam</label>'+
+        '</div>'+
+        '<label style="display:block;margin-top:14px;font-size:12.5px;color:var(--text-2)">Mã CRM <span style="font-weight:400">(nhập 1 lần, máy nhớ giúp)</span>'+
+          '<input type="password" id="tt-tok" class="btn-cl" style="width:100%;padding:8px 10px;margin-top:4px" value="'+esc(crmToken())+'" placeholder="mã đã đặt trên CRM">'+
+        '</label>'+
+        '<div id="tt-modal-err" style="color:#b3261e;font-size:12.5px;margin-top:10px;display:none"></div>'+
+        '<div class="row">'+
+          '<button class="btn-cl" id="tt-cancel" type="button">Huỷ</button>'+
+          '<button class="btn-cl" id="tt-ok" type="button" style="font-weight:800;background:linear-gradient(135deg,var(--primary),var(--primary-700));color:#fff;border-color:transparent">Xác nhận &amp; chạy Ads</button>'+
+        '</div>'+
+      '</div>';
+    document.body.appendChild(bg);
+
+    var errEl=bg.querySelector('#tt-modal-err'), okBtn=bg.querySelector('#tt-ok'), tokEl=bg.querySelector('#tt-tok');
+    function mark(){
+      Array.prototype.forEach.call(bg.querySelectorAll('.tt-who label'),function(l){
+        l.classList.toggle('on', l.querySelector('input').checked);
+      });
+    }
+    Array.prototype.forEach.call(bg.querySelectorAll('.tt-who input'),function(r){
+      r.checked=(r.value===me);
+      r.addEventListener('change',mark);
+      r.parentNode.addEventListener('click',function(){ r.checked=true; mark(); });
+    });
+    mark();
+
+    function close(){ document.removeEventListener('keydown',onKey); bg.remove(); }
+    function onKey(e){ if(e.key==='Escape') close(); }
+    document.addEventListener('keydown',onKey);
+    bg.addEventListener('click',function(e){ if(e.target===bg) close(); });
+    bg.querySelector('#tt-cancel').addEventListener('click',close);
+
+    okBtn.addEventListener('click',async function(){
+      var staff=(bg.querySelector('.tt-who input:checked')||{}).value;
+      if(!staff) return;
+      var tok=tokEl.value.trim();
+      okBtn.disabled=true; okBtn.textContent='Đang ghi nhận…'; errEl.style.display='none';
+      setMyStaff(staff); if(tok) setCrmToken(tok);
+      var res=await claimVideos(staff, list, tok);
+      if(!res.ok){
+        okBtn.disabled=false; okBtn.textContent='Xác nhận & chạy Ads';
+        errEl.textContent=res.error; errEl.style.display='';
+        return;
+      }
+      close();
+      // Người khác vừa nhận mất vài video → loại ra, chỉ chạy phần còn lại.
+      var blocked={};
+      (res.conflicts||[]).forEach(function(c){ blocked[c.key]=c.staff_name||c.staff; });
+      var go=list.filter(function(v){ return !blocked[videoKey(v.link)]; });
+      if(res.conflicts && res.conflicts.length){
+        alert(res.conflicts.length+'/'+list.length+' video vừa được người khác nhận trước ('+
+          Object.keys(blocked).map(function(k){ return blocked[k]; }).filter(function(x,i,a){ return a.indexOf(x)===i; }).join(', ')+
+          ') nên bị loại khỏi lượt này.\n\n'+(go.length?'Vẫn chạy '+go.length+' video còn lại.':'Không còn video nào để chạy.'));
+      }
+      renderVideos();
+      if(!go.length) return;
+      showUndoToast(staff,(res.claimed||[]));
+      onDone(go);
+    });
+  }
+
+  // Ghi sổ nhận. Trả { ok, claimed, conflicts } hoặc { ok:false, error }.
+  async function claimVideos(staff, list, token){
+    try{
+      var r=await fetch('/api/video-claims',{
+        method:'POST', credentials:'same-origin',
+        headers:{ 'Content-Type':'application/json', 'X-Optimizer-Token':token||'' },
+        body:JSON.stringify({ staff:staff, videos:list.map(function(v){
+          return { link:v.link, title:v.title, product:v.product, shop:v.shop };
+        })}),
+      });
+      var j=await r.json();
+      if(!r.ok||!j.ok) return { ok:false, error:(j&&j.error)||('lỗi HTTP '+r.status) };
+      // Cập nhật sổ tại chỗ để bảng khoá ngay, không chờ tải lại.
+      var now=Math.floor(Date.now()/1000);
+      (j.claimed||[]).forEach(function(k){ claims.set(k,{ staff:staff, staff_name:STAFF_NAME[staff], claimed_at:now }); });
+      (j.conflicts||[]).forEach(function(c){ claims.set(c.key,{ staff:c.staff, staff_name:c.staff_name, claimed_at:now }); });
+      dropLockedFromCart();
+      return j;
+    }catch(e){ return { ok:false, error:'không gọi được server: '+e.message }; }
+  }
+
+  // ── Toast gỡ nhận (60s) ───────────────────────────────────────────────────
+  // Nổi cố định vì bấm xong là chuyển sang view "Tạo Ads tự động" — để nút gỡ
+  // trong bảng TikTok thì người dùng không còn nhìn thấy nó nữa.
+  function showUndoToast(staff, keys){
+    if(!keys.length) return;
+    var old=document.getElementById('tt-undo'); if(old) old.remove();
+    lastClaim={ staff:staff, keys:keys, at:Date.now() };
+    var el=document.createElement('div');
+    el.id='tt-undo'; el.className='tt-toast';
+    document.body.appendChild(el);
+    var timer=setInterval(tick,1000);
+    function tick(){
+      var left=RELEASE_S-Math.floor((Date.now()-lastClaim.at)/1000);
+      if(left<=0){ clearInterval(timer); el.remove(); return; }
+      el.innerHTML='✓ Đã ghi <b>'+keys.length+'</b> video cho <b>'+esc(STAFF_NAME[staff]||staff)+'</b>.'+
+        '<button type="button" id="tt-undo-btn">Gỡ nhận ('+left+'s)</button>';
+      el.querySelector('#tt-undo-btn').addEventListener('click',async function(){
+        clearInterval(timer);
+        el.innerHTML='Đang gỡ…';
+        var r=await releaseVideos(staff,keys);
+        el.innerHTML = r.ok
+          ? '↩ Đã gỡ '+(r.released||[]).length+' video.'+((r.denied||[]).length?' '+r.denied.length+' video quá hạn 60s, không gỡ được.':'')
+          : '<span style="color:#ffb4b4">Gỡ không được: '+esc(r.error)+'</span>';
+        setTimeout(function(){ el.remove(); },5000);
+        renderVideos();
+      });
+    }
+    tick();
+  }
+
+  async function releaseVideos(staff, keys){
+    try{
+      var r=await fetch('/api/video-claims',{
+        method:'DELETE', credentials:'same-origin',
+        headers:{ 'Content-Type':'application/json', 'X-Optimizer-Token':crmToken() },
+        body:JSON.stringify({ staff:staff, keys:keys }),
+      });
+      var j=await r.json();
+      if(!r.ok||!j.ok) return { ok:false, error:(j&&j.error)||('lỗi HTTP '+r.status) };
+      (j.released||[]).forEach(function(k){ claims.delete(k); });
+      return j;
+    }catch(e){ return { ok:false, error:e.message }; }
+  }
+
+  function pushToAdsCreator(list){
     var payload={ at:Date.now(), videos:list.map(function(v){
       return { link:v.link?'https://'+String(v.link).replace(/^https?:\/\//,''):null,
                title:v.title, product:v.product||v.shop||'chua-phan-loai',
@@ -2540,7 +2784,10 @@
 
   function loadVideos(){
     vidsEl.innerHTML='<div class="tt-empty">Đang tải… (quét dữ liệu video, có thể mất vài giây)</div>';
-    fetch('/api/lark/tiktok-videos?days='+vidDaysSel.value+'&top=20',{credentials:'same-origin'})
+    // Lấy top 100 (không phải 20) để bộ lọc "nhiều đơn nhất" xếp trên tập đủ rộng —
+    // xếp lại 20 video GMV cao nhất thì không ra được video nhiều đơn mà GMV thấp.
+    // Chi phí gần như không đổi: phần nặng là quét Lark, đã lọc theo ngày ở Lark rồi.
+    fetch('/api/lark/tiktok-videos?days='+vidDaysSel.value+'&top=100',{credentials:'same-origin'})
       .then(function(r){return r.json();})
       .then(function(j){
         if(!j.ok) throw new Error(j.error||'lỗi');
@@ -2551,16 +2798,53 @@
       .catch(function(e){ vidSub.textContent=''; errBox(vidsEl,e.message); });
   }
 
+  // Sổ nhận + sổ đã-lên-camp. Hỏng thì bảng vẫn dùng được (chỉ mất nhãn/bộ lọc),
+  // KHÔNG chặn cả view — nhưng có báo để không ai tưởng "chưa ai nhận".
+  function loadClaims(){
+    return fetch('/api/video-claims',{credentials:'same-origin'})
+      .then(function(r){return r.json();})
+      .then(function(j){
+        if(!j.ok) throw new Error(j.error||'lỗi');
+        if(j.release_window_s) RELEASE_S=j.release_window_s;
+        claims=new Map((j.claims||[]).map(function(c){
+          return [String(c.video_key),{ staff:c.staff, staff_name:c.staff_name, claimed_at:c.claimed_at }];
+        }));
+        claimsErr='';
+        dropLockedFromCart();
+      })
+      .catch(function(e){
+        claims=new Map();
+        claimsErr='chưa đọc được sổ nhận ('+e.message+') — chưa biết ai đang giữ video nào';
+      });
+  }
+
+  function loadInCamp(){
+    return fetch('/api/uploaded-videos?scope=all',{credentials:'same-origin'})
+      .then(function(r){return r.json();})
+      .then(function(j){
+        if(!j.ok) throw new Error(j.error||'lỗi');
+        // Tên file trong sổ là "<id video TikTok>.mp4" → cắt đuôi ra khoá video.
+        inCamp=new Set((j.files||[]).map(function(f){ return String(f).replace(/\.[^.]+$/,''); }));
+      })
+      .catch(function(){ inCamp=new Set(); });
+  }
+
+  function loadMarks(){ return Promise.all([loadClaims(),loadInCamp()]).then(renderVideos); }
+
   function syncOwn(){
     var n=ownSet().size;
     ownN.textContent = n ? n+' kênh nhà' : 'chưa khai kênh nhà';
     if(lastVideos.length) renderVideos();   // vẽ lại nhãn kênh nhà/creator
   }
 
-  nav.addEventListener('click',function(){ if(loaded)return; loaded=true; loadMain(); loadVideos(); });
+  nav.addEventListener('click',function(){ if(loaded)return; loaded=true; loadMain(); loadVideos(); loadMarks(); });
   daysSel.addEventListener('change',loadMain);
   vidDaysSel.addEventListener('change',loadVideos);
-  refreshBtn.addEventListener('click',function(){ loadMain(); loadVideos(); });
+  refreshBtn.addEventListener('click',function(){ loadMain(); loadVideos(); loadMarks(); });
+  // Lọc/sắp xếp chạy trên dữ liệu đã tải — không gọi lại API.
+  sortSel.addEventListener('change',renderVideos);
+  fCampSel.addEventListener('change',renderVideos);
+  fStaffSel.addEventListener('change',renderVideos);
   try{ ownEl.value=localStorage.getItem('tt_own_accounts')||''; }catch(e){}
   ownEl.addEventListener('input',function(){
     try{ localStorage.setItem('tt_own_accounts',ownEl.value); }catch(e){}
