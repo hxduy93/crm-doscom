@@ -63,6 +63,7 @@ export const AD_FORMATS = [
   },
   {
     key: "hoi_dap",
+    headlineFixed: true,   // headline gắn liền cấu trúc bài / đã chốt — không xoay
     label: "Hỏi - Đáp",
     bestFor: "Sản phẩm khách hay phân vân, nhiều câu hỏi trước khi chốt (giá, bảo hành, dùng có khó không).",
     headline: "USP ngắn hoặc câu trả lời cho thắc mắc lớn nhất",
@@ -77,6 +78,7 @@ KHÔNG dùng block bullet ✅ tính năng riêng — tính năng phải nằm tr
   },
   {
     key: "checklist",
+    headlineFixed: true,   // headline gắn liền cấu trúc bài / đã chốt — không xoay
     label: "Dấu hiệu / trường hợp bạn cần",
     bestFor: "Khách chưa biết mình có nhu cầu. Giúp họ tự nhận ra mình thuộc nhóm nên mua.",
     headline: "Số + nhóm đối tượng (\"5 trường hợp nên có máy dò\")",
@@ -91,6 +93,7 @@ KHÔNG dùng block bullet ✅ tính năng riêng — tính năng phải nằm tr
   },
   {
     key: "sai_lam",
+    headlineFixed: true,   // headline gắn liền cấu trúc bài / đã chốt — không xoay
     label: "Sai lầm thường gặp",
     bestFor: "Khách đang tự xử lý bằng cách sai/kém hiệu quả, cần chỉ ra rồi mới bán.",
     headline: "Số + chủ đề (\"3 sai lầm khi tự tẩy ố kính\")",
@@ -105,6 +108,7 @@ KHÔNG dùng block bullet ✅ tính năng riêng — tính năng phải nằm tr
   },
   {
     key: "huong_dan",
+    headlineFixed: true,   // headline gắn liền cấu trúc bài / đã chốt — không xoay
     label: "Hướng dẫn dùng",
     bestFor: "Sản phẩm khách sợ 'mua về không biết dùng': dung dịch, thiết bị có thao tác.",
     headline: `TÊN SẢN PHẨM + VẤN ĐỀ được xử lý + CÁCH xử lý gọn. Công thức này đã
@@ -126,6 +130,7 @@ KHÔNG dùng block bullet ✅ tính năng — tính năng thể hiện qua các 
   },
   {
     key: "trai_nghiem_theo_moc",
+    headlineFixed: true,   // headline gắn liền cấu trúc bài / đã chốt — không xoay
     label: "Trải nghiệm theo mốc thời gian",
     bestFor: "Khách phân vân dùng lâu có xuống không, mua về rồi bỏ xó không.",
     headline: `CÔNG THỨC "VẤN ĐỀ + CHỐT HẠ" (bắt buộc, duyệt 2026-07-22):
@@ -170,6 +175,7 @@ Mọi câu viết ở thể KHẲNG ĐỊNH TRỰC TIẾP, chủ ngữ là hiệ
   // Đừng thêm lại nếu chưa hỏi.
   {
     key: "thong_so",
+    headlineFixed: true,   // headline gắn liền cấu trúc bài / đã chốt — không xoay
     label: "Thiên thông số kỹ thuật",
     bestFor: "Khách lý trí, đã hiểu nhu cầu, đang so kỹ trước khi chốt.",
     headline: `GỌI THẲNG người đang phân vân chọn mua và mời họ đọc — đừng liệt kê
@@ -191,6 +197,66 @@ thông số ở headline, đọc như bảng giá thì không mời được ai.
     guard: "Chỉ dùng số liệu có trong USP/dữ liệu sản phẩm được cấp. Thiếu số thì mô tả định tính, TUYỆT ĐỐI không bịa thông số.",
   },
 ];
+
+// ── KIỂU HEADLINE — xoay vòng như dạng bài ──────────────────────────────────
+// Chủ dự án duyệt content 2026-07-22: dạng bài đã đa dạng nhưng headline vẫn bị
+// đóng đinh một kiểu cho mỗi dạng, nên chạy nhiều video vẫn thấy tiêu đề na ná.
+// Nay mỗi lượt được giao MỘT KIỂU headline khác nhau.
+//
+// Chỉ áp cho dạng KHÔNG có headline bắt buộc. Vài dạng có headline gắn liền với
+// cấu trúc bài (hỏi-đáp mở bằng câu hỏi, checklist mở bằng con số) hoặc đã được
+// chủ dự án chốt cứng — những dạng đó giữ nguyên, ép xoay sẽ hỏng bài.
+export const HEADLINE_STYLES = [
+  {
+    key: "van_de_chot_ha",
+    label: "Vấn đề + chốt hạ",
+    rule: `Vế đầu nêu vấn đề, vế sau CHỐT HẠ bằng lời kêu gọi dùng thẳng sản phẩm.
+Vừa cho lối giải quyết, vừa gián tiếp khẳng định sản phẩm làm được việc đó.`,
+    example: `"Cặn canxi bám kính? Dùng ngay Noma 911"`,
+  },
+  {
+    key: "social_proof",
+    label: "Số người đã mua",
+    rule: `Nêu số người đã mua để tạo tin cậy. Con số hợp lý trong khoảng 1-5 triệu.
+KHÔNG kèm số tiền tiết kiệm cụ thể nếu không có dữ liệu.`,
+    example: `"Hơn 1.200.000 chủ xe đã đặt tại đây"`,
+  },
+  {
+    key: "benefit_so",
+    label: "Lợi ích kèm con số",
+    rule: `Nêu thẳng cái được kèm một con số cụ thể. Con số PHẢI có trong bảng thông
+số hoặc USP được cấp — không tự chế.`,
+    example: `"1 chai 100ml làm sạch 2-3 xe"`,
+  },
+  {
+    key: "cau_hoi",
+    label: "Câu hỏi gọi đúng người",
+    rule: `Hỏi đúng tình huống khách đang gặp để họ tự nhận ra mình. Là câu hỏi TÌNH
+HUỐNG, không phải câu tấn công thuộc tính cá nhân.`,
+    example: `"Kính xe bạn còn ố sau khi rửa?"`,
+  },
+  {
+    key: "doi_tuong",
+    label: "Gọi thẳng nhóm khách",
+    rule: `Gọi đích danh nhóm khách hợp nhất với sản phẩm, để đúng người dừng lại đọc.`,
+    example: `"Xe đỗ ngoài trời cả mùa mưa nên xem"`,
+  },
+  {
+    key: "he_qua",
+    label: "Hệ quả nếu bỏ qua",
+    rule: `Nêu điều sẽ xấu đi nếu để nguyên tình trạng. Nói ở mức thực tế, KHÔNG hù dọa
+cực đoan, KHÔNG dọa mất an toàn tính mạng.`,
+    example: `"Ố kính để lâu càng bám càng khó tẩy"`,
+  },
+  {
+    key: "usp_ngan",
+    label: "USP ngắn gọn",
+    rule: `Nêu điểm khác biệt mạnh nhất, cô đọng, không thừa chữ.`,
+    example: `"Tẩy ố kính – hạt mài siêu nhỏ, không xước"`,
+  },
+];
+
+export const HEADLINE_KEYS = HEADLINE_STYLES.map((h) => h.key);
 
 export const FORMAT_KEYS = AD_FORMATS.map((f) => f.key);
 export const getFormat = (key) => AD_FORMATS.find((f) => f.key === key) || null;
@@ -231,4 +297,14 @@ export function pickFormats({ seed = "", rotate = 0, count = 3, allowed = null }
   const out = [];
   for (let i = 0; i < n; i++) out.push(pool[(start + i) % pool.length]);
   return out;
+}
+
+/**
+ * Chọn kiểu headline cho 1 variant. Cùng cơ chế xoay vòng như pickFormats.
+ * Cố ý lệch pha bằng chuỗi seed khác ("hl:") để dạng bài và kiểu headline không
+ * đi cùng nhịp — nếu không thì dạng A luôn dính kiểu headline A, lại thành cố định.
+ */
+export function pickHeadlineStyle({ seed = "", rotate = 0, offset = 0 } = {}) {
+  const i = (hashSeed(`hl:${seed}`) + (Number(rotate) || 0) + (Number(offset) || 0)) % HEADLINE_STYLES.length;
+  return HEADLINE_STYLES[i];
 }

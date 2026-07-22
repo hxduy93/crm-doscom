@@ -7,6 +7,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   AD_FORMATS, FORMAT_KEYS, getFormat, hashSeed, pickFormats,
+  HEADLINE_STYLES, pickHeadlineStyle,
 } from "../functions/lib/ad-formats.js";
 import { SYSTEM_PROMPT, buildUserPrompt } from "../functions/lib/ad-prompts.js";
 import { getProduct, PRODUCTS } from "../functions/lib/product-catalog.js";
@@ -290,6 +291,67 @@ test("dạng 'So với cách làm cũ' đã bị loại theo yêu cầu, không 
     false,
     "không dạng nào còn dựng bảng đối chiếu cách cũ / sản phẩm"
   );
+});
+
+test("kiểu headline xoay vòng — chạy nhiều video không ra tiêu đề na ná", () => {
+  assert.ok(HEADLINE_STYLES.length >= 6, "cần đủ kiểu để 1 lô video không lặp tiêu đề");
+  for (const h of HEADLINE_STYLES) {
+    assert.ok(h.key && h.label && h.rule && h.example, `kiểu ${h.key} thiếu metadata`);
+  }
+  const dung = [];
+  for (let i = 0; i < HEADLINE_STYLES.length; i++) {
+    dung.push(pickHeadlineStyle({ seed: "Noma 911", rotate: i }).key);
+  }
+  assert.equal(new Set(dung).size, HEADLINE_STYLES.length, "1 vòng phải đi hết các kiểu");
+  // Deterministic: chạy lại lô cũ ra đúng tiêu đề cũ.
+  assert.equal(
+    pickHeadlineStyle({ seed: "Noma 911", rotate: 3 }).key,
+    pickHeadlineStyle({ seed: "Noma 911", rotate: 3 }).key
+  );
+});
+
+test("dạng bài và kiểu headline không đi cùng nhịp", () => {
+  // Nếu cùng nhịp thì dạng A luôn dính kiểu headline A → lại thành cố định.
+  const cap = new Set();
+  for (let i = 0; i < 9; i++) {
+    const f = pickFormats({ seed: "Noma 911", rotate: i, count: 1 })[0].key;
+    const h = pickHeadlineStyle({ seed: "Noma 911", rotate: i }).key;
+    cap.add(`${f}|${h}`);
+  }
+  assert.equal(cap.size, 9, "9 lượt phải ra 9 cặp dạng-headline khác nhau");
+});
+
+test("usp_bullet được xoay headline; dạng có cấu trúc riêng thì giữ nguyên", () => {
+  assert.ok(!getFormat("usp_bullet").headlineFixed, "dạng phổ thông phải đổi tiêu đề mỗi lượt");
+  assert.ok(!getFormat("cau_chuyen").headlineFixed);
+  assert.ok(!getFormat("truoc_sau").headlineFixed);
+  // Headline gắn liền cấu trúc bài hoặc đã được chốt → ép xoay là hỏng bài.
+  for (const k of ["hoi_dap", "checklist", "sai_lam", "huong_dan", "trai_nghiem_theo_moc", "thong_so"]) {
+    assert.equal(getFormat(k).headlineFixed, true, `${k} phải giữ headline riêng`);
+  }
+});
+
+test("prompt giao đúng kiểu headline cho dạng xoay, không giao cho dạng cố định", () => {
+  const p1 = buildUserPrompt({
+    product: getProduct("Noma 911"), format: "x", formatLabel: "x", cta: "x", notes: "",
+    promotion: "", formats: [getFormat("usp_bullet")], seed: "Noma 911", rotate: 0,
+  });
+  assert.match(p1, /Kiểu headline lượt này/);
+  assert.match(p1, /KHÔNG mặc định quay về "USP ngắn"/);
+
+  // Cùng dạng nhưng lượt khác → kiểu headline khác.
+  const p2 = buildUserPrompt({
+    product: getProduct("Noma 911"), format: "x", formatLabel: "x", cta: "x", notes: "",
+    promotion: "", formats: [getFormat("usp_bullet")], seed: "Noma 911", rotate: 1,
+  });
+  const kieu = (s) => (s.match(/Kiểu headline lượt này: \*\*(.+?)\*\*/) || [])[1];
+  assert.notEqual(kieu(p1), kieu(p2), "video kế tiếp phải đổi kiểu tiêu đề");
+
+  const p3 = buildUserPrompt({
+    product: getProduct("Noma 911"), format: "x", formatLabel: "x", cta: "x", notes: "",
+    promotion: "", formats: [getFormat("hoi_dap")], seed: "Noma 911", rotate: 0,
+  });
+  assert.equal(/Kiểu headline lượt này/.test(p3), false, "dạng cố định giữ headline riêng");
 });
 
 test("headline kiểu 'Vấn đề + chốt hạ' là kiểu mạnh nhất, có trong luật chung", () => {

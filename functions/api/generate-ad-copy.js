@@ -123,6 +123,10 @@ export async function onRequestPost(context) {
 
   const userPrompt = buildUserPrompt({
     product, format, formatLabel, cta, notes, promotion, formats: chosenFormats,
+    // Cùng seed/rotate với việc chọn dạng bài → kiểu headline cũng xoay theo video,
+    // vẫn deterministic (chạy lại lô cũ ra đúng bộ headline cũ).
+    seed: seed != null ? String(seed) : String(productKey),
+    rotate: Number(rotate) || 0,
   });
 
   // Sản phẩm NOMA → nối Brand Core v3 vào cuối system prompt. Đặt SAU để luật
