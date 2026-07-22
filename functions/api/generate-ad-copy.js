@@ -22,7 +22,7 @@
 
 import { getProduct } from "../lib/product-catalog.js";
 import { SYSTEM_PROMPT, buildUserPrompt } from "../lib/ad-prompts.js";
-import { AD_FORMATS, FORMAT_KEYS, getFormat, pickFormats } from "../lib/ad-formats.js";
+import { AD_FORMATS, ENABLED_FORMATS, FORMAT_KEYS, getFormat, pickFormats } from "../lib/ad-formats.js";
 // Brand Core NOMA v3 — nguồn sự thật thương hiệu NOMA, ĐÃ CÓ SẴN trong repo và
 // đang được module GEO + đăng sản phẩm dùng. Trước 2026-07-22 agent viết ads
 // KHÔNG đọc file này nên viết Noma như một dòng sản phẩm của Doscom và dùng cụm
@@ -197,10 +197,12 @@ export async function onRequestPost(context) {
   });
 }
 
-// GET: liệt kê dạng bài để UI dựng dropdown (không tốn credit AI).
+// GET: liệt kê dạng bài ĐANG BẬT để UI dựng dropdown (không tốn credit AI).
+// Dạng đang tắt không hiện lên UI — tránh chọn nhầm lối viết chưa được duyệt.
 export function onRequestGet() {
   return jsonResponse({
     ok: true,
-    formats: AD_FORMATS.map((f) => ({ key: f.key, label: f.label, bestFor: f.bestFor })),
+    formats: ENABLED_FORMATS.map((f) => ({ key: f.key, label: f.label, bestFor: f.bestFor })),
+    disabled_count: AD_FORMATS.length - ENABLED_FORMATS.length,
   });
 }

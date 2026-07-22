@@ -22,6 +22,7 @@
 export const AD_FORMATS = [
   {
     key: "usp_bullet",
+    enabled: true,         // dạng DUY NHẤT đang chạy (chốt 2026-07-22)
     label: "USP + gạch đầu dòng",
     bestFor: "Bài chủ lực, an toàn nhất. Hợp khách mua lần đầu cần thấy đủ tính năng.",
     headline: "USP ngắn hoặc Benefit có số",
@@ -35,6 +36,7 @@ export const AD_FORMATS = [
   },
   {
     key: "cau_chuyen",
+    enabled: false,        // chưa bật — chờ chủ dự án duyệt
     label: "Kể chuyện một tình huống",
     bestFor: "Sản phẩm giải quyết nỗi lo có thật, khách cần đồng cảm trước khi cần thông số.",
     headline: "Benefit hoặc câu kết của chuyện",
@@ -49,6 +51,7 @@ export const AD_FORMATS = [
   },
   {
     key: "truoc_sau",
+    enabled: false,        // chưa bật — chờ chủ dự án duyệt
     label: "Trước / Sau (đối lập)",
     bestFor: "Sản phẩm có kết quả nhìn thấy được: tẩy ố kính, camera, chất lượng ghi âm.",
     headline: "Benefit có mốc thời gian (\"Kính sáng lại sau 5 phút\")",
@@ -63,6 +66,7 @@ export const AD_FORMATS = [
   },
   {
     key: "hoi_dap",
+    enabled: false,        // chưa bật — chờ chủ dự án duyệt
     headlineFixed: true,   // headline gắn liền cấu trúc bài / đã chốt — không xoay
     label: "Hỏi - Đáp",
     bestFor: "Sản phẩm khách hay phân vân, nhiều câu hỏi trước khi chốt (giá, bảo hành, dùng có khó không).",
@@ -78,6 +82,7 @@ KHÔNG dùng block bullet ✅ tính năng riêng — tính năng phải nằm tr
   },
   {
     key: "checklist",
+    enabled: false,        // chưa bật — chờ chủ dự án duyệt
     headlineFixed: true,   // headline gắn liền cấu trúc bài / đã chốt — không xoay
     label: "Dấu hiệu / trường hợp bạn cần",
     bestFor: "Khách chưa biết mình có nhu cầu. Giúp họ tự nhận ra mình thuộc nhóm nên mua.",
@@ -93,6 +98,7 @@ KHÔNG dùng block bullet ✅ tính năng riêng — tính năng phải nằm tr
   },
   {
     key: "sai_lam",
+    enabled: false,        // chưa bật — chờ chủ dự án duyệt
     headlineFixed: true,   // headline gắn liền cấu trúc bài / đã chốt — không xoay
     label: "Sai lầm thường gặp",
     bestFor: "Khách đang tự xử lý bằng cách sai/kém hiệu quả, cần chỉ ra rồi mới bán.",
@@ -108,6 +114,7 @@ KHÔNG dùng block bullet ✅ tính năng riêng — tính năng phải nằm tr
   },
   {
     key: "huong_dan",
+    enabled: false,        // chưa bật — chờ chủ dự án duyệt
     headlineFixed: true,   // headline gắn liền cấu trúc bài / đã chốt — không xoay
     label: "Hướng dẫn dùng",
     bestFor: "Sản phẩm khách sợ 'mua về không biết dùng': dung dịch, thiết bị có thao tác.",
@@ -130,6 +137,7 @@ KHÔNG dùng block bullet ✅ tính năng — tính năng thể hiện qua các 
   },
   {
     key: "trai_nghiem_theo_moc",
+    enabled: false,        // chưa bật — chờ chủ dự án duyệt
     headlineFixed: true,   // headline gắn liền cấu trúc bài / đã chốt — không xoay
     label: "Trải nghiệm theo mốc thời gian",
     bestFor: "Khách phân vân dùng lâu có xuống không, mua về rồi bỏ xó không.",
@@ -175,6 +183,7 @@ Mọi câu viết ở thể KHẲNG ĐỊNH TRỰC TIẾP, chủ ngữ là hiệ
   // Đừng thêm lại nếu chưa hỏi.
   {
     key: "thong_so",
+    enabled: false,        // chưa bật — chờ chủ dự án duyệt
     headlineFixed: true,   // headline gắn liền cấu trúc bài / đã chốt — không xoay
     label: "Thiên thông số kỹ thuật",
     bestFor: "Khách lý trí, đã hiểu nhu cầu, đang so kỹ trước khi chốt.",
@@ -261,6 +270,12 @@ export const HEADLINE_KEYS = HEADLINE_STYLES.map((h) => h.key);
 export const FORMAT_KEYS = AD_FORMATS.map((f) => f.key);
 export const getFormat = (key) => AD_FORMATS.find((f) => f.key === key) || null;
 
+// Dạng ĐANG CHẠY. Chốt 2026-07-22: chỉ dùng "USP + gạch đầu dòng" — chủ dự án đã
+// duyệt lối viết này. 8 dạng còn lại giữ nguyên trong thư viện (đã viết xong, đã
+// test) để bật lại từng dạng khi duyệt thêm — chỉ cần đổi enabled: true.
+export const ENABLED_FORMATS = AD_FORMATS.filter((f) => f.enabled);
+export const ENABLED_KEYS = ENABLED_FORMATS.map((f) => f.key);
+
 // Băm chuỗi ổn định (FNV-1a 32-bit). Cùng chuỗi → cùng số, ở mọi máy, mọi lần chạy.
 export function hashSeed(str) {
   let h = 0x811c9dc5;
@@ -284,16 +299,21 @@ export function hashSeed(str) {
  * @param {string} o.seed    khoá ổn định (vd mã sản phẩm) — đổi seed thì đổi điểm bắt đầu
  * @param {number} o.rotate  số thứ tự trong lô (0,1,2…) — đẩy cửa sổ chọn đi
  * @param {number} o.count   số dạng cần lấy
- * @param {string[]} o.allowed  giới hạn trong các dạng này (bỏ trống = tất cả)
+ * @param {string[]} o.allowed  giới hạn trong các dạng này (bỏ trống = các dạng ĐANG BẬT)
  */
 export function pickFormats({ seed = "", rotate = 0, count = 3, allowed = null } = {}) {
+  // Bỏ trống allowed → chỉ lấy dạng đang bật. Truyền allowed = chỉ định tay,
+  // tôn trọng đúng danh sách đó kể cả dạng đang tắt (để thử nghiệm).
   const pool = (Array.isArray(allowed) && allowed.length
     ? AD_FORMATS.filter((f) => allowed.includes(f.key))
-    : AD_FORMATS);
+    : ENABLED_FORMATS);
   if (!pool.length) return [];
 
-  const n = Math.max(1, Math.min(Number(count) || 1, pool.length));
-  const start = (hashSeed(seed) + (Number(rotate) || 0) * n) % pool.length;
+  // Xin nhiều hơn số dạng có → lặp lại dạng cho đủ. Chấp nhận được vì KIỂU TIÊU
+  // ĐỀ xoay riêng theo từng variant, nên 3 bài cùng dạng vẫn khác tiêu đề và
+  // khác góc mở bài. Lúc chỉ bật 1 dạng thì đây là hành vi mong muốn.
+  const n = Math.max(1, Number(count) || 1);
+  const start = (hashSeed(seed) + (Number(rotate) || 0) * Math.min(n, pool.length)) % pool.length;
   const out = [];
   for (let i = 0; i < n; i++) out.push(pool[(start + i) % pool.length]);
   return out;

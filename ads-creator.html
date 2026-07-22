@@ -2211,7 +2211,7 @@ function AdsCreatorPanel() {
                   onChange={e => setAiStyle(e.target.value)}
                   className="w-full border border-amber-300 rounded px-2 py-1.5 text-xs bg-white"
                 >
-                  <option value="">🎲 Tự xoay — mỗi lần bấm ra 3 dạng khác nhau</option>
+                  <option value="">🎲 Tự xoay — mỗi lần bấm đổi kiểu tiêu đề</option>
                   {aiFormats.map(f => (
                     <option key={f.key} value={f.key}>{f.label}</option>
                   ))}
@@ -2219,7 +2219,7 @@ function AdsCreatorPanel() {
                 <p className="text-[10px] text-amber-700 mt-1 italic">
                   {aiStyle
                     ? (aiFormats.find(f => f.key === aiStyle) || {}).bestFor || ""
-                    : "Mỗi dạng có khung bài khác hẳn (kể chuyện, hỏi-đáp, trước/sau, hướng dẫn…), không chỉ khác giọng văn. Chọn một dạng cụ thể nếu bạn đã biết muốn gì."}
+                    : "Hiện chỉ chạy dạng đã được duyệt. Mỗi lần bấm, tiêu đề đổi sang một kiểu khác (vấn đề + chốt hạ, số người đã mua, câu hỏi, gọi thẳng nhóm khách…)."}
                 </p>
               </div>
             </div>

@@ -7,7 +7,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   AD_FORMATS, FORMAT_KEYS, getFormat, hashSeed, pickFormats,
-  HEADLINE_STYLES, pickHeadlineStyle,
+  HEADLINE_STYLES, pickHeadlineStyle, ENABLED_KEYS,
 } from "../functions/lib/ad-formats.js";
 import { SYSTEM_PROMPT, buildUserPrompt } from "../functions/lib/ad-prompts.js";
 import { getProduct, PRODUCTS } from "../functions/lib/product-catalog.js";
@@ -33,18 +33,20 @@ test("các dạng phải KHÁC KHUNG nhau, không chỉ khác giọng văn", () 
   assert.ok(camBullet.length >= 2, "cần vài dạng cấm hẳn bullet thì bố cục mới thật sự khác");
 });
 
-test("xoay vòng: 10 video liên tiếp ăn 10 dạng KHÁC nhau", () => {
+// Các test dưới bơm allowed = FORMAT_KEYS để kiểm CƠ CHẾ xoay vòng trên toàn thư
+// viện. Hiện chỉ 1 dạng đang bật, nhưng cơ chế phải còn đúng cho lúc bật thêm.
+test("xoay vòng: N video liên tiếp ăn N dạng KHÁC nhau", () => {
   const dùng = [];
   for (let i = 0; i < AD_FORMATS.length; i++) {
-    const [f] = pickFormats({ seed: "D1:Noma", rotate: i, count: 1 });
+    const [f] = pickFormats({ seed: "D1:Noma", rotate: i, count: 1, allowed: FORMAT_KEYS });
     dùng.push(f.key);
   }
   assert.equal(new Set(dùng).size, AD_FORMATS.length, "không được lặp dạng trong 1 vòng");
 });
 
 test("lấy 3 dạng 1 lượt thì 3 dạng đó khác nhau, và lượt sau khác lượt trước", () => {
-  const lượt1 = pickFormats({ seed: "D1", rotate: 1, count: 3 }).map((f) => f.key);
-  const lượt2 = pickFormats({ seed: "D1", rotate: 2, count: 3 }).map((f) => f.key);
+  const lấy = (r) => pickFormats({ seed: "D1", rotate: r, count: 3, allowed: FORMAT_KEYS }).map((f) => f.key);
+  const lượt1 = lấy(1), lượt2 = lấy(2);
   assert.equal(new Set(lượt1).size, 3, "3 variant cùng lượt phải khác dạng nhau");
   assert.equal(lượt1.some((k) => lượt2.includes(k)), false, "bấm lại phải ra bộ dạng mới");
 });
@@ -58,16 +60,30 @@ test("deterministic: cùng input luôn ra cùng dạng (chạy lại lô cũ kh�
 });
 
 test("2 sản phẩm khác nhau không mở màn cùng một dạng", () => {
-  const d1 = pickFormats({ seed: "D1", rotate: 0, count: 1 })[0].key;
-  const dr1 = pickFormats({ seed: "DR1", rotate: 0, count: 1 })[0].key;
-  const noma = pickFormats({ seed: "NOMA911", rotate: 0, count: 1 })[0].key;
-  assert.equal(new Set([d1, dr1, noma]).size >= 2, true);
+  const mo = (s) => pickFormats({ seed: s, rotate: 0, count: 1, allowed: FORMAT_KEYS })[0].key;
+  assert.equal(new Set([mo("D1"), mo("DR1"), mo("NOMA911")]).size >= 2, true);
 });
 
-test("allowed: chặn được dạng không hợp với 1 sản phẩm", () => {
-  const got = pickFormats({ seed: "x", rotate: 0, count: 3, allowed: ["cau_chuyen", "hoi_dap"] });
-  assert.equal(got.length, 2, "xin 3 mà chỉ cho 2 dạng thì trả 2, không lặp cho đủ số");
+test("allowed: chỉ định tay thì dùng đúng danh sách đó, kể cả dạng đang tắt", () => {
+  const got = pickFormats({ seed: "x", rotate: 0, count: 2, allowed: ["cau_chuyen", "hoi_dap"] });
   assert.equal(got.every((f) => ["cau_chuyen", "hoi_dap"].includes(f.key)), true);
+});
+
+test("chỉ 'USP + gạch đầu dòng' đang chạy; 8 dạng kia giữ lại chờ duyệt", () => {
+  assert.deepEqual(ENABLED_KEYS, ["usp_bullet"], "chốt 2026-07-22: chỉ 1 dạng chạy");
+  assert.equal(AD_FORMATS.length, 9, "8 dạng kia vẫn nằm trong thư viện, không xoá");
+  // Không truyền allowed → chỉ được lấy dạng đang bật.
+  for (let i = 0; i < 5; i++) {
+    const [f] = pickFormats({ seed: "Noma 911", rotate: i, count: 1 });
+    assert.equal(f.key, "usp_bullet", `lượt ${i} phải là dạng đã duyệt`);
+  }
+});
+
+test("chỉ 1 dạng bật mà xin 3 variant → lặp dạng nhưng KHÁC kiểu tiêu đề", () => {
+  const got = pickFormats({ seed: "Noma 911", rotate: 0, count: 3 });
+  assert.equal(got.length, 3, "vẫn trả đủ 3 lựa chọn cho người dùng");
+  const kieu = got.map((_, i) => pickHeadlineStyle({ seed: "Noma 911", rotate: 0, offset: i }).key);
+  assert.equal(new Set(kieu).size, 3, "3 variant phải ra 3 kiểu tiêu đề khác nhau");
 });
 
 test("prompt hệ thống: giữ nguyên luật bất di bất dịch", () => {
@@ -314,7 +330,7 @@ test("dạng bài và kiểu headline không đi cùng nhịp", () => {
   // Nếu cùng nhịp thì dạng A luôn dính kiểu headline A → lại thành cố định.
   const cap = new Set();
   for (let i = 0; i < 9; i++) {
-    const f = pickFormats({ seed: "Noma 911", rotate: i, count: 1 })[0].key;
+    const f = pickFormats({ seed: "Noma 911", rotate: i, count: 1, allowed: FORMAT_KEYS })[0].key;
     const h = pickHeadlineStyle({ seed: "Noma 911", rotate: i }).key;
     cap.add(`${f}|${h}`);
   }
