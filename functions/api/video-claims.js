@@ -56,10 +56,14 @@ export function videoKeyFromLink(link) {
   return /^\d+$/.test(s) ? s : null;
 }
 
-// Tách danh sách xin nhận thành: được nhận / vướng người khác.
-// activeByKey: Map(video_key → { staff }) của các dòng ĐANG giữ (released_at IS NULL).
-// Video mình đang giữ sẵn thì vẫn tính là "được nhận" (bấm lại lần 2 không lỗi).
-export function partitionClaims(requested, activeByKey, staff) {
+// Đối chiếu danh sách xin nhận với CHỦ SỞ HỮU THẬT đọc lại SAU khi ghi.
+// ownersByKey: Map(video_key → { staff }) các dòng đang giữ (released_at IS NULL).
+//
+// Cố ý chấm điểm SAU khi ghi chứ không phải trước: hỏi trước rồi mới ghi thì giữa
+// 2 bước có khe hở, 2 người bấm cùng lúc đều thấy video trống và đều tưởng mình
+// nhận được. Để SQL quyết ai thắng rồi đọc lại thì kết quả luôn đúng, dù bao
+// nhiêu người bấm cùng lúc.
+export function resolveOwners(requested, ownersByKey, staff) {
   const claimed = [];
   const conflicts = [];
   const seen = new Set();
@@ -67,12 +71,11 @@ export function partitionClaims(requested, activeByKey, staff) {
     const key = item && item.key;
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    const held = activeByKey.get(key);
-    if (held && held.staff !== staff) {
-      conflicts.push({ key, staff: held.staff, staff_name: STAFF[held.staff] || held.staff });
-    } else {
-      claimed.push(item);
-    }
+    const held = ownersByKey.get(key);
+    if (held && held.staff === staff) claimed.push(key);
+    else if (held) conflicts.push({ key, staff: held.staff, staff_name: STAFF[held.staff] || held.staff });
+    // Không có chủ sau khi ghi = ghi hụt → không báo nhận được, để lần sau bấm lại.
+    else conflicts.push({ key, staff: null, staff_name: "ghi hụt, bấm lại" });
   }
   return { claimed, conflicts };
 }
@@ -172,29 +175,39 @@ export async function onRequestPost(context) {
   if (guard.err) return guard.err;
 
   try {
-    const active = await activeClaimsFor(env.DB, videos.map((v) => v.key));
-    const { claimed, conflicts } = partitionClaims(videos, active, staff);
+    const now = Math.floor(Date.now() / 1000);
+    // Upsert CÓ ĐIỀU KIỆN — chính SQL là chỗ phân xử ai thắng, không phải app:
+    //   • chưa có dòng            → INSERT, mình nhận.
+    //   • có dòng đã gỡ           → WHERE đúng → ghi đè, mình nhận.
+    //   • có dòng người khác giữ  → WHERE sai → không làm gì, KHÔNG lỗi.
+    //   • có dòng chính mình giữ  → WHERE sai → giữ nguyên mốc claimed_at cũ
+    //                               (bấm lại không được kéo dài hạn gỡ 60s).
+    // Nhờ vậy 2 người bấm cùng một video cùng lúc vẫn chỉ 1 người thắng.
+    const stmt = env.DB.prepare(
+      `INSERT INTO video_claims
+         (video_key, staff, link, title, product, shop, claimed_at, claimed_by, released_at, released_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)
+       ON CONFLICT(video_key) DO UPDATE SET
+         staff = excluded.staff, link = excluded.link, title = excluded.title,
+         product = excluded.product, shop = excluded.shop,
+         claimed_at = excluded.claimed_at, claimed_by = excluded.claimed_by,
+         released_at = NULL, released_by = NULL
+       WHERE video_claims.released_at IS NOT NULL`
+    );
+    await env.DB.batch(videos.map((v) => stmt.bind(
+      v.key, staff, v.link, v.title, v.product, v.shop, now, guard.id?.email || null
+    )));
 
-    if (claimed.length) {
-      const now = Math.floor(Date.now() / 1000);
-      // Đã lọc hết dòng của người khác ở trên → OR REPLACE chỉ đụng dòng trống
-      // hoặc dòng của chính mình. Không cần upsert điều kiện cho rối.
-      const stmt = env.DB.prepare(
-        `INSERT OR REPLACE INTO video_claims
-           (video_key, staff, link, title, product, shop, claimed_at, claimed_by, released_at, released_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)`
-      );
-      await env.DB.batch(claimed.map((v) => stmt.bind(
-        v.key, staff, v.link, v.title, v.product, v.shop, now, guard.id?.email || null
-      )));
-    }
+    // Đọc lại để biết ai THẬT SỰ đang giữ từng video sau khi ghi.
+    const owners = await activeClaimsFor(env.DB, videos.map((v) => v.key));
+    const { claimed, conflicts } = resolveOwners(videos, owners, staff);
 
     return json({
       ok: true,
       staff,
       staff_name: STAFF[staff],
       release_window_s: RELEASE_WINDOW_S,
-      claimed: claimed.map((v) => v.key),
+      claimed,
       conflicts,
     });
   } catch (err) {

@@ -85,6 +85,37 @@ test("gỡ nhận: người khác không gỡ hộ được, chính chủ gỡ x
   assert.equal((await h.list()).body.claims[0].staff, "PHUONG_NAM");
 });
 
+test("2 người bấm nhận CÙNG LÚC cùng 1 video → đúng 1 người thắng", { skip }, async () => {
+  const h = harness();
+  const ids = ["111", "222", "333", "444", "555"];
+  // Không await lần lượt: cả 2 request chạy xen kẽ nhau như 2 người bấm cùng giây.
+  const [duy, nam] = await Promise.all([h.claim("DUY", ids), h.claim("PHUONG_NAM", ids)]);
+
+  for (const id of ids) {
+    const cả2 = duy.body.claimed.includes(id) && nam.body.claimed.includes(id);
+    assert.equal(cả2, false, `video ${id} không được báo "nhận được" cho cả hai người`);
+    assert.equal(
+      duy.body.claimed.includes(id) || nam.body.claimed.includes(id), true,
+      `video ${id} phải có đúng 1 người nhận được`
+    );
+  }
+  // Sổ là nguồn sự thật: mỗi video đúng 1 dòng, và khớp với người được báo thắng.
+  const owners = new Map((await h.list()).body.claims.map((c) => [c.video_key, c.staff]));
+  assert.equal(owners.size, ids.length, "mỗi video chỉ 1 dòng trong sổ");
+  for (const id of duy.body.claimed) assert.equal(owners.get(id), "DUY");
+  for (const id of nam.body.claimed) assert.equal(owners.get(id), "PHUONG_NAM");
+});
+
+test("bấm nhận lại video mình đang giữ KHÔNG kéo dài hạn gỡ 60s", { skip }, async () => {
+  const h = harness();
+  await h.claim("DUY", ["111"]);
+  const mốc1 = (await h.list()).body.claims[0].claimed_at;
+  await new Promise((r) => setTimeout(r, 1100));
+  const lại = await h.claim("DUY", ["111"]);
+  assert.deepEqual(lại.body.claimed, ["111"], "vẫn báo là của mình");
+  assert.equal((await h.list()).body.claims[0].claimed_at, mốc1, "mốc nhận giữ nguyên, không gia hạn");
+});
+
 test("GET trả kèm hạn gỡ để UI đếm ngược đúng", { skip }, async () => {
   const h = harness();
   await h.claim("DUY", ["111"]);

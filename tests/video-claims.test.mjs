@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  STAFF, RELEASE_WINDOW_S, videoKeyFromLink, partitionClaims, canRelease, normalizeVideo,
+  STAFF, RELEASE_WINDOW_S, videoKeyFromLink, resolveOwners, canRelease, normalizeVideo,
 } from "../functions/api/video-claims.js";
 
 const LINK = "https://www.tiktok.com/@toanmanshop/video/7106594312292453675";
@@ -23,28 +23,34 @@ test("cùng 1 video ở 2 shop/2 link khác nhau vẫn là MỘT khoá → khôn
   assert.equal(a.key, b.key);
 });
 
-test("video chưa ai nhận → nhận được; video người khác giữ → vào conflicts, KHÔNG ghi đè", () => {
-  const active = new Map([["222", { staff: "PHUONG_NAM" }]]);
-  const { claimed, conflicts } = partitionClaims(
-    [{ key: "111" }, { key: "222" }, { key: "333" }], active, "DUY"
+test("chấm điểm theo chủ sở hữu THẬT sau khi ghi: của mình → nhận, của người khác → conflict", () => {
+  const owners = new Map([["111", { staff: "DUY" }], ["222", { staff: "PHUONG_NAM" }], ["333", { staff: "DUY" }]]);
+  const { claimed, conflicts } = resolveOwners(
+    [{ key: "111" }, { key: "222" }, { key: "333" }], owners, "DUY"
   );
-  assert.deepEqual(claimed.map((c) => c.key), ["111", "333"]);
+  assert.deepEqual(claimed, ["111", "333"]);
   assert.equal(conflicts.length, 1);
   assert.equal(conflicts[0].key, "222");
   assert.equal(conflicts[0].staff, "PHUONG_NAM");
   assert.equal(conflicts[0].staff_name, "Nam", "báo lỗi phải hiện TÊN người giữ, không phải mã");
 });
 
-test("bấm lại video CHÍNH MÌNH đang giữ → vẫn cho, không báo trùng", () => {
-  const active = new Map([["111", { staff: "DUY" }]]);
-  const { claimed, conflicts } = partitionClaims([{ key: "111" }], active, "DUY");
-  assert.deepEqual(claimed.map((c) => c.key), ["111"]);
+test("bấm lại video CHÍNH MÌNH đang giữ → vẫn tính là nhận, không báo trùng", () => {
+  const { claimed, conflicts } = resolveOwners([{ key: "111" }], new Map([["111", { staff: "DUY" }]]), "DUY");
+  assert.deepEqual(claimed, ["111"]);
   assert.equal(conflicts.length, 0);
 });
 
-test("gửi trùng khoá trong 1 lần → chỉ ghi 1 lần", () => {
-  const { claimed } = partitionClaims([{ key: "111" }, { key: "111" }], new Map(), "DUY");
-  assert.equal(claimed.length, 1);
+test("ghi hụt (sau khi ghi vẫn không có chủ) → KHÔNG báo nhận được", () => {
+  const { claimed, conflicts } = resolveOwners([{ key: "111" }], new Map(), "DUY");
+  assert.deepEqual(claimed, [], "không được báo thành công khi DB không có dòng nào");
+  assert.equal(conflicts.length, 1);
+});
+
+test("gửi trùng khoá trong 1 lần → chỉ tính 1 lần", () => {
+  const owners = new Map([["111", { staff: "DUY" }]]);
+  const { claimed } = resolveOwners([{ key: "111" }, { key: "111" }], owners, "DUY");
+  assert.deepEqual(claimed, ["111"]);
 });
 
 test("gỡ nhận: chính chủ, trong 60s đầu → được", () => {

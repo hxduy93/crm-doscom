@@ -768,19 +768,27 @@ function AdsCreatorPanel() {
     return m ? m[1] : String(Date.now())
   }
 
-  // Dịch vụ giải link chặn 1 request/giây, tính theo IP — 2 tab, 2 người cùng mạng,
-  // hay lượt chạy ngay trước đó đều tính chung. Dính thì đợi rồi thử lại chứ đừng
-  // bỏ luôn video (giải link nhanh, thử lại rẻ hơn nhiều so với bắt người dùng làm lại).
-  const resolveTikTok = async (link, tries = 3) => {
-    let lastMsg = "không giải được link"
+  // Dịch vụ giải link chặn 1 request/giây và tính THEO IP — cả văn phòng chung 1 IP
+  // nên Duy với Nam chạy cùng lúc là đụng nhau chắc chắn. Dính thì đợi rồi thử lại,
+  // đừng bỏ video (giải link rẻ, bắt người dùng làm lại cả lô mới đắt).
+  const RATE_LIMIT_RE = /limit|rate|too many|quá tải/i
+  const jitter = (base, spread) => base + Math.floor(Math.random() * spread)
+
+  const resolveTikTok = async (link, tries = 5) => {
+    let lastMsg = "không giải được link", rateLimited = false
     for (let t = 0; t < tries; t++) {
-      if (t > 0) await new Promise(r => setTimeout(r, 1500 * t))
+      // Lùi dần + xóc ngẫu nhiên: 2 máy cùng dính rồi cùng đợi đúng 1500ms thì
+      // lần thử lại lại va nhau tiếp. Xóc lệch ra mới tách được hai bên.
+      if (t > 0) await new Promise(r => setTimeout(r, jitter(1100 * t, 900)))
       const rj = await (await fetch(TT_RESOLVER + encodeURIComponent(link))).json()
       if (rj.code === 0 && rj.data) return rj.data
       lastMsg = String(rj.msg || lastMsg)
-      if (!/limit|rate|too many/i.test(lastMsg)) break   // lỗi thật (video riêng tư, bị xoá…) → thôi
+      rateLimited = RATE_LIMIT_RE.test(lastMsg)
+      if (!rateLimited) break   // lỗi thật (video riêng tư, bị xoá…) → thử lại vô ích
     }
-    throw new Error(lastMsg)
+    throw new Error(rateLimited
+      ? "dịch vụ giải link đang quá tải (có thể người khác đang lấy video cùng lúc) — đợi một lát rồi bấm lại"
+      : lastMsg)
   }
 
   // Chốt chặn chạy trùng: hàng đợi tới bằng CẢ HAI đường (sessionStorage lúc iframe
@@ -811,8 +819,9 @@ function AdsCreatorPanel() {
       const v = vids[i]
       setTtFetch(s => ({ ...s, done: i, msg: `Đang lấy link ${i + 1}/${vids.length}: ${String(v.title || "").slice(0, 42)}…` }))
       try {
-        // Giãn giữa các video cho khớp hạn ngạch 1 request/giây.
-        if (i > 0) await new Promise(r => setTimeout(r, 1300))
+        // Giãn giữa các video cho khớp hạn ngạch 1 request/giây. Xóc ngẫu nhiên để
+        // 2 người chạy song song không trôi vào cùng một nhịp rồi va nhau mọi lượt.
+        if (i > 0) await new Promise(r => setTimeout(r, jitter(1300, 600)))
         const data = await resolveTikTok(v.link)
         // Ưu tiên bản HD: byte không còn đi qua trình duyệt/Cloudflare nên nặng
         // cũng không sao. Cả hai bản đều KHÔNG watermark.
