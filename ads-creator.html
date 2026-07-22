@@ -15,7 +15,7 @@
 <script type="text/babel" data-presets="react">
 // useEffect dùng cho việc nhận hàng đợi video từ menu TikTok Shop.
 // (Thiếu nó thì cả trang trắng vì ReferenceError ngay lúc mount.)
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 // Icon (copy y nguyên cơ chế makeIcon của dashboard nguồn)
 const makeIcon = (emoji) => ({ className = "" } = {}) =>
   React.createElement("span", { className: "inline-flex items-center justify-center " + className, style: { fontSize: "1em", lineHeight: 1 } }, emoji);
@@ -768,9 +768,40 @@ function AdsCreatorPanel() {
     return m ? m[1] : String(Date.now())
   }
 
+  // Dịch vụ giải link chặn 1 request/giây, tính theo IP — 2 tab, 2 người cùng mạng,
+  // hay lượt chạy ngay trước đó đều tính chung. Dính thì đợi rồi thử lại chứ đừng
+  // bỏ luôn video (giải link nhanh, thử lại rẻ hơn nhiều so với bắt người dùng làm lại).
+  const resolveTikTok = async (link, tries = 3) => {
+    let lastMsg = "không giải được link"
+    for (let t = 0; t < tries; t++) {
+      if (t > 0) await new Promise(r => setTimeout(r, 1500 * t))
+      const rj = await (await fetch(TT_RESOLVER + encodeURIComponent(link))).json()
+      if (rj.code === 0 && rj.data) return rj.data
+      lastMsg = String(rj.msg || lastMsg)
+      if (!/limit|rate|too many/i.test(lastMsg)) break   // lỗi thật (video riêng tư, bị xoá…) → thôi
+    }
+    throw new Error(lastMsg)
+  }
+
+  // Chốt chặn chạy trùng: hàng đợi tới bằng CẢ HAI đường (sessionStorage lúc iframe
+  // vừa nạp + postMessage 900ms sau). Không chặn thì cùng 1 lô chạy 2 lần cách nhau
+  // ~900ms → dính đúng hạn ngạch 1 request/giây, và lượt sau ghi đè kết quả lượt trước.
+  const ingestedAt = useRef(0)
+  const ingesting = useRef(false)
+
   const ingestTikTokQueue = async (payload) => {
     const vids = (payload && payload.videos || []).filter(v => v && v.link)
     if (!vids.length) return
+    if (ingesting.current) return
+    const at = Number(payload && payload.at) || 0
+    if (at && at === ingestedAt.current) return   // đúng lô này chạy rồi
+    ingestedAt.current = at
+    ingesting.current = true
+    // finally: lỗi bất ngờ mà kẹt cờ thì cả phiên không nhận thêm được lô nào nữa.
+    try { await runTikTokIngest(vids) } finally { ingesting.current = false }
+  }
+
+  const runTikTokIngest = async (vids) => {
     setTtFetch({ busy: true, done: 0, total: vids.length, msg: "Đang lấy link video từ TikTok…", err: [] })
     setAutoResults([]); setAutoLog([]); setAutoExisting(null); setAutoScanMsg("")
 
@@ -780,22 +811,20 @@ function AdsCreatorPanel() {
       const v = vids[i]
       setTtFetch(s => ({ ...s, done: i, msg: `Đang lấy link ${i + 1}/${vids.length}: ${String(v.title || "").slice(0, 42)}…` }))
       try {
-        // Dịch vụ giải link chặn ở 1 request/giây → phải giãn ra, nếu không video
-        // thứ 2 trở đi ăn lỗi "Free Api Limit: 1 request/second".
+        // Giãn giữa các video cho khớp hạn ngạch 1 request/giây.
         if (i > 0) await new Promise(r => setTimeout(r, 1300))
-        const rj = await (await fetch(TT_RESOLVER + encodeURIComponent(v.link))).json()
-        if (rj.code !== 0 || !rj.data) throw new Error(rj.msg || "không giải được link")
+        const data = await resolveTikTok(v.link)
         // Ưu tiên bản HD: byte không còn đi qua trình duyệt/Cloudflare nên nặng
         // cũng không sao. Cả hai bản đều KHÔNG watermark.
-        const hd = !!rj.data.hdplay
-        const src = rj.data.hdplay || rj.data.play
+        const hd = !!data.hdplay
+        const src = data.hdplay || data.play
         if (!src) throw new Error("không có bản không watermark")
         // Có API trả đường dẫn tương đối (tikwm proxy) → chuẩn hoá thành link tuyệt
         // đối, vì lát nữa chính Facebook mới là bên đi tải.
         const url = /^https?:\/\//i.test(src) ? src : new URL(src, TT_ORIGIN).href
         // Tên file = id video → trùng với sổ uploaded_videos, quét trùng vẫn đúng.
         const name = ttVideoId(v.link) + ".mp4"
-        const size = Number((hd ? rj.data.hd_size : rj.data.size) || rj.data.size) || 0
+        const size = Number((hd ? data.hd_size : data.size) || data.size) || 0
         const product = slugFolder(v.product)
         ;(byProduct[product] = byProduct[product] || []).push({ name, url, size, remote: true })
       } catch (e) {
