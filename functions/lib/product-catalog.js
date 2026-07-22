@@ -172,44 +172,10 @@ export const PRODUCTS = {
     ],
   },
 
-  // ⚠️ CHƯA XÁC MINH ĐƯỢC (2026-07-22): doscom.vn không có trang bán bản Pro.
-  // Mọi thông số dưới đây (2K, màn 4 inch, WiFi dual-band, AI phân biệt người/thú
-  // cưng giảm báo giả 70%, pin dự phòng 4000mAh 8 giờ, loa 2W) hiện KHÔNG có nguồn
-  // đối chiếu. Trước khi chạy ads cho SP này, chủ dự án cần xác nhận lại từng số —
-  // sai số liệu trong ad là rủi ro khiếu nại và bị Facebook gỡ bài.
-  "DA8.1 Pro": {
-    name: "Camera DA8.1 Pro",
-    brand: "DOSCOM",
-    unverified: true,
-    fullName: "Camera an ninh video call 2 chiều DA8.1 Pro (bản nâng cấp)",
-    priceRange: "1.550.000đ",
-    category: "Camera an ninh gia đình kiêm video call - bản cao cấp",
-    usps: [
-      "Tất cả tính năng DA8.1 + nâng cấp chất lượng hình + pin dự phòng",
-      "Camera 2K (2560x1440) – sắc nét gấp 1.7 lần bản 1080P",
-      "Màn hình 4 inch – lớn hơn 40% so với bản thường, người lớn tuổi dễ nhìn mặt người gọi",
-      "WiFi dual-band 2.4GHz + 5GHz – video call không giật khi mạng đông thiết bị",
-      "AI phân biệt người / thú cưng – giảm báo giả tới 70%",
-      "Pin dự phòng 4000mAh – hoạt động 8 giờ khi mất điện",
-      "Loa 2W (gấp đôi bản thường) – tiếng to rõ trong phòng rộng",
-    ],
-    painPoints: [
-      "Gia đình có ông bà lớn tuổi cần màn hình lớn, hình nét để nhìn mặt con cháu",
-      "Nhà hay mất điện đột xuất, camera thường tắt theo khiến mất giám sát",
-      "Camera thường báo giả liên tục khi thú cưng di chuyển, phiền",
-      "Nhiều thiết bị WiFi trong nhà gây giật video call chất lượng cao",
-    ],
-    targetAudience: "Gia đình thu nhập khá có nhiều thế hệ, doanh nhân hay công tác, người mua biếu ba mẹ ở quê, gia đình có ông bà 60+",
-    tonePreferred: "Ấm áp + chất lượng cao, nhấn mạnh 'đáng tiền nâng cấp' cho gia đình quan trọng",
-    avoidWords: [
-      "giám sát lén", "theo dõi bí mật", "rình",
-    ],
-    fbPolicyNotes: "Tập trung vào kết nối gia đình + chất lượng cao cho ông bà. KHÔNG ám chỉ theo dõi/giám sát lén.",
-    provenAngles: [
-      "CAMERA CẦN THIẾT CHO GIA ĐÌNH CÓ NGƯỜI GIÀ VÀ TRẺ NHỎ — bản Pro có màn 4 inch to hơn giúp ông bà lớn tuổi dễ nhìn mặt con cháu khi video call, pin dự phòng 8h giữ kết nối cả khi mất điện. (Angle đã thành công 2025)",
-      "QUÀ BIẾU BA MẸ Ở QUÊ — DA8.1 Pro như món quà thiết thực cho ba mẹ không dùng smartphone mà vẫn video call được với con cháu ở xa. (Angle đã thành công 2025)",
-    ],
-  },
+  // DA8.1 Pro đã NGỪNG BÁN (chủ dự án xác nhận 2026-07-22) → gỡ khỏi catalog để
+  // không sinh được content quảng cáo mới. Pixel "DA8.1 Pro" và dữ liệu doanh thu
+  // lịch sử vẫn giữ nguyên ở ads-creator.html và index.html — campaign cũ còn tham
+  // chiếu, xoá đi là hỏng báo cáo cũ.
 };
 
 export function getProduct(key) {

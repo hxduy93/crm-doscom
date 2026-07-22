@@ -57,7 +57,8 @@ Phần yêu cầu sẽ ghi rõ sản phẩm này có dòng cam kết gì, hoặc
 Người dùng không cung cấp → BỎ HẲN phần khuyến mãi, chỉ giữ dòng bảo hành.
 
 **Danh sách quà tặng CẤM tự ý chèn** (không phải quà mặc định của bất kỳ SP nào —
-kể cả camera DA8.1 / DA8.1 Pro): thẻ nhớ mọi dung lượng, tai nghe, dây sạc/cáp
+kể cả camera DA8.1 — thẻ nhớ là TÙY CHỌN CÓ TRẢ TIỀN, không phải quà tặng):
+thẻ nhớ mọi dung lượng, tai nghe, dây sạc/cáp
 Type-C/adapter, hộp đựng/bao da/case, pin dự phòng, khăn microfiber (trừ Noma nếu
 người dùng xác nhận), giá treo/giá đỡ, chân đế, SIM 4G, và mọi phụ kiện khác.
 

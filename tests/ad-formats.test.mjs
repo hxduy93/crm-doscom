@@ -138,7 +138,7 @@ test("mọi sản phẩm đều khai thương hiệu — không để endpoint �
     assert.ok(BRANDS[p.brand], `sản phẩm ${key} khai brand lạ: ${p.brand}`);
   }
   assert.equal(PRODUCTS["Noma 911"].brand, "NOMA");
-  for (const k of ["D1", "DR1", "DA8.1", "DA8.1 Pro"]) {
+  for (const k of ["D1", "DR1", "DA8.1"]) {
     assert.equal(PRODUCTS[k].brand, "DOSCOM", `${k} ký tên Doscom`);
   }
 });
@@ -230,12 +230,17 @@ test("có bảng thông số → prompt KHOÁ mọi con số vào bảng đó", 
   assert.match(p, /nặng 41 g/);
 });
 
+test("DA8.1 Pro đã ngừng bán → không sinh được content quảng cáo nữa", () => {
+  assert.equal(getProduct("DA8.1 Pro"), null, "gỡ khỏi catalog thì endpoint trả 400");
+  assert.equal("DA8.1 Pro" in PRODUCTS, false);
+});
+
 test("SP chưa có bảng thông số → prompt cấm tự chế thông số", () => {
-  const pro = getProduct("DA8.1 Pro");
-  assert.equal(pro.unverified, true, "doscom.vn không có trang bán bản Pro");
-  assert.ok(!pro.specs, "chưa đối chiếu được thì không dựng bảng thông số giả");
+  // Noma 911: số liệu nằm trong USP (100ml, 2-3 xe), chưa dựng bảng specs riêng.
+  const noma = getProduct("Noma 911");
+  assert.ok(!noma.specs, "chưa đối chiếu bảng thông số thì không dựng bảng giả");
   const p = buildUserPrompt({
-    product: pro, format: "x", formatLabel: "x", cta: "x",
+    product: noma, format: "x", formatLabel: "x", cta: "x",
     notes: "", promotion: "", formats: [getFormat("usp_bullet")],
   });
   assert.match(p, /CHƯA có bảng thông số đối chiếu/);
