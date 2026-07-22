@@ -4,6 +4,7 @@
 export const PRODUCTS = {
   "D1": {
     name: "Máy dò D1",
+    brand: "DOSCOM",
     fullName: "Máy dò thiết bị nghe lén D1",
     priceRange: "2.500.000đ",
     category: "An ninh - bảo mật",
@@ -29,6 +30,7 @@ export const PRODUCTS = {
 
   "DR1": {
     name: "Máy ghi âm DR1",
+    brand: "DOSCOM",
     fullName: "Máy ghi âm siêu nhỏ DR1",
     priceRange: "1.300.000đ",
     category: "Thiết bị ghi âm chuyên dụng",
@@ -101,6 +103,7 @@ export const PRODUCTS = {
 
   "DA8.1": {
     name: "Camera DA8.1",
+    brand: "DOSCOM",
     fullName: "Camera an ninh video call 2 chiều DA8.1",
     priceRange: "1.250.000đ",
     category: "Camera an ninh gia đình kiêm video call",
@@ -132,6 +135,7 @@ export const PRODUCTS = {
 
   "DA8.1 Pro": {
     name: "Camera DA8.1 Pro",
+    brand: "DOSCOM",
     fullName: "Camera an ninh video call 2 chiều DA8.1 Pro (bản nâng cấp)",
     priceRange: "1.550.000đ",
     category: "Camera an ninh gia đình kiêm video call - bản cao cấp",

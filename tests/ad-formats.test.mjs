@@ -9,7 +9,8 @@ import {
   AD_FORMATS, FORMAT_KEYS, getFormat, hashSeed, pickFormats,
 } from "../functions/lib/ad-formats.js";
 import { SYSTEM_PROMPT, buildUserPrompt } from "../functions/lib/ad-prompts.js";
-import { getProduct } from "../functions/lib/product-catalog.js";
+import { getProduct, PRODUCTS } from "../functions/lib/product-catalog.js";
+import { BRANDS, footerFor } from "../functions/lib/ad-brands.js";
 
 test("mỗi dạng có đủ khung bài riêng, không dạng nào rỗng", () => {
   assert.ok(AD_FORMATS.length >= 8, "cần đủ dạng để 1 lô video không phải lặp khung");
@@ -70,16 +71,17 @@ test("allowed: chặn được dạng không hợp với 1 sản phẩm", () => 
 
 test("prompt hệ thống: giữ nguyên luật bất di bất dịch", () => {
   for (const phải_có of [
-    "Bảo hành 12 tháng",
-    "1900638597",
     "{{URL}}",
     "TUYỆT ĐỐI KHÔNG tự bịa",
     "thẻ nhớ mọi dung lượng",   // danh sách quà tặng cấm tự chèn
-    "doscom.vn",
     "Nhân xưng",                // luật FB: chỉ xưng "bạn"
+    "KHÔNG tự nới rộng phạm vi", // cam kết: dùng đúng chữ được cấp
   ]) {
     assert.ok(SYSTEM_PROMPT.includes(phải_có), `prompt mất luật: ${phải_có}`);
   }
+  // Hotline/website nay nằm ở footer THEO THƯƠNG HIỆU, không ghi cứng trong prompt chung.
+  assert.match(footerFor("DOSCOM"), /1900638597/);
+  assert.match(footerFor("DOSCOM"), /doscom\.vn/);
   // Và phải nói rõ khung bài KHÔNG cố định — đây là điểm sửa cốt lõi.
   assert.match(SYSTEM_PROMPT, /KHÔNG CÓ KHUNG MẶC ĐỊNH/);
 });
@@ -128,6 +130,61 @@ test("Noma 911: prompt cấm hẳn dòng bảo hành + cấp quy trình dùng th
   assert.equal(p.includes("🎁 Bảo hành 12 tháng"), false, "không được lọt dòng bảo hành vào prompt");
   assert.match(p, /QUY TRÌNH SỬ DỤNG CHÍNH THỨC/);
   assert.match(p, /Bóp dung dịch lên bề mặt kính/, "dùng thao tác chính thức, không để AI bịa");
+});
+
+test("mọi sản phẩm đều khai thương hiệu — không để endpoint đoán", () => {
+  for (const [key, p] of Object.entries(PRODUCTS)) {
+    assert.ok(p.brand, `sản phẩm ${key} chưa khai brand`);
+    assert.ok(BRANDS[p.brand], `sản phẩm ${key} khai brand lạ: ${p.brand}`);
+  }
+  assert.equal(PRODUCTS["Noma 911"].brand, "NOMA");
+  for (const k of ["D1", "DR1", "DA8.1", "DA8.1 Pro"]) {
+    assert.equal(PRODUCTS[k].brand, "DOSCOM", `${k} ký tên Doscom`);
+  }
+});
+
+test("footer NOMA khác footer Doscom, không lẫn pháp nhân", () => {
+  const noma = footerFor("NOMA"), doscom = footerFor("DOSCOM");
+  assert.match(noma, /Công ty TNHH Noma Auto/);
+  assert.match(noma, /noma\.vn/);
+  assert.equal(/Doscom/i.test(noma), false, "footer NOMA không được dính tên Doscom");
+
+  assert.match(doscom, /Công ty TNHH Doscom Holdings/);
+  assert.match(doscom, /doscom\.vn/);
+
+  // Hotline + địa chỉ dùng chung (chủ dự án xác nhận), kẻ ngang giữ đúng 26 ký tự.
+  for (const f of [noma, doscom]) {
+    assert.match(f, /1900638597/);
+    assert.match(f, /38B Triệu Việt Vương/);
+    assert.match(f, /KĐT City Land/);
+    assert.equal(f.split("\n")[0], "━".repeat(26), "kẻ ngang phải đúng 26 ký tự ━");
+  }
+});
+
+test("prompt bài NOMA cấp footer NOMA và cấm gắn 'của Doscom'", () => {
+  const p = buildUserPrompt({
+    product: getProduct("Noma 911"), format: "x", formatLabel: "x", cta: "x",
+    notes: "", promotion: "", formats: [getFormat("usp_bullet")],
+  });
+  assert.match(p, /Công ty TNHH Noma Auto/);
+  assert.match(p, /KHÔNG gắn "của Doscom"/);
+  assert.equal(p.includes("Doscom Holdings"), false, "không được lọt footer Doscom vào bài NOMA");
+});
+
+test("prompt bài Doscom vẫn cấp footer Doscom như cũ", () => {
+  const p = buildUserPrompt({
+    product: getProduct("D1"), format: "x", formatLabel: "x", cta: "x",
+    notes: "", promotion: "", formats: [getFormat("usp_bullet")],
+  });
+  assert.match(p, /Công ty TNHH Doscom Holdings/);
+  assert.match(p, /Được phép gắn "của Doscom"/);
+  assert.equal(p.includes("Noma Auto"), false);
+});
+
+test("SYSTEM_PROMPT không còn ghi cứng footer của bất kỳ thương hiệu nào", () => {
+  assert.equal(SYSTEM_PROMPT.includes("Doscom Holdings"), false,
+    "footer ghi cứng trong prompt chung là lý do bài NOMA từng ký tên Doscom");
+  assert.match(SYSTEM_PROMPT, /Footer KHÁC NHAU theo thương hiệu/);
 });
 
 test("cấm bịa lời chứng thực khách hàng ở mọi dạng", () => {

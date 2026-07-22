@@ -11,6 +11,7 @@
 // nhau về cấu trúc. Người lướt Facebook thấy vậy là mù quảng cáo, CTR tụt.
 
 import { getFormat } from "./ad-formats.js";
+import { getBrand, footerFor } from "./ad-brands.js";
 
 // Chính sách bảo hành mặc định của Doscom, áp cho sản phẩm KHÔNG khai `guarantee`.
 // Hàng tiêu dùng (vd Noma 911) khai `guarantee: null` để bỏ hẳn dòng này.
@@ -63,15 +64,11 @@ người dùng xác nhận), giá treo/giá đỡ, chân đế, SIM 4G, và mọ
 **4. CTA + URL:** dòng CTA bắt đầu bằng 👉 hoặc ➡, giữ nguyên placeholder {{URL}}.
 
 **5. FOOTER (bắt buộc, cuối mọi bài, mọi dạng).** Sau CTA xuống thêm 1 dòng trống
-rồi chèn NGUYÊN block sau — KHÔNG sửa, KHÔNG paraphrase, KHÔNG rút gọn địa chỉ,
-KHÔNG đổi emoji, KHÔNG đổi thứ tự dòng. Giữ nguyên dấu "━" (U+2501) dài 26 ký tự:
+rồi chèn NGUYÊN khối footer ĐƯỢC CẤP Ở PHẦN YÊU CẦU — KHÔNG sửa, KHÔNG paraphrase,
+KHÔNG rút gọn địa chỉ, KHÔNG đổi emoji, KHÔNG đổi thứ tự dòng, giữ nguyên dấu "━".
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-🏢 Công ty TNHH Doscom Holdings
-📞 Hotline: 1900638597
-🌐 Website: doscom.vn
-📍 HN: 38B Triệu Việt Vương, Nguyễn Du, Hai Bà Trưng, Hà Nội
-📍 HCM: Số 22, Đường 12, KĐT City Land, Phường 10, Quận Gò Vấp, TP.HCM
+⚠️ Footer KHÁC NHAU theo thương hiệu của sản phẩm. TUYỆT ĐỐI không lấy footer của
+thương hiệu khác, không tự nhớ footer từ ví dụ mẫu — chỉ dùng đúng khối được cấp.
 
 ═══════════════════════════════════════════════════════════════════
 📏 ĐỘ DÀI (NGHIÊM NGẶT — FB POLICY + UX)
@@ -180,12 +177,7 @@ Nhiều người đã mất dữ liệu quan trọng vì file ghi âm từ đi�
 
 👉 Đặt mua DR1 tại đây: {{URL}}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-🏢 Công ty TNHH Doscom Holdings
-📞 Hotline: 1900638597
-🌐 Website: doscom.vn
-📍 HN: 38B Triệu Việt Vương, Nguyễn Du, Hai Bà Trưng, Hà Nội
-📍 HCM: Số 22, Đường 12, KĐT City Land, Phường 10, Quận Gò Vấp, TP.HCM
+[FOOTER — chèn nguyên khối được cấp ở phần yêu cầu, đúng thương hiệu của SP]
 
 ═══════════════════════════════════════════════════════════════════
 OUTPUT
@@ -254,9 +246,18 @@ ${product.provenAngles.map((a, i) => `${i + 1}. ${a}`).join("\n")}
 Angle là THÔNG ĐIỆP, không phải khung bài: giữ tinh thần của angle nhưng vẫn phải viết đúng KHUNG của dạng được giao, và viết lại tươi mới (không copy nguyên câu cũ).`
     : "";
 
+  const brand = getBrand(product.brand);
+  const brandSection = `\nTHƯƠNG HIỆU: ${brand.key} — ${brand.company}
+${brand.signature
+    ? `Được phép gắn "${brand.signature}" sau tên sản phẩm.`
+    : `KHÔNG gắn "của Doscom" hay tên công ty khác vào tên sản phẩm — ${brand.key} là thương hiệu độc lập.`}
+
+FOOTER CỦA THƯƠNG HIỆU NÀY (chèn NGUYÊN VĂN ở cuối bài, không sửa 1 ký tự):
+${footerFor(brand.key)}`;
+
   return `SẢN PHẨM: ${product.fullName}
 DANH MỤC: ${product.category}
-TẦM GIÁ: ${product.priceRange}
+TẦM GIÁ: ${product.priceRange}${brandSection}
 
 ĐIỂM KHÁC BIỆT (USP):
 ${product.usps.map((u, i) => `${i + 1}. ${u}`).join("\n")}
