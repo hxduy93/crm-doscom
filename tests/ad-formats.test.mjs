@@ -292,6 +292,20 @@ test("dạng 'So với cách làm cũ' đã bị loại theo yêu cầu, không 
   );
 });
 
+test("headline kiểu 'Vấn đề + chốt hạ' là kiểu mạnh nhất, có trong luật chung", () => {
+  assert.match(SYSTEM_PROMPT, /Vấn đề \+ chốt hạ/);
+  assert.match(SYSTEM_PROMPT, /Cặn canxi bám kính\? Dùng ngay Noma 911/);
+  assert.match(SYSTEM_PROMPT, /Headline chỉ MÔ TẢ suông/);
+});
+
+test("dạng trải nghiệm: headline PHẢI chốt hạ, không tả suông", () => {
+  const h = getFormat("trai_nghiem_theo_moc").headline;
+  assert.match(h, /VẤN ĐỀ \+ CHỐT HẠ/);
+  assert.match(h, /GIÁN TIẾP khẳng định sản phẩm/);
+  // Chính headline cũ bị chê được giữ làm ví dụ SAI.
+  assert.match(h, /kính trong lại, giữ được lâu.*chỉ tả kết quả/s);
+});
+
 test("dạng trải nghiệm: cấm giải thích rồi bỏ lửng", () => {
   const s = getFormat("trai_nghiem_theo_moc").skeleton;
   assert.match(s, /NHẤN MẠNH gây ấn tượng/);

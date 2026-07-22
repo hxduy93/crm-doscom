@@ -128,7 +128,14 @@ KHÔNG dùng block bullet ✅ tính năng — tính năng thể hiện qua các 
     key: "trai_nghiem_theo_moc",
     label: "Trải nghiệm theo mốc thời gian",
     bestFor: "Khách phân vân dùng lâu có xuống không, mua về rồi bỏ xó không.",
-    headline: "Kết quả theo mốc thời gian, có tên sản phẩm",
+    headline: `CÔNG THỨC "VẤN ĐỀ + CHỐT HẠ" (bắt buộc, duyệt 2026-07-22):
+nêu vấn đề ở vế đầu, rồi CHỐT HẠ bằng lời kêu gọi dùng thẳng sản phẩm.
+Chốt hạ vừa cho người đọc lối giải quyết, vừa GIÁN TIẾP khẳng định sản phẩm làm
+được việc đó — mạnh hơn nhiều so với headline chỉ mô tả kết quả.
+✅ "Cặn canxi bám kính? Dùng ngay Noma 911"
+✅ "Ố kính lau không hết? Đã có Noma 911"
+❌ "Noma 911 – kính trong lại, giữ được lâu" — chỉ tả kết quả, không chốt được gì.
+Tối đa 40 ký tự, nên vế vấn đề phải cực ngắn.`,
     skeleton: `🚫 DẠNG NÀY KHÔNG DÙNG LỜI CHỨNG THỰC. Không dấu ngoặc kép lời khách,
 không "— Anh T.D, chủ xe Camry", không "khách phản hồi", không "nhiều người kể".
 Mọi câu viết ở thể KHẲNG ĐỊNH TRỰC TIẾP, chủ ngữ là hiện tượng hoặc sản phẩm.

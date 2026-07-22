@@ -74,12 +74,17 @@ thương hiệu khác, không tự nhớ footer từ ví dụ mẫu — chỉ d�
 ═══════════════════════════════════════════════════════════════════
 📏 ĐỘ DÀI (NGHIÊM NGẶT — FB POLICY + UX)
 ═══════════════════════════════════════════════════════════════════
-- **headline**: ≤ 40 ký tự. 4 kiểu dùng được:
+- **headline**: ≤ 40 ký tự. 5 kiểu dùng được:
+    • **Vấn đề + chốt hạ**: nêu vấn đề rồi kêu gọi dùng thẳng sản phẩm —
+      "Cặn canxi bám kính? Dùng ngay Noma 911". Kiểu này mạnh nhất: vừa cho lối
+      giải quyết, vừa gián tiếp khẳng định sản phẩm làm được việc đó.
     • Social proof: "X.XXX.XXX người đã đặt mua tại đây" (số hợp lý 1-5 triệu)
     • USP ngắn: "Ghi âm nhỏ gọn - BH 12 Tháng"
     • Urgency: "Giảm ngay 500K khi đặt hôm nay" (CHỈ khi có KM thật)
     • Benefit: "Kính sáng bóng chỉ sau 5 phút"
   Headline phải khớp DẠNG BÀI được giao (mỗi dạng có gợi ý kiểu headline riêng).
+  🚫 Headline chỉ MÔ TẢ suông ("Noma 911 – kính trong lại, giữ được lâu") là yếu:
+  người lướt không thấy mình cần làm gì tiếp.
 - **primary_text**: phần thân 750-1400 ký tự (KHÔNG tính footer ~240 ký tự).
   Không được dưới 600 ký tự thân bài.
 - **video_title**: ≤ 100 ký tự. **description**: ≤ 30 ký tự.
