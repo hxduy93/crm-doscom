@@ -158,19 +158,20 @@ là sản phẩm hoặc hiện tượng, không phải một nhân vật:
 ⚠️ Đọc để nắm CHẤT LƯỢNG câu chữ, độ cụ thể của số liệu và cách gài giọng Doscom.
 TUYỆT ĐỐI KHÔNG bắt chước BỐ CỤC này cho các dạng khác — dạng khác có khung khác hẳn.
 
-Headline: Ghi âm 30 giờ – Lọc ồn HD – BH 12 tháng
+Headline: Ghi âm 30 giờ – Lọc tạp âm – BH 12 tháng
 Primary text:
-🎙 Ghi âm rõ từng câu, lọc ồn thông minh, pin 30 giờ liên tục – DR1 Mini gói gọn trong chiếc USB
+🎙 Ghi âm rõ từng câu, lọc tạp âm, pin ghi liên tục 30 giờ – DR1 Doscom nhỏ gọn 41g bỏ vừa túi áo
 
 Nhiều người đã mất dữ liệu quan trọng vì file ghi âm từ điện thoại bị rè, tiếng ồn át hết nội dung, pin tụt giữa buổi họp. DR1 được Doscom thiết kế chuyên dụng để giải quyết đúng 3 điểm yếu đó.
 
-✅ Mic kép + chip DSP lọc ồn – thu rõ giọng trong quán cà phê, phòng họp đông người
-✅ 1 gạt là ghi / kích hoạt tự động bằng giọng nói – không lỡ khoảnh khắc quan trọng
-✅ Pin liên tục 30 giờ – họp cả tuần không cần sạc giữa chừng
-✅ Bộ nhớ 16GB – lưu khoảng 280 giờ file chất lượng cao
-✅ Thiết kế 8g như chiếc USB – bỏ túi áo, móc chìa khóa không ai chú ý
+✅ Micro siêu nhạy + lọc tạp âm – thu rõ giọng trong quán cà phê, phòng họp đông người
+✅ Ghi âm chỉ trong 1 chạm, tự kích hoạt theo giọng nói – không lỡ khoảnh khắc quan trọng
+✅ Pin ghi liên tục 30 giờ – họp cả tuần không cần sạc giữa chừng
+✅ Bộ nhớ 16GB – lưu file đến 192 giờ
+✅ Chỉ 41g, dài 77mm – bỏ túi áo mang cả ngày không vướng
+✅ Cắm OTG vào điện thoại hoặc máy tính là lấy file, không cần cài app
 
-💼 Phù hợp cho: doanh nhân, luật sư, phóng viên, nhân viên văn phòng, sinh viên cao học
+💼 Phù hợp cho: nhà báo, phóng viên, nhà sáng tạo nội dung, học sinh, sinh viên
 
 🎁 Bảo hành 12 tháng – 1 đổi 1 trong 90 ngày nếu lỗi kỹ thuật
 ✔ Hỗ trợ kỹ thuật 12 tháng kể từ ngày mua
@@ -227,6 +228,19 @@ export function buildUserPrompt({ product, format, formatLabel, cta, notes, prom
 → BỎ HẲN mọi dòng bảo hành / đổi trả / hoàn tiền. Sau phần thân bài đi thẳng sang CTA.
 TUYỆT ĐỐI không tự bịa "bảo hành 12 tháng", "1 đổi 1", "hoàn tiền nếu không hiệu quả".`;
 
+  // Thông số đã đối chiếu trang bán. Có danh sách này thì KHOÁ luôn: mọi con số
+  // trong bài phải nằm trong đây. Trước đây AI tự chế thông số (vd DR1 "8g",
+  // "280 giờ" — thật là 41g và 192 giờ) vì không ai đưa cho nó bộ số chuẩn.
+  const specsSection = (product.specs && product.specs.length)
+    ? `\nTHÔNG SỐ ĐÃ XÁC MINH (nguồn: trang bán chính thức):
+${product.specs.map((s) => `• ${s}`).join("\n")}
+
+⛔ MỌI CON SỐ trong bài phải lấy từ danh sách trên hoặc từ USP. TUYỆT ĐỐI không
+tự chế thông số, không làm tròn khác đi, không suy ra số mới (vd từ "16GB" suy ra
+"lưu 280 giờ"). Cần một con số mà danh sách không có → viết định tính, bỏ số.`
+    : `\n⚠ Sản phẩm này CHƯA có bảng thông số đối chiếu. Chỉ dùng số liệu xuất hiện
+trong USP ở trên. TUYỆT ĐỐI không tự chế thêm thông số kỹ thuật nào.`;
+
   // Quy trình chính thức — có thì bắt dùng đúng, để dạng "hướng dẫn dùng" không bịa thao tác.
   const usageSection = (product.usage && product.usage.length)
     ? `\nQUY TRÌNH SỬ DỤNG CHÍNH THỨC (dùng ĐÚNG các bước này khi bài cần nêu cách dùng — KHÔNG tự chế thao tác khác):
@@ -267,7 +281,7 @@ ${product.painPoints.map((p, i) => `${i + 1}. ${p}`).join("\n")}
 
 ĐỐI TƯỢNG MỤC TIÊU: ${product.targetAudience}
 TONE PHÙ HỢP: ${product.tonePreferred}
-LƯU Ý POLICY CHO SP NÀY: ${product.fbPolicyNotes}${avoidSection}${guaranteeSection}${usageSection}${provenAnglesSection}
+LƯU Ý POLICY CHO SP NÀY: ${product.fbPolicyNotes}${avoidSection}${specsSection}${guaranteeSection}${usageSection}${provenAnglesSection}
 
 CAMPAIGN FORMAT: ${formatLabel}
 CTA BUTTON: ${cta}${promoSection}

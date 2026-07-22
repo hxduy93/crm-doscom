@@ -187,6 +187,69 @@ test("SYSTEM_PROMPT không còn ghi cứng footer của bất kỳ thương hi�
   assert.match(SYSTEM_PROMPT, /Footer KHÁC NHAU theo thương hiệu/);
 });
 
+test("thông số 3 SP Doscom khớp trang bán doscom.vn (đối chiếu 2026-07-22)", () => {
+  const specs = (k) => PRODUCTS[k].specs.join(" | ");
+
+  // D1 — bản cũ ghi "pin 8 tiếng", trang bán ghi 12 giờ.
+  assert.match(specs("D1"), /12 giờ liên tục/);
+  assert.match(specs("D1"), /30 MHz – 1\.5 GHz/);
+  assert.match(specs("D1"), /66 g/);
+  assert.equal(/pin 8 tiếng/i.test(JSON.stringify(PRODUCTS.D1)), false);
+
+  // DR1 — bản cũ ghi "16-32GB"; ví dụ mẫu trong prompt còn ghi "8g" và "280 giờ".
+  assert.match(specs("DR1"), /16GB — lưu file đến 192 giờ/);
+  assert.match(specs("DR1"), /nặng 41 g/);
+  assert.equal(/16-32GB/.test(JSON.stringify(PRODUCTS.DR1)), false, "chỉ có bản 16GB");
+
+  // DA8.1 — bản cũ ghi dọc 60° và thẻ 128GB.
+  assert.match(specs("DA8.1"), /Xoay ngang 350°, xoay dọc 90°/);
+  assert.match(specs("DA8.1"), /tối đa 256GB/);
+  assert.match(specs("DA8.1"), /5 – 10 mét/);
+  const da = JSON.stringify(PRODUCTS["DA8.1"]);
+  assert.equal(/60° dọc/.test(da), false);
+  assert.equal(/128GB/.test(da), false);
+  assert.equal(/đầu tiên/.test(da), false, "claim 'camera đầu tiên' không có nguồn");
+});
+
+test("ví dụ mẫu trong prompt KHÔNG được chứa thông số bịa", () => {
+  // Ví dụ mẫu là mỏ neo chất lượng — sai số ở đây là dạy model bịa số.
+  assert.equal(SYSTEM_PROMPT.includes("280 giờ"), false, "DR1 lưu 192 giờ, không phải 280");
+  assert.equal(/Thiết kế 8g/.test(SYSTEM_PROMPT), false, "DR1 nặng 41g, không phải 8g");
+  assert.match(SYSTEM_PROMPT, /192 giờ/);
+  assert.match(SYSTEM_PROMPT, /41g/);
+});
+
+test("có bảng thông số → prompt KHOÁ mọi con số vào bảng đó", () => {
+  const p = buildUserPrompt({
+    product: getProduct("DR1"), format: "x", formatLabel: "x", cta: "x",
+    notes: "", promotion: "", formats: [getFormat("thong_so")],
+  });
+  assert.match(p, /THÔNG SỐ ĐÃ XÁC MINH/);
+  assert.match(p, /MỌI CON SỐ trong bài phải lấy từ danh sách trên/);
+  assert.match(p, /không suy ra số mới/);
+  assert.match(p, /nặng 41 g/);
+});
+
+test("SP chưa có bảng thông số → prompt cấm tự chế thông số", () => {
+  const pro = getProduct("DA8.1 Pro");
+  assert.equal(pro.unverified, true, "doscom.vn không có trang bán bản Pro");
+  assert.ok(!pro.specs, "chưa đối chiếu được thì không dựng bảng thông số giả");
+  const p = buildUserPrompt({
+    product: pro, format: "x", formatLabel: "x", cta: "x",
+    notes: "", promotion: "", formats: [getFormat("usp_bullet")],
+  });
+  assert.match(p, /CHƯA có bảng thông số đối chiếu/);
+  assert.match(p, /không tự chế thêm thông số/);
+});
+
+test("3 SP đã đối chiếu đều ghi nguồn để lần sau rà lại được", () => {
+  for (const k of ["D1", "DR1", "DA8.1", "Noma 911"]) {
+    if (k === "Noma 911") continue; // nguồn là brandcore nội bộ, không phải trang bán
+    assert.match(PRODUCTS[k].source, /^https:\/\/doscom\.vn\/product\//, `${k} thiếu link nguồn`);
+    assert.match(PRODUCTS[k].source, /2026-07-22/, `${k} thiếu ngày đối chiếu`);
+  }
+});
+
 test("cấm bịa lời chứng thực khách hàng ở mọi dạng", () => {
   assert.match(SYSTEM_PROMPT, /KHÔNG BỊA LỜI CHỨNG THỰC/);
   assert.equal(

@@ -5,13 +5,28 @@ export const PRODUCTS = {
   "D1": {
     name: "Máy dò D1",
     brand: "DOSCOM",
-    fullName: "Máy dò thiết bị nghe lén D1",
+    fullName: "Thiết bị dò D1 Doscom — dò thiết bị ghi âm, máy nghe lén, camera ẩn",
     priceRange: "2.500.000đ",
     category: "An ninh - bảo mật",
+    source: "https://doscom.vn/product/thiet-bi-do-d1-do-thiet-bi-dinh-vi-nghe-len-camera-giau-kin (đối chiếu 2026-07-22)",
+    // Số liệu lấy NGUYÊN từ trang bán. AI chỉ được dùng số trong danh sách này.
+    // Bản cũ ghi "pin 8 tiếng" (thật: 12 giờ) và "quét từ trường" (trang không có).
+    specs: [
+      "Dải tần quét: 30 MHz – 1.5 GHz",
+      "Tần số quét: 1500 lần/phút",
+      "Dò được: GSM (2G/3G/4G/5G), GPS, WiFi",
+      "Phạm vi dò: 0 – 30 cm",
+      "Chế độ báo động: rung và chuông",
+      "Pin 300 mAh – hoạt động 12 giờ liên tục",
+      "Kích thước: 135 × 22 × 12 mm, nặng 66 g",
+      "Màn hình LCD 1 inch, sạc Type-C",
+      "Nhiệt độ hoạt động: -10 ~ 50°C",
+    ],
     usps: [
-      "Phát hiện camera ẩn, thiết bị nghe lén, GPS trộm",
-      "Công nghệ quét đa tần số RF + từ trường + hồng ngoại",
-      "Nhỏ gọn, cầm tay, pin 8 tiếng",
+      "Phát hiện máy nghe lén, định vị GPS, camera ẩn",
+      "2 chế độ dò: sóng RF + đèn hồng ngoại tìm camera siêu nhỏ",
+      "Quét 360 độ không bỏ sót",
+      "Pin 300mAh dùng 12 giờ liên tục, nặng 66g bỏ túi được",
       "Dùng được ở khách sạn, homestay, xe hơi, văn phòng",
     ],
     painPoints: [
@@ -31,23 +46,35 @@ export const PRODUCTS = {
   "DR1": {
     name: "Máy ghi âm DR1",
     brand: "DOSCOM",
-    fullName: "Máy ghi âm siêu nhỏ DR1",
+    fullName: "Thiết bị ghi âm DR1 Doscom — bộ nhớ 16GB, lưu file đến 192 giờ",
     priceRange: "1.300.000đ",
     category: "Thiết bị ghi âm chuyên dụng",
+    source: "https://doscom.vn/product/thiet-bi-ghi-am-dr1-doscom (đối chiếu 2026-07-22)",
+    // Bản cũ ghi "16-32GB" (chỉ có 16GB) và "nhỏ như chiếc USB" (thật: 41g,
+    // 77×22.6×13.3mm). Ví dụ mẫu trong prompt còn ghi "8g" và "280 giờ" — đều bịa.
+    specs: [
+      "Bộ nhớ 16GB — lưu file đến 192 giờ",
+      "Ghi âm liên tục 30 giờ",
+      "Pin 230 mAh, sạc Type-C",
+      "Kích thước: 77 × 22.6 × 13.3 mm, nặng 41 g",
+      "Định dạng MP3, WAV — bitrate 32/64/128/192/512 kbps",
+      "Có loa ngoài, phát được nhạc MP3",
+      "Kết nối OTG với điện thoại và máy tính",
+    ],
     usps: [
-      "Ghi âm liên tục 30 giờ, dung lượng 16-32GB",
-      "Kích thước siêu nhỏ (như chiếc USB)",
-      "Chất lượng âm thanh HD, lọc tiếng ồn",
-      "Kích hoạt bằng giọng nói (voice-activated)",
-      "Kết nối máy tính không cần app",
+      "Bộ nhớ 16GB lưu file đến 192 giờ, ghi liên tục 30 giờ",
+      "Ghi âm chỉ trong 1 chạm",
+      "Tự động kích hoạt theo giọng nói",
+      "Lọc tạp âm, micro siêu nhạy",
+      "Cắm OTG là lấy file, không cần cài app",
     ],
     painPoints: [
       "Cần lưu lại cuộc họp quan trọng",
       "Phóng viên, nhà báo cần tác nghiệp",
-      "Luật sư cần ghi lại trao đổi với khách hàng",
       "Sinh viên cần ghi lại bài giảng dài",
+      "Ghi âm bằng điện thoại thì hết pin, hết bộ nhớ giữa chừng",
     ],
-    targetAudience: "Phóng viên, luật sư, doanh nhân, sinh viên cao học, người cần tác nghiệp",
+    targetAudience: "Nhà sáng tạo nội dung, nhà báo, phóng viên, học sinh, sinh viên; dùng cho họp, phỏng vấn, giảng dạy",
     tonePreferred: "Chuyên nghiệp, nhấn mạnh tính tiện dụng và bảo mật",
     avoidWords: [
       "ghi âm lén", "nghe lén", "rình",
@@ -104,16 +131,28 @@ export const PRODUCTS = {
   "DA8.1": {
     name: "Camera DA8.1",
     brand: "DOSCOM",
-    fullName: "Camera an ninh video call 2 chiều DA8.1",
-    priceRange: "1.250.000đ",
+    fullName: "Camera gọi video 2 chiều DA8.1 Doscom — màn hình 2,8 inch",
+    priceRange: "1.250.000đ – 1.940.000đ (tùy dung lượng thẻ nhớ chọn kèm)",
     category: "Camera an ninh gia đình kiêm video call",
+    source: "https://doscom.vn/product/camera-da8-goi-video-2-chieu (đối chiếu 2026-07-22)",
+    // Bản cũ sai: góc dọc 60° (thật 90°), thẻ nhớ 128GB (thật tối đa 256GB),
+    // hồng ngoại "10m" (thật 5-10m), và claim "camera đầu tiên" không có nguồn.
+    specs: [
+      "Màn hình 2,8 inch trên thân camera",
+      "Hình ảnh FullHD, góc nhìn 140°",
+      "Xoay ngang 350°, xoay dọc 90°",
+      "Hồng ngoại ban đêm 5 – 10 mét",
+      "Hỗ trợ thẻ nhớ tối đa 256GB",
+      "Kết nối WiFi, app Im Cam cho iOS và Android",
+    ],
     usps: [
-      "Camera an ninh đầu tiên có video call 2 chiều chỉ bằng 1 nút bấm vật lý – người ở nhà không cần smartphone",
-      "Màn hình IPS 2.8 inch mặt camera – ông bà/trẻ nhỏ thấy mặt người gọi",
-      "Full HD 1080P + hồng ngoại ban đêm 10m",
-      "Góc xoay 350° ngang + 60° dọc – bao quát cả phòng",
-      "Phát hiện chuyển động, cảnh báo qua app IM Cam tiếng Việt",
-      "Hỗ trợ thẻ nhớ đến 128GB – lưu ~14 ngày video ghi đè tự động",
+      "Gọi video 2 chiều chỉ bằng 1 nút bấm trên thân camera – người ở nhà không cần smartphone",
+      "Màn hình 2,8 inch ngay trên camera – ông bà/trẻ nhỏ thấy mặt người gọi",
+      "Hình FullHD, góc nhìn 140°, hồng ngoại ban đêm 5-10m",
+      "Xoay ngang 350° + dọc 90° – bao quát cả phòng",
+      "Phát hiện và theo dõi chuyển động người, cảnh báo về điện thoại qua app Im Cam",
+      "Hỗ trợ thẻ nhớ tối đa 256GB, tự ghi đè khi đầy",
+      "Hỗ trợ lắp đặt miễn phí tại nội thành Hà Nội và TP.HCM",
     ],
     painPoints: [
       "Ba mẹ đi làm lo con nhỏ ở nhà một mình, con cần nhưng không gọi được",
@@ -133,9 +172,15 @@ export const PRODUCTS = {
     ],
   },
 
+  // ⚠️ CHƯA XÁC MINH ĐƯỢC (2026-07-22): doscom.vn không có trang bán bản Pro.
+  // Mọi thông số dưới đây (2K, màn 4 inch, WiFi dual-band, AI phân biệt người/thú
+  // cưng giảm báo giả 70%, pin dự phòng 4000mAh 8 giờ, loa 2W) hiện KHÔNG có nguồn
+  // đối chiếu. Trước khi chạy ads cho SP này, chủ dự án cần xác nhận lại từng số —
+  // sai số liệu trong ad là rủi ro khiếu nại và bị Facebook gỡ bài.
   "DA8.1 Pro": {
     name: "Camera DA8.1 Pro",
     brand: "DOSCOM",
+    unverified: true,
     fullName: "Camera an ninh video call 2 chiều DA8.1 Pro (bản nâng cấp)",
     priceRange: "1.550.000đ",
     category: "Camera an ninh gia đình kiêm video call - bản cao cấp",
