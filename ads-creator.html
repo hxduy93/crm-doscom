@@ -122,6 +122,17 @@ function AdsCreatorPanel() {
   const [aiError, setAiError] = useState("")
   const [aiVariants, setAiVariants] = useState([])
   const [aiSelectedId, setAiSelectedId] = useState(null)
+  // Dạng bài: "" = để hệ thống tự xoay 3 dạng khác nhau mỗi lần bấm.
+  const [aiStyle, setAiStyle] = useState("")
+  const [aiFormats, setAiFormats] = useState([])   // danh mục dạng, lấy từ API
+  const [aiRound, setAiRound] = useState(0)        // bấm lại lần thứ mấy → đổi bộ dạng
+
+  useEffect(() => {
+    fetch("/api/generate-ad-copy")
+      .then(r => r.json())
+      .then(d => { if (d && d.ok) setAiFormats(d.formats || []) })
+      .catch(() => { /* không lấy được danh mục → vẫn dùng được chế độ tự xoay */ })
+  }, [])
 
   // ── Publish status ──
   const [status, setStatus] = useState(null) // null | "ready" | "sending" | "done" | "error"
@@ -475,6 +486,11 @@ function AdsCreatorPanel() {
         aiDirection ? `Hướng content: ${aiDirection}` : "",
       ].filter(Boolean).join(" | ")
 
+      // Chọn tay 1 dạng thì chỉ ra 1 bài đúng dạng đó. Để "Tự xoay" thì mỗi lần
+      // bấm lấy bộ 3 dạng KHÁC lần trước (aiRound tăng dần) — server không tự
+      // random, biến thiên do client đẩy sang, nên vẫn tái hiện được.
+      const round = aiRound + 1
+      setAiRound(round)
       const res = await fetch("/api/generate-ad-copy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -485,6 +501,7 @@ function AdsCreatorPanel() {
           cta: (ads.find(a => a.id === targetAdId) || {}).cta || "LEARN_MORE",
           notes,
           promotion: aiPromotion.trim(),
+          ...(aiStyle ? { styles: [aiStyle], count: 1 } : { count: 3, seed: product, rotate: round }),
         }),
       })
       const data = await res.json()
@@ -946,7 +963,11 @@ function AdsCreatorPanel() {
           for (let i = 0; i < files.length; i++) {
             const file = files[i]
             const baseName = file.name.replace(/\.[^.]+$/, "")
-            // 1) AI viết caption
+            // 1) AI viết caption.
+            // rotate = số thứ tự video trong nhóm → mỗi video ăn MỘT DẠNG BÀI khác
+            // nhau (kể chuyện / hỏi-đáp / trước-sau / hướng dẫn…). Trước đây mọi
+            // video dùng chung 1 khung nên cả campaign nhìn như một bài nhân bản.
+            // seed theo sản phẩm để 2 sản phẩm khác nhau không mở màn cùng dạng.
             pushLog(`  • [${file.name}] AI viết caption...`)
             let headline = g.product, adCopy = baseName
             try {
@@ -960,12 +981,16 @@ function AdsCreatorPanel() {
                   cta: autoCta,
                   notes: `Tên video: ${baseName} | Nhóm sản phẩm: ${g.product}`,
                   promotion: "",
+                  count: 1,
+                  seed: `${autoCopyProduct}:${g.product}`,
+                  rotate: i,
                 }),
               })
               const d = await r.json()
               if (r.ok && d.variants && d.variants[0]) {
                 headline = d.variants[0].headline || g.product
                 adCopy = d.variants[0].primary_text || baseName
+                pushLog(`    ✓ caption dạng "${d.variants[0].style_label || d.variants[0].style}"`)
               } else {
                 pushLog(`    ⚠ caption lỗi (${d.error || r.status}) → tạm dùng tên file`)
               }
@@ -2103,12 +2128,14 @@ function AdsCreatorPanel() {
                       <div className="space-y-2">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                           {aiVariants.map((v) => {
-                            const styleConfig = {
-                              "A": { color: "pink",  emoji: "💝", label: "Cảm xúc" },
-                              "B": { color: "blue",  emoji: "🧠", label: "Lý trí" },
-                              "C": { color: "red",   emoji: "⏰", label: "Khẩn cấp" },
+                            // Nhãn lấy từ DẠNG BÀI server đã giao, không gán cứng theo
+                            // vị trí A/B/C nữa — mỗi lần bấm là một bộ dạng khác.
+                            const palette = ["pink", "blue", "amber", "teal", "purple"]
+                            const cfg = {
+                              color: palette[aiVariants.indexOf(v) % palette.length],
+                              emoji: "📝",
+                              label: v.style_label || v.style || "—",
                             }
-                            const cfg = styleConfig[v.id] || { color: "gray", emoji: "📝", label: v.style }
                             const isSelected = aiSelectedId === v.id
                             return (
                               <div key={v.id} className={`bg-white rounded-lg border-2 p-2 ${isSelected ? `border-${cfg.color}-500` : "border-gray-200"}`}>
@@ -2175,6 +2202,24 @@ function AdsCreatorPanel() {
                   placeholder="Khuyến mãi (tùy chọn — VD: Giảm 500K + tặng thẻ nhớ 32GB, hết 31/10). Để trống nếu không có KM — AI sẽ không tự bịa."
                 />
                 <p className="text-[10px] text-amber-700 mt-1 italic">💡 Nếu bạn KHÔNG điền, AI sẽ chỉ giữ dòng Bảo hành 12 tháng và không tự ý thêm giảm giá / quà tặng / "chỉ hôm nay".</p>
+              </div>
+              <div className="mt-2">
+                <label className="block text-[11px] font-semibold text-amber-900 mb-1">Dạng bài</label>
+                <select
+                  value={aiStyle}
+                  onChange={e => setAiStyle(e.target.value)}
+                  className="w-full border border-amber-300 rounded px-2 py-1.5 text-xs bg-white"
+                >
+                  <option value="">🎲 Tự xoay — mỗi lần bấm ra 3 dạng khác nhau</option>
+                  {aiFormats.map(f => (
+                    <option key={f.key} value={f.key}>{f.label}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-amber-700 mt-1 italic">
+                  {aiStyle
+                    ? (aiFormats.find(f => f.key === aiStyle) || {}).bestFor || ""
+                    : "Mỗi dạng có khung bài khác hẳn (kể chuyện, hỏi-đáp, trước/sau, hướng dẫn…), không chỉ khác giọng văn. Chọn một dạng cụ thể nếu bạn đã biết muốn gì."}
+                </p>
               </div>
             </div>
           </div>
