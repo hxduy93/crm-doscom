@@ -23,6 +23,11 @@
 import { getProduct } from "../lib/product-catalog.js";
 import { SYSTEM_PROMPT, buildUserPrompt } from "../lib/ad-prompts.js";
 import { AD_FORMATS, FORMAT_KEYS, getFormat, pickFormats } from "../lib/ad-formats.js";
+// Brand Core NOMA v3 — nguồn sự thật thương hiệu NOMA, ĐÃ CÓ SẴN trong repo và
+// đang được module GEO + đăng sản phẩm dùng. Trước 2026-07-22 agent viết ads
+// KHÔNG đọc file này nên viết Noma như một dòng sản phẩm của Doscom và dùng cụm
+// "chuẩn Mỹ" sai nghĩa xuất xứ — đúng thứ brand core cấm.
+import { NOMA_BRAND_GUIDE, scanForbidden } from "./geo/_utils/noma-brandcore.js";
 
 const CLAUDE_MODEL = "claude-haiku-4-5";
 
@@ -120,9 +125,15 @@ export async function onRequestPost(context) {
     product, format, formatLabel, cta, notes, promotion, formats: chosenFormats,
   });
 
+  // Sản phẩm NOMA → nối Brand Core v3 vào cuối system prompt. Đặt SAU để luật
+  // brand thắng mọi mô tả chung ở trên (chính brand core ghi "THẮNG mọi mô tả khác").
+  const systemPrompt = product.brand === "NOMA"
+    ? `${SYSTEM_PROMPT}\n\n${NOMA_BRAND_GUIDE}`
+    : SYSTEM_PROMPT;
+
   let textOut;
   try {
-    textOut = await callClaudeViaGateway(env, SYSTEM_PROMPT, userPrompt);
+    textOut = await callClaudeViaGateway(env, systemPrompt, userPrompt);
   } catch (err) {
     return jsonResponse({
       error: "Claude lỗi: " + (err?.message || String(err)),
@@ -155,7 +166,7 @@ export async function onRequestPost(context) {
   // điền — model hay viết lại tên dạng, mà UI cần mã khớp lib/ad-formats.js.
   parsed.variants = parsed.variants.map((v, i) => {
     const f = chosenFormats[i] || chosenFormats[chosenFormats.length - 1];
-    return {
+    const out = {
       id: v.id || String.fromCharCode(65 + i),
       style: f.key,
       style_label: f.label,
@@ -164,6 +175,13 @@ export async function onRequestPost(context) {
       video_title: (v.video_title || "").slice(0, 100),
       description: (v.description || "").slice(0, 30),
     };
+    // Rà cụm vi phạm brand core bằng regex (không tốn credit AI). Chỉ CẢNH BÁO,
+    // không tự sửa: câu chữ do người duyệt quyết, nhưng phải biết mà sửa.
+    if (product.brand === "NOMA") {
+      const hits = scanForbidden(`${out.headline}\n${out.primary_text}`);
+      if (hits.length) out.brand_warnings = hits;
+    }
+    return out;
   });
 
   return jsonResponse({

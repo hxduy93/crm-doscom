@@ -53,28 +53,50 @@ export const PRODUCTS = {
     fbPolicyNotes: "Phải nêu mục đích hợp pháp (tác nghiệp, ghi nhớ). Không được ám chỉ ghi âm bí mật người khác.",
   },
 
+  // NOMA là thương hiệu RIÊNG (NOMA Technologies LLC), không phải dòng sản phẩm của
+  // Doscom → brand:"NOMA" để endpoint nạp thêm Brand Core v3 ở
+  // functions/api/geo/_utils/noma-brandcore.js. Số liệu dưới đây do chủ dự án xác
+  // nhận 2026-07-22 (bản cũ ghi sai: 200ml, 4-5 xe, "mưa axit", "không hạt mài").
   "Noma 911": {
     name: "Noma 911",
+    brand: "NOMA",
     fullName: "Dung dịch tẩy ố kính Noma 911",
-    priceRange: "199.000đ / chai 200ml",
+    priceRange: "199.000đ / chai 100ml",
     category: "Chăm sóc ô tô",
+    // Hàng tiêu dùng → KHÔNG có bảo hành. null = bỏ hẳn dòng cam kết bảo hành,
+    // khác với để trống (undefined) là dùng chính sách bảo hành mặc định của Doscom.
+    guarantee: null,
     usps: [
-      "Tẩy sạch ố kính ô tô do mưa axit, nước cứng chỉ sau 5 phút",
-      "Công thức đậm đặc, không gây xước kính",
+      "Tẩy ố kính do cặn canxi trong nước mưa, nước cứng và màng dầu bám lâu ngày",
+      "Công thức đậm đặc có hạt mài siêu nhỏ — đánh bật cặn bám mà không gây xước kính",
       "An toàn với viền cao su, không ăn mòn",
-      "1 chai dùng được cho 4-5 xe",
-      "Được các gara, detailing chuyên nghiệp tin dùng",
+      "1 chai 100ml dùng được cho 2-3 xe",
+      "Được các gara, tiệm detailing tin dùng",
     ],
     painPoints: [
-      "Kính xe bị mờ ố do mưa axit, khó lau sạch",
-      "Lái xe trời mưa bị chói, nguy hiểm",
-      "Các dung dịch rẻ tiền thường gây xước kính",
-      "Ra gara tẩy kính tốn 500k-1tr/lần",
+      "Nước mưa chứa nhiều canxi — vệ sinh kính không kỹ sẽ đóng cặn trắng bám chặt trên kính",
+      "Cặn bám làm chói đèn ngược chiều khi chạy đêm, tầm nhìn kém lúc trời mưa",
+      "Rửa xe thông thường và nước lau kính không xử lý được lớp cặn khoáng này",
+      "Mang ra gara/tiệm detailing thì mất thời gian, mà vài tháng lại phải đi lần nữa",
     ],
-    targetAudience: "Chủ xe hơi cá nhân nam 30-55 tuổi, gara rửa xe, detailing shop",
-    tonePreferred: "Thực tế, có dẫn chứng hình ảnh before/after, giọng thợ lành nghề",
-    avoidWords: [],
-    fbPolicyNotes: "Tránh khẳng định tuyệt đối ('tẩy sạch 100%'). Dùng 'hiệu quả lên đến'.",
+    // Quy trình CHÍNH THỨC (đồng bộ functions/api/geo/_utils/noma-sku-specs.js).
+    // Có sẵn để AI khỏi tự bịa thao tác khi viết dạng bài "hướng dẫn dùng".
+    usage: [
+      "Lắc đều chai",
+      "Bóp dung dịch lên bề mặt kính",
+      "Chà bằng pad theo chuyển động tròn",
+      "Đợi 1-2 phút",
+      "Rửa lại bằng nước sạch và lau khô",
+    ],
+    targetAudience: "Chủ xe ô tô tự chăm xe tại nhà (DIY), nam 25-45 thành thị; thêm tệp chủ gara/tiệm rửa xe",
+    tonePreferred: "Giọng 'người anh biết xe' — thẳng thắn, minh bạch, dám nói cả giới hạn sản phẩm, thực dụng, gần gũi",
+    // Lấy từ danh sách cấm của Brand Core NOMA v3 (mục ⛔ TỪ / CLAIM CẤM).
+    avoidWords: [
+      "rẻ", "siêu rẻ", "hàng xịn", "số 1", "tốt nhất", "đỉnh", "vượt trội", "đột phá",
+      "100%", "tuyệt đối", "hoàn toàn", "xoá hoàn toàn",
+      "Made in USA", "chính hãng Mỹ", "công nghệ Mỹ", "sản xuất tại Mỹ", "nhập khẩu từ Mỹ",
+    ],
+    fbPolicyNotes: "Tránh khẳng định tuyệt đối ('tẩy sạch 100%') — dùng 'hiệu quả lên đến', 'thấy rõ ngay lần đầu'. Nói 'ố do cặn canxi', KHÔNG nói 'mưa axit'. Tuân thủ Brand Core NOMA v3 kèm bên dưới.",
   },
 
   "DA8.1": {

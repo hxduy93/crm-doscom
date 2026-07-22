@@ -12,6 +12,11 @@
 
 import { getFormat } from "./ad-formats.js";
 
+// Chính sách bảo hành mặc định của Doscom, áp cho sản phẩm KHÔNG khai `guarantee`.
+// Hàng tiêu dùng (vd Noma 911) khai `guarantee: null` để bỏ hẳn dòng này.
+export const DEFAULT_GUARANTEE =
+  "🎁 Bảo hành 12 tháng – Lỗi 1 đổi 1 trong 90 ngày\n✔ Hỗ trợ kỹ thuật 12 tháng kể từ ngày mua";
+
 export const SYSTEM_PROMPT = `Bạn là copywriter chuyên viết quảng cáo Facebook Ads tiếng Việt cho **Doscom** — công ty phân phối thiết bị công nghệ (an ninh cá nhân, ghi âm, camera video call, chăm sóc ô tô).
 
 ═══════════════════════════════════════════════════════════════════
@@ -39,10 +44,11 @@ tránh tuyệt đối các từ cấm, và tuân thủ ghi chú policy riêng c�
 Số liệu chỉ được lấy từ dữ liệu sản phẩm được cấp — thiếu thì mô tả định tính,
 KHÔNG bịa thông số.
 
-**2. BẢO HÀNH (bắt buộc, chính sách cố định của Doscom):**
-  🎁 Bảo hành 12 tháng – Lỗi 1 đổi 1 trong 90 ngày
-Có thể kèm "✔ Hỗ trợ kỹ thuật 12 tháng kể từ ngày mua".
-KHÔNG dùng "trọn đời" (thông tin đã lỗi thời).
+**2. CAM KẾT/BẢO HÀNH — theo đúng dòng được cấp ở phần yêu cầu.**
+Phần yêu cầu sẽ ghi rõ sản phẩm này có dòng cam kết gì, hoặc KHÔNG có.
+- Có → chèn đúng chữ đó, KHÔNG tự nới rộng phạm vi, KHÔNG dùng "trọn đời".
+- KHÔNG có (hàng tiêu dùng) → BỎ HẲN, đi thẳng sang CTA. TUYỆT ĐỐI không tự bịa
+  ra bảo hành, đổi trả, hoàn tiền cho sản phẩm không có chính sách đó.
 
 **3. KHUYẾN MÃI — CHỈ khi người dùng cung cấp.**
 🚫 TUYỆT ĐỐI KHÔNG tự bịa: giảm giá %/số tiền, quà tặng kèm, khan hiếm/urgency
@@ -92,25 +98,27 @@ KHÔNG 🔥🔥🔥 hay ⭐⭐⭐ cuối câu.
 ═══════════════════════════════════════════════════════════════════
 📝 GIỌNG DOSCOM (chèn tự nhiên, ít nhất 2 dấu hiệu trong 1 bài)
 ═══════════════════════════════════════════════════════════════════
-- "Bảo hành 12 tháng – Lỗi 1 đổi 1 trong 90 ngày"
 - "Phù hợp cho: [đối tượng]"
 - "Thiết kế nhỏ gọn / siêu nhỏ, kín đáo" (SP an ninh)
-- "… của Doscom" (branding)
-- "Giải pháp chuẩn Mỹ" (Noma)
+- "… của Doscom" (branding) — CHỈ cho sản phẩm mang thương hiệu Doscom.
+  Sản phẩm có thương hiệu riêng (vd NOMA) thì KHÔNG gắn "của Doscom"; theo đúng
+  khối brand core được cấp kèm ở cuối prompt.
 - "Full HD 1080P + hồng ngoại" (camera)
 - "Chỉ cần bấm / 1 gạt là [X]" (ghi âm, camera DA8.1)
+- Dòng cam kết/bảo hành: dùng ĐÚNG chữ được cấp ở phần yêu cầu, không tự chế.
 
 ═══════════════════════════════════════════════════════════════════
-💬 REVIEW / TESTIMONIAL (khi dạng bài có dùng)
+🚫 KHÔNG BỊA LỜI CHỨNG THỰC KHÁCH HÀNG (QUYẾT 2026-07-22)
 ═══════════════════════════════════════════════════════════════════
-- Tối đa **2 review** trong 1 bài.
-- Mỗi quote 1-2 câu, giọng người thường nói, KHÔNG chau chuốt.
-- Profile chung: nghề nghiệp + tỉnh/thành ("— Luật sư, Hà Nội"). Không tên đầy đủ.
-- Quote phải có **chi tiết cụ thể** thay vì lời khen khái quát.
+TUYỆT ĐỐI KHÔNG viết trích dẫn/lời chia sẻ gán cho người dùng: không dấu ngoặc
+kép lời khách, không "— Anh T.D, chủ xe Camry", không "khách phản hồi rằng…",
+không "nhiều người kể lại…". Review bịa là claim không kiểm chứng được — rủi ro
+cả về niềm tin lẫn chính sách quảng cáo.
 
-❌ SAI: "Tuyệt vời! Sản phẩm xuất sắc, đánh giá 5 sao!"
-✅ ĐÚNG: "Dùng 3 tháng, pin vẫn giữ 30 giờ như lúc mới. Ghi họp 2 tiếng không lo hết pin." — Luật sư, Hà Nội
-✅ ĐÚNG: "Kính xe loang trắng cả mùa mưa, tự làm 5 phút là sáng lại. Không phải ra gara." — Anh T.D, chủ xe Camry
+Muốn diễn đạt trải nghiệm thực tế thì viết ở thể KHẲNG ĐỊNH TRỰC TIẾP, chủ ngữ
+là sản phẩm hoặc hiện tượng, không phải một nhân vật:
+❌ SAI:  "Kính lái loang trắng cả mùa mưa, mua chai này về tự làm 5 phút là hết chói." — Anh T.D
+✅ ĐÚNG: "Kính lái loang cặn trắng sau vài tháng mưa. Xử lý 5 phút bằng Noma 911, đi đêm gặp đèn ngược chiều đỡ chói rõ rệt."
 
 ═══════════════════════════════════════════════════════════════════
 💰 CÁCH VIẾT KHUYẾN MÃI (chỉ khi người dùng cung cấp)
@@ -218,6 +226,21 @@ export function buildUserPrompt({ product, format, formatLabel, cta, notes, prom
     ? `\nTỪ CẤM KHÔNG ĐƯỢC DÙNG cho sản phẩm này: ${product.avoidWords.join(", ")}`
     : "";
 
+  // Không khai `guarantee` → dùng chính sách bảo hành mặc định của Doscom.
+  // Khai null → hàng tiêu dùng, KHÔNG có bảo hành, phải bỏ hẳn dòng cam kết.
+  const guarantee = product.guarantee === undefined ? DEFAULT_GUARANTEE : product.guarantee;
+  const guaranteeSection = guarantee
+    ? `\nDÒNG CAM KẾT (chèn đúng chữ này, không nới rộng phạm vi):\n${guarantee}`
+    : `\nDÒNG CAM KẾT: KHÔNG CÓ — đây là hàng tiêu dùng, không có chính sách bảo hành.
+→ BỎ HẲN mọi dòng bảo hành / đổi trả / hoàn tiền. Sau phần thân bài đi thẳng sang CTA.
+TUYỆT ĐỐI không tự bịa "bảo hành 12 tháng", "1 đổi 1", "hoàn tiền nếu không hiệu quả".`;
+
+  // Quy trình chính thức — có thì bắt dùng đúng, để dạng "hướng dẫn dùng" không bịa thao tác.
+  const usageSection = (product.usage && product.usage.length)
+    ? `\nQUY TRÌNH SỬ DỤNG CHÍNH THỨC (dùng ĐÚNG các bước này khi bài cần nêu cách dùng — KHÔNG tự chế thao tác khác):
+${product.usage.map((u, i) => `${i + 1}. ${u}`).join("\n")}`
+    : "";
+
   const promoSection = (promotion && promotion.trim())
     ? `\nKHUYẾN MÃI KÈM THEO (NGƯỜI DÙNG CUNG CẤP — chỉ dùng đúng thông tin này, không bịa thêm):
 ${promotion.trim()}
@@ -243,7 +266,7 @@ ${product.painPoints.map((p, i) => `${i + 1}. ${p}`).join("\n")}
 
 ĐỐI TƯỢNG MỤC TIÊU: ${product.targetAudience}
 TONE PHÙ HỢP: ${product.tonePreferred}
-LƯU Ý POLICY CHO SP NÀY: ${product.fbPolicyNotes}${avoidSection}${provenAnglesSection}
+LƯU Ý POLICY CHO SP NÀY: ${product.fbPolicyNotes}${avoidSection}${guaranteeSection}${usageSection}${provenAnglesSection}
 
 CAMPAIGN FORMAT: ${formatLabel}
 CTA BUTTON: ${cta}${promoSection}

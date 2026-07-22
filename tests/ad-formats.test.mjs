@@ -84,8 +84,75 @@ test("prompt hệ thống: giữ nguyên luật bất di bất dịch", () => {
   assert.match(SYSTEM_PROMPT, /KHÔNG CÓ KHUNG MẶC ĐỊNH/);
 });
 
+test("Noma 911: số liệu đúng bản chủ dự án xác nhận 2026-07-22", () => {
+  const n = getProduct("Noma 911");
+  assert.ok(n, "khoá sản phẩm là 'Noma 911' (có dấu cách) — ads-creator truyền đúng chuỗi này");
+  assert.match(n.priceRange, /100ml/, "chai 100ml, không phải 200ml");
+  assert.equal(n.guarantee, null, "hàng tiêu dùng → KHÔNG có bảo hành");
+  assert.equal(n.brand, "NOMA", "để endpoint nạp Brand Core NOMA v3");
+  const usp = n.usps.join(" ");
+  assert.match(usp, /2-3 xe/, "1 chai dùng 2-3 xe");
+  assert.match(usp, /hạt mài siêu nhỏ/, "công thức CÓ hạt mài siêu nhỏ");
+  // "mưa axit" chỉ được phép xuất hiện ở câu CẤM dùng nó, không phải ở nội dung bán hàng.
+  const noiDung = JSON.stringify([n.usps, n.painPoints, n.usage, n.category]);
+  assert.equal(/axit/i.test(noiDung), false, "nước mưa chứa canxi, KHÔNG phải axit");
+  assert.match(noiDung, /canxi/i);
+  assert.match(n.fbPolicyNotes, /KHÔNG nói 'mưa axit'/, "phải cấm thẳng cụm sai cũ");
+  assert.ok(n.usage && n.usage.length >= 4, "có quy trình chính thức để AI khỏi bịa thao tác");
+});
+
+test("Noma 911: nạp đủ từ cấm của Brand Core NOMA v3", () => {
+  const n = getProduct("Noma 911");
+  for (const w of ["100%", "tuyệt đối", "tốt nhất", "Made in USA", "chính hãng Mỹ"]) {
+    assert.ok(n.avoidWords.includes(w), `thiếu từ cấm brand core: ${w}`);
+  }
+});
+
+test("sản phẩm không khai guarantee → vẫn dùng bảo hành mặc định của Doscom", () => {
+  const d1 = getProduct("D1");
+  assert.equal(d1.guarantee, undefined);
+  const p = buildUserPrompt({
+    product: d1, format: "x", formatLabel: "x", cta: "x", notes: "", promotion: "",
+    formats: [getFormat("usp_bullet")],
+  });
+  assert.ok(p.includes("Bảo hành 12 tháng"), "SP Doscom vẫn giữ dòng bảo hành");
+});
+
+test("Noma 911: prompt cấm hẳn dòng bảo hành + cấp quy trình dùng thật", () => {
+  const p = buildUserPrompt({
+    product: getProduct("Noma 911"), format: "x", formatLabel: "x", cta: "x",
+    notes: "", promotion: "", formats: [getFormat("huong_dan")],
+  });
+  assert.match(p, /DÒNG CAM KẾT: KHÔNG CÓ/);
+  assert.match(p, /không tự bịa "bảo hành 12 tháng"/);
+  assert.equal(p.includes("🎁 Bảo hành 12 tháng"), false, "không được lọt dòng bảo hành vào prompt");
+  assert.match(p, /QUY TRÌNH SỬ DỤNG CHÍNH THỨC/);
+  assert.match(p, /Bóp dung dịch lên bề mặt kính/, "dùng thao tác chính thức, không để AI bịa");
+});
+
+test("cấm bịa lời chứng thực khách hàng ở mọi dạng", () => {
+  assert.match(SYSTEM_PROMPT, /KHÔNG BỊA LỜI CHỨNG THỰC/);
+  assert.equal(
+    AD_FORMATS.some((f) => /testimonial/i.test(f.skeleton)),
+    false,
+    "không dạng nào được yêu cầu viết testimonial nữa"
+  );
+  const moc = getFormat("trai_nghiem_theo_moc");
+  assert.ok(moc, "dạng review cũ đã đổi thành trải nghiệm theo mốc");
+  assert.equal(getFormat("review_nguoi_dung"), null, "mã dạng cũ phải biến mất");
+  assert.match(moc.skeleton, /KHÔNG DÙNG LỜI CHỨNG THỰC/);
+});
+
+test("headline: các dạng từng bị chê cụt/lạc đề nay có hướng dẫn rõ", () => {
+  assert.match(getFormat("huong_dan").headline, /TÊN SẢN PHẨM/,
+    "hướng dẫn dùng: headline phải nêu tên SP, không chỉ nêu thao tác");
+  assert.match(getFormat("huong_dan").skeleton, /GIỚI THIỆU SẢN PHẨM \(BẮT BUỘC/,
+    "phải có khối giới thiệu SP trước các bước");
+  assert.match(getFormat("so_sanh_cach_lam").headline, /KHÔNG phải câu so sánh mở/);
+});
+
 test("user prompt: nhét đúng khung của từng dạng + brandcore sản phẩm", () => {
-  const product = getProduct("NOMA911") || getProduct("D1");
+  const product = getProduct("Noma 911");
   const formats = [getFormat("cau_chuyen"), getFormat("hoi_dap")];
   const p = buildUserPrompt({
     product, format: "OUTCOME_SALES", formatLabel: "Doanh số",
