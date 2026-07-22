@@ -31,6 +31,22 @@ import { NOMA_BRAND_GUIDE, scanForbidden } from "./geo/_utils/noma-brandcore.js"
 
 const CLAUDE_MODEL = "claude-haiku-4-5";
 
+/**
+ * Thay placeholder {{URL}} trong bài bằng link đích thật.
+ *
+ * Prompt bảo model giữ nguyên {{URL}} để biết chỗ nào cần chèn link. Trước đây
+ * client không thay nên người chạy ads phải tự tìm rồi sửa tay từng bài.
+ *
+ * Bắt rộng: model hay viết lệch thành {URL}, {{ URL }}, {{url}}. Sót một biến thể
+ * là quảng cáo chạy với chữ "{{URL}}" nằm giữa bài.
+ * Không có link → giữ nguyên placeholder, KHÔNG xoá (xoá đi thì mất luôn dấu chỗ chèn).
+ */
+export function fillUrlPlaceholder(text, link) {
+  const l = String(link || "").trim();
+  const s = String(text == null ? "" : text);
+  return l ? s.replace(/\{\{?\s*URL\s*\}?\}/gi, l) : s;
+}
+
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -89,7 +105,11 @@ export async function onRequestPost(context) {
   }
 
   const { product: productKey, format, formatLabel, cta, notes, promotion,
-          styles, count, seed, rotate } = body;
+          styles, count, seed, rotate, link } = body;
+
+  // Link đích: thay thẳng vào chỗ {{URL}} để bài trả về dùng được ngay.
+  // Không truyền link thì giữ nguyên placeholder (client tự thay sau).
+  const destLink = String(link || "").trim();
 
   const product = getProduct(productKey);
   if (!product) {
@@ -168,16 +188,18 @@ export async function onRequestPost(context) {
   // Truncate to enforce FB limits (safety net).
   // style/style_label lấy từ dạng ĐÃ GIAO theo thứ tự, không tin chuỗi model tự
   // điền — model hay viết lại tên dạng, mà UI cần mã khớp lib/ad-formats.js.
+  const fillUrl = (s) => fillUrlPlaceholder(s, destLink);
+
   parsed.variants = parsed.variants.map((v, i) => {
     const f = chosenFormats[i] || chosenFormats[chosenFormats.length - 1];
     const out = {
       id: v.id || String.fromCharCode(65 + i),
       style: f.key,
       style_label: f.label,
-      headline: (v.headline || "").slice(0, 40),
-      primary_text: (v.primary_text || "").slice(0, 2200),
-      video_title: (v.video_title || "").slice(0, 100),
-      description: (v.description || "").slice(0, 30),
+      headline: fillUrl(v.headline).slice(0, 40),
+      primary_text: fillUrl(v.primary_text).slice(0, 2200),
+      video_title: fillUrl(v.video_title).slice(0, 100),
+      description: fillUrl(v.description).slice(0, 30),
     };
     // Rà cụm vi phạm brand core bằng regex (không tốn credit AI). Chỉ CẢNH BÁO,
     // không tự sửa: câu chữ do người duyệt quyết, nhưng phải biết mà sửa.
@@ -193,6 +215,8 @@ export async function onRequestPost(context) {
     model: CLAUDE_MODEL,
     product: productKey,
     styles: chosenFormats.map((f) => f.key),
+    // Cho client biết link đã được gắn hay chưa, để còn tự thay nốt nếu chưa.
+    link_filled: destLink || null,
     variants: parsed.variants,
   });
 }

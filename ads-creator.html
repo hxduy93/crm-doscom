@@ -502,6 +502,8 @@ function AdsCreatorPanel() {
           cta: (ads.find(a => a.id === targetAdId) || {}).cta || "LEARN_MORE",
           notes,
           promotion: aiPromotion.trim(),
+          // Link đích của chính ad đang sinh content → bài trả về gắn link sẵn.
+          link: (ads.find(a => a.id === targetAdId) || {}).link || "",
           ...(aiStyle ? { styles: [aiStyle], count: 1 } : { count: 3, seed: product, rotate: round }),
         }),
       })
@@ -517,9 +519,22 @@ function AdsCreatorPanel() {
     }
   }
 
+  // Thay {{URL}} bằng link thật. Server đã thay 1 lần lúc sinh content, nhưng link
+  // có thể bị sửa SAU đó nên phải thay lại ở mọi chặng — sót là quảng cáo chạy với
+  // chữ "{{URL}}" nằm giữa bài. Bắt rộng cả {URL} và {{ URL }}.
+  const fillUrl = (text, link) => {
+    const l = String(link || "").trim()
+    if (!l) return String(text || "")
+    return String(text || "").replace(/\{\{?\s*URL\s*\}?\}/gi, l)
+  }
+
   const handleUseVariant = (v) => {
     if (!aiTargetAdId) return
-    updateAd(aiTargetAdId, { headline: v.headline || "", adCopy: v.primary_text || "" })
+    const ad = ads.find(a => a.id === aiTargetAdId) || {}
+    updateAd(aiTargetAdId, {
+      headline: fillUrl(v.headline, ad.link),
+      adCopy: fillUrl(v.primary_text, ad.link),
+    })
     setAiSelectedId(v.id)
   }
 
@@ -578,7 +593,9 @@ function AdsCreatorPanel() {
       ads: ads.map((a, idx) => ({
         ad_name: a.adName || `${finalCampaignName} - Ad ${idx + 1}`,
         headline: a.headline,
-        ad_copy: a.adCopy,
+        // Chặn cuối trước khi đẩy lên Meta: link sửa sau lúc sinh content thì
+        // bài vẫn còn {{URL}}, thay nốt ở đây.
+        ad_copy: fillUrl(a.adCopy, a.link),
         cta: a.cta,
         // Link đích — GIỮ NGUYÊN, không append UTM
         link: a.link,
@@ -985,6 +1002,9 @@ function AdsCreatorPanel() {
                   count: 1,
                   seed: `${autoCopyProduct}:${g.product}`,
                   rotate: i,
+                  // Gắn thẳng link đích vào bài — người chạy ads không phải tự
+                  // tìm chỗ {{URL}} mà thay tay nữa.
+                  link: autoLink,
                 }),
               })
               const d = await r.json()
@@ -992,6 +1012,11 @@ function AdsCreatorPanel() {
                 headline = d.variants[0].headline || g.product
                 adCopy = d.variants[0].primary_text || baseName
                 pushLog(`    ✓ caption dạng "${d.variants[0].style_label || d.variants[0].style}"`)
+                // Còn {{URL}} nghĩa là chưa điền link đích ở trên → báo ngay,
+                // đừng để phát hiện lúc quảng cáo đã chạy.
+                if (/\{\{?\s*URL\s*\}?\}/i.test(adCopy)) {
+                  pushLog(`    ⚠ bài còn chỗ trống {{URL}} — chưa điền "Link đích" ở phần cấu hình`)
+                }
               } else {
                 pushLog(`    ⚠ caption lỗi (${d.error || r.status}) → tạm dùng tên file`)
               }
@@ -1012,7 +1037,9 @@ function AdsCreatorPanel() {
               adsArr.push({
                 // Tên ad = tên creative: "d/m - sản phẩm - tên video".
                 ad_name: `${dm} - ${g.product} - ${baseName}`,
-                headline, ad_copy: adCopy, cta: autoCta, link: autoLink,
+                headline: fillUrl(headline, autoLink),
+                ad_copy: fillUrl(adCopy, autoLink),   // chặn cuối, xem ghi chú ở fillUrl
+                cta: autoCta, link: autoLink,
                 url_tags: utmStr, video_id: ud.video_id, thumbnail_url: ud.thumbnail_url,
                 filename: file.name, // để ghi sổ uploaded_videos sau khi tạo ad
               })
