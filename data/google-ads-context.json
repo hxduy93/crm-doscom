@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-23 15:16",
+  "generated_at": "2026-07-23 17:37",
   "source_data_date_range": {
     "start_7d": "2026-07-16",
     "end": "2026-07-22",
@@ -1579,7 +1579,7 @@
   "search_term_insights": {
     "summary": {
       "total_unique_terms": 3605,
-      "terms_with_conversions": 33,
+      "terms_with_conversions": 34,
       "conv_rate_terms": 0.009,
       "total_spend_30d": 21681748.0
     },
@@ -1628,19 +1628,6 @@
         ]
       },
       {
-        "search_term": "máy chống ghi âm",
-        "spend_30d": 59248.0,
-        "clicks_30d": 21,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.2471,
-        "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
         "search_term": "máy ghi âm cuộc họp",
         "spend_30d": 84322.0,
         "clicks_30d": 15,
@@ -1683,6 +1670,19 @@
         ]
       },
       {
+        "search_term": "máy ghi hình mini",
+        "spend_30d": 2165.0,
+        "clicks_30d": 1,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.5,
+        "match_types": [
+          "NEAR_PHRASE"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
         "search_term": "camera ezviz",
         "spend_30d": 154564.0,
         "clicks_30d": 13,
@@ -1710,13 +1710,13 @@
         ]
       },
       {
-        "search_term": "máy ghi hình mini",
-        "spend_30d": 2165.0,
-        "clicks_30d": 1,
+        "search_term": "máy chống ghi âm",
+        "spend_30d": 59248.0,
+        "clicks_30d": 21,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.5,
+        "ctr_30d": 0.2471,
         "match_types": [
-          "NEAR_PHRASE"
+          "EXACT"
         ],
         "statuses": [
           "ADDED"
@@ -2215,7 +2215,7 @@
       "NEAR_PHRASE": {
         "spend_30d": 5235808.0,
         "clicks_30d": 1029,
-        "conversions_30d": 6.5,
+        "conversions_30d": 7.5,
         "term_count": 733
       },
       "PHRASE": {
