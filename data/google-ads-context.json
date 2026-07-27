@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-27 15:52",
+  "generated_at": "2026-07-27 19:20",
   "source_data_date_range": {
     "start_7d": "2026-07-20",
     "end": "2026-07-26",
@@ -60,8 +60,8 @@
     "orders_30d": 115,
     "by_status": {
       "delivered": {
-        "revenue": 161697500.0,
-        "orders": 100
+        "revenue": 163297500.0,
+        "orders": 101
       },
       "returning": {
         "revenue": 7897000.0,
@@ -72,8 +72,8 @@
         "orders": 4
       },
       "other": {
-        "revenue": 7496000.0,
-        "orders": 6
+        "revenue": 5896000.0,
+        "orders": 5
       }
     },
     "by_source": {
@@ -1619,52 +1619,24 @@
         ]
       },
       {
-        "search_term": "camera ezviz",
-        "spend_30d": 142695.0,
-        "clicks_30d": 11,
+        "search_term": "máy dò camera",
+        "spend_30d": 99912.0,
+        "clicks_30d": 20,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.0561,
+        "ctr_30d": 0.1613,
         "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera sim 4g hikvision",
-        "spend_30d": 28356.0,
-        "clicks_30d": 2,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.2,
-        "match_types": [
-          "EXACT",
-          "PHRASE"
+          "NEAR_PHRASE"
         ],
         "statuses": [
           "ADDED"
         ]
       },
       {
-        "search_term": "ezviz camera",
-        "spend_30d": 51043.0,
-        "clicks_30d": 5,
+        "search_term": "thiết bị ghi âm chuyên nghiệp",
+        "spend_30d": 63373.0,
+        "clicks_30d": 8,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.0595,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "EXCLUDED",
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "máy chống ghi âm",
-        "spend_30d": 64397.0,
-        "clicks_30d": 21,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.2692,
+        "ctr_30d": 0.1702,
         "match_types": [
           "EXACT"
         ],
@@ -1673,13 +1645,29 @@
         ]
       },
       {
-        "search_term": "máy dò camera",
-        "spend_30d": 99912.0,
-        "clicks_30d": 20,
+        "search_term": "máy ghi âm cuộc họp",
+        "spend_30d": 76498.0,
+        "clicks_30d": 13,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.1613,
+        "ctr_30d": 0.1275,
         "match_types": [
-          "NEAR_PHRASE"
+          "EXACT",
+          "NEAR_PHRASE",
+          "PHRASE"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm nghe từ xa",
+        "spend_30d": 117216.0,
+        "clicks_30d": 21,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1927,
+        "match_types": [
+          "EXACT",
+          "PHRASE"
         ],
         "statuses": [
           "ADDED"
@@ -1699,18 +1687,30 @@
         ]
       },
       {
-        "search_term": "máy ghi âm cuộc họp",
-        "spend_30d": 76498.0,
-        "clicks_30d": 13,
+        "search_term": "camera ezviz",
+        "spend_30d": 142695.0,
+        "clicks_30d": 11,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.1275,
+        "ctr_30d": 0.0561,
         "match_types": [
-          "EXACT",
-          "NEAR_PHRASE",
-          "PHRASE"
+          "BROAD"
         ],
         "statuses": [
-          "ADDED"
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "ezviz camera",
+        "spend_30d": 51043.0,
+        "clicks_30d": 5,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.0595,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "EXCLUDED",
+          "NONE"
         ]
       }
     ],
@@ -2142,17 +2142,11 @@
       }
     ],
     "match_type_breakdown": {
-      "BROAD": {
-        "spend_30d": 12443900.0,
-        "clicks_30d": 1576,
-        "conversions_30d": 26.0,
-        "term_count": 2321
-      },
-      "NEAR_PHRASE": {
-        "spend_30d": 4664588.0,
-        "clicks_30d": 947,
-        "conversions_30d": 7.5,
-        "term_count": 672
+      "EXACT": {
+        "spend_30d": 2141412.0,
+        "clicks_30d": 385,
+        "conversions_30d": 12.5,
+        "term_count": 72
       },
       "PHRASE": {
         "spend_30d": 4959240.0,
@@ -2160,29 +2154,35 @@
         "conversions_30d": 10.83,
         "term_count": 613
       },
+      "NEAR_PHRASE": {
+        "spend_30d": 4664588.0,
+        "clicks_30d": 947,
+        "conversions_30d": 7.5,
+        "term_count": 672
+      },
+      "BROAD": {
+        "spend_30d": 12443900.0,
+        "clicks_30d": 1576,
+        "conversions_30d": 26.0,
+        "term_count": 2321
+      },
       "NEAR_EXACT": {
         "spend_30d": 59117.0,
         "clicks_30d": 15,
         "conversions_30d": 0.0,
         "term_count": 4
-      },
-      "EXACT": {
-        "spend_30d": 2141412.0,
-        "clicks_30d": 385,
-        "conversions_30d": 12.5,
-        "term_count": 72
       }
     }
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 8984,
-      "total_spend_30d": 8697884.0
+      "total_unique_placements": 8994,
+      "total_spend_30d": 8696053.0
     },
     "network_breakdown": {
       "CONTENT": {
-        "spend_30d": 8697897.0,
-        "clicks_30d": 4482,
+        "spend_30d": 8696067.0,
+        "clicks_30d": 4481,
         "impressions_30d": 341560,
         "ctr_30d": 0.0131,
         "cpc_30d": 1941.0,
@@ -2199,11 +2199,11 @@
     },
     "placement_type_breakdown": {
       "WEBSITE": {
-        "spend_30d": 8697884.0,
-        "clicks_30d": 4482,
-        "impressions_30d": 325840,
-        "ctr_30d": 0.0138,
-        "placement_count": 8984
+        "spend_30d": 8696053.0,
+        "clicks_30d": 4481,
+        "impressions_30d": 325941,
+        "ctr_30d": 0.0137,
+        "placement_count": 8994
       }
     },
     "top_waste_placements": [],
