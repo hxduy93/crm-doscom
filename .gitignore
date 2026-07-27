@@ -1,5 +1,8 @@
 node_modules/
 .wrangler/
+# Secret chạy local (wrangler pages dev tự đọc). KHÔNG BAO GIỜ commit.
+.dev.vars
+.dev.vars.*
 .DS_Store
 dist/
 __pycache__/
