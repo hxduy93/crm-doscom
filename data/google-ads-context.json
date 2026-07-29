@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-29 20:11",
+  "generated_at": "2026-07-29 22:25",
   "source_data_date_range": {
     "start_7d": "2026-07-22",
     "end": "2026-07-28",
@@ -1630,56 +1630,28 @@
         ]
       },
       {
-        "search_term": "máy dò camera",
-        "spend_30d": 99912.0,
-        "clicks_30d": 20,
+        "search_term": "camera doscom da1 pro",
+        "spend_30d": 59184.0,
+        "clicks_30d": 5,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.1575,
+        "ctr_30d": 0.1351,
         "match_types": [
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
-        "search_term": "máy ghi âm cuộc họp",
-        "spend_30d": 86376.0,
-        "clicks_30d": 14,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1443,
-        "match_types": [
-          "EXACT",
+          "BROAD",
           "NEAR_PHRASE",
           "PHRASE"
         ],
         "statuses": [
-          "ADDED"
+          "NONE"
         ]
       },
       {
-        "search_term": "máy ghi âm nghe từ xa",
-        "spend_30d": 119778.0,
-        "clicks_30d": 20,
+        "search_term": "camera dùng pin",
+        "spend_30d": 9472.0,
+        "clicks_30d": 2,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.1923,
+        "ctr_30d": 0.069,
         "match_types": [
-          "EXACT",
-          "PHRASE"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
-        "search_term": "máy ghi âm từ xa",
-        "spend_30d": 53991.0,
-        "clicks_30d": 10,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.3125,
-        "match_types": [
-          "BROAD",
-          "PHRASE"
+          "BROAD"
         ],
         "statuses": [
           "NONE"
@@ -1712,6 +1684,19 @@
         ]
       },
       {
+        "search_term": "cameras",
+        "spend_30d": 119679.0,
+        "clicks_30d": 3,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.15,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
         "search_term": "ezviz camera",
         "spend_30d": 59883.0,
         "clicks_30d": 5,
@@ -1723,6 +1708,19 @@
         "statuses": [
           "EXCLUDED",
           "NONE"
+        ]
+      },
+      {
+        "search_term": "máy dò camera",
+        "spend_30d": 99912.0,
+        "clicks_30d": 20,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1575,
+        "match_types": [
+          "NEAR_PHRASE"
+        ],
+        "statuses": [
+          "ADDED"
         ]
       }
     ],
@@ -2136,6 +2134,24 @@
       }
     ],
     "match_type_breakdown": {
+      "BROAD": {
+        "spend_30d": 11812903.0,
+        "clicks_30d": 1513,
+        "conversions_30d": 30.0,
+        "term_count": 2273
+      },
+      "NEAR_PHRASE": {
+        "spend_30d": 4533626.0,
+        "clicks_30d": 906,
+        "conversions_30d": 7.5,
+        "term_count": 663
+      },
+      "NEAR_EXACT": {
+        "spend_30d": 61053.0,
+        "clicks_30d": 15,
+        "conversions_30d": 0.0,
+        "term_count": 4
+      },
       "EXACT": {
         "spend_30d": 2157520.0,
         "clicks_30d": 379,
@@ -2147,30 +2163,12 @@
         "clicks_30d": 861,
         "conversions_30d": 9.83,
         "term_count": 607
-      },
-      "NEAR_PHRASE": {
-        "spend_30d": 4533626.0,
-        "clicks_30d": 906,
-        "conversions_30d": 7.5,
-        "term_count": 663
-      },
-      "BROAD": {
-        "spend_30d": 11812903.0,
-        "clicks_30d": 1513,
-        "conversions_30d": 30.0,
-        "term_count": 2273
-      },
-      "NEAR_EXACT": {
-        "spend_30d": 61053.0,
-        "clicks_30d": 15,
-        "conversions_30d": 0.0,
-        "term_count": 4
       }
     }
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 8132,
+      "total_unique_placements": 8157,
       "total_spend_30d": 7509003.0
     },
     "network_breakdown": {
@@ -2195,9 +2193,9 @@
       "WEBSITE": {
         "spend_30d": 7509003.0,
         "clicks_30d": 3672,
-        "impressions_30d": 273407,
+        "impressions_30d": 273759,
         "ctr_30d": 0.0134,
-        "placement_count": 8132
+        "placement_count": 8157
       }
     },
     "top_waste_placements": [],
