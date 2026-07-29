@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-29 12:26",
+  "generated_at": "2026-07-29 15:25",
   "source_data_date_range": {
     "start_7d": "2026-07-22",
     "end": "2026-07-28",
@@ -49,19 +49,19 @@
   },
   "roas_proxy": {
     "google_ads_spend_30d": 38595904.0,
-    "website_revenue_30d_vnd": 194901500.0,
-    "roas_overall": 5.05,
+    "website_revenue_30d_vnd": 196201500.0,
+    "roas_overall": 5.08,
     "target_roas": 3.0,
     "status": "healthy",
     "note": "ROAS = Pancake Website revenue (30d) / Google Ads spend (30d). Proxy — mua qua Zalo/Hotline sau khi thay Google Ads khong count vao day."
   },
   "website_revenue_pancake": {
-    "total_30d": 194901500.0,
-    "orders_30d": 116,
+    "total_30d": 196201500.0,
+    "orders_30d": 117,
     "by_status": {
       "delivered": {
-        "revenue": 156907500.0,
-        "orders": 98
+        "revenue": 170562500.0,
+        "orders": 100
       },
       "returning": {
         "revenue": 7897000.0,
@@ -72,8 +72,8 @@
         "orders": 4
       },
       "other": {
-        "revenue": 22497000.0,
-        "orders": 9
+        "revenue": 10142000.0,
+        "orders": 8
       }
     },
     "by_source": {
@@ -86,8 +86,8 @@
         "orders": 20
       },
       "HOTLINE": {
-        "revenue": 82108500.0,
-        "orders": 36
+        "revenue": 83408500.0,
+        "orders": 37
       }
     },
     "note": "Gộp 3 nguồn POS: WEBSITE + ZALO_OA + HOTLINE (filter 'Website' trên POS). Loại DUY + PHUONG_NAM (team FB Ads). Match: delivered + other. Excluded returning/returned/canceled/refunded."
@@ -1584,7 +1584,7 @@
       "total_unique_terms": 3316,
       "terms_with_conversions": 31,
       "conv_rate_terms": 0.009,
-      "total_spend_30d": 17886299.0
+      "total_spend_30d": 17899697.0
     },
     "top_converting_terms": [
       {
@@ -2003,6 +2003,23 @@
         ]
       },
       {
+        "search_term": "mua máy ghi âm ở hà nội",
+        "spend_30d": 92233.0,
+        "clicks_30d": 8,
+        "conversions_30d": 0.0,
+        "match_types": [
+          "BROAD",
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Chống Ghi Âm",
+          "8/5/2025 Search - TB Ghi Âm"
+        ]
+      },
+      {
         "search_term": "camera an ninh",
         "spend_30d": 83316.0,
         "clicks_30d": 9,
@@ -2033,23 +2050,6 @@
         "campaigns": [
           "8/5/2025 Search - Cam mini",
           "8/5/2025 Search - Sim 4G"
-        ]
-      },
-      {
-        "search_term": "mua máy ghi âm ở hà nội",
-        "spend_30d": 78835.0,
-        "clicks_30d": 7,
-        "conversions_30d": 0.0,
-        "match_types": [
-          "BROAD",
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ],
-        "campaigns": [
-          "8/5/2025 Search - TB Chống Ghi Âm",
-          "8/5/2025 Search - TB Ghi Âm"
         ]
       },
       {
@@ -2143,8 +2143,8 @@
         "term_count": 72
       },
       "PHRASE": {
-        "spend_30d": 4915492.0,
-        "clicks_30d": 860,
+        "spend_30d": 4928890.0,
+        "clicks_30d": 861,
         "conversions_30d": 9.83,
         "term_count": 607
       },
@@ -2155,8 +2155,8 @@
         "term_count": 663
       },
       "BROAD": {
-        "spend_30d": 11799505.0,
-        "clicks_30d": 1512,
+        "spend_30d": 11812903.0,
+        "clicks_30d": 1513,
         "conversions_30d": 30.0,
         "term_count": 2273
       },
@@ -2170,34 +2170,34 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 8134,
-      "total_spend_30d": 7513484.0
+      "total_unique_placements": 8132,
+      "total_spend_30d": 7509003.0
     },
     "network_breakdown": {
       "CONTENT": {
-        "spend_30d": 7513484.0,
-        "clicks_30d": 3674,
-        "impressions_30d": 288082,
-        "ctr_30d": 0.0128,
+        "spend_30d": 7509004.0,
+        "clicks_30d": 3672,
+        "impressions_30d": 288078,
+        "ctr_30d": 0.0127,
         "cpc_30d": 2045.0,
         "campaign_count": 5
       },
       "SEARCH": {
-        "spend_30d": 31074065.0,
-        "clicks_30d": 4865,
+        "spend_30d": 31087463.0,
+        "clicks_30d": 4866,
         "impressions_30d": 43606,
         "ctr_30d": 0.1116,
-        "cpc_30d": 6387.0,
+        "cpc_30d": 6389.0,
         "campaign_count": 5
       }
     },
     "placement_type_breakdown": {
       "WEBSITE": {
-        "spend_30d": 7513484.0,
-        "clicks_30d": 3674,
-        "impressions_30d": 273411,
+        "spend_30d": 7509003.0,
+        "clicks_30d": 3672,
+        "impressions_30d": 273407,
         "ctr_30d": 0.0134,
-        "placement_count": 8134
+        "placement_count": 8132
       }
     },
     "top_waste_placements": [],
@@ -2408,23 +2408,23 @@
   },
   "ad_insights": {
     "summary": {
-      "total_ads": 93,
-      "total_spend_30d": 39351723.0
+      "total_ads": 92,
+      "total_spend_30d": 38595905.0
     },
     "format_breakdown": {
       "DISPLAY_BANNER": {
-        "spend_30d": 3116953.0,
-        "clicks_30d": 1610,
-        "impressions_30d": 138608,
-        "ctr_30d": 0.0116,
+        "spend_30d": 2992126.0,
+        "clicks_30d": 1485,
+        "impressions_30d": 130335,
+        "ctr_30d": 0.0114,
         "ad_count": 5
       },
       "OTHER": {
-        "spend_30d": 36234770.0,
-        "clicks_30d": 7336,
-        "impressions_30d": 403447,
-        "ctr_30d": 0.0182,
-        "ad_count": 88
+        "spend_30d": 35603779.0,
+        "clicks_30d": 7051,
+        "impressions_30d": 376740,
+        "ctr_30d": 0.0187,
+        "ad_count": 87
       }
     },
     "top_spend_banners": [
@@ -2434,9 +2434,9 @@
         "ad_group_name": "Ad group 1",
         "ad_name": "300x600.gif",
         "ad_format": "DISPLAY_BANNER",
-        "spend_30d": 2112032.0,
-        "clicks_30d": 1022,
-        "ctr_30d": 0.021
+        "spend_30d": 2027417.0,
+        "clicks_30d": 972,
+        "ctr_30d": 0.0206
       },
       {
         "ad_id": "752128818624",
@@ -2444,9 +2444,9 @@
         "ad_group_name": "Ad group 1",
         "ad_name": "300x250.gif",
         "ad_format": "DISPLAY_BANNER",
-        "spend_30d": 858128.0,
-        "clicks_30d": 534,
-        "ctr_30d": 0.007
+        "spend_30d": 817084.0,
+        "clicks_30d": 458,
+        "ctr_30d": 0.0065
       },
       {
         "ad_id": "752128818630",
@@ -2454,9 +2454,9 @@
         "ad_group_name": "Ad group 1",
         "ad_name": "320x50.gif",
         "ad_format": "DISPLAY_BANNER",
-        "spend_30d": 80007.0,
+        "spend_30d": 75867.0,
         "clicks_30d": 33,
-        "ctr_30d": 0.0033
+        "ctr_30d": 0.0036
       },
       {
         "ad_id": "752128818633",
@@ -2464,9 +2464,9 @@
         "ad_group_name": "Ad group 1",
         "ad_name": "728x90.gif",
         "ad_format": "DISPLAY_BANNER",
-        "spend_30d": 53692.0,
-        "clicks_30d": 18,
-        "ctr_30d": 0.006
+        "spend_30d": 58664.0,
+        "clicks_30d": 19,
+        "ctr_30d": 0.0065
       },
       {
         "ad_id": "752128818621",
@@ -2476,7 +2476,7 @@
         "ad_format": "DISPLAY_BANNER",
         "spend_30d": 13094.0,
         "clicks_30d": 3,
-        "ctr_30d": 0.0125
+        "ctr_30d": 0.0144
       }
     ],
     "worst_performing_banners": [],
