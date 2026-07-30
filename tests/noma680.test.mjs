@@ -21,7 +21,9 @@ const BASE_URL = process.env.BASE_URL || "https://crm-doscom.pages.dev";
 const GIA_COMBO = {
   "le-680": 99000,
   "combo-2x680": 198000,
-  "combo-680-911": 298000,
+  "combo-680-310": 298000,
+  "combo-680-911": 318000,
+  "combo-680-922": 298000,
 };
 
 // Gọi API 1 lần. Trả null nếu endpoint chưa deploy để test tự bỏ qua.
