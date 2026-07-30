@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-30 20:41",
+  "generated_at": "2026-07-30 22:45",
   "source_data_date_range": {
     "start_7d": "2026-07-23",
     "end": "2026-07-29",
@@ -1642,13 +1642,54 @@
         ]
       },
       {
-        "search_term": "camera dùng pin",
-        "spend_30d": 9472.0,
-        "clicks_30d": 2,
+        "search_term": "máy chống ghi âm",
+        "spend_30d": 53217.0,
+        "clicks_30d": 18,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.0741,
+        "ctr_30d": 0.2571,
         "match_types": [
-          "BROAD"
+          "EXACT"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
+        "search_term": "thiết bị chống ghi âm nghe lén",
+        "spend_30d": 18264.0,
+        "clicks_30d": 7,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.2258,
+        "match_types": [
+          "EXACT"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm nghe từ xa",
+        "spend_30d": 139782.0,
+        "clicks_30d": 22,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.2037,
+        "match_types": [
+          "EXACT",
+          "PHRASE"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm từ xa",
+        "spend_30d": 60265.0,
+        "clicks_30d": 11,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.3548,
+        "match_types": [
+          "BROAD",
+          "PHRASE"
         ],
         "statuses": [
           "NONE"
@@ -1682,54 +1723,13 @@
         ]
       },
       {
-        "search_term": "máy chống ghi âm",
-        "spend_30d": 53217.0,
-        "clicks_30d": 18,
+        "search_term": "camera dùng pin",
+        "spend_30d": 9472.0,
+        "clicks_30d": 2,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.2571,
+        "ctr_30d": 0.0741,
         "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
-        "search_term": "máy dò camera",
-        "spend_30d": 99912.0,
-        "clicks_30d": 20,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1681,
-        "match_types": [
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
-        "search_term": "máy ghi âm nghe từ xa",
-        "spend_30d": 139782.0,
-        "clicks_30d": 22,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.2037,
-        "match_types": [
-          "EXACT",
-          "PHRASE"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
-        "search_term": "máy ghi âm từ xa",
-        "spend_30d": 60265.0,
-        "clicks_30d": 11,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.3548,
-        "match_types": [
-          "BROAD",
-          "PHRASE"
+          "BROAD"
         ],
         "statuses": [
           "NONE"
@@ -2146,11 +2146,11 @@
       }
     ],
     "match_type_breakdown": {
-      "BROAD": {
-        "spend_30d": 11572652.0,
-        "clicks_30d": 1496,
-        "conversions_30d": 29.0,
-        "term_count": 2281
+      "EXACT": {
+        "spend_30d": 2342862.0,
+        "clicks_30d": 392,
+        "conversions_30d": 11.5,
+        "term_count": 71
       },
       "NEAR_PHRASE": {
         "spend_30d": 4519073.0,
@@ -2164,23 +2164,23 @@
         "conversions_30d": 10.83,
         "term_count": 619
       },
+      "BROAD": {
+        "spend_30d": 11572652.0,
+        "clicks_30d": 1496,
+        "conversions_30d": 29.0,
+        "term_count": 2281
+      },
       "NEAR_EXACT": {
         "spend_30d": 71718.0,
         "clicks_30d": 16,
         "conversions_30d": 0.0,
         "term_count": 4
-      },
-      "EXACT": {
-        "spend_30d": 2342862.0,
-        "clicks_30d": 392,
-        "conversions_30d": 11.5,
-        "term_count": 71
       }
     }
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 7708,
+      "total_unique_placements": 7743,
       "total_spend_30d": 7057478.0
     },
     "network_breakdown": {
@@ -2205,9 +2205,9 @@
       "WEBSITE": {
         "spend_30d": 7057478.0,
         "clicks_30d": 3344,
-        "impressions_30d": 249611,
+        "impressions_30d": 250090,
         "ctr_30d": 0.0134,
-        "placement_count": 7708
+        "placement_count": 7743
       }
     },
     "top_waste_placements": [],
