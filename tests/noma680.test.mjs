@@ -23,7 +23,7 @@ const GIA_COMBO = {
   "combo-2x680": 198000,
   "combo-680-310": 298000,
   "combo-680-911": 318000,
-  "combo-680-922": 298000,
+  "combo-680-922": 318000,
 };
 
 // Gọi API 1 lần. Trả null nếu endpoint chưa deploy để test tự bỏ qua.

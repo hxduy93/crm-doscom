@@ -13,7 +13,7 @@ const COMBO_META = {
   "combo-2x680":   { label: "2 chai NOMA 680 650ml",                  amount: 198000 },
   "combo-680-310": { label: "NOMA 680 + NOMA 310 chống hấp hơi kính", amount: 298000 },
   "combo-680-911": { label: "NOMA 680 + NOMA 911 tẩy ố kính",         amount: 318000 },
-  "combo-680-922": { label: "NOMA 680 + NOMA 922 phủ nano kính",      amount: 298000 },
+  "combo-680-922": { label: "NOMA 680 + NOMA 922 phủ nano kính",      amount: 318000 },
 };
 
 function json(obj, status = 200) {
