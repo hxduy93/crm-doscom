@@ -111,7 +111,9 @@
   .user-logout:focus-visible{outline:3px solid var(--secondary);outline-offset:2px}
   @media(max-width:640px){.user-email{display:none}}
 
-  .content{padding:24px 28px 60px;max-width:1320px}
+  /* 1600px: 2 bảng "theo nhân sự" + "brand × nhân sự" thêm cột sau hoàn nên cần rộng hơn;
+     màn hình hẹp hơn vẫn tự co (max-width chỉ chặn trần). */
+  .content{padding:24px 28px 60px;max-width:1600px}
   .hero h2{font-size:24px;font-weight:800;letter-spacing:-.6px;margin:0 0 3px}
   .hero p{margin:0 0 20px;color:var(--text-2);font-size:13.5px}
   .hero b{color:var(--text)}
@@ -157,6 +159,11 @@
   .who{display:flex;align-items:center;gap:9px;font-weight:800}
   .who i{width:10px;height:10px;border-radius:4px;flex:none}
   .roas{font-weight:800}
+  /* Bảng nhiều cột tiền (theo nhân sự / brand × nhân sự): bóp padding + cỡ chữ cho đủ 1 màn. */
+  .mod.tbl-dense table{font-size:12.5px}
+  .mod.tbl-dense thead th{padding:9px 8px}
+  .mod.tbl-dense tbody td{padding:10px 8px}
+  .mod.tbl-dense .col-net{background:color-mix(in srgb,var(--muted) 45%,transparent)}
   .badge{font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px}
 
   .chart-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:6px}
@@ -295,23 +302,23 @@
         </div>
       </section>
 
-      <section class="mod wide" style="margin-bottom:16px" id="sec-staff">
-        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo nhân sự</h3></div><span class="s">Website/Hotline = gộp Website + Zalo + Hotline (kênh Google) · DT &amp; Giá vốn gồm mọi trạng thái (kể cả hoàn/huỷ, khớp Pancake) · LN = DT − Chi phí QC − Giá vốn · Lead = đăng ký từ landing trên Cloudflare: NOMA 911 (nm911d/911tpn) + Máy dò D1 (d1cb/d1tpn) + Ghi âm DR1 (dr1lad/dr1tpn)</span></div>
+      <section class="mod wide tbl-dense" style="margin-bottom:16px" id="sec-staff">
+        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo nhân sự</h3></div><span class="s">Website/Hotline = gộp Website + Zalo + Hotline (kênh Google) · DT &amp; Giá vốn gồm mọi trạng thái (kể cả hoàn/huỷ, khớp Pancake) · LN = DT − Chi phí QC − Giá vốn · <b>Sau hoàn</b> = đã trừ đơn ĐANG HOÀN + ĐÃ HOÀN trên Pancake POS (đơn huỷ vẫn tính) · Lead = đăng ký từ landing trên Cloudflare: NOMA 911 (nm911d/911tpn) + Máy dò D1 (d1cb/d1tpn) + Ghi âm DR1 (dr1lad/dr1tpn)</span></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
-            <thead><tr><th>Nhân sự / Nguồn</th><th class="num">Chi phí QC</th><th class="num">Doanh thu</th><th class="num">Giá vốn</th><th class="num">ROAS</th><th class="num" title="Tổng đăng ký từ mọi landing trên Cloudflare (NOMA 911 + Máy dò D1 + Ghi âm DR1), theo đúng khoảng ngày đang lọc">Lead</th><th class="num">Đơn</th><th class="num">Lợi nhuận (DT−CP−GV)</th></tr></thead>
+            <thead><tr><th>Nhân sự / Nguồn</th><th class="num">Chi phí QC</th><th class="num">Doanh thu</th><th class="num col-net" title="Doanh thu đã trừ đơn đang hoàn + đã hoàn trên Pancake POS">DT sau hoàn</th><th class="num">Giá vốn</th><th class="num">ROAS</th><th class="num" title="Tổng đăng ký từ mọi landing trên Cloudflare (NOMA 911 + Máy dò D1 + Ghi âm DR1), theo đúng khoảng ngày đang lọc">Lead</th><th class="num">Đơn</th><th class="num">Lợi nhuận (DT−CP−GV)</th><th class="num col-net" title="DT sau hoàn − Chi phí QC − Giá vốn sau hoàn (hàng hoàn về kho nên không tính giá vốn)">LN sau hoàn</th></tr></thead>
             <tbody id="staff-rows"></tbody>
           </table>
         </div>
       </section>
 
-      <section class="mod wide" style="margin-bottom:16px" id="sec-brand-cost">
-        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo brand × nhân sự</h3></div><span class="s">Noma = SP "Noma…", Doscom = còn lại · DT gồm mọi trạng thái (khớp Pancake), tính cấp đơn (Noma = tổng đơn − Doscom per-SP) · CIR = Chi phí ÷ Doanh thu (thấp = tốt)</span></div>
+      <section class="mod wide tbl-dense" style="margin-bottom:16px" id="sec-brand-cost">
+        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo brand × nhân sự</h3></div><span class="s">Noma = SP "Noma…", Doscom = còn lại · DT gồm mọi trạng thái (khớp Pancake), tính cấp đơn (Noma = tổng đơn − Doscom per-SP) · CIR = Chi phí ÷ Doanh thu (thấp = tốt) · <b>Sau hoàn</b> = đã trừ đơn ĐANG HOÀN + ĐÃ HOÀN trên Pancake POS (đơn huỷ vẫn tính) · LN sau hoàn = DT sau hoàn − Chi phí − Giá vốn sau hoàn</span></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
             <thead>
-              <tr><th rowspan="2">Nhân sự / Nguồn</th><th class="num" colspan="3" style="border-left:2px solid var(--border)">NOMA</th><th class="num" colspan="3" style="border-left:2px solid var(--border)">DOSCOM</th></tr>
-              <tr><th class="num" style="border-left:2px solid var(--border)">Chi phí</th><th class="num">Doanh thu</th><th class="num">CIR</th><th class="num" style="border-left:2px solid var(--border)">Chi phí</th><th class="num">Doanh thu</th><th class="num">CIR</th></tr>
+              <tr><th rowspan="2">Nhân sự / Nguồn</th><th class="num" colspan="5" style="border-left:2px solid var(--border)">NOMA</th><th class="num" colspan="5" style="border-left:2px solid var(--border)">DOSCOM</th></tr>
+              <tr><th class="num" style="border-left:2px solid var(--border)">Chi phí</th><th class="num">Doanh thu</th><th class="num">CIR</th><th class="num col-net" title="Doanh thu đã trừ đơn đang hoàn + đã hoàn trên Pancake POS">DT sau hoàn</th><th class="num col-net" title="DT sau hoàn − Chi phí − Giá vốn sau hoàn">LN sau hoàn</th><th class="num" style="border-left:2px solid var(--border)">Chi phí</th><th class="num">Doanh thu</th><th class="num">CIR</th><th class="num col-net" title="Doanh thu đã trừ đơn đang hoàn + đã hoàn trên Pancake POS">DT sau hoàn</th><th class="num col-net" title="DT sau hoàn − Chi phí − Giá vốn sau hoàn">LN sau hoàn</th></tr>
             </thead>
             <tbody id="brand-cost-rows"></tbody>
           </table>
@@ -1046,6 +1053,13 @@
   function srcRevenue(key){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0; var r=g.order_revenue_by_status_by_date||{},s=0; for(var st in r){ if(EXCL[st])continue; s+=sumByDate(r[st]); } return s; }
   // Giá vốn theo nguồn = Σ(số lượng bán × giá nhập kho), loại trạng thái hoàn/huỷ (khớp cách tính DT). product_costs đồng bộ từ facebookadsallinone.
   function srcCogs(key){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0; var pbs=g.products_by_status||{},pc=D.product_costs||{},s=0; for(var st in pbs){ if(EXCL[st])continue; var prods=pbs[st]; for(var p in prods){ var cost=Number((pc[p]||{}).gia_nhap_vnd)||0; if(!cost)continue; s+=cost*sumByDate((prods[p]||{}).units_by_date); } } return s; }
+  // ===== Nhóm chỉ số "SAU HOÀN" (thêm 2026-07-31, KHÔNG đụng vào cột gộp ở trên) =====
+  // "Hoàn" theo định nghĩa Pancake POS = đơn ĐANG HOÀN (returning) + ĐÃ HOÀN (returned).
+  // Đơn HUỶ (canceled) KHÔNG phải hoàn → vẫn nằm trong số sau hoàn, cùng gốc với cột gộp.
+  var EXCL_RET={returning:1,returned:1};
+  function srcRevenueNet(key){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0; var r=g.order_revenue_by_status_by_date||{},s=0; for(var st in r){ if(EXCL[st]||EXCL_RET[st])continue; s+=sumByDate(r[st]); } return s; }
+  // Giá vốn sau hoàn: hàng của đơn hoàn quay lại kho nên không tính vào giá vốn đã bán.
+  function srcCogsNet(key){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0; var pbs=g.products_by_status||{},pc=D.product_costs||{},s=0; for(var st in pbs){ if(EXCL[st]||EXCL_RET[st])continue; var prods=pbs[st]; for(var p in prods){ var cost=Number((pc[p]||{}).gia_nhap_vnd)||0; if(!cost)continue; s+=cost*sumByDate((prods[p]||{}).units_by_date); } } return s; }
   function srcOrders(key){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0; return sumByDate(g.total_orders_by_date); }
   function srcDailyOrders(key){ var g=((D.revenue||{}).source_groups||{})[key]; return g?(g.total_orders_by_date||{}):{}; }
   function staffSpend(s){ if(s.ad==='GOOGLE') return ggSpend(); if(!s.ad) return 0; var o=(D.ad_spend_by_staff||{})[s.ad]||{},sum=0; for(var p in o){ sum+=sumByDate(o[p].by_date); } return sum; }
@@ -1087,27 +1101,37 @@
       {label:'Website / Hotline', color:'#16A34A', keys:['WEBSITE','ZALO_OA','HOTLINE'], ad:'GOOGLE', leadKey:null},
       {label:'Page Facebook', color:'#F472B6', keys:['FB_PAGE'], ad:null, leadKey:null}
     ];
-    var tRev=0,tSp=0,tOrd=0,tCogs=0;
+    var tRev=0,tSp=0,tOrd=0,tCogs=0,tRevN=0,tCogsN=0;
     var rows=STAFF_GROUPS.map(function(s){
       var sp=staffSpend({ad:s.ad});
       var rv=s.keys.reduce(function(t,k){return t+srcRevenue(k);},0);
       var cg=s.keys.reduce(function(t,k){return t+srcCogs(k);},0);
       var od=s.keys.reduce(function(t,k){return t+srcOrders(k);},0);
-      tRev+=rv;tSp+=sp;tOrd+=od;tCogs+=cg;
-      var roas=sp>0?(rv/sp):null, ln=rv-sp-cg;
+      var rvN=s.keys.reduce(function(t,k){return t+srcRevenueNet(k);},0);
+      var cgN=s.keys.reduce(function(t,k){return t+srcCogsNet(k);},0);
+      tRev+=rv;tSp+=sp;tOrd+=od;tCogs+=cg;tRevN+=rvN;tCogsN+=cgN;
+      var roas=sp>0?(rv/sp):null, ln=rv-sp-cg, lnN=rvN-sp-cgN;
+      // % doanh thu bị hoàn — cho biết cột "sau hoàn" hụt bao nhiêu so với cột gộp.
+      var retPc=rv>0?((rv-rvN)/rv*100):0;
       return '<tr><td><span class="who"><i style="background:'+s.color+'"></i>'+s.label+'</span></td>'+
         '<td class="num tnum">'+(sp>0?vnd(sp):'—')+'</td>'+
         '<td class="num tnum">'+vnd(rv)+'</td>'+
+        '<td class="num tnum col-net" title="Hoàn '+retPc.toFixed(1).replace('.',',')+'% doanh thu gộp">'+vnd(rvN)+'</td>'+
         '<td class="num tnum">'+(cg>0?vnd(cg):'—')+'</td>'+
         '<td class="num roas" style="color:'+(roas==null?'var(--text-2)':(roas>=1.5?'#16A34A':(roas>=1?'#E08600':'#E5484D')))+'">'+(roas!=null?roas.toFixed(2)+'×':'—')+'</td>'+
         // Lead điền sau khi /api/noma911/stats trả về (fillStaffLeads) — bảng này
         // vẽ đồng bộ còn lead phải gọi API nên chưa có ngay.
         '<td class="num tnum" data-lead="'+(s.leadKey||'')+'" style="color:var(--text-2)">'+(s.leadKey?'…':'—')+'</td>'+
         '<td class="num tnum">'+num(od)+'</td>'+
-        '<td class="num tnum" style="color:'+(ln>=0?'#16A34A':'#E5484D')+'">'+vnd(ln)+'</td></tr>';
+        '<td class="num tnum" style="color:'+(ln>=0?'#16A34A':'#E5484D')+'">'+vnd(ln)+'</td>'+
+        '<td class="num tnum col-net" style="font-weight:800;color:'+(lnN>=0?'#16A34A':'#E5484D')+'">'+vnd(lnN)+'</td></tr>';
     }).join('');
-    var tRoas=tSp>0?(tRev/tSp):null, tLn=tRev-tSp-tCogs;
-    rows+='<tr class="tot"><td>Tổng</td><td class="num tnum">'+vnd(tSp)+'</td><td class="num tnum">'+vnd(tRev)+'</td><td class="num tnum">'+vnd(tCogs)+'</td><td class="num">'+(tRoas!=null?tRoas.toFixed(2)+'×':'—')+'</td><td class="num tnum" id="lead-total" style="color:var(--text-2)">…</td><td class="num tnum">'+num(tOrd)+'</td><td class="num tnum" style="color:'+(tLn>=0?'#16A34A':'#E5484D')+'">'+vnd(tLn)+'</td></tr>';
+    var tRoas=tSp>0?(tRev/tSp):null, tLn=tRev-tSp-tCogs, tLnN=tRevN-tSp-tCogsN;
+    var tRetPc=tRev>0?((tRev-tRevN)/tRev*100):0;
+    rows+='<tr class="tot"><td>Tổng</td><td class="num tnum">'+vnd(tSp)+'</td><td class="num tnum">'+vnd(tRev)+'</td>'+
+      '<td class="num tnum col-net" title="Hoàn '+tRetPc.toFixed(1).replace('.',',')+'% doanh thu gộp">'+vnd(tRevN)+'</td>'+
+      '<td class="num tnum">'+vnd(tCogs)+'</td><td class="num">'+(tRoas!=null?tRoas.toFixed(2)+'×':'—')+'</td><td class="num tnum" id="lead-total" style="color:var(--text-2)">…</td><td class="num tnum">'+num(tOrd)+'</td><td class="num tnum" style="color:'+(tLn>=0?'#16A34A':'#E5484D')+'">'+vnd(tLn)+'</td>'+
+      '<td class="num tnum col-net" style="color:'+(tLnN>=0?'#16A34A':'#E5484D')+'">'+vnd(tLnN)+'</td></tr>';
     document.getElementById('staff-rows').innerHTML=rows;
     // Bảng vừa vẽ lại → nếu lead đã tải trước đó thì điền ngay, khỏi chờ API lần nữa.
     if(NOMA_LEADS) fillStaffLeads(NOMA_LEADS);
@@ -1134,6 +1158,10 @@
     function ggCostBrand(wantNoma){ var ga=(D.google_ads||{}).by_category||{},s=0; for(var c in ga){ if((/noma/i.test(c))===wantNoma) s+=sumByDate((ga[c]||{}).by_date); } return s; }
     function costOf(ad,wantNoma){ if(ad==='GOOGLE') return ggCostBrand(wantNoma); if(!ad) return 0; return adCostBrand(ad,wantNoma); }
     function srcDoscomRev(key){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0; var pbs=g.products_by_status||{},s=0; for(var st in pbs){ if(EXCL[st])continue; var prods=pbs[st]; for(var p in prods){ if(isNomaP(p))continue; s+=sumByDate((prods[p]||{}).by_date); } } return s; }
+    // Bản "sau hoàn": bỏ đơn đang hoàn + đã hoàn (EXCL_RET). Noma vẫn là phần dư (tổng đơn − Doscom per-SP).
+    function srcDoscomRevNet(key){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0; var pbs=g.products_by_status||{},s=0; for(var st in pbs){ if(EXCL[st]||EXCL_RET[st])continue; var prods=pbs[st]; for(var p in prods){ if(isNomaP(p))continue; s+=sumByDate((prods[p]||{}).by_date); } } return s; }
+    // Giá vốn sau hoàn tách theo brand (per-SKU, không cần phần dư vì đơn vị tính là sản phẩm).
+    function srcCogsNetBrand(key,wantNoma){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0; var pbs=g.products_by_status||{},pc=D.product_costs||{},s=0; for(var st in pbs){ if(EXCL[st]||EXCL_RET[st])continue; var prods=pbs[st]; for(var p in prods){ if(isNomaP(p)!==wantNoma)continue; var cost=Number((pc[p]||{}).gia_nhap_vnd)||0; if(!cost)continue; s+=cost*sumByDate((prods[p]||{}).units_by_date); } } return s; }
     var GROUPS=[
       {label:'Duy',color:'#3257E6',keys:['DUY'],ad:'DUY'},
       {label:'Phương Nam',color:'#8B5CF6',keys:['PHUONG_NAM'],ad:'PHUONG_NAM'},
@@ -1141,18 +1169,28 @@
       {label:'Page Facebook',color:'#F472B6',keys:['FB_PAGE'],ad:null}
     ];
     var cirCell=function(c,r){ if(!(r>0)) return '<td class="num tnum" style="color:var(--text-2)">—</td>'; var v=c/r,col=v>1?'#E5484D':(v<=0.5?'#16A34A':'#E08600'); return '<td class="num tnum" style="color:'+col+';font-weight:800">'+Math.round(v*100)+'%</td>'; };
-    var tot={nc:0,nr:0,dc:0,dr:0};
+    // LN sau hoàn = DT sau hoàn − chi phí QC brand − giá vốn sau hoàn brand (cùng công thức bảng nhân sự).
+    var lnCell=function(v){ return '<td class="num tnum col-net" style="font-weight:800;color:'+(v>=0?'#16A34A':'#E5484D')+'">'+vnd(v)+'</td>'; };
+    var tot={nc:0,nr:0,dc:0,dr:0,nrN:0,drN:0,ngN:0,dgN:0};
     var html=GROUPS.map(function(g){
-      var nc=costOf(g.ad,true), dc=costOf(g.ad,false), nr=0, dr=0;
-      g.keys.forEach(function(k){ var tr=srcRevenue(k), dP=srcDoscomRev(k); dr+=dP; nr+=Math.max(0,tr-dP); });
-      tot.nc+=nc;tot.nr+=nr;tot.dc+=dc;tot.dr+=dr;
+      var nc=costOf(g.ad,true), dc=costOf(g.ad,false), nr=0, dr=0, nrN=0, drN=0, ngN=0, dgN=0;
+      g.keys.forEach(function(k){
+        var tr=srcRevenue(k), dP=srcDoscomRev(k); dr+=dP; nr+=Math.max(0,tr-dP);
+        var trN=srcRevenueNet(k), dPN=srcDoscomRevNet(k); drN+=dPN; nrN+=Math.max(0,trN-dPN);
+        ngN+=srcCogsNetBrand(k,true); dgN+=srcCogsNetBrand(k,false);
+      });
+      tot.nc+=nc;tot.nr+=nr;tot.dc+=dc;tot.dr+=dr;tot.nrN+=nrN;tot.drN+=drN;tot.ngN+=ngN;tot.dgN+=dgN;
       return '<tr><td><span class="who"><i style="background:'+g.color+'"></i>'+g.label+'</span></td>'+
         '<td class="num tnum" style="border-left:2px solid var(--border)">'+(nc>0?vnd(nc):'—')+'</td><td class="num tnum">'+(nr>0?vnd(nr):'—')+'</td>'+cirCell(nc,nr)+
-        '<td class="num tnum" style="border-left:2px solid var(--border)">'+(dc>0?vnd(dc):'—')+'</td><td class="num tnum">'+(dr>0?vnd(dr):'—')+'</td>'+cirCell(dc,dr)+'</tr>';
+        '<td class="num tnum col-net">'+(nrN>0?vnd(nrN):'—')+'</td>'+lnCell(nrN-nc-ngN)+
+        '<td class="num tnum" style="border-left:2px solid var(--border)">'+(dc>0?vnd(dc):'—')+'</td><td class="num tnum">'+(dr>0?vnd(dr):'—')+'</td>'+cirCell(dc,dr)+
+        '<td class="num tnum col-net">'+(drN>0?vnd(drN):'—')+'</td>'+lnCell(drN-dc-dgN)+'</tr>';
     }).join('');
     html+='<tr class="tot"><td>Tổng</td>'+
       '<td class="num tnum" style="border-left:2px solid var(--border)">'+vnd(tot.nc)+'</td><td class="num tnum">'+vnd(tot.nr)+'</td>'+cirCell(tot.nc,tot.nr)+
-      '<td class="num tnum" style="border-left:2px solid var(--border)">'+vnd(tot.dc)+'</td><td class="num tnum">'+vnd(tot.dr)+'</td>'+cirCell(tot.dc,tot.dr)+'</tr>';
+      '<td class="num tnum col-net">'+vnd(tot.nrN)+'</td>'+lnCell(tot.nrN-tot.nc-tot.ngN)+
+      '<td class="num tnum" style="border-left:2px solid var(--border)">'+vnd(tot.dc)+'</td><td class="num tnum">'+vnd(tot.dr)+'</td>'+cirCell(tot.dc,tot.dr)+
+      '<td class="num tnum col-net">'+vnd(tot.drN)+'</td>'+lnCell(tot.drN-tot.dc-tot.dgN)+'</tr>';
     el.innerHTML=html;
   }
 
