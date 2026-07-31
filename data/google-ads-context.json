@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-31 17:33",
+  "generated_at": "2026-07-31 19:50",
   "source_data_date_range": {
     "start_7d": "2026-07-24",
     "end": "2026-07-30",
@@ -1650,6 +1650,20 @@
         ]
       },
       {
+        "search_term": "máy ghi âm cuộc họp",
+        "spend_30d": 109314.0,
+        "clicks_30d": 16,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.16,
+        "match_types": [
+          "EXACT",
+          "PHRASE"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
         "search_term": "camera ezviz",
         "spend_30d": 101742.0,
         "clicks_30d": 9,
@@ -1677,17 +1691,29 @@
         ]
       },
       {
-        "search_term": "máy ghi âm cuộc họp",
-        "spend_30d": 109314.0,
-        "clicks_30d": 16,
+        "search_term": "máy dò camera",
+        "spend_30d": 95965.0,
+        "clicks_30d": 19,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.16,
+        "ctr_30d": 0.1624,
         "match_types": [
-          "EXACT",
-          "PHRASE"
+          "NEAR_PHRASE"
         ],
         "statuses": [
           "ADDED"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm nghe lén từ xa",
+        "spend_30d": 34418.0,
+        "clicks_30d": 5,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1613,
+        "match_types": [
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
         ]
       },
       {
@@ -1714,32 +1740,6 @@
         ],
         "statuses": [
           "ADDED"
-        ]
-      },
-      {
-        "search_term": "máy dò camera",
-        "spend_30d": 95965.0,
-        "clicks_30d": 19,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1624,
-        "match_types": [
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
-        "search_term": "máy ghi âm nghe lén từ xa",
-        "spend_30d": 34418.0,
-        "clicks_30d": 5,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1613,
-        "match_types": [
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
         ]
       }
     ],
@@ -2150,12 +2150,6 @@
       }
     ],
     "match_type_breakdown": {
-      "BROAD": {
-        "spend_30d": 11593090.0,
-        "clicks_30d": 1477,
-        "conversions_30d": 29.0,
-        "term_count": 2278
-      },
       "EXACT": {
         "spend_30d": 2410649.0,
         "clicks_30d": 398,
@@ -2174,6 +2168,12 @@
         "conversions_30d": 11.83,
         "term_count": 619
       },
+      "BROAD": {
+        "spend_30d": 11593090.0,
+        "clicks_30d": 1477,
+        "conversions_30d": 29.0,
+        "term_count": 2278
+      },
       "NEAR_EXACT": {
         "spend_30d": 7165.0,
         "clicks_30d": 2,
@@ -2184,16 +2184,16 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 7054,
-      "total_spend_30d": 6602291.0
+      "total_unique_placements": 7063,
+      "total_spend_30d": 6600888.0
     },
     "network_breakdown": {
       "CONTENT": {
-        "spend_30d": 6602305.0,
-        "clicks_30d": 3023,
-        "impressions_30d": 243059,
+        "spend_30d": 6600902.0,
+        "clicks_30d": 3021,
+        "impressions_30d": 243057,
         "ctr_30d": 0.0124,
-        "cpc_30d": 2184.0,
+        "cpc_30d": 2185.0,
         "campaign_count": 5
       },
       "SEARCH": {
@@ -2207,11 +2207,11 @@
     },
     "placement_type_breakdown": {
       "WEBSITE": {
-        "spend_30d": 6602291.0,
-        "clicks_30d": 3023,
-        "impressions_30d": 230220,
+        "spend_30d": 6600888.0,
+        "clicks_30d": 3021,
+        "impressions_30d": 230348,
         "ctr_30d": 0.0131,
-        "placement_count": 7054
+        "placement_count": 7063
       }
     },
     "top_waste_placements": [],
@@ -2371,18 +2371,18 @@
         "ad_network_type": "CONTENT"
       },
       {
-        "placement": "xskt.com.vn/xsmb/200-ngay",
-        "spend_30d": 29835.0,
-        "clicks_30d": 37,
-        "ctr_30d": 0.0219,
-        "placement_type": "WEBSITE",
-        "ad_network_type": "CONTENT"
-      },
-      {
         "placement": "xskt.com.vn",
         "spend_30d": 29501.0,
         "clicks_30d": 15,
         "ctr_30d": 0.0035,
+        "placement_type": "WEBSITE",
+        "ad_network_type": "CONTENT"
+      },
+      {
+        "placement": "xskt.com.vn/xsmb/200-ngay",
+        "spend_30d": 29482.0,
+        "clicks_30d": 36,
+        "ctr_30d": 0.0213,
         "placement_type": "WEBSITE",
         "ad_network_type": "CONTENT"
       },
