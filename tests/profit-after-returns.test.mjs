@@ -13,19 +13,28 @@ const profitFn = html.match(/function renderProfit\(\)\{[\s\S]*?\n  \}/);
 assert.ok(profitFn, "không trích được renderProfit từ index.html");
 const src = profitFn[0];
 
-test("renderProfit đi qua products_by_status, KHÔNG dùng revenue.products gộp", () => {
-  assert.match(src, /products_by_status/, "phải đọc products_by_status để tách được trạng thái");
+// QUYẾT 2026-07-31: doanh thu = GIÁ TRỊ ĐƠN THẬT, không cộng từng dòng sản phẩm.
+// Cộng theo dòng lấy giá niêm yết nên cao hơn số khách thật trả (tháng 7 lệch 41,3tr ≈ 3,6%).
+test("doanh thu lấy từ order_revenue_by_status_by_date, KHÔNG cộng dòng sản phẩm", () => {
+  assert.match(src, /order_revenue_by_status_by_date/, "doanh thu phải là giá trị đơn thật");
   assert.doesNotMatch(
     src,
     /\(D\.revenue\|\|\{\}\)\.products\b(?!_by_status)/,
     "dùng lại revenue.products là quay về lãi gộp — sai quyết định 31/07"
   );
+  assert.doesNotMatch(src, /mrev\[m\]=\(mrev\[m\]\|\|0\)\+[^;]*by_date\[d\]\)\|\|0\);\s*\}\s*\}\s*var ud/,
+    "không được cộng doanh thu từ dòng sản phẩm nữa");
 });
 
 test("loại đơn hoàn khỏi CẢ doanh thu lẫn giá vốn", () => {
-  assert.match(src, /isRet\s*=\s*!!EXCL_RET\[st\]/, "phải nhận diện trạng thái hoàn qua EXCL_RET");
+  assert.match(src, /isRet\s*=\s*!!EXCL_RET\[st\]/, "doanh thu: nhận diện trạng thái hoàn qua EXCL_RET");
   assert.match(src, /if\(!isRet\)\s*mrev\[m\]/, "doanh thu phải bỏ đơn hoàn");
-  assert.match(src, /if\(!isRet\)\s*mcogs\[m2\]/, "giá vốn phải bỏ hàng hoàn (hàng về lại kho)");
+  assert.match(src, /if\(EXCL_RET\[st2\]\)\s*continue;/, "giá vốn phải bỏ hàng hoàn (hàng về lại kho)");
+});
+
+test("giá vốn vẫn đi per-SP vì giá nhập gắn theo từng sản phẩm", () => {
+  assert.match(src, /products_by_status/, "giá vốn cần products_by_status");
+  assert.match(src, /gia_nhap_vnd/, "giá vốn = số lượng × giá nhập kho");
 });
 
 // QUYẾT 2026-07-31: bảng này là LỢI NHUẬN TRƯỚC VAT.
@@ -87,27 +96,27 @@ test("tiêu đề cột và ghi chú nói rõ là sau hoàn", () => {
   assert.match(html, /Bảng này là lợi nhuận SAU HOÀN/);
 });
 
-test("mô phỏng: đơn hoàn bị loại khỏi cả DT và giá vốn", () => {
-  // 2 đơn giao (200) + 1 đơn hoàn (100); giá nhập 30/cái
+test("mô phỏng: doanh thu theo đơn thật, giá vốn theo SP, cả hai bỏ đơn hoàn", () => {
+  const EXCL_RET = { returning: 1, returned: 1 };
+  // Giá trị ĐƠN thật: đã giao 190 (chiết khấu 10 so với giá niêm yết 200), hoàn 100
+  const ordRev = { delivered: { "2026-07-05": 190 }, returned: { "2026-07-06": 100 } };
+  // Dòng SP: 2 cái đã giao, 1 cái hoàn — giá niêm yết 100/cái, giá nhập 30/cái
   const pbs = {
     delivered: { X: { by_date: { "2026-07-05": 200 }, units_by_date: { "2026-07-05": 2 } } },
     returned: { X: { by_date: { "2026-07-06": 100 }, units_by_date: { "2026-07-06": 1 } } },
   };
-  const EXCL_RET = { returning: 1, returned: 1 };
   const pc = { X: { gia_nhap_vnd: 30 } };
-  let rev = 0, cogs = 0, revG = 0, cogsG = 0;
-  for (const st in pbs) {
-    const isRet = !!EXCL_RET[st];
-    for (const p in pbs[st]) {
-      const o = pbs[st][p], cost = pc[p].gia_nhap_vnd;
-      for (const d in o.by_date) { revG += o.by_date[d]; if (!isRet) rev += o.by_date[d]; }
-      for (const d in o.units_by_date) { const c = o.units_by_date[d] * cost; cogsG += c; if (!isRet) cogs += c; }
-    }
-  }
-  assert.equal(revG, 300, "gộp = 200 + 100");
-  assert.equal(rev, 200, "sau hoàn chỉ còn đơn đã giao");
-  assert.equal(cogsG, 90, "gộp = 3 cái × 30");
-  assert.equal(cogs, 60, "sau hoàn = 2 cái × 30, hàng hoàn về kho không tính");
+
+  let rev = 0, revG = 0;
+  for (const st in ordRev) { const isRet = !!EXCL_RET[st];
+    for (const d in ordRev[st]) { revG += ordRev[st][d]; if (!isRet) rev += ordRev[st][d]; } }
+  let cogs = 0;
+  for (const st in pbs) { if (EXCL_RET[st]) continue;
+    for (const p in pbs[st]) for (const d in pbs[st][p].units_by_date) cogs += pbs[st][p].units_by_date[d] * pc[p].gia_nhap_vnd; }
+
+  assert.equal(revG, 290, "gộp theo đơn thật = 190 + 100");
+  assert.equal(rev, 190, "sau hoàn = 190, KHÔNG phải 200 của dòng SP — chiết khấu 10 đã phản ánh");
+  assert.equal(cogs, 60, "2 cái × 30; hàng hoàn về kho không tính giá vốn");
   const ad = 50, fee = ad * 0.15;
-  assert.equal(rev - ad - fee - cogs, 200 - 50 - 7.5 - 60, "LN trước VAT không trừ VAT");
+  assert.equal(rev - ad - fee - cogs, 190 - 50 - 7.5 - 60, "LN trước VAT không trừ VAT");
 });

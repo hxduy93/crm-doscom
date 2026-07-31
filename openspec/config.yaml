@@ -66,7 +66,11 @@ context: |
       Giá vốn sau hoàn − Phụ phí agency. KHÔNG trừ VAT (QUYẾT 2026-07-31): chủ dự án không xác
       định được VAT thực phải nộp (đầu ra trừ đầu vào tuỳ hoá đơn) nên trừ ước lượng 10% sẽ tạo
       cảm giác chính xác giả. Đây CŨNG chưa phải lãi ròng — chưa trừ lương, vận chuyển, phí COD,
-      kho bãi, thuế TNDN. Tháng 7/2026: 282.809.000đ, biên 24%.
+      kho bãi, thuế TNDN. Tháng 7/2026: 241.550.000đ, biên 21%.
+      DOANH THU ở bảng này = `order_revenue_by_status_by_date` (GIÁ TRỊ ĐƠN THẬT), KHÔNG cộng
+      từng dòng SP: cộng theo dòng lấy giá niêm yết nên cao hơn số khách thật trả (tháng 7 lệch
+      41,3tr ≈ 3,6%) do chiết khấu cấp đơn không phản ánh vào dòng. GIÁ VỐN vẫn per-SP vì giá
+      nhập gắn theo SP. Nhờ vậy doanh thu bảng này KHỚP cột "DT sau hoàn" của bảng theo nhân sự.
   - BẢNG LỢI NHUẬN THEO THÁNG = LỢI NHUẬN SAU HOÀN (QUYẾT 2026-07-31, ĐẢO quy tắc cũ "dùng
     revenue.products gộp"). Đi qua `revenue.products_by_status`, LOẠI trạng thái returning +
     returned khỏi CẢ doanh thu LẪN giá vốn (hàng hoàn quay về kho nên không còn là giá vốn đã

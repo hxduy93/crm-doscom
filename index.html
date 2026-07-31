@@ -358,7 +358,7 @@
             <thead><tr><th>Tháng</th><th class="num col-net" title="Đã trừ đơn đang hoàn + đã hoàn. Rê chuột vào từng ô để xem doanh thu gộp khớp Pancake và % bị hoàn.">Doanh thu sau hoàn</th><th class="num">Chi phí QC</th><th class="num" title="Agency nạp tiền QC hộ và thu VAT 8% + phí dịch vụ 7%, cộng thẳng trên chi phí gốc (không lũy kế). Chỉ áp cho FB Ads.">Phụ phí agency</th><th class="num col-net" title="Không tính giá vốn hàng đã hoàn về kho">Giá vốn sau hoàn</th><th class="num col-net" title="Lợi nhuận TRƯỚC VAT — chưa trừ VAT phải nộp và thuế TNDN">Lợi nhuận trước VAT</th><th class="num" title="Lợi nhuận trước VAT ÷ Doanh thu sau hoàn">Biên LN</th></tr></thead>
             <tbody id="profit-rows"></tbody>
           </table>
-          <p style="font-size:11.5px;color:var(--text-2);margin:10px 2px 0;font-weight:600">* <b>Bảng này là lợi nhuận SAU HOÀN</b> (QUYẾT 31/07/2026): doanh thu &amp; giá vốn đã loại đơn <b>đang hoàn + đã hoàn</b> trên Pancake POS — hàng hoàn quay về kho nên không tính giá vốn. Đơn <b>huỷ</b> vẫn tính, cùng gốc với các bảng khác. <b>LN trước VAT = DT sau hoàn − Chi phí QC (FB+Google) − Giá vốn sau hoàn (số lượng × giá nhập kho) − Phụ phí agency</b> (QUYẾT 31/07/2026).<br>* <b>Chưa trừ VAT phải nộp và thuế TNDN</b> — VAT đầu ra trừ đầu vào phụ thuộc hoá đơn thực tế nên không tính ước lượng ở đây. Cũng chưa trừ lương, vận chuyển, phí COD, kho bãi. Muốn ra lãi ròng thì lấy số này trừ tiếp các khoản đó.<br>* Vì vậy doanh thu ở bảng này <b>thấp hơn</b> KPI "Doanh thu" ở đầu trang và bảng theo nhân sự — hai chỗ đó cố ý để gộp cho khớp "doanh số" Pancake. Rê chuột vào ô doanh thu để xem số gộp và % bị hoàn.<br>* <b>Phụ phí agency = 15% chi phí FB Ads</b> — VAT 8% + phí dịch vụ 7%, cả hai cộng thẳng trên chi phí gốc (không lũy kế), đúng cách agency đối soát top-up. <b>Chỉ FB Ads chịu phí này; Google Ads chi trực tiếp nên không tính</b> — nên cột Chi phí QC (gồm cả Google) luôn lớn hơn phần sinh ra phụ phí.</p>
+          <p style="font-size:11.5px;color:var(--text-2);margin:10px 2px 0;font-weight:600">* <b>Bảng này là lợi nhuận SAU HOÀN</b> (QUYẾT 31/07/2026): doanh thu &amp; giá vốn đã loại đơn <b>đang hoàn + đã hoàn</b> trên Pancake POS — hàng hoàn quay về kho nên không tính giá vốn. Đơn <b>huỷ</b> vẫn tính, cùng gốc với các bảng khác.<br>* Doanh thu lấy theo <b>giá trị đơn thật khách trả</b>, không cộng từng dòng sản phẩm — cộng theo dòng lấy giá niêm yết nên cao hơn thực tế (tháng 7/2026 lệch 41,3tr ≈ 3,6%) vì chiết khấu cấp đơn không phản ánh vào dòng. Nhờ vậy doanh thu ở đây <b>khớp đúng cột "DT sau hoàn"</b> của bảng theo nhân sự. <b>LN trước VAT = DT sau hoàn − Chi phí QC (FB+Google) − Giá vốn sau hoàn (số lượng × giá nhập kho) − Phụ phí agency</b> (QUYẾT 31/07/2026).<br>* <b>Chưa trừ VAT phải nộp và thuế TNDN</b> — VAT đầu ra trừ đầu vào phụ thuộc hoá đơn thực tế nên không tính ước lượng ở đây. Cũng chưa trừ lương, vận chuyển, phí COD, kho bãi. Muốn ra lãi ròng thì lấy số này trừ tiếp các khoản đó.<br>* Vì vậy doanh thu ở bảng này <b>thấp hơn</b> KPI "Doanh thu" ở đầu trang và bảng theo nhân sự — hai chỗ đó cố ý để gộp cho khớp "doanh số" Pancake. Rê chuột vào ô doanh thu để xem số gộp và % bị hoàn.<br>* <b>Phụ phí agency = 15% chi phí FB Ads</b> — VAT 8% + phí dịch vụ 7%, cả hai cộng thẳng trên chi phí gốc (không lũy kế), đúng cách agency đối soát top-up. <b>Chỉ FB Ads chịu phí này; Google Ads chi trực tiếp nên không tính</b> — nên cột Chi phí QC (gồm cả Google) luôn lớn hơn phần sinh ra phụ phí.</p>
         </div>
       </section>
 
@@ -1228,15 +1228,23 @@
     // để loại đơn ĐANG HOÀN + ĐÃ HOÀN khỏi cả doanh thu lẫn giá vốn (hàng hoàn về kho).
     // Vẫn cộng song song bản gộp (mrevG/mcogsG) — chỉ để hiện tooltip đối chiếu Pancake,
     // KHÔNG dùng vào công thức lợi nhuận.
+    // DOANH THU = GIÁ TRỊ ĐƠN THẬT (order_revenue_by_status_by_date) — QUYẾT 2026-07-31.
+    // KHÔNG cộng từng dòng sản phẩm nữa: cộng theo dòng lấy giá niêm yết nên cao hơn số khách
+    // thật trả (tháng 7/2026 lệch 41,3tr ≈ 3,6%) vì chiết khấu cấp đơn không phản ánh vào dòng.
+    // GIÁ VỐN thì vẫn phải đi per-SP vì giá nhập gắn theo từng sản phẩm.
+    // Cả hai đều loại đơn ĐANG HOÀN + ĐÃ HOÀN; đơn HUỶ vẫn tính.
+    var ordRev=(D.revenue||{}).order_revenue_by_status_by_date||{};
     var pbs=(D.revenue||{}).products_by_status||{}, pc=D.product_costs||{};
     // Tách FB / Google vì phụ phí agency chỉ áp cho tiền nạp qua agency (FB).
-    var mrev={},mcogs={},mrevG={},mcogsG={},mfb={},mgg={};
-    for(var st in pbs){ var isRet=!!EXCL_RET[st], prods=pbs[st];
-      for(var p in prods){ var cost=(pc[p]||{}).gia_nhap_vnd||0,o=prods[p];
-        var bd=o.by_date||{}; for(var d in bd){ if(inR(d)){ var m=d.slice(0,7),rv=Number(bd[d])||0;
-          mrevG[m]=(mrevG[m]||0)+rv; if(!isRet) mrev[m]=(mrev[m]||0)+rv; } }
-        var ud=o.units_by_date||{}; for(var d2 in ud){ if(inR(d2)){ var m2=d2.slice(0,7),cg=(Number(ud[d2])||0)*cost;
-          mcogsG[m2]=(mcogsG[m2]||0)+cg; if(!isRet) mcogs[m2]=(mcogs[m2]||0)+cg; } }
+    var mrev={},mcogs={},mrevG={},mfb={},mgg={};
+    for(var st in ordRev){ var isRet=!!EXCL_RET[st], bd=ordRev[st]||{};
+      for(var d in bd){ if(inR(d)){ var m=d.slice(0,7),rv=Number(bd[d])||0;
+        mrevG[m]=(mrevG[m]||0)+rv; if(!isRet) mrev[m]=(mrev[m]||0)+rv; } }
+    }
+    for(var st2 in pbs){ if(EXCL_RET[st2]) continue;   // hàng hoàn về kho → không tính giá vốn
+      var prods=pbs[st2];
+      for(var p in prods){ var cost=(pc[p]||{}).gia_nhap_vnd||0, ud=prods[p].units_by_date||{};
+        for(var d2 in ud){ if(inR(d2)){ var m2=d2.slice(0,7); mcogs[m2]=(mcogs[m2]||0)+((Number(ud[d2])||0)*cost); } }
       }
     }
     (D.accounts||[]).forEach(function(a){ (a.daily||[]).forEach(function(x){ if(inR(x.date)){ var m=x.date.slice(0,7); mfb[m]=(mfb[m]||0)+(Number(x.spend)||0); } }); });
