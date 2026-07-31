@@ -222,6 +222,90 @@ def fb_get(url, params=None):
             print(f"  retry {attempt+1} after error: {e}")
     raise RuntimeError("fb_get failed after retries")
 
+# ── LINK LANDING → SẢN PHẨM ──────────────────────────────────────────────
+# Chủ dự án chốt 2026-07-31. Key = host + path (bỏ "www.", bỏ query/fragment).
+# Dùng BỔ SUNG cho việc đọc tên campaign, không thay thế: đo trên 90 ngày cho thấy
+# 12,2% chi tiêu CHỈ tên gán được (ad Messenger không có link), còn 1,9% CHỈ link gán
+# được. Và link KHÔNG đáng tin hơn tên — đã gặp campaign "Thiet Bi Ghi Am DR1" trỏ
+# nhầm về nm911d. Vì vậy thứ tự là TÊN trước, LINK vớt sau.
+LANDING_TO_PRODUCT = {
+    "noma.io.vn/911tpn":     "Noma 911",
+    "noma.io.vn/nm911d":     "Noma 911",
+    "noma.io.vn/noma911":    "Noma 911",
+    "doscom.click/d1cb":     "D1",
+    "doscom.click/d1tpn":    "D1",
+    "senso.io.vn/dr1lad":    "DR1",
+    "senso.io.vn/dr1tpn":    "DR1",
+    "doscom.click/dr1tpn":   "DR1",
+    "doscom.store/da8.1tpn": "DA8.1",
+    "noma.io.vn/250tpn":     "Noma 250",
+}
+
+_AD_CREATIVE_FIELDS = (
+    "id,campaign_id,"
+    "creative{object_story_spec{link_data{link},video_data{call_to_action{value{link}}}},"
+    "asset_feed_spec{link_urls{website_url}},template_url,object_url}"
+)
+
+
+def _norm_url(u):
+    try:
+        from urllib.parse import urlsplit
+        p = urlsplit(u)
+        return (p.netloc or "").lower().replace("www.", "") + ((p.path or "/").rstrip("/") or "/")
+    except Exception:
+        return ""
+
+
+def _links_of_creative(cr):
+    """Gom mọi chỗ Facebook có thể giấu link đích, tuỳ loại quảng cáo."""
+    out = []
+    if not cr:
+        return out
+    oss = cr.get("object_story_spec") or {}
+    if (oss.get("link_data") or {}).get("link"):
+        out.append(oss["link_data"]["link"])
+    vd = ((oss.get("video_data") or {}).get("call_to_action") or {}).get("value") or {}
+    if vd.get("link"):
+        out.append(vd["link"])
+    for u in ((cr.get("asset_feed_spec") or {}).get("link_urls") or []):
+        if u.get("website_url"):
+            out.append(u["website_url"])
+    for k in ("template_url", "object_url"):
+        if cr.get(k):
+            out.append(cr[k])
+    return out
+
+
+def fetch_campaign_products_from_links(account_id: str):
+    """{campaign_id: product} suy từ link landing của các ad trong campaign.
+
+    Chỉ nhận khi MỌI link đọc được trong campaign cùng trỏ về 1 sản phẩm. Campaign có
+    link mâu thuẫn → trả None cho campaign đó, nhường quyền cho tên campaign.
+    Lỗi mạng ở đây KHÔNG được làm hỏng cả run: trả về {} rồi chạy tiếp bằng tên.
+    """
+    found = {}
+    try:
+        url = f"https://graph.facebook.com/{FB_API_VERSION}/act_{account_id}/ads"
+        params = {"access_token": FB_TOKEN, "fields": _AD_CREATIVE_FIELDS, "limit": 200}
+        while url:
+            data = fb_get(url, params=params)
+            for ad in data.get("data", []):
+                cid = ad.get("campaign_id")
+                if not cid:
+                    continue
+                for link in _links_of_creative(ad.get("creative")):
+                    prod = LANDING_TO_PRODUCT.get(_norm_url(link))
+                    if prod:
+                        found.setdefault(cid, set()).add(prod)
+            url = data.get("paging", {}).get("next")
+            params = None
+    except Exception as e:
+        print(f"   ⚠ đọc link landing act_{account_id} lỗi ({e}) — bỏ qua, dùng tên campaign", file=sys.stderr)
+        return {}
+    return {cid: next(iter(s)) for cid, s in found.items() if len(s) == 1}
+
+
 def fetch_insights(account_id: str, level: str):
     """Fetch daily insights for one account at a given level (account|campaign|ad)."""
     today = datetime.now(timezone(timedelta(hours=7))).strftime("%Y-%m-%d")
@@ -464,45 +548,53 @@ def build_data():
 
     # --- AD SPEND PER STAFF × PROFIT PRODUCT -----------------------
     # Duy cầm 3 TK, Phương Nam cầm 3 TK; campaign name chứa tên SP → detect_profit_product.
-    # 2026-07-31: campaign KHÔNG đoán được SP từ tên (vd "New folder #1", "Toản mán shop",
-    # "Triệu vương đen") TRƯỚC ĐÂY BỊ BỎ HẲN khỏi ad_spend_by_staff → tiền biến mất khỏi
-    # bảng nhân sự lẫn bảng brand, làm lợi nhuận bị thổi lên (27,3tr của Duy).
-    # Nay gom vào rổ "(chưa gán SP)" có tiền tố brand lấy từ fb-config.json để:
-    #   · staffSpend() cộng đủ            → chi phí nhân sự ĐÚNG
-    #   · adCostBrand() tách đúng cột      → nhờ tiền tố "Noma " khớp regex /^\s*noma/i của UI
-    #   · tiền không còn biến mất âm thầm  → sai lệch lộ ra thay vì bị giấu
-    # Đây KHÔNG phải nhận diện sản phẩm — chỉ đảm bảo không mất tiền. Muốn biết đúng SP
-    # thì phải đọc link landing của ad (xem ghi chú ở fetch_fb_ad_creatives.py).
-    _fbcfg = (_load_json("data/fb-config.json") or {}).get("account_to_groups", {})
-
-    def _unassigned_label(acct_id):
-        groups = (_fbcfg.get(str(acct_id or "").replace("act_", "")) or {}).get("groups") or []
-        # Tiền tố "Noma " để UI xếp vào cột NOMA; tài khoản khác để trống -> cột DOSCOM.
-        return ("Noma " if "NOMA" in groups else "") + "(chưa gán SP)"
-
+    # THỨ TỰ GÁN SẢN PHẨM (QUYẾT 2026-07-31, đo trên 90 ngày trước khi chốt):
+    #   1. Tên campaign  — phủ 97,7%; riêng 12,2% chi tiêu CHỈ tên gán được (ad Messenger
+    #      không có link nào), nên KHÔNG được thay tên bằng link.
+    #   2. Link landing  — vớt thêm 1,9% mà tên chịu (campaign đặt tên kiểu "New folder #1").
+    #      Đặt SAU vì link không đáng tin hơn tên: đã gặp "Thiet Bi Ghi Am DR1" trỏ nhầm nm911d.
+    #   3. Cả hai chịu   → campaign TƯƠNG TÁC chạy hộ team content → KHÔNG TÍNH vào chi phí
+    #      (chủ dự án chốt: "cái đó không tính"). Ghi riêng vào ad_spend_excluded để số bị
+    #      loại vẫn tra được, KHÔNG biến mất âm thầm như lỗi cũ.
     account_to_staff = {f"act_{a['id']}": a["staff"] for a in ACCOUNTS}
+
+    link_products = {}
+    for a in ACCOUNTS:
+        if f"act_{a['id']}" in {f"act_{x['id']}" for x in ACCOUNTS}:
+            link_products.update(fetch_campaign_products_from_links(a["id"]))
+    print(f"   ✓ đọc link landing: {len(link_products)} campaign suy được SP từ link")
+
     ad_spend_by_staff = {"DUY": {}, "PHUONG_NAM": {}}
-    unassigned = {"DUY": 0.0, "PHUONG_NAM": 0.0}
+    excluded = {"DUY": {"_total": 0.0, "by_date": {}}, "PHUONG_NAM": {"_total": 0.0, "by_date": {}}}
+    from_link, excluded_names = [], []
     for c in data["campaigns"]:
         staff = account_to_staff.get(c.get("account_id"))
         if not staff:
             continue
         prod = detect_profit_product(c.get("name", ""))
-        is_unassigned = not prod
-        if is_unassigned:
-            prod = _unassigned_label(c.get("account_id"))
-        bucket = ad_spend_by_staff[staff].setdefault(prod, {"_total": 0.0, "by_date": {}})
+        if not prod:
+            prod = link_products.get(str(c.get("id") or ""))
+            if prod:
+                from_link.append(c.get("name", "")[:40])
+        if not prod:
+            bucket, is_excluded = excluded[staff], True
+            excluded_names.append(c.get("name", "")[:40])
+        else:
+            bucket, is_excluded = ad_spend_by_staff[staff].setdefault(prod, {"_total": 0.0, "by_date": {}}), False
         for d in c["daily"]:
             sp = float(d.get("spend") or 0)
             if sp <= 0:
                 continue
             bucket["_total"] += sp
             bucket["by_date"][d["date"]] = bucket["by_date"].get(d["date"], 0.0) + sp
-            if is_unassigned:
-                unassigned[staff] += sp
     data["ad_spend_by_staff"] = ad_spend_by_staff
-    # Giữ nguyên khoá cũ để biết còn bao nhiêu tiền chưa gán được SP (campaign cần đổi tên).
-    data["ad_spend_unassigned"] = unassigned
+    data["ad_spend_excluded"] = excluded
+    if from_link:
+        print(f"   ↪ {len(from_link)} campaign gán SP nhờ LINK landing: {', '.join(from_link[:6])}")
+    if excluded_names:
+        tot_ex = sum(v['_total'] for v in excluded.values())
+        print(f"   ↪ LOẠI {len(excluded_names)} campaign tương tác (chạy hộ team content) = {tot_ex:,.0f}đ: "
+              f"{', '.join(excluded_names[:6])}")
     print(f"   ✓ ad spend by staff: DUY={sum(v['_total'] for v in ad_spend_by_staff['DUY'].values()):,.0f}đ · "
           f"PHUONG_NAM={sum(v['_total'] for v in ad_spend_by_staff['PHUONG_NAM'].values()):,.0f}đ · "
           f"unassigned: DUY={unassigned['DUY']:,.0f}đ / PN={unassigned['PHUONG_NAM']:,.0f}đ")
