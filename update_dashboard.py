@@ -457,15 +457,33 @@ def build_data():
 
     # --- AD SPEND PER STAFF × PROFIT PRODUCT -----------------------
     # Duy cầm 3 TK, Phương Nam cầm 3 TK; campaign name chứa tên SP → detect_profit_product.
+    # 2026-07-31: campaign KHÔNG đoán được SP từ tên (vd "New folder #1", "Toản mán shop",
+    # "Triệu vương đen") TRƯỚC ĐÂY BỊ BỎ HẲN khỏi ad_spend_by_staff → tiền biến mất khỏi
+    # bảng nhân sự lẫn bảng brand, làm lợi nhuận bị thổi lên (27,3tr của Duy).
+    # Nay gom vào rổ "(chưa gán SP)" có tiền tố brand lấy từ fb-config.json để:
+    #   · staffSpend() cộng đủ            → chi phí nhân sự ĐÚNG
+    #   · adCostBrand() tách đúng cột      → nhờ tiền tố "Noma " khớp regex /^\s*noma/i của UI
+    #   · tiền không còn biến mất âm thầm  → sai lệch lộ ra thay vì bị giấu
+    # Đây KHÔNG phải nhận diện sản phẩm — chỉ đảm bảo không mất tiền. Muốn biết đúng SP
+    # thì phải đọc link landing của ad (xem ghi chú ở fetch_fb_ad_creatives.py).
+    _fbcfg = (_load_json("data/fb-config.json") or {}).get("account_to_groups", {})
+
+    def _unassigned_label(acct_id):
+        groups = (_fbcfg.get(str(acct_id or "").replace("act_", "")) or {}).get("groups") or []
+        # Tiền tố "Noma " để UI xếp vào cột NOMA; tài khoản khác để trống -> cột DOSCOM.
+        return ("Noma " if "NOMA" in groups else "") + "(chưa gán SP)"
+
     account_to_staff = {f"act_{a['id']}": a["staff"] for a in ACCOUNTS}
     ad_spend_by_staff = {"DUY": {}, "PHUONG_NAM": {}}
+    unassigned = {"DUY": 0.0, "PHUONG_NAM": 0.0}
     for c in data["campaigns"]:
         staff = account_to_staff.get(c.get("account_id"))
         if not staff:
             continue
         prod = detect_profit_product(c.get("name", ""))
-        if not prod:
-            continue
+        is_unassigned = not prod
+        if is_unassigned:
+            prod = _unassigned_label(c.get("account_id"))
         bucket = ad_spend_by_staff[staff].setdefault(prod, {"_total": 0.0, "by_date": {}})
         for d in c["daily"]:
             sp = float(d.get("spend") or 0)
@@ -473,16 +491,10 @@ def build_data():
                 continue
             bucket["_total"] += sp
             bucket["by_date"][d["date"]] = bucket["by_date"].get(d["date"], 0.0) + sp
+            if is_unassigned:
+                unassigned[staff] += sp
     data["ad_spend_by_staff"] = ad_spend_by_staff
-
-    # Unassigned (campaign không detect được SP) để biết campaign cần đổi tên
-    unassigned = {"DUY": 0.0, "PHUONG_NAM": 0.0}
-    for c in data["campaigns"]:
-        staff = account_to_staff.get(c.get("account_id"))
-        if not staff or detect_profit_product(c.get("name", "")):
-            continue
-        for d in c["daily"]:
-            unassigned[staff] += float(d.get("spend") or 0)
+    # Giữ nguyên khoá cũ để biết còn bao nhiêu tiền chưa gán được SP (campaign cần đổi tên).
     data["ad_spend_unassigned"] = unassigned
     print(f"   ✓ ad spend by staff: DUY={sum(v['_total'] for v in ad_spend_by_staff['DUY'].values()):,.0f}đ · "
           f"PHUONG_NAM={sum(v['_total'] for v in ad_spend_by_staff['PHUONG_NAM'].values()):,.0f}đ · "
