@@ -36,7 +36,7 @@ test("công thức LN trừ đủ 4 khoản", () => {
 // Bảng nhân sự = lãi gộp (không VAT, không phụ phí) để so hiệu quả nhân sự.
 // Bảng lợi nhuận tháng = lãi cuối (trừ đủ). Ai đó "đồng bộ" hai bên là phá quyết định này.
 test("bảng nhân sự giữ công thức đơn thuần DT − CP − GV", () => {
-  const staff = html.match(/var roas=sp>0\?\(rv\/sp\):null, ln=([^;]+);/);
+  const staff = html.match(/var ln=([^;]+);/);
   assert.ok(staff, "không trích được công thức LN của bảng nhân sự");
   assert.equal(staff[1].trim(), "rv-sp-cg, lnN=rvN-sp-cgN", "bảng nhân sự KHÔNG được trừ VAT/phụ phí");
   assert.doesNotMatch(staff[1], /vat|fee|agencyFee/i, "lọt VAT hoặc phụ phí vào bảng nhân sự là sai quyết định");

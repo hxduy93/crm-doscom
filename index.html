@@ -303,10 +303,10 @@
       </section>
 
       <section class="mod wide tbl-dense" style="margin-bottom:16px" id="sec-staff">
-        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo nhân sự</h3></div><span class="s">Website/Hotline = gộp Website + Zalo + Hotline (kênh Google) · DT &amp; Giá vốn gồm mọi trạng thái (kể cả hoàn/huỷ, khớp Pancake) · LN = DT − Chi phí QC − Giá vốn · <b>Sau hoàn</b> = đã trừ đơn ĐANG HOÀN + ĐÃ HOÀN trên Pancake POS (đơn huỷ vẫn tính) · Lead = đăng ký từ landing trên Cloudflare: NOMA 911 (nm911d/911tpn) + Máy dò D1 (d1cb/d1tpn) + Ghi âm DR1 (dr1lad/dr1tpn)</span></div>
+        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo nhân sự</h3></div><span class="s">Website/Hotline = gộp Website + Zalo + Hotline (kênh Google) · DT &amp; Giá vốn gồm mọi trạng thái (kể cả hoàn/huỷ, khớp Pancake) · LN tạm tính = DT − Chi phí QC − Giá vốn (chưa trừ VAT &amp; phụ phí agency) · CIR = Chi phí QC ÷ Doanh thu, thấp = tốt · <b>Sau hoàn</b> = đã trừ đơn ĐANG HOÀN + ĐÃ HOÀN trên Pancake POS (đơn huỷ vẫn tính) · Lead = đăng ký từ landing trên Cloudflare: NOMA 911 (nm911d/911tpn) + Máy dò D1 (d1cb/d1tpn) + Ghi âm DR1 (dr1lad/dr1tpn)</span></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
-            <thead><tr><th>Nhân sự / Nguồn</th><th class="num">Chi phí QC</th><th class="num">Doanh thu</th><th class="num col-net" title="Doanh thu đã trừ đơn đang hoàn + đã hoàn trên Pancake POS">DT sau hoàn</th><th class="num">Giá vốn</th><th class="num">ROAS</th><th class="num" title="Tổng đăng ký từ mọi landing trên Cloudflare (NOMA 911 + Máy dò D1 + Ghi âm DR1), theo đúng khoảng ngày đang lọc">Lead</th><th class="num">Đơn</th><th class="num">Lợi nhuận (DT−CP−GV)</th><th class="num col-net" title="DT sau hoàn − Chi phí QC − Giá vốn sau hoàn (hàng hoàn về kho nên không tính giá vốn)">LN sau hoàn</th></tr></thead>
+            <thead><tr><th>Nhân sự / Nguồn</th><th class="num">Chi phí QC</th><th class="num">Doanh thu</th><th class="num col-net" title="Doanh thu đã trừ đơn đang hoàn + đã hoàn trên Pancake POS">DT sau hoàn</th><th class="num">Giá vốn</th><th class="num" title="CIR = Chi phí QC ÷ Doanh thu (thấp = tốt). Tính trên doanh thu gộp để khớp bảng brand × nhân sự — rê chuột vào ô để xem CIR sau hoàn.">CIR</th><th class="num" title="Tổng đăng ký từ mọi landing trên Cloudflare (NOMA 911 + Máy dò D1 + Ghi âm DR1), theo đúng khoảng ngày đang lọc">Lead</th><th class="num">Đơn</th><th class="num" title="Lợi nhuận TẠM TÍNH — chưa trừ VAT 10% và phụ phí agency">Lợi nhuận tạm tính (DT−CP−GV)</th><th class="num col-net" title="DT sau hoàn − Chi phí QC − Giá vốn sau hoàn (hàng hoàn về kho nên không tính giá vốn)">LN sau hoàn</th></tr></thead>
             <tbody id="staff-rows"></tbody>
           </table>
           <p style="font-size:11.5px;color:var(--text-2);margin:10px 2px 0;font-weight:600">* Cột LN ở bảng này cố ý dùng <b>công thức đơn thuần DT − Chi phí QC − Giá vốn</b> (QUYẾT 31/07/2026) — <b>CHƯA trừ VAT 10% và phụ phí agency</b>, nên nó là <b>lãi gộp</b> để so hiệu quả giữa các nhân sự, KHÔNG phải lãi cuối. Lãi cuối xem ở <b>Bảng lợi nhuận theo tháng</b> bên dưới; hai bảng lệch nhau là bình thường, tháng 7/2026 lệch ~159tr (VAT ~120tr + phụ phí agency ~80tr, bù lại khác cơ sở doanh thu ~41tr).<br>* Dấu <b>*</b> cạnh Chi phí QC = có phần tiền từ campaign chưa gán được sản phẩm (tên campaign không chứa tên SP). Tiền đó <b>vẫn tính đủ</b> vào chi phí — rê chuột vào ô để xem bao nhiêu.</p>
@@ -1116,6 +1116,14 @@
       {label:'Page Facebook', color:'#F472B6', keys:['FB_PAGE'], ad:null, leadKey:null}
     ];
     var tRev=0,tSp=0,tOrd=0,tCogs=0,tRevN=0,tCogsN=0,tUnas=0;
+    // Ô CIR dùng chung cho hàng nhân sự và hàng Tổng. Ngưỡng màu khớp bảng brand × nhân sự:
+    // >100% đỏ (chi nhiều hơn thu), ≤50% xanh, giữa là cam. Tooltip kèm CIR sau hoàn.
+    var cirCell=function(cost,rev,revNet){
+      if(!(rev>0)) return '<td class="num tnum" style="color:var(--text-2)">—</td>';
+      var v=cost/rev, col=v>1?'#E5484D':(v<=0.5?'#16A34A':'#E08600');
+      var tip=revNet>0?'CIR sau hoàn = '+Math.round(cost/revNet*100)+'% (chi phí '+vnd(cost)+' ÷ DT sau hoàn '+vnd(revNet)+')':'';
+      return '<td class="num tnum" style="color:'+col+';font-weight:800"'+(tip?' title="'+tip+'"':'')+'>'+Math.round(v*100)+'%</td>';
+    };
     var rows=STAFF_GROUPS.map(function(s){
       var sp=staffSpend({ad:s.ad});
       var rv=s.keys.reduce(function(t,k){return t+srcRevenue(k);},0);
@@ -1124,7 +1132,9 @@
       var rvN=s.keys.reduce(function(t,k){return t+srcRevenueNet(k);},0);
       var cgN=s.keys.reduce(function(t,k){return t+srcCogsNet(k);},0);
       tRev+=rv;tSp+=sp;tOrd+=od;tCogs+=cg;tRevN+=rvN;tCogsN+=cgN;
-      var roas=sp>0?(rv/sp):null, ln=rv-sp-cg, lnN=rvN-sp-cgN;
+      // CIR = Chi phí QC ÷ Doanh thu (thấp = tốt) — cùng định nghĩa với bảng brand × nhân sự.
+      // Tính trên doanh thu GỘP để khớp bảng brand; CIR sau hoàn để ở tooltip.
+      var ln=rv-sp-cg, lnN=rvN-sp-cgN;
       // % doanh thu bị hoàn — cho biết cột "sau hoàn" hụt bao nhiêu so với cột gộp.
       var retPc=rv>0?((rv-rvN)/rv*100):0;
       var unas=staffUnassigned(s.ad); tUnas+=unas;
@@ -1133,7 +1143,7 @@
         '<td class="num tnum">'+vnd(rv)+'</td>'+
         '<td class="num tnum col-net" title="Hoàn '+retPc.toFixed(1).replace('.',',')+'% doanh thu gộp">'+vnd(rvN)+'</td>'+
         '<td class="num tnum">'+(cg>0?vnd(cg):'—')+'</td>'+
-        '<td class="num roas" style="color:'+(roas==null?'var(--text-2)':(roas>=1.5?'#16A34A':(roas>=1?'#E08600':'#E5484D')))+'">'+(roas!=null?roas.toFixed(2)+'×':'—')+'</td>'+
+        cirCell(sp,rv,rvN)+
         // Lead điền sau khi /api/noma911/stats trả về (fillStaffLeads) — bảng này
         // vẽ đồng bộ còn lead phải gọi API nên chưa có ngay.
         '<td class="num tnum" data-lead="'+(s.leadKey||'')+'" style="color:var(--text-2)">'+(s.leadKey?'…':'—')+'</td>'+
@@ -1141,13 +1151,13 @@
         '<td class="num tnum" style="color:'+(ln>=0?'#16A34A':'#E5484D')+'">'+vnd(ln)+'</td>'+
         '<td class="num tnum col-net" style="font-weight:800;color:'+(lnN>=0?'#16A34A':'#E5484D')+'">'+vnd(lnN)+'</td></tr>';
     }).join('');
-    var tRoas=tSp>0?(tRev/tSp):null, tLn=tRev-tSp-tCogs, tLnN=tRevN-tSp-tCogsN;
+    var tLn=tRev-tSp-tCogs, tLnN=tRevN-tSp-tCogsN;
     var tRetPc=tRev>0?((tRev-tRevN)/tRev*100):0;
     rows+='<tr class="tot"><td>Tổng</td>'+
       '<td class="num tnum"'+(tUnas>0?' title="Trong đó '+vnd(tUnas)+' chưa gán được sản phẩm — vẫn tính đủ vào chi phí"':'')+'>'+vnd(tSp)+(tUnas>0?' <span style="color:var(--text-2);font-weight:700">*</span>':'')+'</td>'+
       '<td class="num tnum">'+vnd(tRev)+'</td>'+
       '<td class="num tnum col-net" title="Hoàn '+tRetPc.toFixed(1).replace('.',',')+'% doanh thu gộp">'+vnd(tRevN)+'</td>'+
-      '<td class="num tnum">'+vnd(tCogs)+'</td><td class="num">'+(tRoas!=null?tRoas.toFixed(2)+'×':'—')+'</td><td class="num tnum" id="lead-total" style="color:var(--text-2)">…</td><td class="num tnum">'+num(tOrd)+'</td><td class="num tnum" style="color:'+(tLn>=0?'#16A34A':'#E5484D')+'">'+vnd(tLn)+'</td>'+
+      '<td class="num tnum">'+vnd(tCogs)+'</td>'+cirCell(tSp,tRev,tRevN)+'<td class="num tnum" id="lead-total" style="color:var(--text-2)">…</td><td class="num tnum">'+num(tOrd)+'</td><td class="num tnum" style="color:'+(tLn>=0?'#16A34A':'#E5484D')+'">'+vnd(tLn)+'</td>'+
       '<td class="num tnum col-net" style="color:'+(tLnN>=0?'#16A34A':'#E5484D')+'">'+vnd(tLnN)+'</td></tr>';
     document.getElementById('staff-rows').innerHTML=rows;
     // Bảng vừa vẽ lại → nếu lead đã tải trước đó thì điền ngay, khỏi chờ API lần nữa.
