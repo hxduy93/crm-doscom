@@ -1,0 +1,25 @@
+name: List ad landing URLs (one-shot debug)
+
+# Liệt kê link landing mà từng quảng cáo dẫn tới, kèm chi tiêu 90 ngày.
+# Dùng để chốt bảng slug -> sản phẩm, thay cho việc đoán SP từ TÊN campaign
+# (tên đặt tay nên có campaign không gán được -> tiền rơi vào rổ "(chưa gán SP)").
+# Chỉ ĐỌC, không sửa dữ liệu gì.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: List ad landing URLs
+        env:
+          FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
+        run: python scripts/list_ad_landing_urls.py
