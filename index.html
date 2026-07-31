@@ -1072,6 +1072,10 @@
   function srcOrders(key){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0; return sumByDate(g.total_orders_by_date); }
   function srcDailyOrders(key){ var g=((D.revenue||{}).source_groups||{})[key]; return g?(g.total_orders_by_date||{}):{}; }
   function staffSpend(s){ if(s.ad==='GOOGLE') return ggSpend(); if(!s.ad) return 0; var o=(D.ad_spend_by_staff||{})[s.ad]||{},sum=0; for(var p in o){ sum+=sumByDate(o[p].by_date); } return sum; }
+  // Tiền QC của campaign đặt tên không chứa tên SP (vd "New folder #1") — nguồn gom vào rổ
+  // "(chưa gán SP)". VẪN nằm trong chi phí, chỉ là chưa biết thuộc SP nào. Hiện ở tooltip
+  // để không ai tưởng dashboard đang giấu tiền như lỗi cũ (27,3tr của Duy biến mất).
+  function staffUnassigned(ad){ if(!ad||ad==='GOOGLE')return 0; var o=(D.ad_spend_by_staff||{})[ad]||{},s=0; for(var p in o){ if(/\(chưa gán SP\)/.test(p)) s+=sumByDate((o[p]||{}).by_date); } return s; }
 
   function dateList(){ var out=[],cur=new Date(range.start+'T00:00:00Z'),end=new Date(range.end+'T00:00:00Z');
     while(cur<=end){ out.push(cur.toISOString().slice(0,10)); cur.setUTCDate(cur.getUTCDate()+1); } return out; }
@@ -1110,7 +1114,7 @@
       {label:'Website / Hotline', color:'#16A34A', keys:['WEBSITE','ZALO_OA','HOTLINE'], ad:'GOOGLE', leadKey:null},
       {label:'Page Facebook', color:'#F472B6', keys:['FB_PAGE'], ad:null, leadKey:null}
     ];
-    var tRev=0,tSp=0,tOrd=0,tCogs=0,tRevN=0,tCogsN=0;
+    var tRev=0,tSp=0,tOrd=0,tCogs=0,tRevN=0,tCogsN=0,tUnas=0;
     var rows=STAFF_GROUPS.map(function(s){
       var sp=staffSpend({ad:s.ad});
       var rv=s.keys.reduce(function(t,k){return t+srcRevenue(k);},0);
@@ -1122,8 +1126,9 @@
       var roas=sp>0?(rv/sp):null, ln=rv-sp-cg, lnN=rvN-sp-cgN;
       // % doanh thu bị hoàn — cho biết cột "sau hoàn" hụt bao nhiêu so với cột gộp.
       var retPc=rv>0?((rv-rvN)/rv*100):0;
+      var unas=staffUnassigned(s.ad); tUnas+=unas;
       return '<tr><td><span class="who"><i style="background:'+s.color+'"></i>'+s.label+'</span></td>'+
-        '<td class="num tnum">'+(sp>0?vnd(sp):'—')+'</td>'+
+        '<td class="num tnum"'+(unas>0?' title="Trong đó '+vnd(unas)+' từ campaign chưa gán được sản phẩm (tên campaign không chứa tên SP) — vẫn tính đủ vào chi phí"':'')+'>'+(sp>0?vnd(sp):'—')+(unas>0?' <span style="color:var(--text-2);font-weight:700">*</span>':'')+'</td>'+
         '<td class="num tnum">'+vnd(rv)+'</td>'+
         '<td class="num tnum col-net" title="Hoàn '+retPc.toFixed(1).replace('.',',')+'% doanh thu gộp">'+vnd(rvN)+'</td>'+
         '<td class="num tnum">'+(cg>0?vnd(cg):'—')+'</td>'+
@@ -1137,7 +1142,9 @@
     }).join('');
     var tRoas=tSp>0?(tRev/tSp):null, tLn=tRev-tSp-tCogs, tLnN=tRevN-tSp-tCogsN;
     var tRetPc=tRev>0?((tRev-tRevN)/tRev*100):0;
-    rows+='<tr class="tot"><td>Tổng</td><td class="num tnum">'+vnd(tSp)+'</td><td class="num tnum">'+vnd(tRev)+'</td>'+
+    rows+='<tr class="tot"><td>Tổng</td>'+
+      '<td class="num tnum"'+(tUnas>0?' title="Trong đó '+vnd(tUnas)+' chưa gán được sản phẩm — vẫn tính đủ vào chi phí"':'')+'>'+vnd(tSp)+(tUnas>0?' <span style="color:var(--text-2);font-weight:700">*</span>':'')+'</td>'+
+      '<td class="num tnum">'+vnd(tRev)+'</td>'+
       '<td class="num tnum col-net" title="Hoàn '+tRetPc.toFixed(1).replace('.',',')+'% doanh thu gộp">'+vnd(tRevN)+'</td>'+
       '<td class="num tnum">'+vnd(tCogs)+'</td><td class="num">'+(tRoas!=null?tRoas.toFixed(2)+'×':'—')+'</td><td class="num tnum" id="lead-total" style="color:var(--text-2)">…</td><td class="num tnum">'+num(tOrd)+'</td><td class="num tnum" style="color:'+(tLn>=0?'#16A34A':'#E5484D')+'">'+vnd(tLn)+'</td>'+
       '<td class="num tnum col-net" style="color:'+(tLnN>=0?'#16A34A':'#E5484D')+'">'+vnd(tLnN)+'</td></tr>';
