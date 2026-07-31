@@ -28,8 +28,30 @@ test("loại đơn hoàn khỏi CẢ doanh thu lẫn giá vốn", () => {
   assert.match(src, /if\(!isRet\)\s*mcogs\[m2\]/, "giá vốn phải bỏ hàng hoàn (hàng về lại kho)");
 });
 
-test("công thức LN trừ đủ 4 khoản", () => {
-  assert.match(src, /pf=r-vat-ad-fee-cogs/, "LN = DT sau hoàn − VAT − chi phí QC − phụ phí agency − giá vốn");
+// QUYẾT 2026-07-31: bảng này là LỢI NHUẬN TRƯỚC VAT.
+// Chủ dự án không xác định được VAT thực phải nộp (đầu ra trừ đầu vào tuỳ hoá đơn), nên KHÔNG
+// trừ VAT ước lượng 10% — trừ một con số bịa sẽ tạo cảm giác chính xác giả.
+test("LN trước VAT = DT sau hoàn − chi phí QC − phụ phí agency − giá vốn, KHÔNG trừ VAT", () => {
+  assert.match(src, /pf=r-ad-fee-cogs/, "công thức phải là r-ad-fee-cogs");
+  assert.doesNotMatch(src, /vat=r\*0\.10/, "không được tính lại VAT 10% trên doanh thu");
+  assert.doesNotMatch(src, /pf=[^;]*-vat/, "không được trừ VAT vào lợi nhuận");
+  // Lưu ý: chuỗi "VAT 8%" vẫn còn hợp lệ — đó là VAT trong PHỤ PHÍ AGENCY ở tooltip,
+  // khác hoàn toàn với VAT đầu ra 10% mà quyết định này loại bỏ.
+  assert.match(src, /AGENCY_FEE\.vat/, "tooltip phụ phí agency vẫn phải tách được VAT 8%");
+});
+
+test("bảng không còn cột VAT (7 cột)", () => {
+  const head = html.match(/<thead><tr><th>Tháng<\/th>[\s\S]*?<\/tr><\/thead>/)[0];
+  assert.doesNotMatch(head, /VAT 10%/, "cột VAT 10% phải bị bỏ");
+  assert.equal([...head.matchAll(/<th[ >]/g)].length, 7);
+  const cs = html.match(/getElementById\('profit-rows'\)\.innerHTML=rows\|\|'<tr><td colspan="(\d+)"/);
+  assert.equal(cs[1], "7", "colspan hàng rỗng phải khớp số cột");
+});
+
+test("tiêu đề nói rõ là chưa VAT", () => {
+  assert.match(html, /Bảng lợi nhuận theo tháng \(chưa VAT\)/);
+  assert.match(html, /Lợi nhuận trước VAT<\/th>/);
+  assert.match(html, /Chưa trừ VAT phải nộp và thuế TNDN/);
 });
 
 // QUYẾT 2026-07-31: hai bảng CỐ Ý dùng hai mức lợi nhuận khác nhau.
@@ -62,7 +84,6 @@ test("lấy danh sách tháng từ bản gộp — tháng chỉ có đơn hoàn 
 test("tiêu đề cột và ghi chú nói rõ là sau hoàn", () => {
   assert.match(html, /<th class="num col-net"[^>]*>Doanh thu sau hoàn<\/th>/);
   assert.match(html, /Giá vốn sau hoàn<\/th>/);
-  assert.match(html, /Lợi nhuận sau hoàn<\/th>/);
   assert.match(html, /Bảng này là lợi nhuận SAU HOÀN/);
 });
 
@@ -88,5 +109,5 @@ test("mô phỏng: đơn hoàn bị loại khỏi cả DT và giá vốn", () =>
   assert.equal(cogsG, 90, "gộp = 3 cái × 30");
   assert.equal(cogs, 60, "sau hoàn = 2 cái × 30, hàng hoàn về kho không tính");
   const ad = 50, fee = ad * 0.15;
-  assert.equal(rev - rev * 0.1 - ad - fee - cogs, 200 - 20 - 50 - 7.5 - 60);
+  assert.equal(rev - ad - fee - cogs, 200 - 50 - 7.5 - 60, "LN trước VAT không trừ VAT");
 });

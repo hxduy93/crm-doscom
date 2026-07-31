@@ -88,13 +88,14 @@ test("đầu vào rỗng/hỏng → 0, không ra NaN", () => {
 });
 
 test("bảng lợi nhuận đã trừ phụ phí agency vào công thức LN", () => {
-  assert.match(html, /pf=r-vat-ad-fee-cogs/, "công thức LN phải trừ fee");
+  // 2026-07-31: bỏ VAT khỏi công thức → pf=r-ad-fee-cogs (fee vẫn phải bị trừ)
+  assert.match(html, /pf=r-ad-fee-cogs/, "công thức LN phải trừ fee");
   assert.match(html, /<th class="num" title="[^"]*"[^>]*>Phụ phí agency<\/th>/, "thiếu cột Phụ phí agency");
   // Hàng "không có dữ liệu" của riêng bảng lợi nhuận (bám getElementById để không bắt nhầm bảng khác)
   const colspan = html.match(/getElementById\('profit-rows'\)\.innerHTML=rows\|\|'<tr><td colspan="(\d+)"/);
   assert.ok(colspan, "không tìm thấy hàng rỗng của profit-rows");
-  assert.equal(colspan[1], "8", "thêm 1 cột thì colspan hàng rỗng phải là 8");
-  // Số <th> của thead bảng lợi nhuận phải bằng số <td> mỗi hàng (8 cột)
+  assert.equal(colspan[1], "7", "bỏ cột VAT thì colspan hàng rỗng phải là 7");
+  // Số <th> của thead bảng lợi nhuận phải bằng số <td> mỗi hàng (7 cột)
   const thead = html.match(/<thead><tr><th>Tháng<\/th>[\s\S]*?<\/tr><\/thead>/)[0];
-  assert.equal([...thead.matchAll(/<th[ >]/g)].length, 8, "thead bảng lợi nhuận phải có đúng 8 cột");
+  assert.equal([...thead.matchAll(/<th[ >]/g)].length, 7, "thead bảng lợi nhuận phải có đúng 7 cột");
 });

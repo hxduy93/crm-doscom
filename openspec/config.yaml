@@ -62,8 +62,11 @@ context: |
   - HAI MỨC LỢI NHUẬN, CỐ Ý KHÁC NHAU (QUYẾT 2026-07-31) — ĐỪNG "sửa" cho bằng nhau:
     · Bảng THEO NHÂN SỰ: LN = Doanh thu − Chi phí QC − Giá vốn. CÔNG THỨC ĐƠN THUẦN, KHÔNG trừ
       VAT 10%, KHÔNG trừ phụ phí agency. Mục đích: so hiệu quả giữa các nhân sự → lãi gộp.
-    · Bảng LỢI NHUẬN THEO THÁNG: là LÃI CUỐI → PHẢI trừ đủ VAT 10% + phụ phí agency.
-    Tháng 7/2026 hai bảng lệch ~159tr (VAT ~120tr + phụ phí ~80tr − khác cơ sở doanh thu ~41tr).
+    · Bảng LỢI NHUẬN THEO THÁNG (CHƯA VAT): LN trước VAT = DT sau hoàn − Chi phí QC −
+      Giá vốn sau hoàn − Phụ phí agency. KHÔNG trừ VAT (QUYẾT 2026-07-31): chủ dự án không xác
+      định được VAT thực phải nộp (đầu ra trừ đầu vào tuỳ hoá đơn) nên trừ ước lượng 10% sẽ tạo
+      cảm giác chính xác giả. Đây CŨNG chưa phải lãi ròng — chưa trừ lương, vận chuyển, phí COD,
+      kho bãi, thuế TNDN. Tháng 7/2026: 282.809.000đ, biên 24%.
   - BẢNG LỢI NHUẬN THEO THÁNG = LỢI NHUẬN SAU HOÀN (QUYẾT 2026-07-31, ĐẢO quy tắc cũ "dùng
     revenue.products gộp"). Đi qua `revenue.products_by_status`, LOẠI trạng thái returning +
     returned khỏi CẢ doanh thu LẪN giá vốn (hàng hoàn quay về kho nên không còn là giá vốn đã
