@@ -63,6 +63,18 @@ context: |
   - Doanh thu Facebook brand tính CẤP ĐƠN (order-level), KHÔNG per-SKU
     (combo Noma đúng ≈ 244k/đơn khớp Pancake, sai thành ~200k nếu tính per-SKU).
   - Noma = tổng đơn FB − Doscom(per-product). FB_PAGE = Messenger organic (không gồm Website/Google/Zalo/Hotline).
+  - MUA CHÉO SẢN PHẨM (QUYẾT 2026-07-31): khách vào từ nguồn quảng cáo SP này nhưng mua SP khác
+    (vd nguồn "PHƯƠNG NAM - D1" mà mua D1 Pro / DR1) thì coi là SẢN PHẨM GIA TĂNG của nguồn đó —
+    doanh thu & giá vốn ghi theo SP THẬT trong đơn, chi phí QC vẫn ghi theo tên campaign, KHÔNG
+    phân bổ lại. Tỉ lệ mua chéo đo được ~2,5% số đơn nên sai lệch ở mức tổng là nhỏ; đổi lại giữ
+    được cách tính đơn giản và ổn định. HỆ QUẢ phải nhớ: ROAS/CPL cấp SẢN PHẨM nghĩa là "hiệu quả
+    quảng cáo của SP đó", KHÔNG phải "lãi lỗ của SP đó" — với SP ít đơn thì một hai đơn chéo đủ
+    làm lệch mạnh (vd nguồn PHƯƠNG NAM - D1 chéo tới 25%). Cấp nhân sự / brand / tháng KHÔNG bị
+    ảnh hưởng vì đều gộp lại.
+  - Nguồn đơn Pancake CHỈ dùng để xếp đơn về đúng nhân sự, KHÔNG dùng để gán sản phẩm.
+    Mỗi khi tạo nguồn "DUY - <SP>" / "PHƯƠNG NAM - <SP>" mới trên Pancake PHẢI khai source ID vào
+    SOURCE_GROUPS của repo facebook-ads-dashboard, nếu không đơn của nguồn đó biến mất khỏi dữ liệu
+    (đã xảy ra: nguồn PHƯƠNG NAM - DR1 mất 21 đơn / 28,5tr). Dò bằng workflow list-all-order-sources.yml.
   - Data Google (Windsor.ai) trễ ~2 ngày so với FB → kỳ "tuần này" Google thiếu 1-2 ngày cuối là BÌNH THƯỜNG.
 
   ## Quy trình
