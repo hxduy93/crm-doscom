@@ -26,9 +26,34 @@
 ## 5. Triển khai
 
 - [x] Push `master` → workflow tự áp migration D1 (`--remote`) rồi deploy Pages.
+      Xác nhận trên D1 production: bảng `noma350_orders` + 4 index đã có.
 - [x] Sinh token 32 byte ngẫu nhiên, set `NOMA350_INGEST_TOKEN` trên project `crm-doscom`.
 - [x] Set `NOMA_INGEST_TOKEN` (cùng giá trị) trên project `noma350-landing`.
-- [x] Kiểm tra đầu-cuối: gửi một đơn thật qua landing, xác nhận vào D1, rồi xoá đơn thử.
+- [x] Deploy lại CẢ HAI project — secret của Pages chỉ có hiệu lực từ deployment mới,
+      set secret xong mà không deploy lại thì Function vẫn thấy `undefined`.
+- [ ] **BỊ CHẶN — Cloudflare Access.** Xem mục 7.
+- [ ] Kiểm tra đầu-cuối: gửi một đơn thật qua landing, xác nhận vào D1, rồi xoá đơn thử.
+
+## 7. Việc cần người có quyền Access làm
+
+`crm-doscom.pages.dev` nằm sau Cloudflare Access (team domain
+`doscomfacebookads.cloudflareaccess.com`). Chính sách hiện tại có **bypass theo từng
+đường dẫn**, và `/api/noma350/*` chưa nằm trong đó:
+
+| Đường dẫn | Kết quả thật (đo 31/07/2026) |
+|---|---|
+| `POST /api/noma680/order` | `401 unauthorized` — JSON, tức là **vào tới function** |
+| `POST /api/noma350/order` | `302` → trang đăng nhập Access, **không vào tới function** |
+
+Hệ quả: landing 350 gọi sang chỉ nhận HTML đăng nhập, proxy đúng luật nên trả
+`502 crm_rejected` — khách không gửi được đơn.
+
+Cần thêm **Bypass policy** cho `/api/noma350/*` trong Zero Trust → Access → Applications,
+giống cách `/api/noma680/*` đang được cấu hình. Bypass ở đây an toàn vì endpoint đã tự
+bảo vệ bằng `X-Noma-Token`.
+
+Token API đang dùng cho deploy **không có quyền Access** (gọi
+`GET /accounts/{id}/access/apps` trả 403) nên không tự làm được bước này.
 
 ## 6. Để lại sau
 
