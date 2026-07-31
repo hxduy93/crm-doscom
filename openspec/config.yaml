@@ -81,7 +81,13 @@ context: |
     đối chiếu số gộp + % hoàn trên ô doanh thu. Tháng 7/2026: gộp 247,3tr vs sau hoàn 163,1tr.
   - Doanh thu Facebook brand tính CẤP ĐƠN (order-level), KHÔNG per-SKU
     (combo Noma đúng ≈ 244k/đơn khớp Pancake, sai thành ~200k nếu tính per-SKU).
-  - Noma = tổng đơn FB − Doscom(per-product). FB_PAGE = Messenger organic (không gồm Website/Google/Zalo/Hotline).
+  - TÁCH BRAND (QUYẾT 2026-07-31, THAY công thức phần dư cũ): với mỗi nguồn, lấy GIÁ TRỊ ĐƠN THẬT
+    rồi CHIA TỈ LỆ theo doanh thu per-SP của từng brand → noma + doscom = tổng đơn thật, luôn đúng.
+    KHÔNG dùng lại `Noma = max(0, tổng đơn − Doscom per-SP)`: doanh thu per-SP lấy giá niêm yết nên
+    tổng dòng CAO HƠN tiền khách thật trả (chiết khấu cấp đơn không vào dòng), làm phần dư bị KẸP
+    về 0 ở nhóm Website/Hotline và tổng bảng brand vênh bảng nhân sự 10.005.000đ (tháng 7/2026).
+    Sau khi sửa: hai bảng khớp 0đ ở từng dòng. Có test canh — tests/brand-split-reconcile.test.mjs.
+  - FB_PAGE = Messenger organic (không gồm Website/Google/Zalo/Hotline).
   - MUA CHÉO SẢN PHẨM (QUYẾT 2026-07-31): khách vào từ nguồn quảng cáo SP này nhưng mua SP khác
     (vd nguồn "PHƯƠNG NAM - D1" mà mua D1 Pro / DR1) thì coi là SẢN PHẨM GIA TĂNG của nguồn đó —
     doanh thu & giá vốn ghi theo SP THẬT trong đơn, chi phí QC vẫn ghi theo tên campaign, KHÔNG

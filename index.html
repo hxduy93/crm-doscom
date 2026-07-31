@@ -314,7 +314,7 @@
       </section>
 
       <section class="mod wide tbl-dense" style="margin-bottom:16px" id="sec-brand-cost">
-        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo brand × nhân sự</h3></div><span class="s">Noma = SP "Noma…", Doscom = còn lại · DT gồm mọi trạng thái (khớp Pancake), tính cấp đơn (Noma = tổng đơn − Doscom per-SP) · CIR = Chi phí ÷ Doanh thu (thấp = tốt) · <b>Sau hoàn</b> = đã trừ đơn ĐANG HOÀN + ĐÃ HOÀN trên Pancake POS (đơn huỷ vẫn tính) · LN sau hoàn = DT sau hoàn − Chi phí − Giá vốn sau hoàn</span></div>
+        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo brand × nhân sự</h3></div><span class="s">Noma = SP "Noma…", Doscom = còn lại · DT lấy theo <b>giá trị đơn thật</b> rồi chia tỉ lệ theo doanh thu từng brand trong nguồn → <b>cộng lại khớp đúng bảng theo nhân sự</b> · CIR = Chi phí ÷ Doanh thu (thấp = tốt) · <b>Sau hoàn</b> = đã trừ đơn ĐANG HOÀN + ĐÃ HOÀN trên Pancake POS (đơn huỷ vẫn tính) · LN sau hoàn = DT sau hoàn − Chi phí − Giá vốn sau hoàn</span></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
             <thead>
@@ -1184,9 +1184,29 @@
     function adCostBrand(adKey,wantNoma){ var o=(D.ad_spend_by_staff||{})[adKey]||{},s=0; for(var p in o){ if(isNomaP(p)===wantNoma) s+=sumByDate((o[p]||{}).by_date); } return s; }
     function ggCostBrand(wantNoma){ var ga=(D.google_ads||{}).by_category||{},s=0; for(var c in ga){ if((/noma/i.test(c))===wantNoma) s+=sumByDate((ga[c]||{}).by_date); } return s; }
     function costOf(ad,wantNoma){ if(ad==='GOOGLE') return ggCostBrand(wantNoma); if(!ad) return 0; return adCostBrand(ad,wantNoma); }
-    function srcDoscomRev(key){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0; var pbs=g.products_by_status||{},s=0; for(var st in pbs){ if(EXCL[st])continue; var prods=pbs[st]; for(var p in prods){ if(isNomaP(p))continue; s+=sumByDate((prods[p]||{}).by_date); } } return s; }
-    // Bản "sau hoàn": bỏ đơn đang hoàn + đã hoàn (EXCL_RET). Noma vẫn là phần dư (tổng đơn − Doscom per-SP).
-    function srcDoscomRevNet(key){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0; var pbs=g.products_by_status||{},s=0; for(var st in pbs){ if(EXCL[st]||EXCL_RET[st])continue; var prods=pbs[st]; for(var p in prods){ if(isNomaP(p))continue; s+=sumByDate((prods[p]||{}).by_date); } } return s; }
+    // Tách doanh thu 1 nguồn thành Noma / Doscom — QUYẾT 2026-07-31 (sửa lỗi lệch 10tr).
+    //
+    // VÌ SAO KHÔNG dùng thẳng per-SP: doanh thu từng dòng SP lấy GIÁ NIÊM YẾT nên tổng các dòng
+    // CAO HƠN giá trị đơn thật khách trả (chiết khấu cấp đơn không phản ánh vào dòng) — tháng
+    // 7/2026 cao hơn ~10tr/nguồn. Công thức cũ "Noma = max(0, tổng đơn − Doscom per-SP)" vì thế
+    // bị KẸP VỀ 0 ở nhóm Website/Hotline, làm tổng bảng brand vênh bảng nhân sự 10.005.000đ.
+    //
+    // CÁCH LÀM: quy tỉ lệ per-SP về đúng giá trị đơn thật rồi mới tách. Chiết khấu được phân bổ
+    // đều theo tỉ trọng doanh thu từng brand trong nguồn đó. Nhờ vậy noma + doscom = tổng đơn
+    // THẬT, không cần kẹp, và bảng brand cộng lại KHỚP TUYỆT ĐỐI bảng theo nhân sự.
+    function brandSplit(key,excl){
+      var g=((D.revenue||{}).source_groups||{})[key]; if(!g) return {noma:0,doscom:0};
+      var ord=0,r=g.order_revenue_by_status_by_date||{};
+      for(var st in r){ if(EXCL[st]||excl[st])continue; ord+=sumByDate(r[st]); }
+      var pbs=g.products_by_status||{},dos=0,nom=0;
+      for(var st2 in pbs){ if(EXCL[st2]||excl[st2])continue; var prods=pbs[st2];
+        for(var p in prods){ var x=sumByDate((prods[p]||{}).by_date); if(isNomaP(p)) nom+=x; else dos+=x; } }
+      var tot=dos+nom;
+      // Không có dòng SP nào (đơn bán SP ngoài danh mục) → dồn hết về Noma như quy tắc phần dư cũ.
+      if(tot<=0) return {noma:Math.max(0,ord), doscom:0};
+      var f=ord/tot;
+      return {noma:nom*f, doscom:dos*f};
+    }
     // Giá vốn sau hoàn tách theo brand (per-SKU, không cần phần dư vì đơn vị tính là sản phẩm).
     function srcCogsNetBrand(key,wantNoma){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0; var pbs=g.products_by_status||{},pc=D.product_costs||{},s=0; for(var st in pbs){ if(EXCL[st]||EXCL_RET[st])continue; var prods=pbs[st]; for(var p in prods){ if(isNomaP(p)!==wantNoma)continue; var cost=Number((pc[p]||{}).gia_nhap_vnd)||0; if(!cost)continue; s+=cost*sumByDate((prods[p]||{}).units_by_date); } } return s; }
     var GROUPS=[
@@ -1202,8 +1222,8 @@
     var html=GROUPS.map(function(g){
       var nc=costOf(g.ad,true), dc=costOf(g.ad,false), nr=0, dr=0, nrN=0, drN=0, ngN=0, dgN=0;
       g.keys.forEach(function(k){
-        var tr=srcRevenue(k), dP=srcDoscomRev(k); dr+=dP; nr+=Math.max(0,tr-dP);
-        var trN=srcRevenueNet(k), dPN=srcDoscomRevNet(k); drN+=dPN; nrN+=Math.max(0,trN-dPN);
+        var a=brandSplit(k,{});        nr+=a.noma;  dr+=a.doscom;   // gộp
+        var b=brandSplit(k,EXCL_RET);  nrN+=b.noma; drN+=b.doscom;  // sau hoàn
         ngN+=srcCogsNetBrand(k,true); dgN+=srcCogsNetBrand(k,false);
       });
       tot.nc+=nc;tot.nr+=nr;tot.dc+=dc;tot.dr+=dr;tot.nrN+=nrN;tot.drN+=drN;tot.ngN+=ngN;tot.dgN+=dgN;

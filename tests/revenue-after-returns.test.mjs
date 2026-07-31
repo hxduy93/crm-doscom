@@ -25,17 +25,17 @@ const src = [
   grabLine(/^[ \t]*function srcCogs\(key\)\{.*\}$/m, "srcCogs"),
   grabLine(/^[ \t]*function srcRevenueNet\(key\)\{.*\}$/m, "srcRevenueNet"),
   grabLine(/^[ \t]*function srcCogsNet\(key\)\{.*\}$/m, "srcCogsNet"),
-  // 3 hàm dưới nằm trong renderBrandCost()
+  // 2 hàm dưới nằm trong renderBrandCost().
+  // (srcDoscomRev/srcDoscomRevNet đã bị thay bằng brandSplit ngày 31/07/2026 —
+  //  xem tests/brand-split-reconcile.test.mjs.)
   grabLine(/^[ \t]*var isNomaP=function\(p\)\{.*\};$/m, "isNomaP"),
-  grabLine(/^[ \t]*function srcDoscomRev\(key\)\{.*\}$/m, "srcDoscomRev"),
-  grabLine(/^[ \t]*function srcDoscomRevNet\(key\)\{.*\}$/m, "srcDoscomRevNet"),
   grabLine(/^[ \t]*function srcCogsNetBrand\(key,wantNoma\)\{.*\}$/m, "srcCogsNetBrand"),
 ].join("\n");
 
 const build = new Function(
   "D",
   "range",
-  `${src}\nreturn { EXCL_RET, srcRevenue, srcCogs, srcRevenueNet, srcCogsNet, srcDoscomRev, srcDoscomRevNet, srcCogsNetBrand };`
+  `${src}\nreturn { EXCL_RET, srcRevenue, srcCogs, srcRevenueNet, srcCogsNet, srcCogsNetBrand };`
 );
 
 // Giá nhập: Noma 911 = 50/cái, D1 = 20/cái.
@@ -94,12 +94,8 @@ test("LN sau hoàn = DT sau hoàn − chi phí QC − giá vốn sau hoàn", () 
   assert.equal(F.srcRevenueNet("TEST") - spend - F.srcCogsNet("TEST"), 180 - 60 - 180);
 });
 
-test("brand: doanh thu Doscom sau hoàn tính per-SP, Noma là phần dư", () => {
-  assert.equal(F.srcDoscomRev("TEST"), 140, "gộp: 40+20+30+50");
-  assert.equal(F.srcDoscomRevNet("TEST"), 120, "sau hoàn: 40 (delivered) + 30 (canceled) + 50 (other)");
-  const nomaNet = Math.max(0, F.srcRevenueNet("TEST") - F.srcDoscomRevNet("TEST"));
-  assert.equal(nomaNet, 60, "Noma = tổng đơn sau hoàn − Doscom per-SP sau hoàn");
-});
+// Việc tách brand giờ do brandSplit đảm nhiệm (chia tỉ lệ về giá trị đơn thật, không còn
+// công thức phần dư kẹp 0) — kiểm ở tests/brand-split-reconcile.test.mjs.
 
 test("brand: giá vốn sau hoàn tách Noma/Doscom, cộng lại bằng tổng", () => {
   assert.equal(F.srcCogsNetBrand("TEST", true), 100, "Noma 911: 2 cái × 50");
@@ -121,6 +117,5 @@ test("cột sau hoàn chỉ cộng ngày trong khoảng lọc", () => {
 test("nguồn không tồn tại → 0, không nổ", () => {
   assert.equal(F.srcRevenueNet("KHONG_CO"), 0);
   assert.equal(F.srcCogsNet("KHONG_CO"), 0);
-  assert.equal(F.srcDoscomRevNet("KHONG_CO"), 0);
   assert.equal(F.srcCogsNetBrand("KHONG_CO", true), 0);
 });
