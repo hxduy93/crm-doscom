@@ -37,23 +37,39 @@
 ## 7. Việc cần người có quyền Access làm
 
 `crm-doscom.pages.dev` nằm sau Cloudflare Access (team domain
-`doscomfacebookads.cloudflareaccess.com`). Chính sách hiện tại có **bypass theo từng
-đường dẫn**, và `/api/noma350/*` chưa nằm trong đó:
+`doscomfacebookads.cloudflareaccess.com`). Bypass đặt theo **từng đường dẫn chính xác** —
+không phải theo prefix. Đo bằng `curl` ngày 31/07/2026:
 
-| Đường dẫn | Kết quả thật (đo 31/07/2026) |
-|---|---|
-| `POST /api/noma680/order` | `401 unauthorized` — JSON, tức là **vào tới function** |
-| `POST /api/noma350/order` | `302` → trang đăng nhập Access, **không vào tới function** |
+| Đường dẫn | Kết quả | |
+|---|---|---|
+| `POST /api/noma911/order` | 401 JSON | ✅ có bypass |
+| `POST /api/noma680/order` | 401 JSON | ✅ có bypass |
+| `GET /api/noma911/stats` | 200 JSON | ✅ có bypass |
+| `POST /api/noma350/order` | 302 → login | ❌ |
+| `GET /api/noma680/stats` | 302 → login | ❌ |
+| `GET /api/noma350/stats` | 302 → login | ❌ |
 
-Hệ quả: landing 350 gọi sang chỉ nhận HTML đăng nhập, proxy đúng luật nên trả
-`502 crm_rejected` — khách không gửi được đơn.
+Cần thêm **Bypass policy** trong Zero Trust → Access → Applications cho ba đường:
 
-Cần thêm **Bypass policy** cho `/api/noma350/*` trong Zero Trust → Access → Applications,
-giống cách `/api/noma680/*` đang được cấu hình. Bypass ở đây an toàn vì endpoint đã tự
-bảo vệ bằng `X-Noma-Token`.
+1. `/api/noma350/order` — **bắt buộc**, không có thì landing 350 không nhận được đơn nào.
+2. `/api/noma350/stats` — để cổng test hoạt động (xem bên dưới).
+3. `/api/noma680/stats` — sửa luôn cùng lỗi, không liên quan tới change này nhưng cùng gốc.
+
+Bypass an toàn vì endpoint ghi tự bảo vệ bằng `X-Noma-Token`, còn stats chỉ đọc số liệu
+tổng hợp.
+
+### Cổng test đang xanh giả
+
+`tests/noma680.test.mjs` và `tests/noma350.test.mjs` tự bỏ qua khi endpoint stats không
+trả JSON — cơ chế chống vòng lặp chết ở lần deploy đầu (Pages trả HTML 200 cho route chưa
+tồn tại). Nhưng Access cũng trả HTML, nên **cả 8 test đó đang bỏ qua sạch**: bộ test báo
+xanh mà không kiểm gì. Bypass hai đường `stats` là khôi phục cổng chất lượng thật.
 
 Token API đang dùng cho deploy **không có quyền Access** (gọi
 `GET /accounts/{id}/access/apps` trả 403) nên không tự làm được bước này.
+
+**Lưu ý khi tự kiểm:** phải dùng `curl`, đừng dùng `Invoke-WebRequest` của PowerShell —
+nó tự đi theo redirect nên che mất 302 và cho kết quả sai.
 
 ## 6. Để lại sau
 
