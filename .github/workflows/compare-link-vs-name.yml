@@ -1,0 +1,28 @@
+name: Compare link vs name attribution (one-shot debug)
+
+# So sanh 2 cach gan san pham cho chi phi QC: doc LINK LANDING vs doc TEN CAMPAIGN.
+# Chay TRUOC khi doi cach tinh, de biet chinh xac viec doi se doi bao nhieu tien
+# va sang san pham nao. Chi DOC, khong ghi du lieu.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # update_dashboard.py (nguon cua detect_profit_product) co import requests
+      - name: Cai dependency
+        run: pip install --quiet requests
+
+      - name: So sanh link vs ten campaign
+        env:
+          FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
+        run: python scripts/compare_link_vs_name.py
