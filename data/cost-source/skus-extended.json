@@ -65,6 +65,13 @@
     "A002 500ml":   29238
   },
 
+  "sale_price_overrides_vnd": {
+    "_note": "Giá BÁN VNĐ — ghi đè xlsx Kho tổng khi xlsx cũ hơn giá bán thực tế. gia_ban_vnd KHÔNG dùng tính doanh thu (doanh thu lấy từ giá trị đơn thật), nhưng ĐƯỢC dùng ở fbAdsHelpers.js: pOrder = giá bán × 0,9 − giá nhập → ngưỡng CVR hoà vốn cho agent FB Ads. Khi đẩy xlsx mới đã đúng giá → xóa entry tương ứng để xlsx win lại.",
+    "_updated": "2026-07-31",
+
+    "DR1":          1300000
+  },
+
   "extended_skus": [
     { "label": "DT2",            "cost_key": "dt2",            "gia_nhap_vnd": 218881,  "google_cat": "DINHVI",       "pancake_names": ["Doscom Tag DT2"] },
     { "label": "DT3",            "cost_key": "dt3",            "gia_nhap_vnd": 216212,  "google_cat": "DINHVI",       "pancake_names": ["Doscom Tag DT3"] },
