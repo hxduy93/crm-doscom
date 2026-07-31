@@ -49,18 +49,22 @@ jobs:
       # => Tự deploy ngay tại đây khi có dữ liệu mới, để web Cloudflare luôn cập nhật.
       # Deploy khi dữ liệu đổi HOẶC khi bấm tay (workflow_dispatch) — để thay đổi code (index.html) cũng lên được web.
       # refresh_data.py luôn chạy trước nên data trong dist luôn tươi, không dính lỗi "deploy data cũ".
+      # Cổng chất lượng — GIỐNG deploy.yml. Trước đây bước này KHÔNG có, nghĩa là cron
+      # (3 lần/ngày) deploy index.html mà bỏ qua test → code hỏng vẫn lên web qua đường này.
+      - name: Cài Node
+        if: steps.commit.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Chạy test (node --test)
+        if: steps.commit.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
+        run: node --test tests/*.mjs
+
+      # Danh sách file nằm ở scripts/build-dist.sh — dùng CHUNG với deploy.yml nên không thể lệch.
       - name: Chuẩn bị thư mục deploy (khi dữ liệu đổi hoặc bấm tay)
         if: steps.commit.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
-        run: |
-          rm -rf dist && mkdir dist
-          cp index.html dist/
-          if [ -f _headers ]; then cp _headers dist/; fi
-          cp -r data dist/data
-          if [ -d demos ]; then cp -r demos dist/demos; fi
-          # ⚠️ Danh sách này PHẢI khớp deploy.yml — thiếu file nào thì cron sẽ deploy đè và xoá mất file đó.
-          for page in agent-geo-doscom.html ads-creator.html product-publisher.html brandcore-fix.html fix-images.html sync-us.html; do
-            if [ -f "$page" ]; then cp "$page" dist/; fi
-          done
+        run: bash scripts/build-dist.sh
 
       - name: Deploy lên Cloudflare Pages (khi dữ liệu đổi hoặc bấm tay)
         if: steps.commit.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'

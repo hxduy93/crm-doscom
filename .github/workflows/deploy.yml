@@ -30,18 +30,10 @@ jobs:
       - name: Chạy test (node --test)
         run: node --test tests/*.mjs
 
+      # Danh sách file nằm ở scripts/build-dist.sh — dùng CHUNG với refresh-data.yml
+      # để hai đường deploy không bao giờ lệch nhau.
       - name: Chuẩn bị thư mục deploy (index.html + data + demos + trang standalone)
-        run: |
-          rm -rf dist && mkdir dist
-          cp index.html dist/
-          if [ -f _headers ]; then cp _headers dist/; fi
-          cp -r data dist/data
-          if [ -d demos ]; then cp -r demos dist/demos; fi
-          # Trang standalone (nhúng iframe trong CRM) — phải copy thủ công.
-          for page in agent-geo-doscom.html ads-creator.html product-publisher.html brandcore-fix.html fix-images.html sync-us.html; do
-            if [ -f "$page" ]; then cp "$page" dist/; fi
-          done
-          # Functions (functions/) được wrangler tự bundle từ gốc repo → không cần copy.
+        run: bash scripts/build-dist.sh
 
       # Áp migration D1 TRƯỚC khi deploy code (để schema sẵn sàng khi function mới chạy).
       # best-effort: continue-on-error để token thiếu quyền D1 không chặn deploy code.
