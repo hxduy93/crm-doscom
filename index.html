@@ -351,13 +351,13 @@
       </section>
 
       <section class="mod wide" style="margin-bottom:16px" id="sec-profit">
-        <div class="mod-h"><div class="t"><i style="background:#16A34A"></i><h3>Bảng lợi nhuận theo tháng</h3></div><span class="s">LN = DT giao − VAT 10% − Chi phí QC − Phụ phí agency − Giá vốn</span></div>
+        <div class="mod-h"><div class="t"><i style="background:#16A34A"></i><h3>Bảng lợi nhuận theo tháng</h3></div><span class="s"><b>Đã trừ đơn hoàn</b> · LN = DT sau hoàn − VAT 10% − Chi phí QC − Phụ phí agency − Giá vốn sau hoàn</span></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
-            <thead><tr><th>Tháng</th><th class="num">Doanh thu</th><th class="num">VAT 10%</th><th class="num">Chi phí QC</th><th class="num" title="Agency nạp tiền QC hộ và thu VAT 8% + phí dịch vụ 7%, cộng thẳng trên chi phí gốc (không lũy kế). Chỉ áp cho FB Ads.">Phụ phí agency</th><th class="num">Giá vốn</th><th class="num">Lợi nhuận</th><th class="num">Biên LN</th></tr></thead>
+            <thead><tr><th>Tháng</th><th class="num col-net" title="Đã trừ đơn đang hoàn + đã hoàn. Rê chuột vào từng ô để xem doanh thu gộp khớp Pancake và % bị hoàn.">Doanh thu sau hoàn</th><th class="num">VAT 10%</th><th class="num">Chi phí QC</th><th class="num" title="Agency nạp tiền QC hộ và thu VAT 8% + phí dịch vụ 7%, cộng thẳng trên chi phí gốc (không lũy kế). Chỉ áp cho FB Ads.">Phụ phí agency</th><th class="num col-net" title="Không tính giá vốn hàng đã hoàn về kho">Giá vốn sau hoàn</th><th class="num col-net">Lợi nhuận sau hoàn</th><th class="num">Biên LN</th></tr></thead>
             <tbody id="profit-rows"></tbody>
           </table>
-          <p style="font-size:11.5px;color:var(--text-2);margin:10px 2px 0;font-weight:600">* Công thức &amp; cơ sở doanh thu <b>khớp đúng dashboard cũ</b> (revenueByProd theo SP). LN = Doanh thu − VAT 10% − Chi phí QC (FB+Google) − Phụ phí agency − Giá vốn (số lượng × giá nhập kho).<br>* <b>Phụ phí agency = 15% chi phí FB Ads</b> — VAT 8% + phí dịch vụ 7%, cả hai cộng thẳng trên chi phí gốc (không lũy kế), đúng cách agency đối soát top-up. <b>Chỉ FB Ads chịu phí này; Google Ads chi trực tiếp nên không tính</b> — nên cột Chi phí QC (gồm cả Google) luôn lớn hơn phần sinh ra phụ phí.</p>
+          <p style="font-size:11.5px;color:var(--text-2);margin:10px 2px 0;font-weight:600">* <b>Bảng này là lợi nhuận SAU HOÀN</b> (QUYẾT 31/07/2026): doanh thu &amp; giá vốn đã loại đơn <b>đang hoàn + đã hoàn</b> trên Pancake POS — hàng hoàn quay về kho nên không tính giá vốn. Đơn <b>huỷ</b> vẫn tính, cùng gốc với các bảng khác. LN = DT sau hoàn − VAT 10% − Chi phí QC (FB+Google) − Phụ phí agency − Giá vốn sau hoàn (số lượng × giá nhập kho).<br>* Vì vậy doanh thu ở bảng này <b>thấp hơn</b> KPI "Doanh thu" ở đầu trang và bảng theo nhân sự — hai chỗ đó cố ý để gộp cho khớp "doanh số" Pancake. Rê chuột vào ô doanh thu để xem số gộp và % bị hoàn.<br>* <b>Phụ phí agency = 15% chi phí FB Ads</b> — VAT 8% + phí dịch vụ 7%, cả hai cộng thẳng trên chi phí gốc (không lũy kế), đúng cách agency đối soát top-up. <b>Chỉ FB Ads chịu phí này; Google Ads chi trực tiếp nên không tính</b> — nên cột Chi phí QC (gồm cả Google) luôn lớn hơn phần sinh ra phụ phí.</p>
         </div>
       </section>
 
@@ -1212,28 +1212,43 @@
 
   function monthName(m){ var p=m.split('-'); return 'Th'+p[1]+'/'+p[0]; }
   function renderProfit(){
-    // Dùng revenue.products (mọi trạng thái) — KHỚP đúng revenueByProd của dashboard cũ
-    var prods=(D.revenue||{}).products||{}, pc=D.product_costs||{};
+    // QUYẾT 2026-07-31 (chủ dự án): bảng này phải là LỢI NHUẬN SAU HOÀN.
+    // Nên KHÔNG dùng revenue.products (gộp mọi trạng thái) nữa mà đi qua products_by_status
+    // để loại đơn ĐANG HOÀN + ĐÃ HOÀN khỏi cả doanh thu lẫn giá vốn (hàng hoàn về kho).
+    // Vẫn cộng song song bản gộp (mrevG/mcogsG) — chỉ để hiện tooltip đối chiếu Pancake,
+    // KHÔNG dùng vào công thức lợi nhuận.
+    var pbs=(D.revenue||{}).products_by_status||{}, pc=D.product_costs||{};
     // Tách FB / Google vì phụ phí agency chỉ áp cho tiền nạp qua agency (FB).
-    var mrev={},mcogs={},mfb={},mgg={};
-    for(var p in prods){ var cost=(pc[p]||{}).gia_nhap_vnd||0,o=prods[p];
-      var bd=o.by_date||{}; for(var d in bd){ if(inR(d)){ var m=d.slice(0,7); mrev[m]=(mrev[m]||0)+(Number(bd[d])||0); } }
-      var ud=o.units_by_date||{}; for(var d2 in ud){ if(inR(d2)){ var m2=d2.slice(0,7); mcogs[m2]=(mcogs[m2]||0)+((Number(ud[d2])||0)*cost); } }
+    var mrev={},mcogs={},mrevG={},mcogsG={},mfb={},mgg={};
+    for(var st in pbs){ var isRet=!!EXCL_RET[st], prods=pbs[st];
+      for(var p in prods){ var cost=(pc[p]||{}).gia_nhap_vnd||0,o=prods[p];
+        var bd=o.by_date||{}; for(var d in bd){ if(inR(d)){ var m=d.slice(0,7),rv=Number(bd[d])||0;
+          mrevG[m]=(mrevG[m]||0)+rv; if(!isRet) mrev[m]=(mrev[m]||0)+rv; } }
+        var ud=o.units_by_date||{}; for(var d2 in ud){ if(inR(d2)){ var m2=d2.slice(0,7),cg=(Number(ud[d2])||0)*cost;
+          mcogsG[m2]=(mcogsG[m2]||0)+cg; if(!isRet) mcogs[m2]=(mcogs[m2]||0)+cg; } }
+      }
     }
     (D.accounts||[]).forEach(function(a){ (a.daily||[]).forEach(function(x){ if(inR(x.date)){ var m=x.date.slice(0,7); mfb[m]=(mfb[m]||0)+(Number(x.spend)||0); } }); });
     var ga=(D.google_ads||{}).by_category||{}; for(var k in ga){ var b=ga[k].by_date||{}; for(var d3 in b){ if(inR(d3)){ var m3=d3.slice(0,7); mgg[m3]=(mgg[m3]||0)+(Number(b[d3])||0); } } }
-    var months=Object.keys(mrev).sort();
-    var TR=0,TV=0,TA=0,TF=0,TC=0,TP=0;
+    // Lấy tháng từ bản GỘP: tháng chỉ có đơn hoàn vẫn phải hiện (doanh thu sau hoàn = 0),
+    // nếu lấy từ mrev thì tháng đó biến mất khỏi bảng.
+    var months=Object.keys(mrevG).sort();
+    var TR=0,TV=0,TA=0,TF=0,TC=0,TP=0,TRG=0;
     var rows=months.map(function(m){ var r=mrev[m]||0,vat=r*0.10,fb=mfb[m]||0,gg=mgg[m]||0,ad=fb+gg,fee=agencyFee(fb,gg),cogs=mcogs[m]||0,pf=r-vat-ad-fee-cogs,mg=r>0?pf/r*100:0;
-      TR+=r;TV+=vat;TA+=ad;TF+=fee;TC+=cogs;TP+=pf;
-      return '<tr><td style="font-weight:800">'+monthName(m)+'</td><td class="num tnum">'+vnd(r)+'</td><td class="num tnum">'+vnd(vat)+'</td><td class="num tnum">'+vnd(ad)+'</td>'+
+      var rG=mrevG[m]||0, retPc=rG>0?((rG-r)/rG*100):0;
+      TR+=r;TV+=vat;TA+=ad;TF+=fee;TC+=cogs;TP+=pf;TRG+=rG;
+      return '<tr><td style="font-weight:800">'+monthName(m)+'</td>'+
+        '<td class="num tnum" title="Doanh thu gộp (khớp Pancake) '+vnd(rG)+' − đơn đang hoàn + đã hoàn '+vnd(rG-r)+' = '+retPc.toFixed(1).replace('.',',')+'% bị hoàn">'+vnd(r)+'</td>'+
+        '<td class="num tnum">'+vnd(vat)+'</td><td class="num tnum">'+vnd(ad)+'</td>'+
         '<td class="num tnum" title="VAT 8% '+vnd(fb*AGENCY_FEE.vat)+' + phí dịch vụ 7% '+vnd(fb*AGENCY_FEE.service)+' trên chi phí FB '+vnd(fb)+'">'+(fee>0?vnd(fee):'—')+'</td>'+
         '<td class="num tnum">'+vnd(cogs)+'</td>'+
         '<td class="num tnum" style="font-weight:800;color:'+(pf>=0?'#16A34A':'#E5484D')+'">'+vnd(pf)+'</td>'+
         '<td class="num" style="font-weight:800;color:'+(mg>=0?'#16A34A':'#E5484D')+'">'+mg.toFixed(0)+'%</td></tr>';
     }).join('');
-    var tm=TR>0?TP/TR*100:0;
-    rows+='<tr class="tot"><td>Tổng</td><td class="num tnum">'+vnd(TR)+'</td><td class="num tnum">'+vnd(TV)+'</td><td class="num tnum">'+vnd(TA)+'</td><td class="num tnum">'+vnd(TF)+'</td><td class="num tnum">'+vnd(TC)+'</td><td class="num tnum" style="color:'+(TP>=0?'#16A34A':'#E5484D')+'">'+vnd(TP)+'</td><td class="num" style="color:'+(tm>=0?'#16A34A':'#E5484D')+'">'+tm.toFixed(0)+'%</td></tr>';
+    var tm=TR>0?TP/TR*100:0, tRetPc=TRG>0?((TRG-TR)/TRG*100):0;
+    rows+='<tr class="tot"><td>Tổng</td>'+
+      '<td class="num tnum" title="Doanh thu gộp (khớp Pancake) '+vnd(TRG)+' − đơn đang hoàn + đã hoàn '+vnd(TRG-TR)+' = '+tRetPc.toFixed(1).replace('.',',')+'% bị hoàn">'+vnd(TR)+'</td>'+
+      '<td class="num tnum">'+vnd(TV)+'</td><td class="num tnum">'+vnd(TA)+'</td><td class="num tnum">'+vnd(TF)+'</td><td class="num tnum">'+vnd(TC)+'</td><td class="num tnum" style="color:'+(TP>=0?'#16A34A':'#E5484D')+'">'+vnd(TP)+'</td><td class="num" style="color:'+(tm>=0?'#16A34A':'#E5484D')+'">'+tm.toFixed(0)+'%</td></tr>';
     document.getElementById('profit-rows').innerHTML=rows||'<tr><td colspan="8" style="color:var(--text-2)">Không có dữ liệu trong kỳ.</td></tr>';
   }
 
