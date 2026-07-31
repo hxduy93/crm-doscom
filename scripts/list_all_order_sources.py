@@ -110,8 +110,18 @@ IN_CONFIG = {
             "39739", "614046174", "1842044041", "307039298", "1842043463", "1228044436",
             "614044869", "921041902", "1535037303", "1228042142", "1535038664", "-1",
             "842243695641184"},
-    "PHUONG_NAM": {"1008799", "1536008673", "1229011407"},
-    "WEBSITE/ZALO/HOTLINE/FB_PAGE": {"614042808", "-1"},
+    "PHUONG_NAM": {"1008799", "1536008673", "1229011407", "1536016559"},
+    # 2026-07-31: bổ sung đủ WEBSITE(921043352) + ZALO_OA(37931) — thiếu 2 ID này khiến
+    # lần chạy đầu báo động giả "THIẾU" cho 2 nguồn vốn đã khai đúng.
+    "WEBSITE/ZALO/HOTLINE/FB_PAGE": {"921043352", "37931", "614042808", "-1"},
+}
+
+# Nguồn CỐ Ý nằm ngoài 6 nhóm — sàn TMĐT và kênh không do quảng cáo FB/Google kéo về.
+# Đánh dấu riêng để không lẫn với nguồn bị bỏ sót thật sự.
+OUT_OF_SCOPE = {
+    "-3": "Shopee", "-9": "Tiktok", "-16": "Woocommerce",
+    "307038639": "Cứu đơn hoàn", "1842042268": "Upsale", "921042539": "Bán tại cửa hàng",
+    "308011406": "RESELL", "615025746": "Xả hàng tồn kho", "1535037906": "Đại lý mới",
 }
 ALL_IN_CONFIG = set().union(*IN_CONFIG.values())
 
@@ -125,7 +135,9 @@ def main():
         for r in rows:
             sid = str(r.get("id") or r.get("source_id") or "?")
             name = str(r.get("name") or r.get("source_name") or "?")
-            mark = "CÓ" if sid in ALL_IN_CONFIG else ">>> THIẾU <<<"
+            mark = ("CÓ" if sid in ALL_IN_CONFIG
+                else ("ngoài phạm vi (%s)" % OUT_OF_SCOPE[sid] if sid in OUT_OF_SCOPE
+                      else ">>> THIẾU <<<"))
             print(f"{sid:<20} | {name:<45} | {mark}")
         return
 
@@ -134,7 +146,9 @@ def main():
     print(f"{'Source ID':<20} | {'Tên nguồn':<42} | {'Đơn':>5} | {'Doanh thu':>15} | {'Từ':<10} {'Đến':<10} | config")
     print("-" * 130)
     for (name, sid), e in sorted(seen.items(), key=lambda x: -x[1]["orders"]):
-        mark = "CÓ" if sid in ALL_IN_CONFIG else ">>> THIẾU <<<"
+        mark = ("CÓ" if sid in ALL_IN_CONFIG
+                else ("ngoài phạm vi (%s)" % OUT_OF_SCOPE[sid] if sid in OUT_OF_SCOPE
+                      else ">>> THIẾU <<<"))
         print(f"{sid:<20} | {name:<42} | {e['orders']:>5} | {e['revenue']:>15,.0f} | "
               f"{e['first'] or '':<10} {e['last'] or '':<10} | {mark}")
 

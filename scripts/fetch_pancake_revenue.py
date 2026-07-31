@@ -216,8 +216,17 @@ SOURCE_GROUPS = [
         "key": "PHUONG_NAM",
         "label": "PHƯƠNG NAM",
         "filter_id": "78a874c7-0601-4416-a377-481dce360b87",
+        # 1008799 = nguồn PN cũ · 1536008673 = PHƯƠNG NAM - NOMA911 · 1229011407 = PHƯƠNG NAM - D1
+        # 2026-07-31: THÊM 1536016559 = "PHƯƠNG NAM - DR1" (nguồn tạo ~28/07, chưa từng khai).
+        #   Triệu chứng trước khi vá: DR1 của Nam chỉ hiện 3 đơn/3,9tr tháng 7 trên dashboard
+        #   trong khi Pancake POS có 18-21 đơn/24-28tr. Nguyên nhân: nguồn không được fetch ở
+        #   nhóm này nên đơn rơi xuống FB_PAGE — nhóm cuối trong thứ tự dedup, fetch source -1
+        #   và KHÔNG có name_prefix nên hứng mọi đơn Facebook chưa nhóm nào nhận.
+        # LƯU Ý VẬN HÀNH: mỗi lần tạo nguồn "PHƯƠNG NAM - <SP>" hay "DUY - <SP>" mới trên
+        #   Pancake, PHẢI thêm source ID vào đây, nếu không doanh số nhân sự sẽ hụt âm thầm.
+        #   Dò nguồn thiếu bằng workflow `list-all-order-sources.yml`.
         "sources": [
-            '["1008799"]', '["1536008673"]', '["1229011407"]',
+            '["1008799"]', '["1536008673"]', '["1229011407"]', '["1536016559"]',
         ],
         "name_prefix": ["PHƯƠNG NAM -", "PHUONG NAM -", "PHƯƠNG NAM-", "PHUONG NAM-"],
     },
