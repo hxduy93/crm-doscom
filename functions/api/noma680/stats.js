@@ -19,7 +19,13 @@ function vnDate(epochSec) {
 }
 
 const STAFF_LABEL = { duy: "Duy", pn: "Phương Nam" };
-const GIFT_LABEL = { noma250: "NOMA 250", noma692: "NOMA 692" };
+// Quà KHÔNG đồng nhất giữa các gói: gói 2 chai 680 tặng khăn microfiber, các gói
+// 680 + sản phẩm kính tặng NOMA 250. Thiếu nhãn ở đây thì dashboard hiện mã thô.
+const GIFT_LABEL = {
+  noma250: "NOMA 250",
+  noma692: "NOMA 692",
+  "khan-microfiber": "Khăn microfiber",
+};
 
 export async function onRequestGet(context) {
   const { request, env } = context;
