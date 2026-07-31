@@ -32,6 +32,21 @@ test("công thức LN trừ đủ 4 khoản", () => {
   assert.match(src, /pf=r-vat-ad-fee-cogs/, "LN = DT sau hoàn − VAT − chi phí QC − phụ phí agency − giá vốn");
 });
 
+// QUYẾT 2026-07-31: hai bảng CỐ Ý dùng hai mức lợi nhuận khác nhau.
+// Bảng nhân sự = lãi gộp (không VAT, không phụ phí) để so hiệu quả nhân sự.
+// Bảng lợi nhuận tháng = lãi cuối (trừ đủ). Ai đó "đồng bộ" hai bên là phá quyết định này.
+test("bảng nhân sự giữ công thức đơn thuần DT − CP − GV", () => {
+  const staff = html.match(/var roas=sp>0\?\(rv\/sp\):null, ln=([^;]+);/);
+  assert.ok(staff, "không trích được công thức LN của bảng nhân sự");
+  assert.equal(staff[1].trim(), "rv-sp-cg, lnN=rvN-sp-cgN", "bảng nhân sự KHÔNG được trừ VAT/phụ phí");
+  assert.doesNotMatch(staff[1], /vat|fee|agencyFee/i, "lọt VAT hoặc phụ phí vào bảng nhân sự là sai quyết định");
+});
+
+test("có ghi chú cảnh báo hai bảng lệch nhau là bình thường", () => {
+  assert.match(html, /CHƯA trừ VAT 10% và phụ phí agency/, "thiếu ghi chú dưới bảng nhân sự");
+  assert.match(html, /KHÔNG phải lãi cuối/, "phải nói rõ đây không phải lãi cuối");
+});
+
 test("vẫn giữ bản gộp để đối chiếu Pancake, nhưng KHÔNG đưa vào công thức", () => {
   assert.match(src, /mrevG/, "phải cộng song song doanh thu gộp cho tooltip");
   assert.match(src, /Doanh thu gộp \(khớp Pancake\)/, "thiếu tooltip đối chiếu");
