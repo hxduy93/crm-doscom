@@ -577,10 +577,10 @@ def build_data():
             if prod:
                 from_link.append(c.get("name", "")[:40])
         if not prod:
-            bucket, is_excluded = excluded[staff], True
+            bucket = excluded[staff]
             excluded_names.append(c.get("name", "")[:40])
         else:
-            bucket, is_excluded = ad_spend_by_staff[staff].setdefault(prod, {"_total": 0.0, "by_date": {}}), False
+            bucket = ad_spend_by_staff[staff].setdefault(prod, {"_total": 0.0, "by_date": {}})
         for d in c["daily"]:
             sp = float(d.get("spend") or 0)
             if sp <= 0:
@@ -597,7 +597,7 @@ def build_data():
               f"{', '.join(excluded_names[:6])}")
     print(f"   ✓ ad spend by staff: DUY={sum(v['_total'] for v in ad_spend_by_staff['DUY'].values()):,.0f}đ · "
           f"PHUONG_NAM={sum(v['_total'] for v in ad_spend_by_staff['PHUONG_NAM'].values()):,.0f}đ · "
-          f"unassigned: DUY={unassigned['DUY']:,.0f}đ / PN={unassigned['PHUONG_NAM']:,.0f}đ")
+          f"đã loại: DUY={excluded['DUY']['_total']:,.0f}đ / PN={excluded['PHUONG_NAM']['_total']:,.0f}đ")
 
     # --- PANCAKE REVENUE (injected from data/product-revenue.json) ---
     try:
