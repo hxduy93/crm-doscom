@@ -28,7 +28,20 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install requests openpyxl
+        run: pip install requests openpyxl pyflakes
+
+      # CỔNG CHẶN — 2026-07-31: một lần sửa code để sót biến `unassigned` đã xoá làm
+      # workflow chết 2 lượt liên tiếp (NameError lúc chạy). `python -m py_compile` và
+      # ast.parse KHÔNG bắt được vì đó không phải lỗi cú pháp. pyflakes thì bắt được.
+      # Chỉ chặn ở lỗi undefined name — cảnh báo import thừa/biến thừa không làm fail.
+      - name: Kiểm biến chưa định nghĩa (pyflakes)
+        run: |
+          out=$(python -m pyflakes update_dashboard.py scripts/*.py || true)
+          echo "$out"
+          if echo "$out" | grep -q "undefined name"; then
+            echo "::error::Có biến chưa định nghĩa — dừng trước khi chạy để không hỏng dữ liệu."
+            exit 1
+          fi
 
       - name: Run update script (FB Ads insights + rebuild index.html)
         env:
