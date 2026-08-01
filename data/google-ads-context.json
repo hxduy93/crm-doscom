@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-02 00:58",
+  "generated_at": "2026-08-02 02:40",
   "source_data_date_range": {
     "start_7d": "2026-07-25",
     "end": "2026-07-31",
@@ -1695,32 +1695,6 @@
         ]
       },
       {
-        "search_term": "cameras",
-        "spend_30d": 108602.0,
-        "clicks_30d": 2,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0833,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "máy chống ghi âm",
-        "spend_30d": 49329.0,
-        "clicks_30d": 17,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.25,
-        "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
         "search_term": "máy dò camera",
         "spend_30d": 142871.0,
         "clicks_30d": 21,
@@ -1756,6 +1730,32 @@
         "match_types": [
           "BROAD",
           "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm remin",
+        "spend_30d": 69362.0,
+        "clicks_30d": 9,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.0662,
+        "match_types": [
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "cameras",
+        "spend_30d": 108602.0,
+        "clicks_30d": 2,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.0833,
+        "match_types": [
+          "BROAD"
         ],
         "statuses": [
           "NONE"
@@ -2169,29 +2169,29 @@
       }
     ],
     "match_type_breakdown": {
-      "NEAR_PHRASE": {
-        "spend_30d": 4750417.0,
-        "clicks_30d": 881,
-        "conversions_30d": 7.48,
-        "term_count": 665
-      },
-      "BROAD": {
-        "spend_30d": 11763709.0,
-        "clicks_30d": 1496,
-        "conversions_30d": 30.0,
-        "term_count": 2299
-      },
       "EXACT": {
         "spend_30d": 2529480.0,
         "clicks_30d": 408,
         "conversions_30d": 11.5,
         "term_count": 71
       },
+      "NEAR_PHRASE": {
+        "spend_30d": 4750417.0,
+        "clicks_30d": 881,
+        "conversions_30d": 7.48,
+        "term_count": 665
+      },
       "PHRASE": {
         "spend_30d": 5916021.0,
         "clicks_30d": 925,
         "conversions_30d": 13.83,
         "term_count": 622
+      },
+      "BROAD": {
+        "spend_30d": 11763709.0,
+        "clicks_30d": 1496,
+        "conversions_30d": 30.0,
+        "term_count": 2299
       },
       "NEAR_EXACT": {
         "spend_30d": 7165.0,
@@ -2203,7 +2203,7 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 7084,
+      "total_unique_placements": 7091,
       "total_spend_30d": 6630413.0
     },
     "network_breakdown": {
@@ -2228,9 +2228,9 @@
       "WEBSITE": {
         "spend_30d": 6630413.0,
         "clicks_30d": 3031,
-        "impressions_30d": 233912,
+        "impressions_30d": 233997,
         "ctr_30d": 0.013,
-        "placement_count": 7084
+        "placement_count": 7091
       }
     },
     "top_waste_placements": [],
