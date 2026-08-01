@@ -550,10 +550,11 @@
           </div>
         </div>
 
-        <!-- Đã bỏ 4 khối tổng quan (thẻ KPI, GMV theo nguồn, Theo shop, Theo ngày):
-             menu này giờ chỉ phục vụ một việc — chọn video KOC để chạy ads. Số tổng quan
-             toàn shop xem ở dashboard sale-report. Các phần tử vẫn được tạo ẩn ở dưới
-             để mã cũ đụng tới chúng không vỡ. -->
+        <!-- Đã bỏ HẲN 4 khối tổng quan (thẻ KPI, GMV theo nguồn, Theo shop, Theo ngày)
+             cùng mã đọc chúng: menu này giờ chỉ phục vụ một việc — chọn video KOC để
+             chạy ads. Số tổng quan toàn shop xem ở dashboard sale-report.
+             Gỡ tiếp khối nào thì soát luôn chốt bảo vệ đầu IIFE bên dưới: nó từng trỏ
+             vào #tt-cards, gỡ thẻ KPI đi là cả menu chết câm. -->
 
         <div class="tt-panel">
           <div class="tt-h" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
@@ -2405,7 +2406,10 @@
 // ===== TikTok Shop (đọc Lark Base) — tải lazy khi mở menu =====
 (function(){
   var nav=document.querySelector('.sidebar .nav-item[data-view="tiktok"]');
-  if(!nav||!cards) return;
+  // Chốt theo ĐÚNG phần tử khối này cần (bảng video). Trước đây chốt theo #tt-cards —
+  // gỡ hàng thẻ KPI đi là biến mất, ReferenceError, cả khối chết câm lúc khởi động và
+  // không gắn nổi listener nào. Kiểm cú pháp không bắt được loại lỗi này.
+  if(!nav||!document.getElementById('tt-videos')) return;
 
   var vidsEl=document.getElementById('tt-videos'), vidSub=document.getElementById('tt-vid-sub'),
       vidDaysSel=document.getElementById('tt-vid-days'),
