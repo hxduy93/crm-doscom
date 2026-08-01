@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-01 18:11",
+  "generated_at": "2026-08-01 19:31",
   "source_data_date_range": {
     "start_7d": "2026-07-25",
     "end": "2026-07-31",
@@ -1695,6 +1695,19 @@
         ]
       },
       {
+        "search_term": "cameras",
+        "spend_30d": 108602.0,
+        "clicks_30d": 2,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.0833,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
         "search_term": "máy chống ghi âm",
         "spend_30d": 49329.0,
         "clicks_30d": 17,
@@ -1702,6 +1715,19 @@
         "ctr_30d": 0.25,
         "match_types": [
           "EXACT"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
+        "search_term": "máy dò camera",
+        "spend_30d": 142871.0,
+        "clicks_30d": 21,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1707,
+        "match_types": [
+          "NEAR_PHRASE"
         ],
         "statuses": [
           "ADDED"
@@ -1730,32 +1756,6 @@
         "match_types": [
           "BROAD",
           "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "máy ghi âm remin",
-        "spend_30d": 69362.0,
-        "clicks_30d": 9,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0662,
-        "match_types": [
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "cameras",
-        "spend_30d": 108602.0,
-        "clicks_30d": 2,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0833,
-        "match_types": [
-          "BROAD"
         ],
         "statuses": [
           "NONE"
@@ -2169,6 +2169,18 @@
       }
     ],
     "match_type_breakdown": {
+      "NEAR_PHRASE": {
+        "spend_30d": 4750417.0,
+        "clicks_30d": 881,
+        "conversions_30d": 7.48,
+        "term_count": 665
+      },
+      "BROAD": {
+        "spend_30d": 11763709.0,
+        "clicks_30d": 1496,
+        "conversions_30d": 30.0,
+        "term_count": 2299
+      },
       "EXACT": {
         "spend_30d": 2529480.0,
         "clicks_30d": 408,
@@ -2181,18 +2193,6 @@
         "conversions_30d": 13.83,
         "term_count": 622
       },
-      "BROAD": {
-        "spend_30d": 11763709.0,
-        "clicks_30d": 1496,
-        "conversions_30d": 30.0,
-        "term_count": 2299
-      },
-      "NEAR_PHRASE": {
-        "spend_30d": 4750417.0,
-        "clicks_30d": 881,
-        "conversions_30d": 7.48,
-        "term_count": 665
-      },
       "NEAR_EXACT": {
         "spend_30d": 7165.0,
         "clicks_30d": 2,
@@ -2203,16 +2203,16 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 7046,
-      "total_spend_30d": 6620451.0
+      "total_unique_placements": 7084,
+      "total_spend_30d": 6630413.0
     },
     "network_breakdown": {
       "CONTENT": {
-        "spend_30d": 6620469.0,
-        "clicks_30d": 3028,
-        "impressions_30d": 246013,
+        "spend_30d": 6630428.0,
+        "clicks_30d": 3031,
+        "impressions_30d": 246967,
         "ctr_30d": 0.0123,
-        "cpc_30d": 2186.0,
+        "cpc_30d": 2188.0,
         "campaign_count": 5
       },
       "SEARCH": {
@@ -2226,11 +2226,11 @@
     },
     "placement_type_breakdown": {
       "WEBSITE": {
-        "spend_30d": 6620451.0,
-        "clicks_30d": 3028,
-        "impressions_30d": 232986,
+        "spend_30d": 6630413.0,
+        "clicks_30d": 3031,
+        "impressions_30d": 233912,
         "ctr_30d": 0.013,
-        "placement_count": 7046
+        "placement_count": 7084
       }
     },
     "top_waste_placements": [],
@@ -2239,15 +2239,15 @@
         "placement": "dantri.com.vn",
         "spend_30d": 155325.0,
         "clicks_30d": 43,
-        "impressions_30d": 27624,
-        "ctr_30d": 0.0016,
+        "impressions_30d": 27796,
+        "ctr_30d": 0.0015,
         "placement_type": "WEBSITE"
       },
       {
         "placement": "xskt.com.vn",
         "spend_30d": 30095.0,
         "clicks_30d": 16,
-        "impressions_30d": 4417,
+        "impressions_30d": 4422,
         "ctr_30d": 0.0036,
         "placement_type": "WEBSITE"
       },
@@ -2255,7 +2255,7 @@
         "placement": "www.minhchinh.com/truc-tiep-xo-so-tu-chon-lotto-535.html",
         "spend_30d": 28495.0,
         "clicks_30d": 10,
-        "impressions_30d": 2582,
+        "impressions_30d": 2592,
         "ctr_30d": 0.0039,
         "placement_type": "WEBSITE"
       },
@@ -2263,15 +2263,15 @@
         "placement": "vietnamnet.vn",
         "spend_30d": 22562.0,
         "clicks_30d": 10,
-        "impressions_30d": 3625,
-        "ctr_30d": 0.0028,
+        "impressions_30d": 3648,
+        "ctr_30d": 0.0027,
         "placement_type": "WEBSITE"
       },
       {
         "placement": "xskt.com.vn/xsmb/30-ngay",
         "spend_30d": 17892.0,
         "clicks_30d": 20,
-        "impressions_30d": 4252,
+        "impressions_30d": 4263,
         "ctr_30d": 0.0047,
         "placement_type": "WEBSITE"
       },
@@ -2279,7 +2279,7 @@
         "placement": "xskt.com.vn/xsmt",
         "spend_30d": 16462.0,
         "clicks_30d": 10,
-        "impressions_30d": 2039,
+        "impressions_30d": 2041,
         "ctr_30d": 0.0049,
         "placement_type": "WEBSITE"
       },
@@ -2295,7 +2295,7 @@
         "placement": "www.minhchinh.com/truc-tiep-xo-so-tu-chon-mega-645.html",
         "spend_30d": 6942.0,
         "clicks_30d": 4,
-        "impressions_30d": 1178,
+        "impressions_30d": 1182,
         "ctr_30d": 0.0034,
         "placement_type": "WEBSITE"
       },
@@ -2343,7 +2343,7 @@
         "placement": "xskt.com.vn/xsmb/90-ngay",
         "spend_30d": 342.0,
         "clicks_30d": 1,
-        "impressions_30d": 2067,
+        "impressions_30d": 2068,
         "ctr_30d": 0.0005,
         "placement_type": "WEBSITE"
       }
@@ -2353,7 +2353,7 @@
         "placement": "dantri.com.vn",
         "spend_30d": 155325.0,
         "clicks_30d": 43,
-        "ctr_30d": 0.0016,
+        "ctr_30d": 0.0015,
         "placement_type": "WEBSITE",
         "ad_network_type": "CONTENT"
       },
@@ -2361,7 +2361,7 @@
         "placement": "a2.hoopgame.net/app/YouTube-TV-Live-TV--more",
         "spend_30d": 112413.0,
         "clicks_30d": 55,
-        "ctr_30d": 0.0298,
+        "ctr_30d": 0.0297,
         "placement_type": "WEBSITE",
         "ad_network_type": "CONTENT"
       },
@@ -2406,18 +2406,18 @@
         "ad_network_type": "CONTENT"
       },
       {
-        "placement": "xskt.com.vn/xsmb/200-ngay",
-        "spend_30d": 28605.0,
-        "clicks_30d": 35,
-        "ctr_30d": 0.0207,
-        "placement_type": "WEBSITE",
-        "ad_network_type": "CONTENT"
-      },
-      {
         "placement": "www.minhchinh.com/truc-tiep-xo-so-tu-chon-lotto-535.html",
         "spend_30d": 28495.0,
         "clicks_30d": 10,
         "ctr_30d": 0.0039,
+        "placement_type": "WEBSITE",
+        "ad_network_type": "CONTENT"
+      },
+      {
+        "placement": "xskt.com.vn/xsmb/200-ngay",
+        "spend_30d": 28294.0,
+        "clicks_30d": 34,
+        "ctr_30d": 0.0201,
         "placement_type": "WEBSITE",
         "ad_network_type": "CONTENT"
       },
