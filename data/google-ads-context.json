@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-02 17:12",
+  "generated_at": "2026-08-02 18:39",
   "source_data_date_range": {
     "start_7d": "2026-07-26",
     "end": "2026-08-01",
@@ -64,16 +64,16 @@
         "orders": 107
       },
       "returning": {
-        "revenue": 11697000.0,
-        "orders": 7
+        "revenue": 12997000.0,
+        "orders": 8
       },
       "canceled": {
         "revenue": 5100000.0,
         "orders": 3
       },
       "other": {
-        "revenue": 12619000.0,
-        "orders": 9
+        "revenue": 11319000.0,
+        "orders": 8
       }
     },
     "by_source": {
@@ -1621,8 +1621,8 @@
   "search_term_insights": {
     "summary": {
       "total_unique_terms": 3416,
-      "terms_with_conversions": 35,
-      "conv_rate_terms": 0.01,
+      "terms_with_conversions": 36,
+      "conv_rate_terms": 0.011,
       "total_spend_30d": 19597325.0
     },
     "top_converting_terms": [
@@ -1669,58 +1669,6 @@
         ]
       },
       {
-        "search_term": "camera ezviz",
-        "spend_30d": 114484.0,
-        "clicks_30d": 10,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0498,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "cameras",
-        "spend_30d": 108602.0,
-        "clicks_30d": 2,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0833,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "doscom",
-        "spend_30d": 83869.0,
-        "clicks_30d": 34,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.2482,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "máy chống ghi âm",
-        "spend_30d": 49329.0,
-        "clicks_30d": 17,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.2361,
-        "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
         "search_term": "máy dò camera",
         "spend_30d": 142871.0,
         "clicks_30d": 21,
@@ -1756,6 +1704,58 @@
         "match_types": [
           "BROAD",
           "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm remin",
+        "spend_30d": 69362.0,
+        "clicks_30d": 9,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.0647,
+        "match_types": [
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera ezviz",
+        "spend_30d": 114484.0,
+        "clicks_30d": 10,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.0498,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "cameras",
+        "spend_30d": 108602.0,
+        "clicks_30d": 2,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.0833,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "doscom",
+        "spend_30d": 83869.0,
+        "clicks_30d": 34,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.2482,
+        "match_types": [
+          "BROAD"
         ],
         "statuses": [
           "NONE"
@@ -2171,29 +2171,29 @@
       }
     ],
     "match_type_breakdown": {
+      "EXACT": {
+        "spend_30d": 2628247.0,
+        "clicks_30d": 419,
+        "conversions_30d": 11.5,
+        "term_count": 71
+      },
+      "PHRASE": {
+        "spend_30d": 6160174.0,
+        "clicks_30d": 954,
+        "conversions_30d": 14.83,
+        "term_count": 630
+      },
       "NEAR_PHRASE": {
         "spend_30d": 5050555.0,
         "clicks_30d": 909,
         "conversions_30d": 7.48,
         "term_count": 676
       },
-      "PHRASE": {
-        "spend_30d": 6160174.0,
-        "clicks_30d": 954,
-        "conversions_30d": 13.83,
-        "term_count": 630
-      },
       "BROAD": {
         "spend_30d": 12118247.0,
         "clicks_30d": 1541,
         "conversions_30d": 30.0,
         "term_count": 2345
-      },
-      "EXACT": {
-        "spend_30d": 2628247.0,
-        "clicks_30d": 419,
-        "conversions_30d": 11.5,
-        "term_count": 71
       },
       "NEAR_EXACT": {
         "spend_30d": 7165.0,
@@ -2205,7 +2205,7 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 7288,
+      "total_unique_placements": 7297,
       "total_spend_30d": 6820937.0
     },
     "network_breakdown": {
@@ -2230,9 +2230,9 @@
       "WEBSITE": {
         "spend_30d": 6820937.0,
         "clicks_30d": 3123,
-        "impressions_30d": 241307,
+        "impressions_30d": 241410,
         "ctr_30d": 0.0129,
-        "placement_count": 7288
+        "placement_count": 7297
       }
     },
     "top_waste_placements": [],
