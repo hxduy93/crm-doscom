@@ -137,7 +137,7 @@ Mapping hiện tại (xem giá trị thật trong `data/fb-config.json`):
 | 764394829882083 | PHƯƠNG NAM | NOMA | Noma 911 |
 | 906015559004892 | PHƯƠNG NAM | MAY_DO | **LOANED → AI_AGENT từ 2026-05-29** (loaned_to_staff) |
 | 1416634670476226 | PHƯƠNG NAM | (rỗng) | Chưa chạy |
-| 1254151326914021 | DUY | NOMA | TK mới trong BM 1418124406240173 (2026-08-02) |
+| 1254151326914021 | DUY | NOMA | CÔNG TY CP DOSCOM — TK mới (2026-08-02) |
 
 **Tách spend theo nhóm SP** giờ dùng **chi tiêu THẬT theo tên campaign**
 (`computeFbSpendByGroupInRange` trong `functions/lib/fbAdsHelpers.js`), thay cho
