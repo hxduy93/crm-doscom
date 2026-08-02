@@ -40,7 +40,7 @@ _FALLBACK_ACCOUNTS = [
     {"id": "1449385949897024", "name": "CÔNG TY TNHH DOSCOM HOLDINGS - Công nghệ nâng tầm cuộc sống"},
     {"id": "906015559004892",  "name": "Doscom Mart"},
     {"id": "1416634670476226", "name": "CÔNG TY TNHH DOSCOM HOLDINGS - Doscom Mart"},
-    {"id": "1254151326914021", "name": "Doscom - Noma (TK mới, BM 1418124406240173)"},
+    {"id": "1254151326914021", "name": "CÔNG TY CP DOSCOM"},
 ]
 
 
