@@ -6,8 +6,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { onRequestGet } from "../functions/api/fb-accounts-pages.js";
+import { getIdentity } from "../functions/lib/access.js";
 
 const ENV = { FB_ACCESS_TOKEN: "tok" };
+// Số TK active đọc thẳng từ sổ đăng ký (lib/access.js) — thêm/bớt tkqc không làm vỡ test.
+const ACTIVE_COUNT = (
+  await getIdentity({ env: {}, request: new Request("https://x/api/fb-accounts-pages") })
+).accounts.length;
 const ME_ERROR = "Unsupported get request. Object with ID 'me' does not exist, cannot be loaded due to missing permissions, or does not support this operation.";
 
 // Một tài khoản QC như Graph trả về.
@@ -67,7 +72,7 @@ test("token System User: /me lỗi → batch act_{id} cứu được danh sách"
   const d = await (await get()).json();
   assert.equal(d.ok, true);
   assert.equal(d.source, "batch");
-  assert.equal(d.count, 6, "6 tài khoản active trong lib/access.js");
+  assert.equal(d.count, ACTIVE_COUNT, "đủ số tài khoản active trong lib/access.js");
   assert.match(d.note, /Object with ID 'me'/, "giữ lý do rẽ nhánh để chẩn đoán token");
   assert.equal(calls.length, 2, "1 call /me hỏng + 1 call batch");
   assert.equal(calls[1].method, "POST");
@@ -88,7 +93,7 @@ test("batch: tài khoản lỗi bị bỏ qua, phần còn lại vẫn trả v�
 
   const d = await (await get()).json();
   assert.equal(d.ok, true);
-  assert.equal(d.count, 5, "1 TK mất quyền không được làm hỏng 5 TK còn lại");
+  assert.equal(d.count, ACTIVE_COUNT - 1, "1 TK mất quyền không được làm hỏng các TK còn lại");
 });
 
 test("cả hai đường hỏng → 502 kèm lý do của /me", async () => {
@@ -114,7 +119,7 @@ test("/me trả 0 tài khoản (không ném lỗi) vẫn rẽ sang batch", async
 
   const d = await (await get()).json();
   assert.equal(d.source, "batch");
-  assert.equal(d.count, 6);
+  assert.equal(d.count, ACTIVE_COUNT);
 });
 
 test("thiếu FB_ACCESS_TOKEN → 500, không gọi Meta", async () => {
