@@ -6,7 +6,7 @@ Trước khi deploy, bạn cần chuẩn bị 5 thứ:
 
 - Tạo (hoặc dùng sẵn) 1 ad account **CHỈ dùng cho test agent này**.
 - Ghi lại `ad_account_id` dạng `act_xxxxxxxxxxxxx`.
-- **KHÔNG** dùng các account production của Doscom (`1449385949897024`, `927390616363424`, `1655506672244826`, `764394829882083`, `906015559004892`, `1416634670476226`, `1418124406240173`).
+- **KHÔNG** dùng các account production của Doscom (`1449385949897024`, `927390616363424`, `1655506672244826`, `764394829882083`, `906015559004892`, `1416634670476226`, `1254151326914021`).
 
 ## 2. Meta System User Token (long-lived, KHÔNG hết hạn)
 
