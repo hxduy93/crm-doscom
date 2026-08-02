@@ -2,7 +2,7 @@
   "_note": "Config tháng cho FB Ads agent. UI edit qua agent-facebook-doscom.html (đầu trang). Backend đọc qua /api/fb-config (KV) — file này là DEFAULT khi KV rỗng.",
   "_registry_help": "account_to_groups = SỔ ĐĂNG KÝ tài khoản QC Facebook (single source of truth). Đây là NƠI DUY NHẤT khai báo tkqc — cả script fetch (scripts/fetch_fb_ads.py) lẫn backend đều đọc từ đây. Khi đổi agency/đổi tkqc: làm theo docs/SWITCH-AD-ACCOUNTS.md (chỉ sửa file này + chạy validate). Mỗi account: name (tên hiển thị), staff (DUY|PHUONG_NAM), groups (subset MAY_DO|CAMERA_VIDEO_CALL|GHI_AM|NOMA — 1 account chạy nhiều SP thì liệt kê nhiều group), active (true=fetch, false=ngừng fetch nhưng giữ lịch sử).",
   "kpi_revenue_monthly_vnd": 1000000000,
-  "_staff_access_help": "Phân quyền đăng nhập Cloudflare Access. email (chữ thường) → { role: admin|staff, staff: TÊN khớp account_to_groups }. admin = thấy MỌI tài khoản; staff = chỉ thấy tài khoản có staff trùng. Thêm email nhân sự vào đây (vd Phương Nam).",
+  "_staff_access_help": "Phân quyền đăng nhập Cloudflare Access. email (chữ thường) → { role: admin|staff, staff: TÊN khớp account_to_groups }. admin = thấy MỌI tài khoản; staff = chỉ thấy tài khoản có staff trùng. Thêm email nhân sự vào đây (vd Phương Nam). LƯU Ý: nguồn quyền THẬT là ACCOUNT_TO_GROUPS + STAFF_ACCESS nhúng trong functions/lib/access.js — khối này chỉ để tra cứu, và bị scripts/refresh_data.py ghi đè mỗi lần sync từ repo facebook-ads-dashboard.",
   "staff_access": {
     "kinhdoanh.doscom@gmail.com": { "role": "admin" },
     "doscom.vietnam@gmail.com": { "role": "admin" },
@@ -63,5 +63,5 @@
   },
   "_note_906": "Account 906015559004892 (DoscomMart) — spend trước 2026-05-29 tính cho PHUONG_NAM (lịch sử giữ nguyên); từ 2026-05-29 trở đi spend tính cho AI_AGENT (xem fb-ads-auto-agent/). Logic backend phải check loaned_from_date: spend.date < loaned_from_date → staff = staff cũ; spend.date >= loaned_from_date → staff = loaned_to_staff. Khôi phục: xóa 2 field loaned_to_staff + loaned_from_date, sửa products_note về 'D1 (máy dò)'.",
   "updated_at": "2026-08-02",
-  "updated_by": "kinhdoanh.doscom@gmail.com (thêm tkqc 1254151326914021 — DUY / NOMA, BM 1418124406240173)"
+  "updated_by": "kinhdoanh.doscom@gmail.com (thêm tkqc 1254151326914021 — DUY / NOMA; xoá 1418124406240173 vì đó là ID của BM, không phải tkqc)"
 }
