@@ -39,7 +39,7 @@ ACCOUNTS = [
     {"id": "1449385949897024", "staff": "DUY",        "short": "CÔNG TY TNHH DOSCOM HOLDINGS - Công nghệ nâng tầm cuộc sống",   "name": "CÔNG TY TNHH DOSCOM HOLDINGS - Công nghệ nâng tầm cuộc sống"},
     {"id": "906015559004892",  "staff": "PHUONG_NAM", "short": "Doscom Mart",                                                   "name": "Doscom Mart"},
     {"id": "1416634670476226", "staff": "PHUONG_NAM", "short": "CÔNG TY TNHH DOSCOM HOLDINGS - Doscom Mart",                    "name": "CÔNG TY TNHH DOSCOM HOLDINGS - Doscom Mart"},
-    {"id": "1254151326914021", "staff": "DUY",        "short": "Doscom - Noma (TK mới)",                                        "name": "Doscom - Noma (TK mới, BM 1418124406240173)"},
+    {"id": "1254151326914021", "staff": "DUY",        "short": "CÔNG TY CP DOSCOM",                                             "name": "CÔNG TY CP DOSCOM"},
 ]
 
 # 14 SP gốc + extended SKUs từ data/cost-source/skus-extended.json
