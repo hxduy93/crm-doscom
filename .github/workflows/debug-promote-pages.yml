@@ -1,0 +1,75 @@
+name: List promote pages (one-shot debug)
+
+# Liệt kê Page mà từng tài khoản QC được phép chạy quảng cáo (promote_pages),
+# kèm pixel + trạng thái tài khoản. Dùng để biết tkqc mới set camp được trên Page nào.
+# Chỉ ĐỌC, không sửa dữ liệu gì. Xoá file này sau khi dùng xong.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: List promote pages
+        env:
+          FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os, json, urllib.parse, urllib.request
+
+          TOKEN = os.environ["FB_ACCESS_TOKEN"]
+          API = "https://graph.facebook.com/v20.0"
+          FIELDS = ("account_id,name,account_status,currency,"
+                    "promote_pages.limit(50){id,name},"
+                    "adspixels.limit(50){id,name}")
+
+          def get(path, **params):
+              params["access_token"] = TOKEN
+              url = f"{API}{path}?{urllib.parse.urlencode(params)}"
+              with urllib.request.urlopen(url, timeout=60) as r:
+                  return json.loads(r.read().decode())
+
+          STATUS = {1: "ACTIVE", 2: "DISABLED", 3: "UNSETTLED", 7: "PENDING_RISK_REVIEW",
+                    8: "PENDING_SETTLEMENT", 9: "IN_GRACE_PERIOD", 100: "PENDING_CLOSURE",
+                    101: "CLOSED"}
+
+          def show(acc):
+              st = STATUS.get(acc.get("account_status"), acc.get("account_status"))
+              print(f"\n=== {acc.get('name')} ({acc.get('account_id')}) — {st} ===")
+              pages = (acc.get("promote_pages") or {}).get("data") or []
+              if pages:
+                  for p in pages:
+                      print(f"   PAGE  {p['id']}  {p.get('name')}")
+              else:
+                  print("   PAGE  (khong co promote_pages)")
+              pxs = (acc.get("adspixels") or {}).get("data") or []
+              for px in pxs:
+                  print(f"   PIXEL {px['id']}  {px.get('name')}")
+
+          TARGET = "1254151326914021"
+          print(">>> TAI KHOAN MUC TIEU")
+          try:
+              show(get(f"/act_{TARGET}", fields=FIELDS))
+          except Exception as e:
+              print(f"   LOI doc act_{TARGET}: {e}")
+
+          print("\n>>> TAT CA TAI KHOAN TOKEN THAY")
+          try:
+              for acc in get("/me/adaccounts", fields=FIELDS, limit="200").get("data", []):
+                  show(acc)
+          except Exception as e:
+              print(f"   LOI /me/adaccounts: {e}")
+
+          print("\n>>> PAGE TOKEN CO QUYEN (/me/accounts)")
+          try:
+              for p in get("/me/accounts", fields="id,name", limit="100").get("data", []):
+                  print(f"   {p['id']}  {p.get('name')}")
+          except Exception as e:
+              print(f"   LOI /me/accounts: {e}")
+          PY
