@@ -3,12 +3,17 @@
 // Bảo vệ bằng header X-Noma-Token == env.NOMA911_INGEST_TOKEN. Lưu vào D1 RIÊNG của CRM.
 // Port từ facebookadsallinone — CRM tự thu đơn, độc lập dashboard cũ.
 
+// Giá PHẢI khớp bảng giá hiển thị trên landing (noma-landings-deploy/nm911d.html +
+// 911tpn.html) và bảng PRICING phía server của landing. Lệch là doanh thu trong
+// /api/noma911/stats sai.
+// Đổi giá 03/08/2026: 199k→219k, 398k→418k/438k (giá cũ dùng cho đơn trước ngày này,
+// đơn cũ trong D1 GIỮ NGUYÊN số cũ vì hồi đó bán đúng giá đó — không sửa lịch sử).
 const COMBO_META = {
-  "le-911":        { label: "1 chai NOMA 911",      amount: 199000 },
-  "combo-2x911":   { label: "2 chai NOMA 911",      amount: 398000 },
-  "combo-911-310": { label: "Combo NOMA 911 + 310", amount: 398000 },
-  "combo-911-922": { label: "Combo NOMA 911 + 922", amount: 398000 },
-  "le-922":        { label: "1 chai NOMA 922",      amount: 199000 },
+  "le-911":        { label: "1 chai NOMA 911",      amount: 219000 },
+  "combo-2x911":   { label: "2 chai NOMA 911",      amount: 438000 },
+  "combo-911-310": { label: "Combo NOMA 911 + 310", amount: 418000 },
+  "combo-911-922": { label: "Combo NOMA 911 + 922", amount: 438000 },
+  "le-922":        { label: "1 chai NOMA 922",      amount: 219000 },
 };
 
 function json(obj, status = 200) {

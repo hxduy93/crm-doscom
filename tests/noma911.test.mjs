@@ -9,13 +9,16 @@ import assert from "node:assert/strict";
 
 const BASE_URL = process.env.BASE_URL || "https://crm-doscom.pages.dev";
 
-// Giá cố định từng combo (lấy đúng từ COMBO_META trong functions/api/noma911/order.js)
+// Giá từng combo (lấy đúng từ COMBO_META trong functions/api/noma911/order.js).
+// Ngày 03/08/2026 giá tăng, nên trong cùng một khoảng thống kê có thể lẫn CẢ HAI mức:
+// đơn cũ lưu giá cũ (đúng — hồi đó bán giá đó), đơn mới lưu giá mới. Vì vậy test không
+// thể so bằng một mức giá duy nhất, xem TEST 2 bên dưới.
 const GIA_COMBO = {
-  "le-911": 199000,
-  "combo-2x911": 398000,
-  "combo-911-310": 398000,
-  "combo-911-922": 398000,
-  "le-922": 199000,
+  "le-911":        { cu: 199000, moi: 219000 },
+  "combo-2x911":   { cu: 398000, moi: 438000 },
+  "combo-911-310": { cu: 398000, moi: 418000 },
+  "combo-911-922": { cu: 398000, moi: 438000 },
+  "le-922":        { cu: 199000, moi: 219000 },
 };
 
 // Gọi API 1 lần, dùng lại cho mọi test
@@ -42,19 +45,31 @@ test("noma911/stats trả về đúng cấu trúc (contract)", async () => {
 // ── TEST 2: LUẬT DỮ LIỆU — doanh thu mỗi combo = số đơn × đúng giá? ──────
 // Đây là lá chắn chống "tính sai tiền": nếu ai lỡ đổi giá combo hay tính nhầm,
 // test này BÁO ĐỎ ngay.
+// Doanh thu phải chia hết thành: (số đơn giá cũ × giá cũ) + (số đơn giá mới × giá mới),
+// với tổng hai nhóm đúng bằng số đơn. Bất kỳ mức giá lạ nào lọt vào cũng phá điều kiện
+// này ngay — chặt như so bằng một giá, mà vẫn đúng khi giá đổi giữa kỳ.
 test("doanh thu mỗi combo = số đơn × đúng giá combo", async () => {
   const kq = await layThongKe();
 
   for (const dong of kq.by_combo) {
-    const giaDung = GIA_COMBO[dong.combo];
-    if (giaDung === undefined) continue; // combo lạ thì bỏ qua
+    const gia = GIA_COMBO[dong.combo];
+    if (!gia) continue; // combo lạ thì bỏ qua
 
-    const mongDoi = dong.orders * giaDung;
+    const min = dong.orders * gia.cu;
+    const max = dong.orders * gia.moi;
+    const buoc = gia.moi - gia.cu;
+
+    assert.ok(
+      dong.revenue >= min && dong.revenue <= max,
+      `Combo "${dong.combo}": ${dong.orders} đơn thì doanh thu phải nằm giữa ${min}đ ` +
+        `(toàn giá cũ ${gia.cu}) và ${max}đ (toàn giá mới ${gia.moi}), nhưng API trả ` +
+        `${dong.revenue}đ → TÍNH SAI TIỀN!`
+    );
     assert.equal(
-      dong.revenue,
-      mongDoi,
-      `Combo "${dong.combo}": ${dong.orders} đơn × ${giaDung}đ phải = ${mongDoi}đ, ` +
-        `nhưng API trả ${dong.revenue}đ → TÍNH SAI TIỀN!`
+      (dong.revenue - min) % buoc,
+      0,
+      `Combo "${dong.combo}": doanh thu ${dong.revenue}đ không ghép được từ ${gia.cu}đ ` +
+        `và ${gia.moi}đ → có đơn mang mức giá lạ, kiểm tra COMBO_META.`
     );
   }
 });
