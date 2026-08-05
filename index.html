@@ -377,6 +377,14 @@
         <div class="mod-b" id="noma-body"><div class="skl">Đang tải dữ liệu noma911…</div></div>
       </section>
 
+      <!-- Ba landing sản phẩm chạy trên Cloudflare Pages, mỗi cái một bảng D1 riêng.
+           Gọi ba endpoint /api/noma{680,350,230}/stats song song — cái nào xong hiện
+           cái đó, một endpoint chết không kéo hai cái kia theo. -->
+      <section class="mod wide" style="margin-bottom:16px" id="lp-mod">
+        <div class="mod-h"><div class="t"><i style="background:#FF6B1A"></i><h3>Đơn đăng ký landing sản phẩm</h3></div><span class="s" id="lp-range">…</span></div>
+        <div class="mod-b" id="lp-body"><div class="skl">Đang tải đơn từ ba landing…</div></div>
+      </section>
+
       <section class="slots">
         <div class="slot">➕ Module tiếp theo<small>vd: theo nhóm SP, top sản phẩm, khách hàng Pancake…</small><span class="wip">bạn chọn — ta làm tiếp</span></div>
       </section>
@@ -1168,6 +1176,8 @@
     renderProfit();
     // đơn đăng ký Noma911 (gọi API D1 riêng theo kỳ)
     loadNoma(range.start, range.end);
+    // đơn đăng ký ba landing sản phẩm 680 / 350 / 230 (mỗi cái một bảng D1 riêng)
+    loadLanding(range.start, range.end);
   }
 
   // Ma trận Chi phí & Doanh thu theo BRAND × NHÂN SỰ — đúng LUẬT tính dữ liệu:
@@ -1953,6 +1963,91 @@
     el.innerHTML=html;
   }
   function noKpi(label,val,color,tip){ return '<div title="'+(tip||'').replace(/"/g,'&quot;')+'" style="background:var(--surface-2);border:1px solid var(--border);border-radius:13px;padding:13px'+(tip?';cursor:help':'')+'"><div style="font-size:12px;color:var(--text-2);font-weight:700">'+label+(tip?' <span style="opacity:.5">ⓘ</span>':'')+'</div><div style="font-size:19px;font-weight:800;margin-top:4px;color:'+color+'">'+val+'</div></div>'; }
+
+  /* ===== ĐƠN ĐĂNG KÝ LANDING SẢN PHẨM (680 · 350 · 230) =====================
+     Ba landing, ba bảng D1, ba endpoint trả CÙNG hình dạng response (cố ý, ghi
+     trong migration 0013/0014/0015) nên dùng chung một hàm vẽ.
+
+     Gọi song song: một endpoint chết thì thẻ đó báo lỗi, hai thẻ kia vẫn hiện.
+     Trước đây dashboard chỉ đọc /api/noma911/stats nên ba landing này có đơn
+     trong D1 mà không hiện ở đâu cả. */
+  var LP_LIST=[
+    { key:'noma680', ten:'NOMA 680', mo:'Bọt tuyết vệ sinh đa năng', mau:'#FF6B1A',
+      link:{ duy:'nomaautocares.cloud/nm680d', pn:'nomaautocares.cloud/nm680tpn' } },
+    { key:'noma350', ten:'NOMA 350', mo:'Dung dịch vệ sinh phanh đĩa', mau:'#0EA5E9',
+      link:{ duy:'noma890.click/nm350d', pn:'noma890.click/nm350tpn' } },
+    { key:'noma230', ten:'NOMA 230', mo:'Xịt dưỡng nhựa nhám', mau:'#8B5CF6',
+      link:{ duy:'noma620.click/nm230d', pn:'noma620.click/nm230tpn' } }
+  ];
+  var LP_DATA={};
+
+  function lpThe(sp,N){
+    var vien='border:1px solid var(--border);border-radius:14px;padding:15px';
+    var dau='<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px"><span style="width:11px;height:11px;border-radius:4px;background:'+sp.mau+'"></span><b style="font-size:14.5px">'+sp.ten+'</b><span style="color:var(--text-2);font-weight:600;font-size:12px">'+sp.mo+'</span></div>';
+
+    if(N && N.__loading) return '<div style="'+vien+'">'+dau+'<div class="skl" style="height:64px">Đang tải…</div></div>';
+    if(!N || N.__failed || !N.summary){
+      /* Không bịa số 0: đơn có thể vẫn về D1 mà endpoint lỗi. Nói rõ là KHÔNG ĐỌC ĐƯỢC. */
+      return '<div style="'+vien+'">'+dau+'<div style="font-size:12.5px;color:#B45309;font-weight:700;line-height:1.6">⚠ Không đọc được <code>/api/'+sp.key+'/stats</code>.<br><span style="font-weight:600;color:var(--text-2)">Đơn vẫn có thể đang về D1 — đây là lỗi đọc, không phải "0 đơn".</span></div></div>';
+    }
+
+    var s=N.summary||{}, byS={};
+    (N.by_staff||[]).forEach(function(r){ byS[r.staff]=r; });
+    var tong=s.orders||0;
+
+    var so='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:11px">'+
+      '<div><div style="font-size:11.5px;color:var(--text-2);font-weight:700">Đơn đăng ký</div><div style="font-size:23px;font-weight:800;color:'+sp.mau+'">'+num(tong)+'</div></div>'+
+      '<div><div style="font-size:11.5px;color:var(--text-2);font-weight:700">Khách (SĐT)</div><div style="font-size:23px;font-weight:800">'+num(s.unique_customers)+'</div></div>'+
+      '<div><div style="font-size:11.5px;color:var(--text-2);font-weight:700">DT đăng ký</div><div style="font-size:17px;font-weight:800;margin-top:5px;color:#16A34A">'+vnd(s.revenue)+'</div></div>'+
+      '</div>';
+
+    var ns=['duy','pn'].map(function(k){
+      var r=byS[k]||{orders:0,revenue:0}, ten=(k==='duy'?'Duy':'Phương Nam');
+      var pct=tong?(r.orders/tong*100):0;
+      return '<div style="background:var(--surface-2);border-radius:10px;padding:9px 11px">'+
+        '<div style="font-size:11.5px;font-weight:800">'+ten+' <span style="color:var(--text-2);font-weight:600">· '+sp.link[k]+'</span></div>'+
+        '<div style="font-size:15px;font-weight:800;margin-top:3px">'+num(r.orders)+' đơn <span style="font-size:11.5px;color:var(--text-2);font-weight:700">· '+pct.toFixed(0)+'% · '+vnd(r.revenue)+'</span></div></div>';
+    }).join('');
+
+    var combos=(N.by_combo||[]).slice().sort(function(x,y){return y.orders-x.orders;});
+    var mx=Math.max.apply(null,combos.map(function(c){return c.orders;}))||1;
+    var ch=combos.length? '<div style="font-size:11.5px;font-weight:800;margin:11px 0 6px;color:var(--text-2)">Theo phương án</div><div class="bars">'+combos.map(function(c){
+        return '<div class="bar"><div class="bt"><span>'+(c.combo_label||c.combo)+'</span><span class="tnum">'+num(c.orders)+' · '+vnd(c.revenue)+'</span></div><div class="track"><div class="fill" style="width:'+(c.orders/mx*100).toFixed(1)+'%;background:'+sp.mau+'"></div></div></div>';
+      }).join('')+'</div>' : '<div style="font-size:12px;color:var(--text-2);font-weight:600;margin-top:10px">Chưa có đơn nào trong kỳ này.</div>';
+
+    return '<div style="'+vien+'">'+dau+so+'<div style="display:grid;gap:7px">'+ns+'</div>'+ch+'</div>';
+  }
+
+  function renderLanding(){
+    var body=document.getElementById('lp-body'); if(!body) return;
+    var tongDon=0, tongDT=0, docDuoc=0;
+    LP_LIST.forEach(function(sp){ var N=LP_DATA[sp.key];
+      if(N && N.summary){ docDuoc++; tongDon+=(N.summary.orders||0); tongDT+=(N.summary.revenue||0); } });
+
+    var tomTat=docDuoc? '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:13px">'+
+        noKpi('Tổng đơn đăng ký', num(tongDon), '#FF6B1A', 'Cộng đơn của '+docDuoc+'/'+LP_LIST.length+' landing đọc được. Mỗi lượt điền form thành công = 1 đơn.')+
+        noKpi('Tổng DT đăng ký', vnd(tongDT), '#16A34A', 'Doanh thu DỰ KIẾN theo bảng giá, CHƯA phải thực thu. Đơn COD còn có thể bị từ chối nhận.')+
+        noKpi('Landing đọc được', docDuoc+'/'+LP_LIST.length, '#0EA5E9', 'Số endpoint trả dữ liệu. Thiếu cái nào thì thẻ của nó báo lỗi đọc, không phải 0 đơn.')+
+        '</div>' : '';
+
+    var ghi='<div style="font-size:11.5px;color:var(--text-2);font-weight:600;line-height:1.65;margin-bottom:13px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;padding:10px 13px">ℹ️ <b>Đơn đăng ký</b> = lượt điền form thành công trên landing (lead), chưa phải đơn chốt POS · <b>DT đăng ký</b> = doanh thu dự kiến theo giá combo · Đơn trùng (cùng SĐT + cùng gói trong ngày) chỉ tính <b>một</b>.</div>';
+
+    body.innerHTML=tomTat+ghi+'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:13px">'+
+      LP_LIST.map(function(sp){ return lpThe(sp, LP_DATA[sp.key]); }).join('')+'</div>';
+  }
+
+  function loadLanding(from,to){
+    var rng=document.getElementById('lp-range'); if(!rng) return;
+    rng.textContent=from+' → '+to;
+    LP_LIST.forEach(function(sp){ LP_DATA[sp.key]={__loading:true}; });
+    renderLanding();
+    LP_LIST.forEach(function(sp){
+      fetch('/api/'+sp.key+'/stats?from='+from+'&to='+to,{cache:'no-store'})
+        .then(function(r){ return r.ok?r.json():null; })
+        .then(function(N){ LP_DATA[sp.key]=(N&&N.summary)?N:{__failed:true}; renderLanding(); })
+        .catch(function(){ LP_DATA[sp.key]={__failed:true}; renderLanding(); });
+    });
+  }
   function renderNoma(N){
     var body=document.getElementById('noma-body'), rng=document.getElementById('noma-range');
     if(!N || !N.summary){
