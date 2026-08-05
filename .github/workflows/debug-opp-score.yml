@@ -1,0 +1,56 @@
+name: Opportunity score probe (one-shot debug)
+
+# Doc Diem co hoi + danh sach khuyen nghi cua tai khoan QC qua Marketing API.
+# Chi DOC. Xoa file nay sau khi dung xong.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Probe opportunity score
+        env:
+          FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os, json, urllib.parse, urllib.request, urllib.error
+
+          TOKEN=os.environ["FB_ACCESS_TOKEN"]
+          ACCS=["1254151326914021","764394829882083","1655506672244826"]
+
+          def get(ver, path, **p):
+              p["access_token"]=TOKEN
+              url=f"https://graph.facebook.com/{ver}{path}?{urllib.parse.urlencode(p)}"
+              try:
+                  with urllib.request.urlopen(url, timeout=60) as r:
+                      return json.loads(r.read().decode())
+              except urllib.error.HTTPError as e:
+                  try: return {"__err": json.loads(e.read().decode())["error"]["message"][:220]}
+                  except Exception: return {"__err": "HTTP "+str(e.code)}
+
+          CAND=[
+            ("/act_{a}", {"fields":"opportunity_score"}),
+            ("/act_{a}", {"fields":"opportunity_score{score,recommendations}"}),
+            ("/act_{a}/opportunity_score", {}),
+            ("/act_{a}/recommendations", {}),
+            ("/act_{a}/guidance", {}),
+            ("/act_{a}/ad_studies", {}),
+          ]
+          for ver in ("v23.0","v20.0"):
+              print(f"\n########## {ver}")
+              for a in ACCS:
+                  print(f"\n=== act_{a}")
+                  for tpl, params in CAND:
+                      path=tpl.format(a=a)
+                      r=get(ver, path, **params)
+                      s=json.dumps(r, ensure_ascii=False)
+                      flag="ERR " if "__err" in r else "OK  "
+                      print(f"  {flag}{path} {params} -> {s[:400]}")
+                  break   # 1 tai khoan la du de biet endpoint nao song
+          PY
