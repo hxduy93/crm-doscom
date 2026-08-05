@@ -1,0 +1,55 @@
+name: Opportunity score full (one-shot debug)
+
+# Doc TOAN BO khuyen nghi cua tkqc 1655506672244826, co di het phan trang. Chi DOC.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Full recommendations
+        env:
+          FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os, json, urllib.parse, urllib.request, urllib.error
+
+          TOKEN=os.environ["FB_ACCESS_TOKEN"]
+          ACC="1655506672244826"
+
+          def raw(url):
+              try:
+                  with urllib.request.urlopen(url, timeout=60) as r:
+                      return json.loads(r.read().decode())
+              except urllib.error.HTTPError as e:
+                  try: return {"__err": json.loads(e.read().decode())["error"]["message"][:250]}
+                  except Exception: return {"__err": "HTTP "+str(e.code)}
+
+          def get(path, **p):
+              p["access_token"]=TOKEN
+              return raw(f"https://graph.facebook.com/v23.0{path}?{urllib.parse.urlencode(p)}")
+
+          print(">>> DIEM:", json.dumps(get(f"/act_{ACC}", fields="opportunity_score,name"), ensure_ascii=False))
+
+          print("\n>>> RAW /recommendations (di het phan trang)")
+          d=get(f"/act_{ACC}/recommendations", limit="100")
+          page=1
+          while True:
+              print(f"\n--- trang {page} ---")
+              print(json.dumps(d, ensure_ascii=False, indent=1)[:12000])
+              nxt=(d.get("paging") or {}).get("next")
+              if not nxt: break
+              page+=1; d=raw(nxt)
+
+          # Thu them vai bien the tham so xem co tra day du hon khong
+          for extra in ({"level":"campaign"}, {"level":"adset"}, {"level":"ad"}, {"filtering":"[]"}):
+              r=get(f"/act_{ACC}/recommendations", limit="100", **extra)
+              n=sum(len(g.get("recommendations") or []) for g in (r.get("data") or [])) if "data" in r else -1
+              print(f"\n>>> voi {extra}: {n} khuyen nghi | {json.dumps(r, ensure_ascii=False)[:300]}")
+          PY
