@@ -247,8 +247,32 @@ export function buildAdsetBase(cfg, campaignId, isCBO, launchStatus) {
   const po = buildPromotedObject(cfg);
   if (po) base.promoted_object = po;
   // ABO → bid_strategy nằm ở ad set (CBO thì ở campaign).
-  if (!isCBO) base.bid_strategy = "LOWEST_COST_WITHOUT_CAP";
+  // cfg.bid_strategy chỉ dùng khi chạy "tối đa hoá GIÁ TRỊ có sàn ROAS"
+  // (LOWEST_COST_WITH_MIN_ROAS) — mọi trường hợp khác giữ chi phí thấp nhất.
+  if (!isCBO) base.bid_strategy = cfg.bid_strategy || "LOWEST_COST_WITHOUT_CAP";
+  // Sàn ROAS: Meta nhận qua bid_constraints.roas_average_floor, đơn vị 1/10000
+  // (2.0 → 20000). Chỉ có nghĩa với optimization_goal = VALUE.
+  if (base.bid_strategy === "LOWEST_COST_WITH_MIN_ROAS" && Number(cfg.roas_average_floor) > 0) {
+    base.bid_constraints = { roas_average_floor: Math.round(Number(cfg.roas_average_floor) * 10000) };
+  }
+  // Chiến lược vòng đời khách hàng (Meta mở 2026 cho campaign Doanh số):
+  // 0 = KHÔNG tiêu đồng nào cho khách cũ = "Chinh phục khách hàng mới".
+  // Không gửi field này = giữ mặc định "thu hút chuyển đổi từ tất cả đối tượng".
+  const ecb = cfg.existing_customer_budget_percentage;
+  if (ecb === 0 || (Number.isFinite(Number(ecb)) && String(ecb).trim() !== "")) {
+    const pct = Math.max(0, Math.min(100, Math.round(Number(ecb))));
+    base.existing_customer_budget_percentage = pct;
+  }
   return base;
+}
+
+// Field vòng đời khách hàng chưa mở cho mọi tài khoản — tài khoản chưa được bật
+// thì Meta trả lỗi "unknown/invalid param". Bỏ field đó ra rồi tạo lại còn hơn
+// để campaign vừa tạo nằm trơ không có ad set nào.
+export function isLifecycleUnsupported(msg) {
+  const m = String(msg || "").toLowerCase();
+  if (!m.includes("existing_customer_budget_percentage")) return false;
+  return /unknown|invalid|not (supported|available|allowed)|does not (support|exist)|unsupported|permission/.test(m);
 }
 
 // Gắn ngân sách ABO cho 1 ad set. amount = ngân sách của CHÍNH ad set này.
@@ -426,6 +450,24 @@ export async function onRequestPost(context) {
       });
     }
 
+    // Tạo ad set — tài khoản chưa được Meta bật "vòng đời khách hàng" thì bỏ đúng
+    // field đó rồi tạo lại, kèm cảnh báo trả về UI (xem isLifecycleUnsupported).
+    const warnings = [];
+    async function createAdset(body) {
+      try {
+        return await fbPost(`/act_${accountIdRaw}/adsets`, body, token);
+      } catch (e) {
+        if (body.existing_customer_budget_percentage === undefined) throw e;
+        if (!isLifecycleUnsupported(e.message)) throw e;
+        const retry = { ...body };
+        delete retry.existing_customer_budget_percentage;
+        if (!warnings.length) {
+          warnings.push("Tài khoản chưa dùng được 'Chiến lược vòng đời khách hàng' — ad set đã tạo với đối tượng mặc định (tất cả đối tượng).");
+        }
+        return await fbPost(`/act_${accountIdRaw}/adsets`, retry, token);
+      }
+    }
+
     try {
       if (adsetPerAd) {
         // 1 ad set / creative — mỗi ad set nhận TRỌN budget_amount.
@@ -433,10 +475,10 @@ export async function onRequestPost(context) {
           currentAdIndex = i;
           currentAdSubStep = "create_adset";
           const body = buildAdsetBase(cfg, partial.campaign_id, isCBO, launchStatus);
-          // 1 creative/ad set → tên ad set = tên ad (= ngày - sản phẩm - tên video).
+          // 1 creative/ad set → tên ad set = tên ad (= ngày - sản phẩm - KOC).
           body.name = cfg.ads[i].ad_name || `${cfg.adset_name || cfg.campaign_name} #${i + 1}`;
           withAdsetBudget(body, cfg, cfg.budget_amount);
-          const adsetRes = await fbPost(`/act_${accountIdRaw}/adsets`, body, token);
+          const adsetRes = await createAdset(body);
           partial.adsets.push(adsetRes.id);
           if (!partial.adset_id) partial.adset_id = adsetRes.id;
           await createAdForAdset(i, adsetRes.id);
@@ -447,7 +489,7 @@ export async function onRequestPost(context) {
         const body = buildAdsetBase(cfg, partial.campaign_id, isCBO, launchStatus);
         body.name = cfg.adset_name || cfg.campaign_name;
         if (!isCBO) withAdsetBudget(body, cfg, cfg.budget_amount);
-        const adsetRes = await fbPost(`/act_${accountIdRaw}/adsets`, body, token);
+        const adsetRes = await createAdset(body);
         partial.adsets.push(adsetRes.id);
         partial.adset_id = adsetRes.id;
         for (let i = 0; i < cfg.ads.length; i++) {
@@ -466,6 +508,7 @@ export async function onRequestPost(context) {
       adset_id: partial.adset_id,
       adsets: partial.adsets,
       ads: partial.ads,
+      ...(warnings.length ? { warnings } : {}),
       ads_manager_url: `https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${accountIdRaw}&selected_campaign_ids=${partial.campaign_id}`,
     });
   } catch (e) {

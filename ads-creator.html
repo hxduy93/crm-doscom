@@ -158,6 +158,20 @@ function AdsCreatorPanel() {
   const [autoCta, setAutoCta] = useState("ORDER_NOW")
   const [autoAgeMin, setAutoAgeMin] = useState(30)
   const [autoAgeMax, setAutoAgeMax] = useState(60)
+  // Hotline chèn vào bài + dùng cho nút gọi. Nhớ máy để khỏi gõ lại mỗi lần.
+  const [phone, setPhone] = useState(() => { try { return localStorage.getItem("doscom_ad_phone") || "" } catch { return "" } })
+  // Nút gọi: Meta chỉ cho MỘT nút CTA/quảng cáo (xem ghi chú ở buildStorySpec phía
+  // server) → bật cái này là ĐỔI nút "Mua ngay/Đặt hàng" thành "Gọi ngay". Mặc định
+  // tắt: bài vẫn nút mua hàng, số hotline nằm trong nội dung bài.
+  const [phoneAsCta, setPhoneAsCta] = useState(false)
+  // Mục tiêu hiệu quả (Meta gọi "performance goal") của ad set Doanh số:
+  //   conversions = tối đa hoá SỐ LƯỢT chuyển đổi (OFFSITE_CONVERSIONS) — mặc định
+  //   value       = tối đa hoá GIÁ TRỊ chuyển đổi (VALUE) — cần pixel gửi kèm value
+  const [autoPerfGoal, setAutoPerfGoal] = useState("conversions")
+  const [autoRoasFloor, setAutoRoasFloor] = useState("")   // "" = không đặt sàn ROAS
+  // Chiến lược vòng đời khách hàng (ad set Doanh số, Meta mở 2026):
+  //   all = thu hút chuyển đổi từ TẤT CẢ đối tượng · new = chinh phục khách hàng mới
+  const [autoLifecycle, setAutoLifecycle] = useState("all")
   // files[] = File (chọn từ folder) HOẶC { name, url, size, remote:true } (link TikTok,
   // chưa tải về — lúc upload đưa link cho FB tự tải). Mọi chỗ khác chỉ đụng .name/.size.
   const [autoGroups, setAutoGroups] = useState([]) // [{ product, files:[File|{name,url,size,remote}] }]
@@ -532,6 +546,22 @@ function AdsCreatorPanel() {
     return String(text || "").replace(/\{\{?\s*URL\s*\}?\}/gi, l)
   }
 
+  // ── Hotline trong bài quảng cáo ────────────────────────────────────────────
+  // Meta chỉ cho MỘT nút CTA trên mỗi quảng cáo, nên "nút Mua ngay + nút gọi"
+  // cùng lúc là không đặt được qua Marketing API. Cách chắc chắn: giữ nút mua
+  // hàng và đưa số hotline vào NỘI DUNG bài (khách bấm số trên điện thoại là gọi).
+  // Đã có số trong bài rồi thì không chèn thêm lần nữa.
+  const digitsOf = (s) => String(s || "").replace(/[^\d+]/g, "")
+  const telLink = (s) => "tel:" + digitsOf(s)
+  const withHotline = (text, ph) => {
+    const t = String(text || "")
+    const d = digitsOf(ph)
+    if (!d) return t
+    // So theo chữ số để "1900 638 597" và "1900638597" tính là một.
+    if (t.replace(/[^\d]/g, "").includes(d.replace(/[^\d]/g, ""))) return t
+    return `${t.replace(/\s+$/, "")}\n📞 Hotline: ${String(ph).trim()}`
+  }
+
   const handleUseVariant = (v) => {
     if (!aiTargetAdId) return
     const ad = ads.find(a => a.id === aiTargetAdId) || {}
@@ -599,7 +629,8 @@ function AdsCreatorPanel() {
         headline: a.headline,
         // Chặn cuối trước khi đẩy lên Meta: link sửa sau lúc sinh content thì
         // bài vẫn còn {{URL}}, thay nốt ở đây.
-        ad_copy: fillUrl(a.adCopy, a.link),
+        // Hotline (nếu có nhập) chèn xuống cuối bài — xem ghi chú ở withHotline.
+        ad_copy: withHotline(fillUrl(a.adCopy, a.link), phone),
         cta: a.cta,
         // Link đích — GIỮ NGUYÊN, không append UTM
         link: a.link,
@@ -806,6 +837,9 @@ function AdsCreatorPanel() {
     const m = String(link || "").match(/\/video\/(\d+)/)
     return m ? m[1] : String(Date.now())
   }
+  // Tên KOC dùng để đặt tên campaign/ad = username TikTok, bỏ @ và khoảng trắng.
+  // Không có username (video tải từ folder) → trả "" để chỗ gọi tự lùi phương án.
+  const kocName = (u) => String(u || "").trim().replace(/^@+/, "").replace(/\s+/g, "").slice(0, 40)
 
   // Dịch vụ giải link chặn 1 request/giây và tính THEO IP — cả văn phòng chung 1 IP
   // nên Duy với Nam chạy cùng lúc là đụng nhau chắc chắn. Dính thì đợi rồi thử lại,
@@ -874,7 +908,9 @@ function AdsCreatorPanel() {
         const name = ttVideoId(v.link) + ".mp4"
         const size = Number((hd ? data.hd_size : data.size) || data.size) || 0
         const product = slugFolder(v.product)
-        ;(byProduct[product] = byProduct[product] || []).push({ name, url, size, remote: true })
+        // Giữ username TikTok của người quay (KOC) — tên campaign/ad lấy từ đây,
+        // thay cho tên video (nội dung video dài, đọc tên camp không ra gì).
+        ;(byProduct[product] = byProduct[product] || []).push({ name, url, size, remote: true, koc: kocName(v.username) })
       } catch (e) {
         errs.push(`${String(v.title || v.link).slice(0, 40)}: ${e.message}`)
       }
@@ -979,6 +1015,21 @@ function AdsCreatorPanel() {
         // (đúng cấu trúc user đang dùng, vd "6/7-noma911-thangthattha").
         const utmVal = [dm, slugCompact(g.product), runnerSlug].filter(Boolean).join("-")
         const utmStr = ["utm_source", "utm_medium", "utm_campaign", "utm_id"].map(k => `${k}=${utmVal}`).join("&")
+        // ── Tên theo công thức "ngày/tháng - sản phẩm - KOC" ──────────────────
+        // KOC = username TikTok của người quay video. Cùng một KOC có nhiều video
+        // thì đánh số: KOC1, KOC2, KOC3 — nhìn tên ad là biết video nào của ai.
+        // Video tải từ folder không có KOC → lùi về tên người chạy.
+        const kocOf = (f) => (f && f.koc) || runner || "NA"
+        const kocSeq = {}
+        const adNames = files.map(f => {
+          const k = kocOf(f)
+          kocSeq[k] = (kocSeq[k] || 0) + 1
+          return `${dm} - ${g.product} - ${k}${kocSeq[k]}`
+        })
+        // Tên campaign: 1 KOC thì ghi thẳng tên, nhiều KOC thì ghi số lượng (tên
+        // campaign không nhét được hết mà cũng không nên dài).
+        const kocList = Object.keys(kocSeq)
+        const campKoc = kocList.length === 1 ? kocList[0] : `${kocList.length} KOC`
         const adsArr = []
         const skipped = []
         try {
@@ -1001,7 +1052,10 @@ function AdsCreatorPanel() {
                   format: "OUTCOME_SALES",
                   formatLabel: "Doanh số",
                   cta: autoCta,
-                  notes: `Tên video: ${baseName} | Nhóm sản phẩm: ${g.product}`,
+                  // Đưa hotline vào ghi chú để AI dùng ĐÚNG số này, khỏi bịa số khác.
+                  // (Chèn lại lần nữa ở withHotline — AI quên thì vẫn có số trong bài.)
+                  notes: `Tên video: ${baseName} | Nhóm sản phẩm: ${g.product}`
+                    + (phone ? ` | Hotline (dùng đúng số này, đặt cuối bài): ${phone}` : ""),
                   promotion: "",
                   count: 1,
                   seed: `${autoCopyProduct}:${g.product}`,
@@ -1039,11 +1093,12 @@ function AdsCreatorPanel() {
                 (m) => pushLog(`    · ${m}`)
               )
               adsArr.push({
-                // Tên ad = tên creative: "d/m - sản phẩm - tên video".
-                ad_name: `${dm} - ${g.product} - ${baseName}`,
+                // Tên ad = tên creative: "d/m - sản phẩm - KOC + số thứ tự".
+                ad_name: adNames[i],
                 headline: fillUrl(headline, autoLink),
-                ad_copy: fillUrl(adCopy, autoLink),   // chặn cuối, xem ghi chú ở fillUrl
-                cta: autoCta, link: autoLink,
+                ad_copy: withHotline(fillUrl(adCopy, autoLink), phone),
+                cta: phoneAsCta && phone ? "CALL_NOW" : autoCta,
+                link: phoneAsCta && phone ? telLink(phone) : autoLink,
                 url_tags: utmStr, video_id: ud.video_id, thumbnail_url: ud.thumbnail_url,
                 filename: file.name, // để ghi sổ uploaded_videos sau khi tạo ad
               })
@@ -1058,15 +1113,22 @@ function AdsCreatorPanel() {
           // 3) Tạo campaign cho cả nhóm (1 campaign → 1 ad set → nhiều ad)
           pushLog(`  • Tạo campaign "${g.product}" — 1 ad set, ${adsArr.length} creative...`)
           const config = {
-            // Campaign: "d/m - sản phẩm - người chạy". Ad set dùng chung cho mọi creative.
-            campaign_name: `${dm} - ${g.product} - ${runner || "NA"}`,
+            // Campaign: "d/m - sản phẩm - KOC" (nhiều KOC thì ghi "N KOC").
+            campaign_name: `${dm} - ${g.product} - ${campKoc}`,
             adset_name: `${dm} - ${g.product}`,
             objective: "OUTCOME_SALES",
             buying_type: "AUCTION",
             account_id: autoAccount,
             page_id: autoPage,
             pixel_id: autoPixel,
-            optimization_goal: "OFFSITE_CONVERSIONS",
+            // Mục tiêu hiệu quả: số lượt chuyển đổi (mặc định) hay giá trị chuyển đổi.
+            optimization_goal: autoPerfGoal === "value" ? "VALUE" : "OFFSITE_CONVERSIONS",
+            // Sàn ROAS chỉ có nghĩa khi tối đa hoá GIÁ TRỊ; bỏ trống = để Meta tự chạy.
+            ...(autoPerfGoal === "value" && Number(autoRoasFloor) > 0
+              ? { bid_strategy: "LOWEST_COST_WITH_MIN_ROAS", roas_average_floor: Number(autoRoasFloor) }
+              : {}),
+            // Chiến lược vòng đời khách hàng: "new" = dồn 100% ngân sách cho khách MỚI.
+            ...(autoLifecycle === "new" ? { existing_customer_budget_percentage: 0 } : {}),
             destination_type: "WEBSITE",
             billing_event: "IMPRESSIONS",
             promoted_event: "COMPLETE_REGISTRATION",
@@ -1089,7 +1151,10 @@ function AdsCreatorPanel() {
           const cr = await fetch("/api/create-campaign", { method: "POST", body: fd2 })
           const cd = await cr.json()
           if (!cr.ok || !cd.success) throw new Error(`[${cd.step || "?"}] ${cd.error || "lỗi tạo camp"}`)
-          pushLog(`  ✓ Xong campaign "${g.product}" — ${adsArr.length} creative trong 1 ad set (PAUSED)`)
+          pushLog(`  ✓ Xong campaign "${dm} - ${g.product} - ${campKoc}" — ${adsArr.length} creative trong 1 ad set (PAUSED)`)
+          // Meta bỏ bớt cài đặt nào (vd vòng đời khách hàng chưa mở cho TK này) thì nói ra,
+          // đừng để người chạy tưởng đã set mà thực tế không có.
+          ;(cd.warnings || []).forEach(w => pushLog(`    ⚠ ${w}`))
           // 4) Ghi sổ video đã upload (để lần quét sau bỏ qua). cd.ads cùng thứ tự adsArr.
           try {
             const records = adsArr.map((a, idx) => ({
@@ -1413,6 +1478,51 @@ function AdsCreatorPanel() {
               <div>
                 <label className={labelClass}>Tuổi đến</label>
                 <input className={inputClass} type="number" value={autoAgeMax} onChange={e => setAutoAgeMax(e.target.value)} />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className={labelClass}>Số điện thoại (hotline trong bài)</label>
+                <input className={inputClass} value={phone} placeholder="vd: 1900638597"
+                  onChange={e => { setPhone(e.target.value); try { localStorage.setItem("doscom_ad_phone", e.target.value) } catch (err) {} }} />
+                <label className="flex items-start gap-2 mt-2 text-[12px] text-gray-600">
+                  <input type="checkbox" className="mt-0.5" checked={phoneAsCta} onChange={e => setPhoneAsCta(e.target.checked)} disabled={!phone} />
+                  <span>Đổi nút CTA thành <b>Gọi ngay</b> (thay cho nút mua hàng).
+                    Meta chỉ cho <b>một</b> nút trên mỗi quảng cáo — để trống ô này thì bài giữ nút mua hàng
+                    và số hotline nằm cuối nội dung bài.</span>
+                </label>
+              </div>
+
+              <div>
+                <label className={labelClass}>Mục tiêu hiệu quả</label>
+                <select className={selectClass} value={autoPerfGoal} onChange={e => setAutoPerfGoal(e.target.value)}>
+                  <option value="conversions">Tối đa hoá số lượt chuyển đổi</option>
+                  <option value="value">Tối đa hoá giá trị lượt chuyển đổi</option>
+                </select>
+                {autoPerfGoal === "value" && (
+                  <p className="text-[11px] text-amber-600 mt-1">
+                    ⚠ Cần pixel gửi kèm <b>value</b> cho sự kiện và đủ dữ liệu mua hàng (Meta khuyến nghị ~100 chuyển đổi có giá trị / tuần).
+                    Chưa đủ thì phân phối sẽ chậm — mặc định nên để "số lượt chuyển đổi".
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className={labelClass}>Sàn ROAS (chỉ khi tối đa hoá giá trị)</label>
+                <input className={inputClass} type="number" step="0.1" value={autoRoasFloor} placeholder="bỏ trống = không đặt sàn"
+                  disabled={autoPerfGoal !== "value"}
+                  onChange={e => setAutoRoasFloor(e.target.value)} />
+              </div>
+              <div className="md:col-span-2">
+                <label className={labelClass}>Chiến lược vòng đời khách hàng</label>
+                <select className={selectClass} value={autoLifecycle} onChange={e => setAutoLifecycle(e.target.value)}>
+                  <option value="all">Thu hút lượt chuyển đổi từ tất cả đối tượng</option>
+                  <option value="new">Chinh phục khách hàng mới</option>
+                </select>
+                {autoLifecycle === "new" && (
+                  <p className="text-[11px] text-amber-600 mt-1">
+                    ⚠ Meta cần biết ai là khách CŨ để loại ra — phải có <b>danh sách khách hàng</b> (Custom Audience
+                    kiểu Customer List) trong tài khoản. Chưa có thì Meta không loại được ai, chỉ thu hẹp phân phối.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -1759,6 +1869,13 @@ function AdsCreatorPanel() {
                 <select value={page} onChange={e => setPage(e.target.value)} className={selectClass}>
                   {Object.entries(PAGES).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
                 </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className={labelClass}>Số điện thoại (hotline chèn cuối bài)</label>
+                <input className={inputClass} value={phone} placeholder="vd: 1900638597"
+                  onChange={e => { setPhone(e.target.value); try { localStorage.setItem("doscom_ad_phone", e.target.value) } catch (err) {} }} />
+                <p className="text-xs text-gray-500 mt-1">Dùng chung với chế độ tự động. Bài nào đã có sẵn số này thì không chèn thêm lần nữa.</p>
               </div>
 
               <div className="md:col-span-2">
