@@ -141,3 +141,33 @@ test("bê sang SCALE phải dùng lại bài viết cũ, không upload lại vid
   assert.doesNotMatch(act, /advideos|adimages/, "không được upload lại media — mất hết tương tác xã hội");
   assert.match(act, /status: "PAUSED"/, "ad bê sang phải ở trạng thái tạm dừng");
 });
+
+// ── Đẩy hàng loạt creative thắng sang SCALE (tick chọn theo UID video) ───────
+const grp = readFileSync(new URL("../functions/api/fb-groups.js", import.meta.url), "utf8");
+
+test("bảng trả kèm UID video để đối chiếu đúng video nào đang thắng", () => {
+  assert.match(grp, /creative\{effective_object_story_id,video_id,object_story_spec\}/,
+    "phải xin video_id của creative");
+  assert.match(grp, /tiktok_id/, "phải map sang ID video gốc trên TikTok");
+  assert.match(grp, /FROM uploaded_videos WHERE account_id = \?/,
+    "ID TikTok lấy từ sổ uploaded_videos (filename = <id tiktok>.mp4)");
+});
+
+test("sổ uploaded_videos hỏng thì KHÔNG làm sập cả bảng", () => {
+  const khoi = grp.slice(grp.indexOf("if (env.DB)"), grp.indexOf("const products = []"));
+  assert.match(khoi, /catch \(e\) \{/, "phải bọc try/catch quanh truy vấn sổ");
+});
+
+test("đẩy hàng loạt phải TUẦN TỰ, không song song", () => {
+  const day = html.slice(html.indexOf("const dayHangLoat"), html.indexOf("const tatAd"));
+  assert.match(day, /for \(const \{ ad, product \} of ds\)/, "duyệt tuần tự từng ad");
+  assert.match(day, /await goiAdAction\(\{ action: "promote"/);
+  assert.doesNotMatch(day, /Promise\.all|Promise\.allSettled/,
+    "chạy song song sẽ tạo 2 hộp SCALE trùng nhau khi sản phẩm chưa có hộp");
+});
+
+test("máy tick sẵn creative đủ điều kiện nhưng không đè lựa chọn của người", () => {
+  assert.match(html, /a\.verdict === "promote"\) win\[a\.ad_id\] = true/);
+  assert.match(html, /setPicked\(c => \(\{ \.\.\.win, \.\.\.c \}\)\)/,
+    "tick của người dùng phải ghi đè tick tự động");
+});

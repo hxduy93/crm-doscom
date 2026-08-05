@@ -66,7 +66,9 @@ export async function onRequestGet(context) {
         "name,status,effective_status,created_time",
         "adset{id,name,status,daily_budget,optimization_goal}",
         "campaign{id,name,status}",
-        "creative{effective_object_story_id}",
+        // video_id để đối chiếu ĐÚNG video nào đang thắng; object_story_spec là
+        // đường lùi khi creative không trả thẳng video_id.
+        "creative{effective_object_story_id,video_id,object_story_spec}",
         `insights.date_preset(last_${days}d){spend,actions,impressions}`,
       ].join(","),
       effective_status: '["ACTIVE","PAUSED","CAMPAIGN_PAUSED","ADSET_PAUSED","PENDING_REVIEW","DISAPPROVED","WITH_ISSUES","IN_PROCESS"]',
@@ -83,6 +85,10 @@ export async function onRequestGet(context) {
       const ins = ((ad.insights || {}).data || [])[0] || {};
       const spend = Number(ins.spend) || 0;
       const results = demKetQua(ins.actions);
+      const cre = ad.creative || {};
+      const videoId = cre.video_id
+        || (((cre.object_story_spec || {}).video_data || {}).video_id)
+        || null;
       const item = {
         ad_id: ad.id,
         ad_name: ad.name,
@@ -95,7 +101,9 @@ export async function onRequestGet(context) {
         results,
         cpl: results > 0 ? Math.round(spend / results) : null,
         impressions: Number(ins.impressions) || 0,
-        post_id: ((ad.creative || {}).effective_object_story_id) || null,
+        post_id: cre.effective_object_story_id || null,
+        video_id: videoId,          // ID video trên Facebook
+        tiktok_id: null,            // ID video gốc trên TikTok — điền ở bước dưới
       };
 
       if (!sanPham.has(g.product)) sanPham.set(g.product, { test: null, scale: null });
@@ -116,6 +124,33 @@ export async function onRequestGet(context) {
         };
       }
       nhom[key].ads.push(item);
+    }
+
+    // Gắn ID video GỐC TRÊN TIKTOK: sổ uploaded_videos lưu filename = "<id tiktok>.mp4"
+    // kèm ad_id/video_id. Nhờ vậy nhìn bảng là biết ad này chạy đúng video nào bên
+    // TikTok Shop, khỏi phải mò ngược. Sổ hỏng thì bỏ qua, không làm sập cả bảng.
+    if (env.DB) {
+      try {
+        const rows = await env.DB.prepare(
+          "SELECT filename, video_id, ad_id FROM uploaded_videos WHERE account_id = ?"
+        ).bind(acct).all();
+        const theoAd = new Map(), theoVideo = new Map();
+        for (const r of rows.results || []) {
+          const tt = String(r.filename || "").replace(/\.[^.]+$/, "");
+          if (!tt) continue;
+          if (r.ad_id) theoAd.set(String(r.ad_id), tt);
+          if (r.video_id) theoVideo.set(String(r.video_id), tt);
+        }
+        for (const nhom of sanPham.values()) {
+          for (const hop of [nhom.test, nhom.scale]) {
+            for (const a of (hop ? hop.ads : [])) {
+              a.tiktok_id = theoAd.get(String(a.ad_id))
+                || (a.video_id ? theoVideo.get(String(a.video_id)) : null)
+                || null;
+            }
+          }
+        }
+      } catch (e) { /* sổ lỗi → cột UID để trống, phần còn lại vẫn dùng được */ }
     }
 
     const products = [];
