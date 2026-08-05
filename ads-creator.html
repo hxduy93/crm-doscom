@@ -172,6 +172,17 @@ function AdsCreatorPanel() {
   // Chiến lược vòng đời khách hàng (ad set Doanh số, Meta mở 2026):
   //   all = thu hút chuyển đổi từ TẤT CẢ đối tượng · new = chinh phục khách hàng mới
   const [autoLifecycle, setAutoLifecycle] = useState("all")
+  // Nhóm chạy: mỗi sản phẩm có ĐÚNG 2 hộp sống lâu dài "<SP> - TEST" và "<SP> - SCALE".
+  // Video mới luôn vào TEST; creative thắng mới được bê sang SCALE (nút ở bảng bên dưới).
+  const [autoGroup, setAutoGroup] = useState("TEST")
+  const MAX_TEST_ADS = 4
+  // Trạng thái hai nhóm của tài khoản đang chọn (/api/fb-groups) — dùng cho cả việc
+  // tái dùng ad set lúc chạy lẫn bảng TEST vs SCALE.
+  const [groups, setGroups] = useState(null)      // { products:[...] } | null
+  const [groupsBusy, setGroupsBusy] = useState(false)
+  const [groupsErr, setGroupsErr] = useState("")
+  const [groupMsg, setGroupMsg] = useState("")
+  const [actBusy, setActBusy] = useState("")       // ad_id đang xử lý
   // files[] = File (chọn từ folder) HOẶC { name, url, size, remote:true } (link TikTok,
   // chưa tải về — lúc upload đưa link cho FB tự tải). Mọi chỗ khác chỉ đụng .name/.size.
   const [autoGroups, setAutoGroups] = useState([]) // [{ product, files:[File|{name,url,size,remote}] }]
@@ -997,6 +1008,10 @@ function AdsCreatorPanel() {
     const runner = (autoRunner || "").trim()
     const runnerSlug = slugCompact(runner)
     const results = []
+    // Trạng thái hộp TEST/SCALE phải là bản MỚI NHẤT ngay lúc chạy (state React có
+    // thể cũ), nên tải lại và dùng biến cục bộ cho cả vòng lặp.
+    const gdNow = await loadGroups(true)
+    if (!gdNow) pushLog("⚠ Không đọc được trạng thái nhóm TEST/SCALE — sẽ tạo hộp mới nếu chưa có.")
     try {
       for (const g of autoGroups) {
         // Chỉ chạy video MỚI (chưa có ad). Đã quét + cả nhóm đều cũ → bỏ qua.
@@ -1110,12 +1125,33 @@ function AdsCreatorPanel() {
           }
           if (skipped.length) pushLog(`  ⚠ ${skipped.length} video lỗi — giữ trạng thái "mới" để thử lại sau: ${skipped.join(", ")}`)
           if (adsArr.length === 0) throw new Error(`cả ${files.length} video đều upload lỗi — không tạo campaign`)
-          // 3) Tạo campaign cho cả nhóm (1 campaign → 1 ad set → nhiều ad)
-          pushLog(`  • Tạo campaign "${g.product}" — 1 ad set, ${adsArr.length} creative...`)
+          // 3) Đổ creative vào HỘP đang chạy của sản phẩm ("<SP> - TEST"), chưa có
+          //    thì mới dựng hộp mới. Không đẻ campaign/ad set mới mỗi lần chạy nữa —
+          //    đó là thứ đã sinh ra ~19 ad set cùng tệp ở tài khoản Noma Việt Nam.
+          const hop = timHop(g.product, autoGroup, gdNow)
+          const tenHop = `${g.product} - ${autoGroup}`
+          if (hop) {
+            // Giữ trần 4 creative sống cùng lúc: đủ chỗ thì thôi, thiếu thì tắt ad CŨ NHẤT.
+            const dangChay = (hop.ads || []).filter(a => a.dang_chay)
+            const canTat = Math.max(0, Math.min(dangChay.length, dangChay.length + adsArr.length - MAX_TEST_ADS))
+            if (canTat > 0) {
+              const cuNhat = dangChay.slice().sort((a, b) => Date.parse(a.created_time || 0) - Date.parse(b.created_time || 0)).slice(0, canTat)
+              pushLog(`  • Hộp "${tenHop}" đang có ${dangChay.length} creative → tắt ${canTat} cái cũ nhất để giữ trần ${MAX_TEST_ADS}`)
+              for (const a of cuNhat) {
+                const r = await pauseAd(a.ad_id)
+                pushLog(r.ok ? `    · đã tắt "${a.ad_name}"` : `    ⚠ không tắt được "${a.ad_name}": ${r.error}`)
+              }
+            }
+            pushLog(`  • Thêm ${adsArr.length} creative vào hộp "${tenHop}" (giữ nguyên ngân sách ad set)...`)
+          } else {
+            pushLog(`  • Chưa có hộp "${tenHop}" → tạo mới: 1 campaign, 1 ad set, ${adsArr.length} creative...`)
+          }
           const config = {
-            // Campaign: "d/m - sản phẩm - KOC" (nhiều KOC thì ghi "N KOC").
-            campaign_name: `${dm} - ${g.product} - ${campKoc}`,
-            adset_name: `${dm} - ${g.product}`,
+            // Tên hộp CỐ ĐỊNH (không kèm ngày) để lần chạy sau tìm lại đúng chỗ.
+            // Ngày/tháng + KOC nằm ở TÊN AD (adNames) — xem ghi chú phía trên.
+            campaign_name: tenHop,
+            adset_name: tenHop,
+            ...(hop ? { existing_adset_id: hop.adset_id, existing_campaign_id: hop.campaign_id } : {}),
             objective: "OUTCOME_SALES",
             buying_type: "AUCTION",
             account_id: autoAccount,
@@ -1151,7 +1187,8 @@ function AdsCreatorPanel() {
           const cr = await fetch("/api/create-campaign", { method: "POST", body: fd2 })
           const cd = await cr.json()
           if (!cr.ok || !cd.success) throw new Error(`[${cd.step || "?"}] ${cd.error || "lỗi tạo camp"}`)
-          pushLog(`  ✓ Xong campaign "${dm} - ${g.product} - ${campKoc}" — ${adsArr.length} creative trong 1 ad set (PAUSED)`)
+          pushLog(`  ✓ Xong "${tenHop}" — thêm ${adsArr.length} creative của ${campKoc} (ad tạo ở PAUSED)`
+            + (cd.reused_adset ? " · dùng lại ad set đang chạy" : " · hộp mới"))
           // Meta bỏ bớt cài đặt nào (vd vòng đời khách hàng chưa mở cho TK này) thì nói ra,
           // đừng để người chạy tưởng đã set mà thực tế không có.
           ;(cd.warnings || []).forEach(w => pushLog(`    ⚠ ${w}`))
@@ -1189,6 +1226,75 @@ function AdsCreatorPanel() {
     } finally {
       setAutoBusy(false)
     }
+  }
+
+  // ══════════ NHÓM CHẠY TEST / SCALE ══════════
+  // Tên sản phẩm ở hai đầu (hàng đợi TikTok vs tên campaign trên Meta) phải so được
+  // với nhau — gọn khoảng trắng, bỏ phân biệt hoa thường.
+  const chuanSP = (s) => String(s || "").trim().replace(/\s+/g, " ").toLowerCase()
+
+  // Hộp (campaign + ad set) của 1 sản phẩm trong 1 nhóm; chưa tải groups thì trả null
+  // → chỗ gọi sẽ tạo hộp mới, đúng hành vi cũ.
+  const timHop = (product, group, data) => {
+    const src = data || groups
+    const p = (src && src.products || []).find(x => chuanSP(x.product) === chuanSP(product))
+    if (!p) return null
+    const h = p[String(group).toLowerCase()]
+    return (h && h.adset_id) ? h : null
+  }
+
+  const loadGroups = async (silent) => {
+    if (!autoAccount) return null
+    if (!silent) { setGroupsBusy(true); setGroupsErr(""); setGroupMsg("") }
+    try {
+      const r = await fetch(`/api/fb-groups?account_id=${encodeURIComponent(autoAccount)}&days=14`, { cache: "no-store" })
+      const d = await r.json()
+      if (!r.ok || !d.ok) throw new Error(d.error || `HTTP ${r.status}`)
+      setGroups(d)
+      return d
+    } catch (e) {
+      setGroups(null); setGroupsErr(e.message || String(e))
+      return null
+    } finally {
+      if (!silent) setGroupsBusy(false)
+    }
+  }
+
+  const goiAdAction = async (payload) => {
+    try {
+      const r = await fetch("/api/fb-ad-actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Optimizer-Token": optToken },
+        body: JSON.stringify(payload),
+      })
+      const d = await r.json()
+      if (!r.ok || !d.ok) return { ok: false, error: d.error || `HTTP ${r.status}` }
+      return d
+    } catch (e) { return { ok: false, error: e.message || String(e) } }
+  }
+  const pauseAd = (adId) => goiAdAction({ action: "pause_ad", ad_id: adId })
+
+  // Bê creative thắng sang hộp SCALE — server dùng lại ĐÚNG bài viết cũ (post ID)
+  // nên giữ nguyên like/comment/share; không upload lại video.
+  const promoteAd = async (ad, product) => {
+    if (actBusy) return
+    setActBusy(ad.ad_id); setGroupMsg("")
+    const d = await goiAdAction({ action: "promote", ad_id: ad.ad_id, product })
+    setActBusy("")
+    setGroupMsg(d.ok
+      ? `✓ Đã bê "${ad.ad_name}" sang SCALE (ad mới đang TẠM DỪNG${d.created && d.created.adset ? ", ad set SCALE vừa được tạo — nhớ bật cả ad set" : ""}).`
+      : `✗ Bê sang SCALE lỗi: ${d.error}`)
+    if (d.ok) loadGroups(true)
+  }
+
+  const tatAd = async (ad) => {
+    if (actBusy) return
+    if (!confirm(`Tắt quảng cáo "${ad.ad_name}"?`)) return
+    setActBusy(ad.ad_id); setGroupMsg("")
+    const d = await pauseAd(ad.ad_id)
+    setActBusy("")
+    setGroupMsg(d.ok ? `✓ Đã tắt "${ad.ad_name}".` : `✗ Tắt lỗi: ${d.error}`)
+    if (d.ok) loadGroups(true)
   }
 
   // Kéo live danh sách TKQC + Page + Pixel mà token FB có quyền (chọn bất kỳ).
@@ -1268,6 +1374,8 @@ function AdsCreatorPanel() {
   React.useEffect(() => { if (mode === "optimize") loadOptAccounts() }, [mode])
   // Vào tab "Tự động từ folder" → kéo live danh sách TKQC/Page/Pixel.
   React.useEffect(() => { if (mode === "auto") loadAutoResources() }, [mode])
+  // Đổi tài khoản (hoặc vào tab) → đọc lại trạng thái hai hộp TEST/SCALE.
+  React.useEffect(() => { if (mode === "auto" && autoAccount) loadGroups(true) }, [mode, autoAccount])
   // Đổi tài khoản (hoặc nạp xong) → load camp + control + decisions.
   React.useEffect(() => { if (mode === "optimize" && optAccount) { loadOptimizer(); loadOptDecisions() } }, [optAccount, mode])
 
@@ -1443,6 +1551,24 @@ function AdsCreatorPanel() {
                 <select className={selectClass} value={autoPixel} onChange={e => setAutoPixel(e.target.value)}>
                   {pixelOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className={labelClass}>Nhóm chạy</label>
+                <div className="flex gap-2">
+                  {["TEST", "SCALE"].map(gr => (
+                    <button key={gr} type="button" onClick={() => setAutoGroup(gr)}
+                      className={"px-4 py-2 rounded-lg text-sm font-bold border-2 transition " +
+                        (autoGroup === gr ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50")}>
+                      {gr === "TEST" ? "🧪 TEST (video mới)" : "🚀 SCALE (creative đã thắng)"}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-gray-500 mt-1.5">
+                  Mỗi sản phẩm có đúng 2 hộp sống lâu dài: <b>&lt;SP&gt; - TEST</b> và <b>&lt;SP&gt; - SCALE</b>.
+                  Video mới luôn vào TEST (tối đa {MAX_TEST_ADS} creative — đủ rồi thì tự tắt cái cũ nhất).
+                  Ad set đã có thì <b>thêm creative vào đó</b>, không tạo ad set mới và <b>không đụng ngân sách</b> (sửa ngân sách = reset máy học).
+                  Creative thắng thì bê sang SCALE bằng nút ở bảng bên dưới.
+                </p>
               </div>
               <div>
                 <label className={labelClass}>Sản phẩm (danh mục — AI viết caption)</label>
@@ -1632,6 +1758,99 @@ function AdsCreatorPanel() {
               )}
             </div>
           )}
+
+          {/* ══════════ BẢNG TEST vs SCALE ══════════
+              Mỗi ad kèm số ngày chạy / chi tiêu / kết quả / CPL và lời khuyên đã chấm
+              sẵn ở server (lib/fb-groups.js) theo đúng ngưỡng: chạy đủ 3 ngày + tiêu
+              đủ 3× CPL mục tiêu mới được phán; CPL ≤ mục tiêu và ≥5 kết quả thì bê. */}
+          <div className="bg-white rounded-xl border-2 border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3 mb-1">
+              <h3 className="font-bold text-gray-800">🧪 TEST → 🚀 SCALE</h3>
+              <button type="button" onClick={() => loadGroups()} disabled={groupsBusy}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-100 border border-gray-300 hover:bg-gray-200 disabled:opacity-50">
+                {groupsBusy ? "Đang đọc…" : "↻ Tải lại"}
+              </button>
+            </div>
+            <p className="text-[11px] text-gray-500 mb-3">
+              CPL mục tiêu lấy từ chính nhóm SCALE của sản phẩm đó. Bê sang SCALE là <b>dùng lại đúng bài viết cũ</b> nên
+              giữ nguyên like/comment/share; ad mới luôn ở trạng thái tạm dừng để bạn xem trước khi bật.
+            </p>
+            {groupsErr && <p className="text-xs text-red-600 mb-2">✗ {groupsErr}</p>}
+            {groupMsg && <p className="text-xs font-semibold text-gray-700 mb-2">{groupMsg}</p>}
+            {!groups && !groupsBusy && !groupsErr && <p className="text-xs text-gray-500">Bấm "Tải lại" để đọc trạng thái hai nhóm của tài khoản đang chọn.</p>}
+            {groups && (groups.products || []).length === 0 && (
+              <p className="text-xs text-gray-500">
+                Tài khoản này chưa có hộp nào đặt tên theo chuẩn <b>&lt;sản phẩm&gt; - TEST/SCALE</b>.
+                Campaign cũ (kiểu "5/8 - NOMA 680 - quangteo") không nằm trong bảng này — lần chạy tới sẽ dựng hộp mới.
+              </p>
+            )}
+            {(groups && groups.products || []).map(p => (
+              <div key={p.product} className="mb-5">
+                <div className="flex items-baseline gap-2 mb-1.5">
+                  <span className="font-bold text-sm text-gray-800">{p.product}</span>
+                  <span className="text-[11px] text-gray-500">
+                    {p.target_cpl ? `CPL mục tiêu ${Number(p.target_cpl).toLocaleString("vi-VN")}đ (từ nhóm SCALE)` : "chưa có CPL chuẩn — nhóm SCALE chưa ra kết quả"}
+                  </span>
+                </div>
+                {["test", "scale"].map(k => {
+                  const h = p[k]
+                  if (!h) return <p key={k} className="text-[11px] text-gray-400 mb-1">— chưa có hộp {k.toUpperCase()}</p>
+                  return (
+                    <div key={k} className="mb-2 border border-gray-200 rounded-lg overflow-hidden">
+                      <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50 text-[11px] font-bold text-gray-700">
+                        <span>{k === "test" ? "🧪" : "🚀"} {h.adset_name}
+                          <span className="font-normal text-gray-500"> · {h.so_ad_dang_chay || 0}/{k === "test" ? MAX_TEST_ADS : 4} creative đang chạy
+                            {h.daily_budget ? ` · ${Number(h.daily_budget).toLocaleString("vi-VN")}đ/ngày` : ""}</span>
+                        </span>
+                        <span className={h.adset_status === "ACTIVE" ? "text-green-600" : "text-amber-600"}>{h.adset_status}</span>
+                      </div>
+                      <table className="w-full text-[11.5px]">
+                        <thead className="bg-white text-gray-500">
+                          <tr><th className="text-left px-3 py-1 font-semibold">Quảng cáo</th><th className="text-right px-2">Ngày</th><th className="text-right px-2">Chi</th><th className="text-right px-2">KQ</th><th className="text-right px-2">CPL</th><th className="text-left px-3">Chấm</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                          {h.ads.map(a => (
+                            <tr key={a.ad_id} className={"border-t border-gray-100 " + (a.dang_chay ? "" : "opacity-50")}>
+                              <td className="px-3 py-1.5">{a.ad_name}</td>
+                              <td className="text-right px-2 tabular-nums">{a.days}</td>
+                              <td className="text-right px-2 tabular-nums">{Math.round(a.spend).toLocaleString("vi-VN")}</td>
+                              <td className="text-right px-2 tabular-nums font-semibold">{a.results}</td>
+                              <td className="text-right px-2 tabular-nums">{a.cpl ? a.cpl.toLocaleString("vi-VN") : "—"}</td>
+                              <td className="px-3 py-1.5">
+                                {a.verdict === "promote" && <span className="text-green-700 font-bold">Bê sang SCALE</span>}
+                                {a.verdict === "kill" && <span className="text-red-700 font-bold">Nên tắt</span>}
+                                {a.verdict === "watch" && <span className="text-amber-600 font-semibold">Theo dõi thêm</span>}
+                                {a.verdict === "wait" && <span className="text-gray-500">Chưa đủ dữ liệu</span>}
+                                {a.verdict === "off" && <span className="text-gray-400">Đã tắt</span>}
+                                <span className="text-gray-400"> · {a.ly_do}</span>
+                              </td>
+                              <td className="px-2 py-1 whitespace-nowrap text-right">
+                                {k === "test" && a.dang_chay && (
+                                  <>
+                                    <button type="button" disabled={!!actBusy} onClick={() => promoteAd(a, p.product)}
+                                      className={"px-2 py-1 rounded text-[11px] font-bold mr-1 disabled:opacity-40 " +
+                                        (a.verdict === "promote" ? "bg-green-600 text-white" : "bg-white border border-gray-300 text-gray-600")}>
+                                      {actBusy === a.ad_id ? "…" : "Bê sang SCALE"}
+                                    </button>
+                                    <button type="button" disabled={!!actBusy} onClick={() => tatAd(a)}
+                                      className="px-2 py-1 rounded text-[11px] font-bold bg-white border border-gray-300 text-gray-600 disabled:opacity-40">Tắt</button>
+                                  </>
+                                )}
+                                {k === "scale" && a.dang_chay && (
+                                  <button type="button" disabled={!!actBusy} onClick={() => tatAd(a)}
+                                    className="px-2 py-1 rounded text-[11px] font-bold bg-white border border-gray-300 text-gray-600 disabled:opacity-40">Tắt</button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

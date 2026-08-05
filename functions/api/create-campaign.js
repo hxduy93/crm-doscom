@@ -363,6 +363,38 @@ export async function onRequestPost(context) {
     // launch_status: "ACTIVE" starts running immediately, "PAUSED" for review
     const launchStatus = cfg.launch_status === "ACTIVE" ? "ACTIVE" : "PAUSED";
     const isCBO = cfg.budget_level === "campaign";
+
+    // ĐỔ VÀO AD SET ĐANG CHẠY (QUYẾT 2026-08-05): cfg.existing_adset_id có nghĩa là
+    // "sản phẩm này đã có hộp TEST rồi, thêm creative vào đó" → BỎ QUA bước tạo
+    // campaign + ad set. Trước đây mỗi lần chạy đều đẻ campaign + ad set mới nên một
+    // tài khoản tích thành ~19 ad set cùng tệp, không cái nào đủ 50 chuyển đổi/tuần
+    // để thoát learning. Ngân sách giữ nguyên của ad set cũ — KHÔNG đụng vào, vì sửa
+    // ngân sách là reset giai đoạn máy học, đúng thứ đang cố tránh.
+    if (cfg.existing_adset_id) {
+      const adsetId = String(cfg.existing_adset_id);
+      partial.campaign_id = cfg.existing_campaign_id || null;
+      partial.adset_id = adsetId;
+      partial.adsets = [adsetId];
+      partial.ads = [];
+      let idx = -1;
+      try {
+        for (let i = 0; i < cfg.ads.length; i++) {
+          idx = i;
+          await createAdForAdset(i, adsetId);
+        }
+      } catch (adErr) {
+        throw new Error(`[Ad #${idx + 1} - thêm vào ad set sẵn có] ${adErr.message || adErr}`);
+      }
+      return json({
+        success: true,
+        reused_adset: true,
+        campaign_id: partial.campaign_id,
+        adset_id: adsetId,
+        adsets: partial.adsets,
+        ads: partial.ads,
+        ads_manager_url: `https://adsmanager.facebook.com/adsmanager/manage/ads?act=${accountIdRaw}&selected_adset_ids=${adsetId}`,
+      });
+    }
     const campaignBody = {
       name: cfg.campaign_name || `${cfg.objective}-${Date.now()}`,
       objective: cfg.objective,

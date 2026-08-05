@@ -53,8 +53,10 @@ test("tên ad KHÔNG còn lấy theo tên/nội dung video", () => {
   assert.match(html, /ad_name: adNames\[i\]/, "tên ad phải theo công thức KOC + số thứ tự");
   assert.doesNotMatch(html, /ad_name: `\$\{dm\} - \$\{g\.product\} - \$\{baseName\}`/,
     "vẫn còn đặt tên ad theo tên video");
-  assert.match(html, /campaign_name: `\$\{dm\} - \$\{g\.product\} - \$\{campKoc\}`/,
-    "tên campaign phải là ngày/tháng - sản phẩm - KOC");
+  // Ngày/tháng + KOC nằm ở TÊN AD. Tên campaign/ad set từ 05/08/2026 là tên hộp cố
+  // định "<SP> - TEST/SCALE" (xem tests/fb-groups.test.mjs) — kèm ngày vào tên
+  // campaign là mỗi lần chạy lại đẻ hộp mới, đúng thứ đang phải chữa.
+  assert.match(html, /const adNames = files\.map/, "phải dựng danh sách tên ad theo KOC");
 });
 
 test("username TikTok được chuẩn hoá (bỏ @, bỏ khoảng trắng)", () => {
