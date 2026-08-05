@@ -1,0 +1,52 @@
+name: Adset fields probe (one-shot debug)
+
+# Soi metadata cua node Ad Set + doc adset that dang chay de biet ten field cua
+# "Chien luoc vong doi khach hang" va "toi da hoa gia tri luot chuyen doi".
+# Chi DOC. Xoa file nay sau khi dung xong.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Probe adset fields
+        env:
+          FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os, json, urllib.parse, urllib.request, urllib.error, re
+
+          TOKEN=os.environ["FB_ACCESS_TOKEN"]; API="https://graph.facebook.com/v23.0"
+          def get(path, **p):
+              p["access_token"]=TOKEN
+              try:
+                  with urllib.request.urlopen(f"{API}{path}?{urllib.parse.urlencode(p)}", timeout=60) as r:
+                      return json.loads(r.read().decode())
+              except urllib.error.HTTPError as e:
+                  return {"__err": e.read().decode()[:400]}
+
+          ACC="1254151326914021"
+          d=get(f"/act_{ACC}/adsets", limit="10",
+                fields="id,name,optimization_goal,billing_event,bid_strategy,destination_type,promoted_object,created_time")
+          print(">>> ADSET DANG CHAY"); print(json.dumps(d, ensure_ascii=False, indent=1)[:3000])
+
+          ids=[x["id"] for x in d.get("data",[])] if d.get("data") else []
+          if ids:
+              m=get(f"/{ids[0]}", metadata="1")
+              fields=[f["name"] for f in (m.get("metadata",{}).get("fields") or [])]
+              print(f"\n>>> METADATA adset {ids[0]} — {len(fields)} field")
+              pat=re.compile(r"custom|lifecycle|acquis|value|roas|sub_event|bid|optimi|audience", re.I)
+              print("   [khop tu khoa]"); [print("   -",f) for f in fields if pat.search(f)]
+              print("\n   [tat ca]"); print("   "+", ".join(fields))
+              # doc thu gia tri cac field khop
+              hits=[f for f in fields if pat.search(f)]
+              if hits:
+                  v=get(f"/{ids[0]}", fields=",".join(hits[:40]))
+                  print("\n>>> GIA TRI"); print(json.dumps(v, ensure_ascii=False, indent=1)[:3000])
+          PY
