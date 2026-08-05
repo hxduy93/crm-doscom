@@ -1,7 +1,6 @@
 name: Opportunity score probe (one-shot debug)
 
-# Doc Diem co hoi + danh sach khuyen nghi cua tai khoan QC qua Marketing API.
-# Chi DOC. Xoa file nay sau khi dung xong.
+# Doc Diem co hoi + TOAN BO khuyen nghi cua tung tkqc. Chi DOC.
 
 on:
   workflow_dispatch:
@@ -22,35 +21,40 @@ jobs:
           import os, json, urllib.parse, urllib.request, urllib.error
 
           TOKEN=os.environ["FB_ACCESS_TOKEN"]
-          ACCS=["1254151326914021","764394829882083","1655506672244826"]
+          ACCS=[("1655506672244826","DOSCOM HOLDINGS - Noma Viet Nam"),
+                ("1254151326914021","CONG TY CP DOSCOM"),
+                ("764394829882083","Doscom - Noma.vn"),
+                ("927390616363424","Doscom - Cong nghe nang tam cuoc song"),
+                ("1449385949897024","HOLDINGS - Cong nghe nang tam cuoc song"),
+                ("906015559004892","Doscom Mart"),
+                ("1416634670476226","HOLDINGS - Doscom Mart")]
 
-          def get(ver, path, **p):
+          def get(path, **p):
               p["access_token"]=TOKEN
-              url=f"https://graph.facebook.com/{ver}{path}?{urllib.parse.urlencode(p)}"
+              url=f"https://graph.facebook.com/v23.0{path}?{urllib.parse.urlencode(p)}"
               try:
                   with urllib.request.urlopen(url, timeout=60) as r:
                       return json.loads(r.read().decode())
               except urllib.error.HTTPError as e:
-                  try: return {"__err": json.loads(e.read().decode())["error"]["message"][:220]}
+                  try: return {"__err": json.loads(e.read().decode())["error"]["message"][:200]}
                   except Exception: return {"__err": "HTTP "+str(e.code)}
 
-          CAND=[
-            ("/act_{a}", {"fields":"opportunity_score"}),
-            ("/act_{a}", {"fields":"opportunity_score{score,recommendations}"}),
-            ("/act_{a}/opportunity_score", {}),
-            ("/act_{a}/recommendations", {}),
-            ("/act_{a}/guidance", {}),
-            ("/act_{a}/ad_studies", {}),
-          ]
-          for ver in ("v23.0","v20.0"):
-              print(f"\n########## {ver}")
-              for a in ACCS:
-                  print(f"\n=== act_{a}")
-                  for tpl, params in CAND:
-                      path=tpl.format(a=a)
-                      r=get(ver, path, **params)
-                      s=json.dumps(r, ensure_ascii=False)
-                      flag="ERR " if "__err" in r else "OK  "
-                      print(f"  {flag}{path} {params} -> {s[:400]}")
-                  break   # 1 tai khoan la du de biet endpoint nao song
+          for acc, ten in ACCS:
+              s=get(f"/act_{acc}", fields="opportunity_score,name")
+              print(f"\n{'='*70}\n{ten} ({acc}) — DIEM CO HOI: {s.get('opportunity_score','?')}")
+              rec=get(f"/act_{acc}/recommendations")
+              if "__err" in rec: print("   loi doc khuyen nghi:", rec["__err"]); continue
+              groups=rec.get("data") or []
+              n=0
+              for gtag in groups:
+                  for r in (gtag.get("recommendations") or []):
+                      n+=1
+                      c=r.get("recommendation_content") or {}
+                      print(f"\n  [{r.get('type')}] +{c.get('opportunity_score_lift','?')} diem")
+                      if c.get("title"): print(f"     {c['title']}")
+                      if c.get("lift_estimate"): print(f"     uoc tinh: {c['lift_estimate']}")
+                      if c.get("body"): print(f"     {str(c['body'])[:400]}")
+                      ids=r.get("object_ids") or []
+                      if ids: print(f"     ap dung cho: {', '.join(map(str,ids[:6]))}")
+              if not n: print("   (khong co khuyen nghi nao)")
           PY
