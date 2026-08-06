@@ -1,0 +1,39 @@
+name: Pixel map probe (one-shot debug)
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Rescan pixel 230
+        env:
+          FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os, json, urllib.parse, urllib.request, urllib.error
+          TOKEN=os.environ["FB_ACCESS_TOKEN"]; P="2082661435656423"
+          ACCS=["1254151326914021","1655506672244826","764394829882083","927390616363424",
+                "1449385949897024","906015559004892","1416634670476226"]
+          def get(path,**p):
+              p["access_token"]=TOKEN
+              try:
+                  with urllib.request.urlopen(f"https://graph.facebook.com/v23.0{path}?{urllib.parse.urlencode(p)}",timeout=60) as r:
+                      return json.loads(r.read().decode())
+              except urllib.error.HTTPError as e:
+                  try: return {"__err": json.loads(e.read().decode())["error"]["message"][:130]}
+                  except Exception: return {"__err":"HTTP "+str(e.code)}
+          co=[]
+          for a in ACCS:
+              d=get(f"/act_{a}", fields="name,adspixels.limit(40){id,name}")
+              if "__err" in d: continue
+              ids={x["id"] for x in (d.get("adspixels") or {}).get("data",[])}
+              print(("  CO  " if P in ids else "  --  ") + d["name"][:46])
+              if P in ids: co.append(d["name"])
+          print(f"\nKET LUAN: pixel NOMA 230 dung duoc o {len(co)}/{len(ACCS)} tai khoan")
+          r=get(f"/{P}/shared_accounts", business="1418124406240173", fields="account_id,name", limit="50")
+          print("Gan trong BM YODAY:", len(r.get("data",[])) if "data" in r else r.get("__err"))
+          PY
