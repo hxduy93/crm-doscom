@@ -221,11 +221,26 @@ function AdsCreatorPanel() {
   const [optMsg, setOptMsg] = useState("")
   const [optDecisions, setOptDecisions] = useState([])
 
+  // link/linkPn = landing đích của Duy / Phương Nam (khớp DK_LIST trong index.html).
+  // Chọn sản phẩm ở tab tự động sẽ tự điền "Link đích" theo đây — chạy 680 mà quên
+  // đổi link, để nguyên landing 911 là tiền đổ vào sai trang.
   const PRODUCTS = {
     "D1":        { pixel: "283066540825683", page: "102966349378081", account: "act_927390616363424", pixelName: "D1 CHUẨN" },
     "DR1":       { pixel: "317565188066584", page: "102966349378081", account: "act_927390616363424", pixelName: "DR1" },
-    "Noma 911":  { pixel: "24397685376567889", page: "681202051750505", account: "act_764394829882083", pixelName: "NOMA 911" },
+    "Noma 911":  { pixel: "24397685376567889", page: "681202051750505", account: "act_764394829882083", pixelName: "NOMA 911",
+                   link: "https://www.noma.io.vn/nm911d", linkPn: "https://www.noma.io.vn/911tpn" },
     "DA8.1":     { pixel: "922958632515102", page: "114261474867281", account: "act_927390616363424", pixelName: "DA8.1" },
+    // Ba SKU Noma có landing riêng (thêm 06/08/2026). Pixel + tkqc đã đối chiếu
+    // thực tế qua API ngày 06/08; nội dung cho AI viết caption ở functions/lib/product-catalog.js.
+    "Noma 680":  { pixel: "1281580350573958", page: "1101583133049069", account: "act_1254151326914021", pixelName: "NOMA 680",
+                   link: "https://nomaautocares.cloud/nm680d", linkPn: "https://nomaautocares.cloud/nm680tpn" },
+    "Noma 350":  { pixel: "1045069881269455", page: "681202051750505", account: "act_1655506672244826", pixelName: "NOMA 350",
+                   link: "https://noma890.click/nm350d", linkPn: "https://noma890.click/nm350tpn" },
+    // ⚠ Pixel NOMA 230 nằm ở BM "Công ty TNHH Doscom Holldings" và CHƯA được gán
+    // vào tkqc nào (đã dò cả 7 tài khoản ngày 06/08 — không tài khoản nào thấy).
+    // Phải gán trong Trình quản lý sự kiện thì chạy 230 mới ghi nhận chuyển đổi.
+    "Noma 230":  { pixel: "2082661435656423", page: "681202051750505", account: "act_1655506672244826", pixelName: "NOMA 230",
+                   link: "https://noma620.click/nm230d", linkPn: "https://noma620.click/nm230tpn" },
     // DA8.1 Pro đã ngừng bán (2026-07-22) → bỏ khỏi danh sách chọn để không tạo
     // camp mới. Pixel của nó vẫn giữ ở PIXELS bên dưới cho camp cũ đọc tên đúng.
   }
@@ -273,6 +288,10 @@ function AdsCreatorPanel() {
     "24397685376567889": "NOMA 911",
     // Pixel đang gắn sẵn trên tkqc CÔNG TY CP DOSCOM (1254151326914021).
     "811464414891137":   "WINKI A100",
+    "1045069881269455":  "NOMA 350",
+    "1281580350573958":  "NOMA 680",
+    // Chưa gán vào tkqc nào tính tới 06/08/2026 — xem ghi chú ở PRODUCTS.
+    "2082661435656423":  "NOMA 230 (chưa gán vào tkqc)",
   }
 
   // ── Mục tiêu chiến dịch (6 ODAX objectives) — Text y hệt FB Ads Manager tiếng Việt ──
@@ -458,6 +477,17 @@ function AdsCreatorPanel() {
       setPage(cfg.page)
       setAccount(cfg.account)
     }
+  }
+
+  // Đổi sản phẩm ở tab TỰ ĐỘNG: ngoài việc đổi catalog cho AI viết caption, tự điền
+  // luôn link đích + pixel của sản phẩm đó. Tài khoản/Page KHÔNG tự đổi — người chạy
+  // có thể đang cố ý chạy sản phẩm này trên tài khoản khác.
+  const onAutoProductChange = (p) => {
+    setAutoCopyProduct(p)
+    const cfg = PRODUCTS[p]
+    if (!cfg) return
+    if (cfg.link) setAutoLink(cfg.link)
+    if (cfg.pixel) setAutoPixel(cfg.pixel)
   }
 
   // Auto-set goal/dest/billing when objective changes
@@ -1649,13 +1679,28 @@ function AdsCreatorPanel() {
               </div>
               <div>
                 <label className={labelClass}>Sản phẩm (danh mục — AI viết caption)</label>
-                <select className={selectClass} value={autoCopyProduct} onChange={e => setAutoCopyProduct(e.target.value)}>
+                <select className={selectClass} value={autoCopyProduct} onChange={e => onAutoProductChange(e.target.value)}>
                   {Object.keys(PRODUCTS).map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
+                {(PRODUCTS[autoCopyProduct] || {}).pixel && (PRODUCTS[autoCopyProduct] || {}).pixel !== autoPixel && (
+                  <button type="button" onClick={() => setAutoPixel(PRODUCTS[autoCopyProduct].pixel)}
+                    className="text-[11px] text-blue-600 hover:underline mt-1">
+                    ⚠ Pixel đang chọn khác pixel của {autoCopyProduct} — bấm để dùng {(PRODUCTS[autoCopyProduct] || {}).pixelName}
+                  </button>
+                )}
               </div>
               <div className="md:col-span-2">
                 <label className={labelClass}>Link đích</label>
                 <input className={inputClass} value={autoLink} onChange={e => setAutoLink(e.target.value)} />
+                {(PRODUCTS[autoCopyProduct] || {}).linkPn && (
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    Landing của {autoCopyProduct}:{" "}
+                    <button type="button" className="text-blue-600 hover:underline" onClick={() => setAutoLink(PRODUCTS[autoCopyProduct].link)}>Duy</button>
+                    {" · "}
+                    <button type="button" className="text-blue-600 hover:underline" onClick={() => setAutoLink(PRODUCTS[autoCopyProduct].linkPn)}>Phương Nam</button>
+                    {" — chọn sản phẩm là tự điền link của Duy, bấm để đổi."}
+                  </p>
+                )}
               </div>
               <div>
                 <label className={labelClass}>Ngân sách / campaign (VND/ngày)</label>
