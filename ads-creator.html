@@ -1215,8 +1215,13 @@ function AdsCreatorPanel() {
             // Chiến lược vòng đời khách hàng — LUÔN khai, kể cả khi chọn "tất cả đối tượng":
             //   0   = không tiêu đồng nào cho khách cũ  → "Chinh phục khách hàng mới"
             //   100 = không giới hạn                     → "Thu hút chuyển đổi từ tất cả đối tượng"
-            // Không gửi field thì Ads Manager hiện ô "Chiến lược vòng đời khách hàng" TRỐNG
-            // và người chạy phải vào set tay từng ad set (phát hiện 06/08/2026).
+            // ĐO ĐƯỢC 06/08/2026: Meta LƯU đúng giá trị này (đọc lại ad set ra ecb=100),
+            // NHƯNG ô "Chiến lược vòng đời khách hàng" trong Ads Manager VẪN TRỐNG — control
+            // đó chưa mở ra Marketing API. Đã dò v23.0 các tên customer_lifecycle_strategy,
+            // lifecycle_strategy, customer_acquisition, is_new_customer_acquisition,
+            // new_customer_acquisition, audience_lifecycle → KHÔNG field nào tồn tại.
+            // Giữ lại vì vô hại (100 = không giới hạn, đúng mặc định) và nhiều khả năng đây
+            // chính là field Meta dùng khi mở control đó ra API.
             existing_customer_budget_percentage: autoLifecycle === "new" ? 0 : 100,
             destination_type: "WEBSITE",
             billing_event: "IMPRESSIONS",
@@ -1767,9 +1772,11 @@ function AdsCreatorPanel() {
                   <option value="all">Thu hút lượt chuyển đổi từ tất cả đối tượng</option>
                   <option value="new">Chinh phục khách hàng mới</option>
                 </select>
-                <p className="text-[11px] text-gray-500 mt-1">
-                  Luôn được ghi vào ad set (tất cả đối tượng = 100% ngân sách không giới hạn, khách hàng mới = 0% cho khách cũ)
-                  — để ô này trong Trình quản lý QC không còn trống.
+                <p className="text-[11px] text-amber-600 mt-1">
+                  ⚠ Ghi được xuống ad set qua <code>existing_customer_budget_percentage</code> (tất cả đối tượng = 100, khách hàng mới = 0),
+                  nhưng ô <b>"Chiến lược vòng đời khách hàng"</b> trong Trình quản lý QC vẫn hiện TRỐNG — Meta chưa mở control đó ra
+                  Marketing API (đã dò v23.0 ngày 06/08, không có field nào khớp). Muốn ô đó có giá trị thì chọn tay trong Ads Manager,
+                  <b>mỗi hộp TEST/SCALE chỉ phải làm một lần</b> vì ad set sống lâu dài. Để trống không chặn phân phối.
                 </p>
                 {autoLifecycle === "new" && (
                   <p className="text-[11px] text-amber-600 mt-1">
