@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-06 15:20",
+  "generated_at": "2026-08-06 17:58",
   "source_data_date_range": {
     "start_7d": "2026-07-30",
     "end": "2026-08-05",
@@ -60,20 +60,20 @@
     "orders_30d": 127,
     "by_status": {
       "delivered": {
-        "revenue": 147890500.0,
-        "orders": 96
+        "revenue": 149190500.0,
+        "orders": 97
       },
       "returning": {
-        "revenue": 15497000.0,
-        "orders": 9
+        "revenue": 17797000.0,
+        "orders": 10
       },
       "canceled": {
         "revenue": 4836000.0,
         "orders": 4
       },
       "other": {
-        "revenue": 32583000.0,
-        "orders": 17
+        "revenue": 28983000.0,
+        "orders": 15
       },
       "returned": {
         "revenue": 0.0,
@@ -1514,7 +1514,7 @@
   "search_term_insights": {
     "summary": {
       "total_unique_terms": 3391,
-      "terms_with_conversions": 33,
+      "terms_with_conversions": 34,
       "conv_rate_terms": 0.01,
       "total_spend_30d": 21110440.0
     },
@@ -1541,6 +1541,22 @@
         "match_types": [
           "BROAD",
           "EXACT"
+        ],
+        "statuses": [
+          "ADDED",
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "máy dò thiết bị nghe lén",
+        "spend_30d": 66791.0,
+        "clicks_30d": 11,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1964,
+        "match_types": [
+          "EXACT",
+          "NEAR_PHRASE",
+          "PHRASE"
         ],
         "statuses": [
           "ADDED",
@@ -1634,19 +1650,6 @@
         "clicks_30d": 2,
         "conversions_30d": 1.0,
         "ctr_30d": 0.0909,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "doscom",
-        "spend_30d": 98798.0,
-        "clicks_30d": 39,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.2746,
         "match_types": [
           "BROAD"
         ],
@@ -2147,19 +2150,19 @@
       "EXACT": {
         "spend_30d": 2872080.0,
         "clicks_30d": 429,
-        "conversions_30d": 7.5,
+        "conversions_30d": 8.5,
         "term_count": 69
       },
       "NEAR_PHRASE": {
         "spend_30d": 6013490.0,
         "clicks_30d": 915,
-        "conversions_30d": 6.48,
+        "conversions_30d": 7.48,
         "term_count": 650
       },
       "PHRASE": {
         "spend_30d": 7219614.0,
         "clicks_30d": 1012,
-        "conversions_30d": 13.83,
+        "conversions_30d": 14.83,
         "term_count": 622
       },
       "BROAD": {
@@ -2178,16 +2181,16 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 7258,
-      "total_spend_30d": 6892417.0
+      "total_unique_placements": 7259,
+      "total_spend_30d": 6891514.0
     },
     "network_breakdown": {
       "CONTENT": {
-        "spend_30d": 6892424.0,
-        "clicks_30d": 3176,
+        "spend_30d": 6891521.0,
+        "clicks_30d": 3174,
         "impressions_30d": 255257,
         "ctr_30d": 0.0124,
-        "cpc_30d": 2170.0,
+        "cpc_30d": 2171.0,
         "campaign_count": 5
       },
       "SEARCH": {
@@ -2201,11 +2204,11 @@
     },
     "placement_type_breakdown": {
       "WEBSITE": {
-        "spend_30d": 6892417.0,
-        "clicks_30d": 3176,
-        "impressions_30d": 241108,
+        "spend_30d": 6891514.0,
+        "clicks_30d": 3174,
+        "impressions_30d": 241133,
         "ctr_30d": 0.0132,
-        "placement_count": 7258
+        "placement_count": 7259
       }
     },
     "top_waste_placements": [],
@@ -2417,7 +2420,7 @@
   "ad_insights": {
     "summary": {
       "total_ads": 60,
-      "total_spend_30d": 46567311.0
+      "total_spend_30d": 46566762.0
     },
     "format_breakdown": {
       "DISPLAY_BANNER": {
@@ -2428,8 +2431,8 @@
         "ad_count": 9
       },
       "OTHER": {
-        "spend_30d": 43787404.0,
-        "clicks_30d": 7263,
+        "spend_30d": 43786855.0,
+        "clicks_30d": 7262,
         "impressions_30d": 337876,
         "ctr_30d": 0.0215,
         "ad_count": 51
