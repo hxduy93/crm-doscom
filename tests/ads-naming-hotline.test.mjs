@@ -94,3 +94,29 @@ test("bài viết ở CẢ hai chế độ đều đi qua withHotline", () => {
   assert.match(html, /ad_copy: withHotline\(fillUrl\(adCopy, autoLink\), phone\)/, "thiếu ở chế độ tự động");
   assert.match(html, /ad_copy: withHotline\(fillUrl\(a\.adCopy, a\.link\), phone\)/, "thiếu ở chế độ thủ công");
 });
+
+// 05/08/2026: có HAI trang cùng tên "Noma Việt Nam" trên Meta —
+//   681202051750505 (trang cũ, 10K)  ·  1101583133049069 (trang tích xanh, chạy QC
+//   từ tkqc CÔNG TY CP DOSCOM). Meta trả về tên y hệt nhau nên dropdown phải tự đổi
+//   nhãn theo ID, không thì chọn nhầm trang là chạy sai chỗ.
+test("hai trang trùng tên phải có nhãn phân biệt theo ID", () => {
+  assert.match(html, /"1101583133049069": "Noma Việt Nam tích xanh"/);
+  assert.match(html, /"681202051750505": "Noma Việt Nam \(10K\)"/);
+  const nhan = new Function(`
+    ${grab(/const PAGE_LABEL = \{[\s\S]*?\n  \}/, "PAGE_LABEL")};
+    ${grab(/const tenPage = \(id, name\) =>[^\n]*\n/, "tenPage")};
+    return [tenPage("1101583133049069", "Noma Việt Nam"),
+            tenPage("681202051750505", "Noma Việt Nam"),
+            tenPage("999", "Trang khác"), tenPage("000", null)];
+  `)();
+  assert.deepEqual(nhan, ["Noma Việt Nam tích xanh", "Noma Việt Nam (10K)", "Trang khác", "000"]);
+});
+
+test("nhãn đè áp cho CẢ danh sách live lẫn danh sách tĩnh", () => {
+  assert.match(html, /curAcc\.pages\.map\(p => \(\{ value: p\.id, label: tenPage\(p\.id, p\.name\) \}\)\)/,
+    "dropdown live (từ token) phải đổi nhãn");
+  assert.match(html, /Object\.entries\(PAGES\)\.map\(\(\[id, name\]\) => \(\{ value: id, label: tenPage\(id, name\) \}\)\)/,
+    "dropdown fallback phải đổi nhãn");
+  assert.match(html, /<option key=\{id\} value=\{id\}>\{tenPage\(id, name\)\}<\/option>/,
+    "chế độ thủ công phải đổi nhãn");
+});

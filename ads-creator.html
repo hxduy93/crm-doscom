@@ -248,7 +248,20 @@ function AdsCreatorPanel() {
     "110312205647152": "Doscom Mart (3.8M)",
     "842243695641184": "Noma.vn",
     "114261474867281": "Doscom - Công Nghệ An Ninh (8.2K)",
+    // Trang thứ HAI cũng tên "Noma Việt Nam" (05/08/2026) — trang tích xanh, chạy QC
+    // từ tkqc CÔNG TY CP DOSCOM. Meta trả về đúng chữ "Noma Việt Nam" y hệt trang
+    // 681202051750505 nên nhìn dropdown không phân biệt nổi → xem PAGE_LABEL bên dưới.
+    "1101583133049069": "Noma Việt Nam tích xanh",
   }
+
+  // Nhãn hiển thị ĐÈ tên Meta trả về, tra theo ID. Dùng cho cả danh sách live lẫn
+  // danh sách tĩnh: hai trang trùng tên mà chọn nhầm là quảng cáo chạy sai trang,
+  // mất cả tương tác lẫn ngân sách.
+  const PAGE_LABEL = {
+    "1101583133049069": "Noma Việt Nam tích xanh",
+    "681202051750505": "Noma Việt Nam (10K)",
+  }
+  const tenPage = (id, name) => PAGE_LABEL[id] || name || id
 
   // PIXELS — tên chuẩn theo Trình quản lý sự kiện (Events Manager)
   const PIXELS = {
@@ -1457,8 +1470,8 @@ function AdsCreatorPanel() {
     : Object.entries(ACCOUNTS).map(([id, name]) => ({ value: id, label: name }))
   const curAcc = liveAccs.find(a => ("act_" + a.id) === autoAccount)
   let pageOptions = curAcc
-    ? curAcc.pages.map(p => ({ value: p.id, label: p.name }))
-    : Object.entries(PAGES).map(([id, name]) => ({ value: id, label: name }))
+    ? curAcc.pages.map(p => ({ value: p.id, label: tenPage(p.id, p.name) }))
+    : Object.entries(PAGES).map(([id, name]) => ({ value: id, label: tenPage(id, name) }))
   let pixelOptions = (curAcc && curAcc.pixels && curAcc.pixels.length)
     ? curAcc.pixels.map(p => ({ value: p.id, label: p.name }))
     : Object.entries(PIXELS).map(([id, name]) => ({ value: id, label: name }))
@@ -2211,7 +2224,7 @@ function AdsCreatorPanel() {
               <div>
                 <label className={labelClass}>Facebook Page</label>
                 <select value={page} onChange={e => setPage(e.target.value)} className={selectClass}>
-                  {Object.entries(PAGES).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                  {Object.entries(PAGES).map(([id, name]) => <option key={id} value={id}>{tenPage(id, name)}</option>)}
                 </select>
               </div>
 
