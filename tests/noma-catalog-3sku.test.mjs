@@ -79,7 +79,10 @@ test("đổi sản phẩm ở tab tự động thì tự điền link + pixel", 
     "KHÔNG tự đổi tài khoản/Page — người chạy có thể cố ý chạy ở tài khoản khác");
 });
 
-test("pixel NOMA 230 phải ghi rõ là chưa gán vào tài khoản nào", () => {
-  assert.match(html, /"2082661435656423":\s*"NOMA 230 \(chưa gán vào tkqc\)"/,
-    "đo ngày 06/08: không tài khoản QC nào thấy pixel này — phải nói rõ, đừng để người chạy tưởng dùng được");
+// 06/08/2026 (chiều): pixel NOMA 230 đã được gán đủ 7/7 tài khoản QC bên BM YODAY
+// → gỡ nhãn cảnh báo. Ba pixel Noma giờ đứng ngang hàng nhau.
+test("ba pixel Noma đều dùng được, không còn nhãn cảnh báo", () => {
+  assert.match(html, /"2082661435656423":\s*"NOMA 230"/);
+  assert.doesNotMatch(html, /chưa gán vào tkqc/,
+    "pixel đã gán rồi thì bỏ cảnh báo, kẻo người chạy né oan");
 });

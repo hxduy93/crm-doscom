@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildAdsetBase, isLifecycleUnsupported } from "../functions/api/create-campaign.js";
+import { readFileSync } from "node:fs";
 
 // YÊU CẦU 2026-08-05: ad set Doanh số hỗ trợ hai cài đặt mới của Meta —
 //  · Mục tiêu hiệu quả "tối đa hoá GIÁ TRỊ lượt chuyển đổi" (optimization_goal=VALUE),
@@ -70,4 +71,21 @@ test("KHÔNG nuốt nhầm lỗi thật của field đó", () => {
   assert.equal(isLifecycleUnsupported("existing_customer_budget_percentage must be between 0 and 100"), false);
   assert.equal(isLifecycleUnsupported("(#100) Unknown parameter: bid_constraints"), false);
   assert.equal(isLifecycleUnsupported(""), false);
+});
+
+// 06/08/2026: Ads Manager hiện ô "Chiến lược vòng đời khách hàng" TRỐNG với ad set
+// do API tạo, vì luồng tự động chỉ gửi field khi chọn "khách hàng mới". Nay LUÔN gửi:
+// 0 = chỉ khách mới · 100 = tất cả đối tượng (không giới hạn).
+test("luồng tự động LUÔN khai chiến lược vòng đời, không để trống", () => {
+  const html = readFileSync(new URL("../ads-creator.html", import.meta.url), "utf8");
+  assert.match(html, /existing_customer_budget_percentage: autoLifecycle === "new" \? 0 : 100/);
+  assert.doesNotMatch(html, /\.\.\.\(autoLifecycle === "new" \? \{ existing_customer_budget_percentage/,
+    "gửi có điều kiện là ô trong Trình quản lý QC lại bỏ trống");
+});
+
+test("cả hai giá trị 0 và 100 đều đi được xuống ad set", () => {
+  assert.equal(buildAdsetBase({ ...base, existing_customer_budget_percentage: 100 }, "c", false, "PAUSED")
+    .existing_customer_budget_percentage, 100);
+  assert.equal(buildAdsetBase({ ...base, existing_customer_budget_percentage: 0 }, "c", false, "PAUSED")
+    .existing_customer_budget_percentage, 0);
 });

@@ -236,9 +236,8 @@ function AdsCreatorPanel() {
                    link: "https://nomaautocares.cloud/nm680d", linkPn: "https://nomaautocares.cloud/nm680tpn" },
     "Noma 350":  { pixel: "1045069881269455", page: "681202051750505", account: "act_1655506672244826", pixelName: "NOMA 350",
                    link: "https://noma890.click/nm350d", linkPn: "https://noma890.click/nm350tpn" },
-    // ⚠ Pixel NOMA 230 nằm ở BM "Công ty TNHH Doscom Holldings" và CHƯA được gán
-    // vào tkqc nào (đã dò cả 7 tài khoản ngày 06/08 — không tài khoản nào thấy).
-    // Phải gán trong Trình quản lý sự kiện thì chạy 230 mới ghi nhận chuyển đổi.
+    // Pixel NOMA 230 do BM "Công ty TNHH Doscom Holldings" sở hữu, đã chia sẻ sang
+    // BM YODAY và gán đủ 7/7 tkqc (dò lại chiều 06/08/2026) — dùng được bình thường.
     "Noma 230":  { pixel: "2082661435656423", page: "681202051750505", account: "act_1655506672244826", pixelName: "NOMA 230",
                    link: "https://noma620.click/nm230d", linkPn: "https://noma620.click/nm230tpn" },
     // DA8.1 Pro đã ngừng bán (2026-07-22) → bỏ khỏi danh sách chọn để không tạo
@@ -290,8 +289,7 @@ function AdsCreatorPanel() {
     "811464414891137":   "WINKI A100",
     "1045069881269455":  "NOMA 350",
     "1281580350573958":  "NOMA 680",
-    // Chưa gán vào tkqc nào tính tới 06/08/2026 — xem ghi chú ở PRODUCTS.
-    "2082661435656423":  "NOMA 230 (chưa gán vào tkqc)",
+    "2082661435656423":  "NOMA 230",
   }
 
   // ── Mục tiêu chiến dịch (6 ODAX objectives) — Text y hệt FB Ads Manager tiếng Việt ──
@@ -1214,8 +1212,12 @@ function AdsCreatorPanel() {
             ...(autoPerfGoal === "value" && Number(autoRoasFloor) > 0
               ? { bid_strategy: "LOWEST_COST_WITH_MIN_ROAS", roas_average_floor: Number(autoRoasFloor) }
               : {}),
-            // Chiến lược vòng đời khách hàng: "new" = dồn 100% ngân sách cho khách MỚI.
-            ...(autoLifecycle === "new" ? { existing_customer_budget_percentage: 0 } : {}),
+            // Chiến lược vòng đời khách hàng — LUÔN khai, kể cả khi chọn "tất cả đối tượng":
+            //   0   = không tiêu đồng nào cho khách cũ  → "Chinh phục khách hàng mới"
+            //   100 = không giới hạn                     → "Thu hút chuyển đổi từ tất cả đối tượng"
+            // Không gửi field thì Ads Manager hiện ô "Chiến lược vòng đời khách hàng" TRỐNG
+            // và người chạy phải vào set tay từng ad set (phát hiện 06/08/2026).
+            existing_customer_budget_percentage: autoLifecycle === "new" ? 0 : 100,
             destination_type: "WEBSITE",
             billing_event: "IMPRESSIONS",
             promoted_event: "COMPLETE_REGISTRATION",
@@ -1765,6 +1767,10 @@ function AdsCreatorPanel() {
                   <option value="all">Thu hút lượt chuyển đổi từ tất cả đối tượng</option>
                   <option value="new">Chinh phục khách hàng mới</option>
                 </select>
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Luôn được ghi vào ad set (tất cả đối tượng = 100% ngân sách không giới hạn, khách hàng mới = 0% cho khách cũ)
+                  — để ô này trong Trình quản lý QC không còn trống.
+                </p>
                 {autoLifecycle === "new" && (
                   <p className="text-[11px] text-amber-600 mt-1">
                     ⚠ Meta cần biết ai là khách CŨ để loại ra — phải có <b>danh sách khách hàng</b> (Custom Audience
