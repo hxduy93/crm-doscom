@@ -1,0 +1,53 @@
+name: Page ownership probe (one-shot debug)
+
+# Soi BM nao dang so huu Trang Noma Viet Nam / Noma.vn va tkqc CP DOSCOM. Chi DOC.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Probe ownership
+        env:
+          FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os, json, urllib.parse, urllib.request, urllib.error
+          TOKEN=os.environ["FB_ACCESS_TOKEN"]
+          def get(path, **p):
+              p["access_token"]=TOKEN
+              try:
+                  with urllib.request.urlopen(f"https://graph.facebook.com/v23.0{path}?{urllib.parse.urlencode(p)}", timeout=60) as r:
+                      return json.loads(r.read().decode())
+              except urllib.error.HTTPError as e:
+                  try: return {"__err": json.loads(e.read().decode())["error"]["message"][:200]}
+                  except Exception: return {"__err":"HTTP "+str(e.code)}
+
+          PAGES=[("681202051750505","Noma Viet Nam"),
+                 ("842243695641184","Noma.vn"),
+                 ("102966349378081","Doscom Viet Nam"),
+                 ("1101583133049069","trang dang chay ad 680")]
+          print(">>> TRANG THUOC BM NAO")
+          for pid, ten in PAGES:
+              d=get(f"/{pid}", fields="id,name,business,tasks")
+              print(f"  {ten} ({pid}) -> {json.dumps(d, ensure_ascii=False)[:400]}")
+
+          print("\n>>> TKQC THUOC BM NAO")
+          for aid in ["1254151326914021","1655506672244826","764394829882083"]:
+              d=get(f"/act_{aid}", fields="name,business,owner,promote_pages{id,name}")
+              print(f"  act_{aid} -> {json.dumps(d, ensure_ascii=False)[:500]}")
+
+          print("\n>>> BM YODAY (1418124406240173) co nhung trang nao")
+          for edge in ("owned_pages","client_pages","pages"):
+              d=get(f"/1418124406240173/{edge}", fields="id,name", limit="100")
+              print(f"  {edge}: {json.dumps(d, ensure_ascii=False)[:400]}")
+
+          print("\n>>> BM ma user nay tham gia")
+          print("  ", json.dumps(get("/me/businesses", fields="id,name", limit="50"), ensure_ascii=False)[:600])
+          PY
