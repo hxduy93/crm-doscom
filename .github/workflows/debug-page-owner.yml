@@ -1,0 +1,36 @@
+name: Page ownership probe (one-shot debug)
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Probe ownership
+        env:
+          FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os, json, urllib.parse, urllib.request, urllib.error
+          TOKEN=os.environ["FB_ACCESS_TOKEN"]
+          def get(path, **p):
+              p["access_token"]=TOKEN
+              try:
+                  with urllib.request.urlopen(f"https://graph.facebook.com/v23.0{path}?{urllib.parse.urlencode(p)}", timeout=60) as r:
+                      return json.loads(r.read().decode())
+              except urllib.error.HTTPError as e:
+                  try: return {"__err": json.loads(e.read().decode())["error"]["message"][:200]}
+                  except Exception: return {"__err":"HTTP "+str(e.code)}
+
+          print(">>> TRANG THUOC BM NAO (khong xin field la)")
+          for pid in ["681202051750505","842243695641184","102966349378081"]:
+              print(" ", pid, json.dumps(get(f"/{pid}", fields="id,name,business"), ensure_ascii=False)[:300])
+
+          print("\n>>> TRANG TRONG BM DOSCOM HOLDINGS (2159592564530249)")
+          for edge in ("owned_pages","client_pages"):
+              print(f"  {edge}:", json.dumps(get(f"/2159592564530249/{edge}", fields="id,name", limit="100"), ensure_ascii=False)[:500])
+          print("  owned_ad_accounts:", json.dumps(get("/2159592564530249/owned_ad_accounts", fields="account_id,name", limit="50"), ensure_ascii=False)[:400])
+          PY
