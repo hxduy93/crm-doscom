@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-09 06:20",
+  "generated_at": "2026-08-09 06:52",
   "source_data_date_range": {
     "start_7d": "2026-08-01",
     "end": "2026-08-07",
@@ -1515,18 +1515,71 @@
         ]
       },
       {
-        "search_term": "camera doscom da1 pro",
-        "spend_30d": 54337.0,
-        "clicks_30d": 4,
+        "search_term": "máy ghi âm nghe lén từ xa",
+        "spend_30d": 57605.0,
+        "clicks_30d": 7,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.125,
+        "ctr_30d": 0.1944,
         "match_types": [
           "BROAD",
-          "NEAR_PHRASE",
           "PHRASE"
         ],
         "statuses": [
           "NONE"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm remin",
+        "spend_30d": 57393.0,
+        "clicks_30d": 8,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.064,
+        "match_types": [
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm từ xa",
+        "spend_30d": 55245.0,
+        "clicks_30d": 10,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.3571,
+        "match_types": [
+          "BROAD",
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "thiết bị ghi âm kết nối điện thoại",
+        "spend_30d": 45445.0,
+        "clicks_30d": 4,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.16,
+        "match_types": [
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera sim 4g hikvision",
+        "spend_30d": 15733.0,
+        "clicks_30d": 1,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1429,
+        "match_types": [
+          "EXACT",
+          "PHRASE"
+        ],
+        "statuses": [
+          "ADDED"
         ]
       },
       {
@@ -1556,20 +1609,6 @@
         ]
       },
       {
-        "search_term": "camera sim 4g hikvision",
-        "spend_30d": 15733.0,
-        "clicks_30d": 1,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1429,
-        "match_types": [
-          "EXACT",
-          "PHRASE"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
         "search_term": "doscom",
         "spend_30d": 88746.0,
         "clicks_30d": 36,
@@ -1577,46 +1616,6 @@
         "ctr_30d": 0.2628,
         "match_types": [
           "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "máy dò camera",
-        "spend_30d": 237128.0,
-        "clicks_30d": 24,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1983,
-        "match_types": [
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
-        "search_term": "máy ghi âm nghe lén từ xa",
-        "spend_30d": 57605.0,
-        "clicks_30d": 7,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1944,
-        "match_types": [
-          "BROAD",
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "máy ghi âm remin",
-        "spend_30d": 57393.0,
-        "clicks_30d": 8,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.064,
-        "match_types": [
-          "PHRASE"
         ],
         "statuses": [
           "NONE"
@@ -2126,17 +2125,11 @@
       }
     ],
     "match_type_breakdown": {
-      "BROAD": {
-        "spend_30d": 11758108.0,
-        "clicks_30d": 1516,
-        "conversions_30d": 24.0,
-        "term_count": 2337
-      },
-      "NEAR_PHRASE": {
-        "spend_30d": 6320013.0,
-        "clicks_30d": 909,
-        "conversions_30d": 7.48,
-        "term_count": 638
+      "EXACT": {
+        "spend_30d": 3092950.0,
+        "clicks_30d": 436,
+        "conversions_30d": 7.5,
+        "term_count": 68
       },
       "PHRASE": {
         "spend_30d": 7363187.0,
@@ -2144,11 +2137,17 @@
         "conversions_30d": 16.5,
         "term_count": 618
       },
-      "EXACT": {
-        "spend_30d": 3092950.0,
-        "clicks_30d": 436,
-        "conversions_30d": 7.5,
-        "term_count": 68
+      "NEAR_PHRASE": {
+        "spend_30d": 6320013.0,
+        "clicks_30d": 909,
+        "conversions_30d": 7.48,
+        "term_count": 638
+      },
+      "BROAD": {
+        "spend_30d": 11758108.0,
+        "clicks_30d": 1516,
+        "conversions_30d": 24.0,
+        "term_count": 2337
       },
       "NEAR_EXACT": {
         "spend_30d": 5763.0,
@@ -2160,14 +2159,14 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 6979,
-      "total_spend_30d": 6638796.0
+      "total_unique_placements": 6977,
+      "total_spend_30d": 6633513.0
     },
     "network_breakdown": {
       "CONTENT": {
-        "spend_30d": 6638807.0,
-        "clicks_30d": 3097,
-        "impressions_30d": 247591,
+        "spend_30d": 6633525.0,
+        "clicks_30d": 3094,
+        "impressions_30d": 247586,
         "ctr_30d": 0.0125,
         "cpc_30d": 2144.0,
         "campaign_count": 5
@@ -2183,11 +2182,11 @@
     },
     "placement_type_breakdown": {
       "WEBSITE": {
-        "spend_30d": 6638796.0,
-        "clicks_30d": 3097,
-        "impressions_30d": 234036,
+        "spend_30d": 6633513.0,
+        "clicks_30d": 3094,
+        "impressions_30d": 234051,
         "ctr_30d": 0.0132,
-        "placement_count": 6979
+        "placement_count": 6977
       }
     },
     "top_waste_placements": [],
