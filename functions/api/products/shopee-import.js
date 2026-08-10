@@ -115,11 +115,16 @@ export function parseDescription(html) {
   return text.slice(0, 6000);
 }
 
-// Trang chặn bot / bắt xác minh → nhận diện để báo lỗi cho ra lỗi.
-function looksBlocked(html) {
+// Trang chặn bot / bắt đăng nhập → nhận diện để báo lỗi cho ra lỗi.
+// Đo thật 2026-08-10 với IP Cloudflare: Shopee KHÔNG hiện captcha mà trả thẳng
+// "Page Unavailable — please log in" (bản PC) hoặc "Login Required" (bản mobile),
+// tiêu đề trang thành "Shopee Việt Nam | Hot Deals, Best Prices". Bắt đúng mấy
+// dấu hiệu này, đừng chỉ dò chữ captcha như bản đầu.
+export function looksBlocked(html) {
   if (!html || html.length < 2000) return true;
-  return /captcha|xác minh bạn không phải|verify you are human|Access denied|請驗證/i.test(html)
-    && !/MÔ TẢ SẢN PHẨM/i.test(html);
+  if (/MÔ TẢ SẢN PHẨM/i.test(html)) return false;   // có mô tả = trang thật, khỏi đoán
+  return /Login Required|Page Unavailable|you.{0,3}re not logged in|Vui lòng đăng nhập|captcha|verify you are human|Access denied/i
+    .test(html);
 }
 
 async function renderHtml(env, url) {
@@ -133,11 +138,30 @@ async function renderHtml(env, url) {
     // Shopee dựng nội dung bằng JS → chờ mạng lắng rồi chờ thêm khối mô tả.
     gotoOptions: { waitUntil: "networkidle0", timeout: 45000 },
     waitForTimeout: 6000,
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
     setExtraHTTPHeaders: {
       "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
     },
     viewport: { width: 1366, height: 900 },
   };
+
+  // Shopee bắt ĐĂNG NHẬP với IP máy chủ (đo 2026-08-10: "Page Unavailable /
+  // Login Required"). Nếu có secret SHOPEE_COOKIE (chuỗi "k=v; k=v" copy từ
+  // trình duyệt đã đăng nhập) thì bơm vào phiên trình duyệt của Cloudflare.
+  const cookieStr = (env.SHOPEE_COOKIE || "").trim();
+  if (cookieStr) {
+    body.cookies = cookieStr.split(";").map((kv) => {
+      const i = kv.indexOf("=");
+      if (i < 1) return null;
+      return {
+        name: kv.slice(0, i).trim(),
+        value: kv.slice(i + 1).trim(),
+        domain: ".shopee.vn",
+        path: "/",
+        secure: true,
+      };
+    }).filter(Boolean);
+  }
 
   const r = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${account}/browser-rendering/content`,
@@ -233,8 +257,10 @@ export async function onRequestPost(context) {
   if (looksBlocked(html)) {
     return json({
       ok: false,
-      error: "shopee_chan_bot",
-      hint: "Shopee trả trang xác minh cho IP Cloudflare. Thử lại sau vài phút; nếu lặp lại thì phải chuyển sang cách bookmarklet chạy trên trình duyệt của bạn.",
+      error: "shopee_bat_dang_nhap",
+      hint: (env.SHOPEE_COOKIE || "").trim()
+        ? "Shopee vẫn bắt đăng nhập dù đã có SHOPEE_COOKIE — cookie hết hạn, cần lấy lại từ trình duyệt."
+        : "Shopee bắt đăng nhập với IP máy chủ. Nạp secret SHOPEE_COOKIE (cookie phiên Shopee đã đăng nhập) rồi thử lại.",
     }, 502);
   }
 

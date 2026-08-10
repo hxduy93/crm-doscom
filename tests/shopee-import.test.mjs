@@ -6,7 +6,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  parseShopeeUrl, parsePrices, parseImages, parseName, parseDescription,
+  parseShopeeUrl, parsePrices, parseImages, parseName, parseDescription, looksBlocked,
 } from "../functions/api/products/shopee-import.js";
 
 test("bóc shop_id + item_id từ link Shopee", () => {
@@ -82,4 +82,17 @@ test("bóc mô tả từ khối MÔ TẢ SẢN PHẨM, trả về văn bản thu
 
 test("không có khối mô tả thì trả rỗng chứ không đoán bừa", () => {
   assert.equal(parseDescription("<div>trang lỗi</div>"), "");
+});
+
+test("nhận ra trang Shopee bắt đăng nhập (đo thật với IP Cloudflare)", () => {
+  // Shopee KHÔNG hiện captcha với IP máy chủ mà trả thẳng trang này —
+  // bản đầu chỉ dò chữ "captcha" nên tưởng đọc được rồi bóc ra rỗng.
+  assert.equal(looksBlocked("x".repeat(3000) + "Page Unavailable ... Please log in and try again"), true);
+  assert.equal(looksBlocked("x".repeat(3000) + "Login Required Looks like you're not logged in yet"), true);
+  assert.equal(looksBlocked(""), true, "trang rỗng cũng coi như hỏng");
+});
+
+test("trang có mô tả sản phẩm thì KHÔNG coi là bị chặn", () => {
+  const real = "x".repeat(3000) + "MÔ TẢ SẢN PHẨM ... Dung tích 100ml ... Login";
+  assert.equal(looksBlocked(real), false);
 });
