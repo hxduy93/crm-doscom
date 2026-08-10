@@ -97,9 +97,13 @@ context: |
     làm lệch mạnh (vd nguồn PHƯƠNG NAM - D1 chéo tới 25%). Cấp nhân sự / brand / tháng KHÔNG bị
     ảnh hưởng vì đều gộp lại.
   - Nguồn đơn Pancake CHỈ dùng để xếp đơn về đúng nhân sự, KHÔNG dùng để gán sản phẩm.
-    Mỗi khi tạo nguồn "DUY - <SP>" / "PHƯƠNG NAM - <SP>" mới trên Pancake PHẢI khai source ID vào
-    SOURCE_GROUPS của repo facebook-ads-dashboard, nếu không đơn của nguồn đó biến mất khỏi dữ liệu
-    (đã xảy ra: nguồn PHƯƠNG NAM - DR1 mất 21 đơn / 28,5tr). Dò bằng workflow list-all-order-sources.yml.
+    Đơn được xếp nhóm theo TÊN nguồn (tiền tố "DUY - " / "PHƯƠNG NAM - ") hoặc ID nguồn cố định
+    (Website / Zalo OA / Hotline / Page Facebook) trong SOURCE_GROUPS của
+    scripts/fetch_pancake_revenue.py — nguồn mới sale tự tạo là tự vào đúng nhóm, KHÔNG phải khai tay.
+    LỊCH SỬ (đừng quay lại cách cũ): trước 2026-08-10 phải khai từng source ID, quên khai là đơn
+    biến mất âm thầm — PHƯƠNG NAM - DR1 mất 21 đơn/28,5tr, DUY mất 85 đơn/12,5tr tuần 03-09/08.
+    Đơn ngoài 6 nhóm (Shopee, Tiktok, Woocommerce, RESELL, bán tại quầy…) cố ý KHÔNG tính vào
+    dashboard; cuối bước fetch có log liệt kê để soát.
   - Data Google (Windsor.ai) trễ ~2 ngày so với FB → kỳ "tuần này" Google thiếu 1-2 ngày cuối là BÌNH THƯỜNG.
 
   ## Quy trình

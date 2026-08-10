@@ -1,0 +1,58 @@
+name: Fetch Google Ads Spend
+
+# Chạy mỗi 30 phút, 24/7 — fetch Google Ads spend từ Windsor.ai JSON API,
+# transform thành data/google-ads-spend.json theo schema dashboard.
+#
+# Yêu cầu GitHub Secret:
+#   WINDSOR_API_KEY  — lấy từ https://onboard.windsor.ai/ → Data Sources → JSON API
+on:
+  schedule:
+    - cron: "5,35 * * * *"
+  workflow_dispatch:            # cho phép chạy thủ công từ tab Actions
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    # CÔNG TẮC CHUNG của cả cụm workflow lấy dữ liệu (gộp từ repo cũ
+    # facebook-ads-dashboard, 2026-08-10). Chỉ chạy khi repo variable
+    # DATA_PIPELINE_ENABLED = 1 — bật sau khi đã nạp đủ secret, để trước đó
+    # workflow không đỏ hàng loạt và CRM vẫn kéo dữ liệu theo đường cũ.
+    # Bật: gh variable set DATA_PIPELINE_ENABLED --body 1 -R hxduy93/crm-doscom
+    if: ${{ vars.DATA_PIPELINE_ENABLED == '1' }}
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run Windsor.ai fetch script
+        env:
+          WINDSOR_API_KEY: ${{ secrets.WINDSOR_API_KEY }}
+        run: python scripts/fetch_google_ads_spend.py
+
+      - name: Commit updated Google Ads spend snapshot
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain data/google-ads-spend.json)" ]; then
+            git add data/google-ads-spend.json
+            git commit -m "chore: auto-sync Google Ads spend snapshot (Windsor.ai)"
+            # Retry + rebase để tránh race condition với fetch-pancake chạy cùng lúc
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin master && git push && exit 0
+              echo "[retry $i] push bị reject, chờ $((i*5))s rồi rebase lại..."
+              sleep $((i*5))
+            done
+            echo "Push vẫn fail sau 5 lần retry"
+            exit 1
+          else
+            echo "No Google Ads changes to commit."
+          fi

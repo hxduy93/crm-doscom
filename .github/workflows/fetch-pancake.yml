@@ -1,0 +1,59 @@
+name: Fetch Pancake Revenue
+
+# Chạy mỗi 30 phút trong giờ hành chính VN: 10:00 → 17:30 (= 03:00 → 10:30 UTC)
+# 16 lần/ngày: 10:00, 10:30, 11:00, ..., 17:00, 17:30 VN
+on:
+  schedule:
+    - cron: "0,30 3-10 * * *"
+  workflow_dispatch:            # cho phép chạy thủ công từ tab Actions
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    # CÔNG TẮC CHUNG của cả cụm workflow lấy dữ liệu (gộp từ repo cũ
+    # facebook-ads-dashboard, 2026-08-10). Chỉ chạy khi repo variable
+    # DATA_PIPELINE_ENABLED = 1 — bật sau khi đã nạp đủ secret, để trước đó
+    # workflow không đỏ hàng loạt và CRM vẫn kéo dữ liệu theo đường cũ.
+    # Bật: gh variable set DATA_PIPELINE_ENABLED --body 1 -R hxduy93/crm-doscom
+    if: ${{ vars.DATA_PIPELINE_ENABLED == '1' }}
+    # 2026-08-10: script quét TOÀN BỘ đơn của shop (không lọc nguồn phía Pancake nữa),
+    # 13 lát × ~7 page chạy song song 4 luồng. Local ~3,5 phút; runner GitHub gọi
+    # Pancake chậm hơn ~4 lần → để dư 40 phút.
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run Pancake fetch script
+        env:
+          PANCAKE_API_KEY: ${{ secrets.PANCAKE_API_KEY }}
+          PANCAKE_SHOP_ID: ${{ secrets.PANCAKE_SHOP_ID }}
+        run: python scripts/fetch_pancake_revenue.py
+
+      - name: Commit updated revenue data
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain data/product-revenue.json)" ]; then
+            git add data/product-revenue.json
+            git commit -m "chore: update pancake revenue snapshot"
+            # Retry + rebase để tránh race condition với fetch-google-ads chạy cùng lúc
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin master && git push && exit 0
+              echo "[retry $i] push bị reject, chờ $((i*5))s rồi rebase lại..."
+              sleep $((i*5))
+            done
+            echo "Push vẫn fail sau 5 lần retry"
+            exit 1
+          else
+            echo "No revenue changes to commit."
+          fi

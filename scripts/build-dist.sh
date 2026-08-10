@@ -20,6 +20,12 @@ cp index.html dist/
 cp -r data dist/data
 [ -d demos ] && cp -r demos dist/demos
 
+# File TRUNG GIAN của pipeline lấy dữ liệu (gộp từ repo cũ 2026-08-10): chỉ dùng
+# lúc build dashboard-data.json, không trang nào gọi → KHÔNG đẩy lên web.
+# pancake-crm-contacts.json ~4MB và chứa SĐT khách; cost-source là file gốc giá nhập.
+rm -f dist/data/pancake-crm-contacts.json
+rm -rf dist/data/cost-source
+
 # Trang standalone (nhúng iframe trong CRM) — phải copy thủ công.
 PAGES="agent-geo-doscom.html ads-creator.html product-publisher.html brandcore-fix.html fix-images.html sync-us.html"
 for page in $PAGES; do

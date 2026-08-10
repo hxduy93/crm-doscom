@@ -10,8 +10,12 @@
 //   from, to : YYYY-MM-DD (mặc định: 30 ngày gần nhất tính tới hôm nay giờ VN)
 //   level    : "account" (mặc định) | "campaign"
 //
-// Nguồn dữ liệu: raw GitHub repo dashboard cũ (PUBLIC, không qua Cloudflare Access) —
-// đồng nhất với data CRM đang dùng. Override bằng env FB_DATA_SOURCE_URL nếu cần.
+// Nguồn dữ liệu: raw GitHub CỦA CHÍNH REPO NÀY (public, không qua Cloudflare Access).
+// Không fetch same-origin được vì endpoint này do đối tác gọi bằng bearer token, không
+// có cookie Access → fetch /data/... sẽ rơi vào trang đăng nhập Access.
+// Override bằng env FB_DATA_SOURCE_URL nếu cần.
+// 2026-08-10: đổi từ repo cũ facebook-ads-dashboard sang repo này, vì fb-ads-data.json
+// nay do workflow fetch-fb-ads.yml của repo này sinh ra.
 //
 // Trả JSON: { ok, source, generated_at, currency, range, level, count, rows[] }
 //   rows (account): { unique_key, date, account_id, account_name, spend, impressions, clicks, currency }
@@ -19,7 +23,7 @@
 //   unique_key = `${date}_${account_id}` (account) / `${date}_${campaign_id}` (campaign) — để đối tác dedup.
 
 const DEFAULT_SOURCE =
-  "https://raw.githubusercontent.com/hxduy93/facebook-ads-dashboard/main/data/fb-ads-data.json";
+  "https://raw.githubusercontent.com/hxduy93/crm-doscom/master/data/fb-ads-data.json";
 const CACHE_KEY = "fb_export:v1:src";
 const CACHE_TTL = 600; // 10 phút — tránh refetch GitHub mỗi lần kéo
 
@@ -137,9 +141,24 @@ export async function onRequestGet(context) {
   const srcUrl = env.FB_DATA_SOURCE_URL || DEFAULT_SOURCE;
   const kv = env.INVENTORY;
   let data = null;
+  let fromCache = false;
   try {
-    if (kv) { const cached = await kv.get(CACHE_KEY); if (cached) data = JSON.parse(cached); }
+    if (kv) {
+      const cached = await kv.get(CACHE_KEY);
+      if (cached) { data = JSON.parse(cached); fromCache = true; }
+    }
   } catch (_) {}
+
+  // Ưu tiên đọc file tĩnh của CHÍNH bản deploy này qua binding ASSETS: không đi ra
+  // internet, không dính Cloudflare Access (endpoint này đối tác gọi bằng bearer token
+  // nên không có cookie Access), và cho phép để repo private sau này.
+  // Không có ASSETS (chạy local / thiếu binding) thì mới fetch srcUrl.
+  if (!data && env.ASSETS) {
+    try {
+      const ar = await env.ASSETS.fetch(new URL("/data/fb-ads-data.json", url.origin).toString());
+      if (ar.ok) data = await ar.json();
+    } catch (_) {}
+  }
   if (!data) {
     let r;
     try {
@@ -149,13 +168,15 @@ export async function onRequestGet(context) {
     }
     if (!r.ok) return json({ ok: false, error: `fetch source HTTP ${r.status}` }, 502);
     data = await r.json();
+  }
+  if (!fromCache) {
     try { if (kv) await kv.put(CACHE_KEY, JSON.stringify(data), { expirationTtl: CACHE_TTL }); } catch (_) {}
   }
 
   const { currency, rows } = buildRows(data, from, to, level);
   return json({
     ok: true,
-    source: "facebookadsallinone/data/fb-ads-data.json",
+    source: "crm-doscom/data/fb-ads-data.json",
     generated_at: (data && data.generated_at) || null,
     currency,
     range: { from, to },
