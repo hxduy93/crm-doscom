@@ -81,9 +81,10 @@ def _load_extended_skus():
     """Đọc data/cost-source/skus-extended.json — manual overlay cho SKU ngoài xlsx Kho tổng.
     Trả về (extended_labels, cost_keys, costs_overlay, price_overrides_vnd).
     price_overrides_vnd: label → giá nhập VND (áp dụng AFTER xlsx merge, ưu tiên cao nhất)."""
-    path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), "data", "cost-source", "skus-extended.json"
-    ))
+    # ROOT chứ KHÔNG phải dirname(__file__): bản gốc nằm ở gốc repo cũ nên ghép
+    # thẳng "data/..." là đúng; ở đây script nằm trong scripts/ nên ghép kiểu cũ ra
+    # scripts/data/... → không thấy file → tụt từ 56 SP có giá vốn xuống còn 14.
+    path = os.path.join(ROOT, "data", "cost-source", "skus-extended.json")
     if not os.path.exists(path):
         return [], {}, {}, {}, {}
     try:
