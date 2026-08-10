@@ -216,6 +216,16 @@ def main():
     orders = pos.get("orders_minimal") or []
     print(f"[INFO] Loaded {len(contacts)} contacts, {len(orders)} orders")
 
+    # 2026-08-10 (sự cố thật): Pancake trả 500 giữa chừng → fetch contacts dừng ở
+    # 6.400/10.226 nhưng vẫn ghi file với cờ partial=true. Funnel dựng trên nửa dữ
+    # liệu cho ra tỉ lệ chốt 75,45% thay vì 66,7% — sai mà nhìn vẫn hợp lý.
+    # Thiếu lead thì THÀ KHÔNG CẬP NHẬT còn hơn cập nhật sai.
+    if crm.get("partial"):
+        print(f"[FATAL] File CRM contacts là bản THIẾU (partial): "
+              f"{crm.get('partial_failure_reason')}. Giữ nguyên lead-to-order.json cũ, "
+              f"chạy lại workflow khi Pancake ổn định.", file=sys.stderr)
+        sys.exit(1)
+
     if not contacts:
         print("[FATAL] CRM file không có contacts_minimal — cần re-run fetch-pancake-crm "
               "với version mới (đã có phone9)", file=sys.stderr)

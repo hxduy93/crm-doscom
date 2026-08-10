@@ -30,9 +30,13 @@ PAGE_SLEEP_SEC = 0.5  # 2026-05-12: giảm 1.0→0.5. Giúp pagination dài (>10
 OUTPUT_FILE = "data/pancake-crm-contacts.json"
 
 
-def http_get_json(url, max_retries=3):
-    """GET + retry. Trên 500: backoff ngắn (10/20/40s) — fail-fast để không vượt timeout job.
-    Logic graceful partial ở fetch_all_contacts() sẽ save data đã pull được nếu page này fail."""
+def http_get_json(url, max_retries=5):
+    """GET + retry. Trên 500: backoff ngắn (10/20/40/80/160s) — fail-fast để không vượt timeout job.
+    Logic graceful partial ở fetch_all_contacts() sẽ save data đã pull được nếu page này fail.
+
+    2026-08-10: 3 → 5 lần thử. Pancake hay 500 rải rác; với 3 lần thử một lượt fetch
+    thật đã dừng ở 6.400/10.226 contact. Job có 25 phút nên chờ thêm được, và
+    build_lead_to_order.py giờ TỪ CHỐI dựng funnel từ file partial."""
     last_err = None
     for attempt in range(1, max_retries + 1):
         try:
