@@ -73,6 +73,48 @@ export function parseImages(html) {
   return out;
 }
 
+// ── Đường KHÔNG CẦN ĐĂNG NHẬP ────────────────────────────────────────────────
+// Shopee chặn IP máy chủ với trình duyệt thường, NHƯNG vẫn trả bản SSR rút gọn
+// cho bot xem trước link (đo 2026-08-10: UA "facebookexternalhit/1.1" → HTTP 200,
+// 17KB, có og:title + og:image + BreadcrumbList). Bản này CHỈ có tên, ảnh đại diện
+// và ngành hàng — KHÔNG có giá, mô tả, hay bộ ảnh đầy đủ (API v4 vẫn 403 với mọi
+// UA bot). Dùng làm đường lùi để ít nhất điền được tên + ảnh chính.
+const CRAWLER_UA = "facebookexternalhit/1.1";
+
+async function fetchCrawlerHtml(url) {
+  const r = await fetch(url, {
+    headers: { "User-Agent": CRAWLER_UA, "Accept-Language": "vi-VN,vi;q=0.9" },
+    signal: AbortSignal.timeout(25000),
+  });
+  if (!r.ok) throw new Error(`crawler_fetch_${r.status}`);
+  return await r.text();
+}
+
+export function parseOgImage(html) {
+  const m = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+    || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+  return m ? m[1] : "";
+}
+
+// BreadcrumbList của Shopee → ngành hàng cuối cùng trước tên sản phẩm.
+export function parseBreadcrumb(html) {
+  const out = [];
+  const re = /<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi;
+  let m;
+  while ((m = re.exec(html))) {
+    let d;
+    try { d = JSON.parse(m[1]); } catch { continue; }
+    if (d && d["@type"] === "BreadcrumbList") {
+      for (const it of d.itemListElement || []) {
+        const n = it && it.item && it.item.name;
+        if (n) out.push(String(n));
+      }
+    }
+  }
+  // bỏ "Shopee" đầu và tên sản phẩm cuối
+  return out.filter((x) => x.toLowerCase() !== "shopee").slice(0, -1);
+}
+
 export function parseName(html) {
   // Ưu tiên og:title (JS chèn sau khi render), rồi <title>, rồi <h1>
   const og = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']{3,300})["']/i);
@@ -240,31 +282,33 @@ export async function onRequestPost(context) {
     }, 400);
   }
 
-  let html;
+  // Thử trang đầy đủ trước (trình duyệt thật). Không được thì lùi về bản SSR cho bot.
+  let html = "";
+  let mode = "full";
+  const warnings = [];
   try {
     html = await renderHtml(env, src.url);
+    if (looksBlocked(html)) {
+      html = "";
+      warnings.push("Shopee chặn IP máy chủ (bắt đăng nhập) nên chỉ lấy được phần công khai.");
+    }
   } catch (e) {
-    const m = String(e.message || e);
-    const hint =
-      m.includes("missing_CF_BROWSER_TOKEN")
-        ? "Chưa nạp secret CF_BROWSER_TOKEN (API token Cloudflare có quyền Browser Rendering)."
-        : m.includes("_401") || m.includes("_403")
-          ? "Token Browser Rendering sai quyền, hoặc tài khoản chưa bật Browser Rendering."
-          : "Trình duyệt của Cloudflare không mở được trang. Thử lại, hoặc kiểm tra link.";
-    return json({ ok: false, error: m, hint }, 502);
+    warnings.push("Không render được trang đầy đủ (" + String(e.message || e).slice(0, 80) + ").");
   }
 
-  if (looksBlocked(html)) {
-    return json({
-      ok: false,
-      error: "shopee_bat_dang_nhap",
-      hint: (env.SHOPEE_COOKIE || "").trim()
-        ? "Shopee vẫn bắt đăng nhập dù đã có SHOPEE_COOKIE — cookie hết hạn, cần lấy lại từ trình duyệt."
-        : "Shopee bắt đăng nhập với IP máy chủ. Nạp secret SHOPEE_COOKIE (cookie phiên Shopee đã đăng nhập) rồi thử lại.",
-    }, 502);
+  if (!html) {
+    mode = "partial";
+    try {
+      html = await fetchCrawlerHtml(src.url);
+    } catch (e) {
+      return json({
+        ok: false,
+        error: "khong_doc_duoc_trang",
+        hint: "Cả trình duyệt Cloudflare lẫn bản công khai đều không đọc được. Kiểm tra lại link.",
+        detail: String(e.message || e),
+      }, 502);
+    }
   }
-
-  const warnings = [];
   const name = parseName(html);
   if (!name) warnings.push("Không đọc được tên sản phẩm — nhập tay giúp.");
 
@@ -276,8 +320,12 @@ export async function onRequestPost(context) {
   const description = parseDescription(html);
   if (!description) warnings.push("Không đọc được phần MÔ TẢ SẢN PHẨM.");
 
+  const breadcrumb = parseBreadcrumb(html);
+
   const wanted = Math.min(Number(body.max_images) || IMG_MAX, IMG_MAX);
-  const urls = parseImages(html).slice(0, wanted);
+  // Bản rút gọn chỉ có og:image — đưa nó lên đầu để chắc chắn có ảnh đại diện.
+  const og = parseOgImage(html);
+  const urls = [...new Set([og, ...parseImages(html)].filter(Boolean))].slice(0, wanted);
   const images = [];
   for (const u of urls) {
     try {
@@ -287,8 +335,13 @@ export async function onRequestPost(context) {
   }
   if (!images.length) warnings.push("Không tải được ảnh nào từ CDN Shopee.");
 
+  if (mode === "partial") {
+    warnings.push("Bản công khai của Shopee không có giá, mô tả và bộ ảnh đầy đủ — nhập tay giúp phần đó.");
+  }
+
   return json({
     ok: true,
+    mode,                       // "full" = đọc được trang thật · "partial" = chỉ bản công khai
     source: src,
     product: {
       name,
@@ -297,6 +350,7 @@ export async function onRequestPost(context) {
       // note = tư liệu thô đưa cho AI viết bài, KHÔNG đăng thẳng lên web
       note: description,
       description,
+      breadcrumb,               // gợi ý ngành hàng, để người dùng chọn danh mục cho nhanh
     },
     images,
     warnings,

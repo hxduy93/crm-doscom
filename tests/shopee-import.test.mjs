@@ -6,7 +6,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  parseShopeeUrl, parsePrices, parseImages, parseName, parseDescription, looksBlocked,
+  parseShopeeUrl, parsePrices, parseImages, parseName, parseDescription, looksBlocked, parseOgImage, parseBreadcrumb,
 } from "../functions/api/products/shopee-import.js";
 
 test("bóc shop_id + item_id từ link Shopee", () => {
@@ -95,4 +95,28 @@ test("nhận ra trang Shopee bắt đăng nhập (đo thật với IP Cloudflare
 test("trang có mô tả sản phẩm thì KHÔNG coi là bị chặn", () => {
   const real = "x".repeat(3000) + "MÔ TẢ SẢN PHẨM ... Dung tích 100ml ... Login";
   assert.equal(looksBlocked(real), false);
+});
+
+test("bóc og:image làm ảnh đại diện của bản công khai", () => {
+  const h = '<meta property="og:image" content="https://down-vn.img.susercontent.com/file/vn-abc123">';
+  assert.equal(parseOgImage(h), "https://down-vn.img.susercontent.com/file/vn-abc123");
+  assert.equal(parseOgImage("<div>không có</div>"), "");
+});
+
+test("bóc ngành hàng từ BreadcrumbList, bỏ Shopee và tên sản phẩm", () => {
+  const ld = JSON.stringify({
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { item: { name: "Shopee" } },
+      { item: { name: "Phụ tùng & Phụ kiện xe cơ giới" } },
+      { item: { name: "Chăm sóc xe cơ giới" } },
+      { item: { name: "NOMA 911- Dung dịch tẩy ố kính ." } },
+    ],
+  });
+  const crumbs = parseBreadcrumb(`<script type="application/ld+json">${ld}</script>`);
+  assert.deepEqual(crumbs, ["Phụ tùng & Phụ kiện xe cơ giới", "Chăm sóc xe cơ giới"]);
+});
+
+test("ld+json hỏng không được làm sập cả lần nhập", () => {
+  assert.deepEqual(parseBreadcrumb('<script type="application/ld+json">{ hỏng </script>'), []);
 });

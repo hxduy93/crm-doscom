@@ -543,8 +543,10 @@ async function importShopee(){
     }
     renderThumbs(); syncCardImg();
 
-    const warn=(d.warnings||[]).length ? ' · <b style="color:var(--accent)">Lưu ý:</b> '+esc(d.warnings.join(' ')) : '';
-    msg.innerHTML='Đã lấy '+added+' ảnh'+(p.name?' · tên + ':' · ')+'giá từ Shopee. Kiểm lại rồi bấm "Viết bài".'+warn;
+    const warn=(d.warnings||[]).length ? '<br><b style="color:var(--accent)">Lưu ý:</b> '+esc(d.warnings.join(' ')) : '';
+    const crumb=(p.breadcrumb||[]).length ? ' · Ngành hàng Shopee: <b>'+esc(p.breadcrumb.join(' › '))+'</b>' : '';
+    const got=[p.name&&'tên', p.price&&'giá', added&&(added+' ảnh')].filter(Boolean).join(' + ')||'không được gì';
+    msg.innerHTML=(d.mode==='partial'?'<b>Chỉ đọc được bản công khai</b> — ':'')+'Đã lấy: '+got+'.'+crumb+warn;
     toast('Đã nhập từ Shopee');
   }catch(e){
     msg.innerHTML='<b style="color:var(--red)">Lỗi:</b> '+esc(String(e&&e.message||e));
