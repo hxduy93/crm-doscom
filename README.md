@@ -8,7 +8,7 @@ Giao diện vận hành + **nhà máy dữ liệu** của Doscom.
 
 ## Pipeline dữ liệu
 
-Từ 2026-08-10 phần **lấy dữ liệu** được gộp từ repo cũ `facebook-ads-dashboard` về đây, để CRM không còn phụ thuộc repo đó nữa.
+Từ 2026-08-10 repo này **tự lấy dữ liệu**, không còn phụ thuộc repo `facebook-ads-dashboard` (đã xoá — toàn bộ 7.808 commit + code dashboard cũ nằm ở nhánh **`legacy-fb-ads-dashboard`** của chính repo này, xem bằng `git checkout legacy-fb-ads-dashboard`).
 
 | Workflow | Lịch | Script | Ra file |
 |---|---|---|---|
@@ -26,26 +26,19 @@ Từ 2026-08-10 phần **lấy dữ liệu** được gộp từ repo cũ `faceb
 `build_dashboard_data.py` là bước cuối: gọi FB Graph API lấy insights rồi ráp chung với các file trên
 thành `data/dashboard-data.json` — file **duy nhất** mà giao diện đọc.
 
-### Công tắc `DATA_PIPELINE_ENABLED`
-
-Cụm workflow lấy dữ liệu chỉ chạy khi repo variable `DATA_PIPELINE_ENABLED = 1`.
-
-- Chưa bật → `refresh-data.yml` chạy đường **cũ**: `scripts/refresh_data.py` đi copy dữ liệu từ repo `facebook-ads-dashboard`.
-- Bật → mọi thứ tự làm tại repo này, không đụng repo cũ nữa.
+### Secret cần có
 
 ```bash
-# nạp secret (lấy giá trị từ nơi bạn đang giữ / tạo lại ở từng dịch vụ)
-gh secret set PANCAKE_API_KEY      -R hxduy93/crm-doscom
-gh secret set PANCAKE_SHOP_ID      -R hxduy93/crm-doscom
-gh secret set PANCAKE_CRM_API_KEY  -R hxduy93/crm-doscom
-gh secret set FB_ACCESS_TOKEN      -R hxduy93/crm-doscom
-gh secret set WINDSOR_API_KEY      -R hxduy93/crm-doscom
-
-# rồi bật công tắc
-gh variable set DATA_PIPELINE_ENABLED --body 1 -R hxduy93/crm-doscom
+gh secret set PANCAKE_API_KEY      -R hxduy93/crm-doscom   # đọc đơn POS
+gh secret set PANCAKE_SHOP_ID      -R hxduy93/crm-doscom   # 1942196207
+gh secret set PANCAKE_CRM_API_KEY  -R hxduy93/crm-doscom   # đọc CRM contacts (lead)
+gh secret set FB_ACCESS_TOKEN      -R hxduy93/crm-doscom   # FB Marketing API
+gh secret set WINDSOR_API_KEY      -R hxduy93/crm-doscom   # Google Ads qua Windsor.ai
 ```
 
-Đối chiếu số trước/sau khi bật: `python scripts/compare_dashboard_data.py` (so file vừa ráp với bản repo cũ đang chạy).
+Thiếu secret nào thì workflow tương ứng **đỏ và dừng**, KHÔNG ghi đè dữ liệu cũ —
+đã có guard ở cả 3 chỗ (FB insights rỗng, Pancake fetch lỗi/tụt >50%, CRM contacts thiếu).
+Kiểm token FB trước khi nạp: `FB_TOKEN=EAA... node scripts/fb-token-check.mjs`.
 
 ## Chạy thử cục bộ
 Cần server (vì fetch /data): `python -m http.server 8125` rồi mở http://127.0.0.1:8125/

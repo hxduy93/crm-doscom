@@ -4,14 +4,16 @@ GitHub Actions `schedule` hay trễ 10 phút → vài tiếng. Worker này chạ
 Cloudflare** (đúng giờ) rồi gọi **GitHub `workflow_dispatch`** (chạy ngay) cho các workflow.
 
 ## Lịch (giờ VN, cron UTC trong wrangler.jsonc)
-- **9h**  (`0 2 * * *`)  → `brand-staff-matrix.yml` (facebook-ads-dashboard) + `refresh-data.yml` (crm-doscom)
+- **9h**  (`0 2 * * *`)  → `refresh-data.yml` (crm-doscom)
 - **13h** (`0 6 * * *`)  → `refresh-data.yml`
-- **15h** (`0 8 * * *`)  → `brand-staff-matrix.yml`
 - **17h** (`0 10 * * *`) → `refresh-data.yml`
+
+(2026-08-10: bỏ `brand-staff-matrix.yml` — repo facebook-ads-dashboard đã xoá,
+lịch sử nằm ở nhánh `legacy-fb-ads-dashboard` của repo này.)
 
 ## Cài đặt (1 lần)
 1. Tạo **fine-grained PAT** ở GitHub → Settings → Developer settings → Fine-grained tokens:
-   - Repository access: chọn cả `hxduy93/facebook-ads-dashboard` và `hxduy93/crm-doscom`.
+   - Repository access: `hxduy93/crm-doscom`.
    - Permissions → **Actions: Read and write**.
 2. Set secret + deploy:
    ```bash

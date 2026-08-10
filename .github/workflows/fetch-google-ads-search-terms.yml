@@ -13,12 +13,6 @@ permissions:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    # CÔNG TẮC CHUNG của cả cụm workflow lấy dữ liệu (gộp từ repo cũ
-    # facebook-ads-dashboard, 2026-08-10). Chỉ chạy khi repo variable
-    # DATA_PIPELINE_ENABLED = 1 — bật sau khi đã nạp đủ secret, để trước đó
-    # workflow không đỏ hàng loạt và CRM vẫn kéo dữ liệu theo đường cũ.
-    # Bật: gh variable set DATA_PIPELINE_ENABLED --body 1 -R hxduy93/crm-doscom
-    if: ${{ vars.DATA_PIPELINE_ENABLED == '1' }}
     timeout-minutes: 8
 
     steps:

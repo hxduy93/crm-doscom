@@ -5,13 +5,10 @@ name: Đọc lại dữ liệu (refresh data)
 # hơn GitHub schedule vốn hay trễ vài tiếng). Xem cron-worker/. Ở đây chỉ giữ workflow_dispatch.
 # Tự deploy luôn ở cuối workflow khi dữ liệu đổi (vì push bằng GITHUB_TOKEN không kích hoạt deploy.yml).
 #
-# 2026-08-10 — GỘP PHẦN LẤY DỮ LIỆU TỪ REPO CŨ facebook-ads-dashboard.
-# Có 2 đường lấy dữ liệu, chọn bằng repo variable DATA_PIPELINE_ENABLED:
-#   = 1  → TỰ RÁP tại repo này (scripts/build_dashboard_data.py, cần FB_ACCESS_TOKEN),
-#          ăn các file data/ do cụm workflow fetch-* trong repo này sinh ra.
-#   ≠ 1  → đường CŨ: scripts/refresh_data.py đi copy từ repo facebook-ads-dashboard.
-# Để 2 đường song song cho tới khi nạp đủ secret + đối chiếu số xong thì bật cờ,
-# nhờ vậy merge PR này KHÔNG làm gián đoạn dữ liệu ngày nào.
+# 2026-08-10 — repo này TỰ LẤY DỮ LIỆU, không còn dính repo facebook-ads-dashboard
+# (repo đó đã xoá; toàn bộ lịch sử nằm ở nhánh `legacy-fb-ads-dashboard`).
+# scripts/build_dashboard_data.py ráp dashboard-data.json từ các file data/ do cụm
+# workflow fetch-* sinh ra, cộng FB Ads insights gọi live (cần FB_ACCESS_TOKEN).
 on:
   workflow_dispatch:        # Worker gọi qua đây + cho phép bấm tay khi cần
 
@@ -34,16 +31,13 @@ jobs:
         with:
           python-version: '3.12'
 
-      # ── Đường MỚI: tự ráp tại repo này ────────────────────────────────
       - name: Cài thư viện Python
-        if: vars.DATA_PIPELINE_ENABLED == '1'
         run: pip install requests openpyxl pyflakes
 
       # Cổng chặn — bê nguyên từ repo cũ: một lần sửa code để sót biến đã xoá làm
       # workflow chết 2 lượt liên tiếp (NameError lúc chạy). py_compile/ast.parse
       # KHÔNG bắt được vì không phải lỗi cú pháp; pyflakes thì bắt được.
       - name: Kiểm biến chưa định nghĩa (pyflakes)
-        if: vars.DATA_PIPELINE_ENABLED == '1'
         run: |
           out=$(python -m pyflakes scripts/*.py || true)
           echo "$out"
@@ -53,15 +47,9 @@ jobs:
           fi
 
       - name: Ráp dashboard-data.json (tự lấy dữ liệu)
-        if: vars.DATA_PIPELINE_ENABLED == '1'
         env:
           FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
         run: python scripts/build_dashboard_data.py
-
-      # ── Đường CŨ: copy từ repo facebook-ads-dashboard (dùng khi chưa bật cờ) ──
-      - name: Đọc lại dữ liệu từ repo cũ (refresh_data.py)
-        if: vars.DATA_PIPELINE_ENABLED != '1'
-        run: python scripts/refresh_data.py
 
       # Noma911: giờ đọc LIVE từ D1 riêng của CRM qua /api/noma911/stats — không cần fetch ở đây nữa.
 
