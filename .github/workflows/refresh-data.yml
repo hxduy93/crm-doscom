@@ -76,7 +76,15 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "refresh data $(date -u +%Y-%m-%dT%H:%MZ)"
-            git push
+            # 2026-08-10: retry + rebase. Từ khi gộp pipeline lấy dữ liệu về đây,
+            # nhiều workflow cùng push vào master → `git push` trần bị reject
+            # (đã xảy ra: đụng build-lead-to-order). Giống các workflow fetch-*.
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin master && git push && break
+              if [ "$i" = "5" ]; then echo "Push vẫn fail sau 5 lần retry"; exit 1; fi
+              echo "[retry $i] push bị reject, chờ $((i*5))s rồi rebase lại..."
+              sleep $((i*5))
+            done
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
