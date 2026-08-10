@@ -1053,11 +1053,16 @@ def main():
     # total_spend=0 → ad_spend_by_staff=0 → "cpqc Facebook = 0đ" trên CRM. Giữ file
     # cũ (last-known-good) + exit lỗi để Actions báo đỏ, thay vì ghi đè bằng 0.
     # Advertiser đang chạy 90 ngày không bao giờ spend=0 thật → sentinel an toàn.
-    if total_spend <= 0 and data["accounts"]:
+    # 2026-08-10 — SỬA LỖ HỔNG CỦA GUARD (đã gây sự cố thật): điều kiện cũ là
+    # `total_spend <= 0 AND data["accounts"]`. Khi token sai, MỌI tài khoản đều bị
+    # SKIP vì 403 → data["accounts"] RỖNG → vế thứ hai sai → guard không nổ → ghi
+    # đè dashboard-data.json bằng file rỗng rồi deploy lên web. Nay rỗng cũng chặn.
+    if not data["accounts"] or total_spend <= 0:
         raise SystemExit(
-            "[FATAL] total FB spend = 0 (token FB hết hạn hoặc API lỗi). "
-            "GIỮ NGUYÊN dashboard-data.json cũ, KHÔNG ghi đè bằng 0. "
-            "Hãy làm mới FB_ACCESS_TOKEN (dài hạn / System User token)."
+            "[FATAL] Không lấy được insights FB (0 tài khoản đọc được, hoặc tổng spend = 0) — "
+            "token FB hết hạn / sai / thiếu quyền. GIỮ NGUYÊN dashboard-data.json cũ, "
+            "KHÔNG ghi đè bằng số rỗng. Hãy làm mới FB_ACCESS_TOKEN (System User token, "
+            "quyền ads_read + ads_management), kiểm bằng scripts/fb-token-check.mjs."
         )
 
     print("")

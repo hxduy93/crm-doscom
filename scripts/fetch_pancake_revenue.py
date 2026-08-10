@@ -493,6 +493,7 @@ def _fetch_one_chunk(args):
     """
     ci, n_chunks, c_start, c_end = args
     out = []
+    failed = False
     page = 1
     consecutive_fails = 0
     while page <= MAX_PAGES:
@@ -502,6 +503,7 @@ def _fetch_one_chunk(args):
             if consecutive_fails >= 3:
                 print(f"[WARN] lát {ci}: 3 page fail liên tiếp, bỏ qua phần còn lại của lát",
                       file=sys.stderr)
+                failed = True
                 break
             page += 1
             time.sleep(3)
@@ -518,9 +520,9 @@ def _fetch_one_chunk(args):
     else:
         print(f"[WARN] lát {ci}: chạm trần {MAX_PAGES} page", file=sys.stderr)
 
-    print(f"[INFO] lát {ci}/{n_chunks} {c_start.date()} → {c_end.date()}: {len(out)} đơn",
-          flush=True)
-    return ci, out
+    print(f"[INFO] lát {ci}/{n_chunks} {c_start.date()} → {c_end.date()}: {len(out)} đơn"
+          + (" [LỖI FETCH]" if failed else ""), flush=True)
+    return ci, out, failed
 
 
 def fetch_orders_by_group(start_dt, end_dt):
@@ -553,7 +555,8 @@ def fetch_orders_by_group(start_dt, end_dt):
         results = list(pool.map(_fetch_one_chunk, jobs))
 
     # Gộp theo đúng thứ tự lát để kết quả không phụ thuộc thread nào xong trước
-    for _ci, orders in sorted(results, key=lambda r: r[0]):
+    failed_chunks = sorted(ci for ci, _o, f in results if f)
+    for _ci, orders, _f in sorted(results, key=lambda r: r[0]):
         for o in orders:
             oid = o.get("id")
             if oid is not None:
@@ -574,7 +577,7 @@ def fetch_orders_by_group(start_dt, end_dt):
         print("[INFO] Nguồn NGOÀI dashboard (bỏ qua):")
         for nm, c in sorted(skipped.items(), key=lambda kv: -kv[1]):
             print(f"    {nm:40s} {c:6d} đơn")
-    return by_group
+    return by_group, failed_chunks
 
 
 def phone_last9(s):
@@ -1125,8 +1128,40 @@ def main():
     # (2026-08-10: thay cho 6 lần fetch riêng theo saved filter + source ID hardcode.
     #  Mỗi đơn chỉ vào đúng 1 nhóm nên không còn cần dedup chéo giữa các nhóm.)
     print("─── [FETCH TOÀN BỘ ĐƠN] ─────────────────────────")
-    orders_by_group = fetch_orders_by_group(start_dt, end_dt)
+    orders_by_group, failed_chunks = fetch_orders_by_group(start_dt, end_dt)
     print()
+
+    # ── Guard: KHÔNG ghi đè snapshot cũ bằng dữ liệu thiếu ────────────────────
+    # 2026-08-10 (sự cố thật): API key sai → Pancake trả 403 ở mọi trang → script
+    # vẫn ghi snapshot 0 đơn, workflow vẫn xanh, file 0 đơn được commit + deploy.
+    # Nay: có lát nào fetch lỗi, hoặc tổng đơn = 0, hoặc số đơn tụt quá nửa so với
+    # snapshot cũ → DỪNG, giữ nguyên file cũ, exit 1 để Actions báo đỏ.
+    kept_total = sum(len(v) for v in orders_by_group.values())
+    if failed_chunks:
+        raise SystemExit(
+            f"[FATAL] {len(failed_chunks)} lát thời gian fetch lỗi (lát {failed_chunks}) — "
+            "snapshot sẽ khuyết đơn. GIỮ NGUYÊN product-revenue.json cũ. "
+            "Xem [WARN] phía trên: 403 = api_key sai/hết hạn."
+        )
+    if kept_total == 0:
+        raise SystemExit(
+            "[FATAL] Không lấy được đơn nào thuộc 6 nhóm nguồn. GIỮ NGUYÊN file cũ. "
+            "Kiểm PANCAKE_API_KEY / PANCAKE_SHOP_ID."
+        )
+    _old_path = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), "..", "data", "product-revenue.json"))
+    if os.path.exists(_old_path):
+        try:
+            with open(_old_path, "r", encoding="utf-8") as _f:
+                _old_total = int(json.load(_f).get("total_orders") or 0)
+        except Exception:
+            _old_total = 0
+        if _old_total > 100 and kept_total < _old_total * 0.5:
+            raise SystemExit(
+                f"[FATAL] Snapshot mới chỉ {kept_total} đơn, tụt quá nửa so với bản cũ "
+                f"({_old_total} đơn) — nghi fetch hỏng. GIỮ NGUYÊN file cũ. "
+                "Nếu đúng là giảm thật thì xoá file cũ rồi chạy lại."
+            )
 
     # Per-group aggregates
     per_group = {}
