@@ -176,6 +176,14 @@
           <select class="inp" id="catSel3"></select>
         </div>
         <div class="field">
+          <label class="lab">Nhập nhanh từ Shopee <span style="color:var(--text-2);font-weight:700">(tuỳ chọn)</span></label>
+          <div style="display:flex;gap:8px;align-items:stretch">
+            <input class="inp" id="shopeeUrl" style="flex:1" placeholder="Dán link sản phẩm shopee.vn/...-i.123.456"/>
+            <button class="btn" id="shopeeBtn" type="button" style="white-space:nowrap">Đọc link</button>
+          </div>
+          <div class="hint" id="shopeeMsg" style="margin-top:6px"></div>
+        </div>
+        <div class="field">
           <label class="lab">Tên sản phẩm <span class="req">*</span></label>
           <input class="inp" id="nameInp" placeholder="VD: Máy dò sóng Doscom D5"/>
         </div>
@@ -502,6 +510,51 @@ $('thumbs').addEventListener('click',e=>{
   const i=[...$('thumbs').children].indexOf(th);
   if(i>0){ const m=state.imgs.splice(i,1)[0]; state.imgs.unshift(m); renderThumbs(); syncCardImg(); toast('Đã đặt làm ảnh đại diện'); }
 });
+// ---------- nhập từ Shopee ----------
+// Máy chủ không đọc thẳng Shopee được (trang do JS dựng, API có chữ ký chống bot),
+// nên /api/products/shopee-import nhờ Cloudflare Browser Rendering mở trang thật rồi
+// bóc DOM. Ở đây chỉ đổ kết quả vào form — phần viết bài + đăng vẫn đi đường cũ.
+async function importShopee(){
+  const url=$('shopeeUrl').value.trim();
+  const msg=$('shopeeMsg');
+  if(!url){ msg.textContent='Dán link sản phẩm Shopee vào đã.'; return; }
+  const btn=$('shopeeBtn'); btn.disabled=true; const old=btn.textContent; btn.textContent='Đang đọc…';
+  msg.textContent='Đang mở trang Shopee bằng trình duyệt của Cloudflare (10–40 giây)…';
+  try{
+    const headers={'content-type':'application/json'};
+    const tok=getToken(); if(tok) headers['X-Products-Token']=tok;
+    let {status,d}=await api('/api/products/shopee-import',{method:'POST',headers,body:JSON.stringify({url})});
+    if(status===401){ const t=askToken(); if(t){ headers['X-Products-Token']=t; ({status,d}=await api('/api/products/shopee-import',{method:'POST',headers,body:JSON.stringify({url})})); } }
+    if(!d.ok){ msg.innerHTML='<b style="color:var(--red)">Không đọc được:</b> '+esc(d.hint||d.error||''); return; }
+
+    const p=d.product||{};
+    if(p.name && !$('nameInp').value.trim()) $('nameInp').value=p.name;
+    if(p.price && !$('priceInp').value.trim()) $('priceInp').value=money(String(p.price));
+    if(p.old_price && !$('oldInp').value.trim()) $('oldInp').value=money(String(p.old_price));
+    if(p.note && !$('noteInp').value.trim()) $('noteInp').value=p.note.slice(0,4000);
+
+    // Ảnh: dựng lại đúng khuôn như ảnh user tự chọn (url/full/small) để mọi bước sau dùng chung.
+    let added=0;
+    for(const im of (d.images||[])){
+      if(state.imgs.length>=20) break;
+      const dataURL='data:'+(im.media_type||'image/jpeg')+';base64,'+im.data;
+      const small=await downscale(dataURL,1152);
+      state.imgs.push({ url:dataURL, full:im.data, small, media_type:im.media_type||'image/jpeg', name:'shopee-'+(++added)+'.jpg' });
+    }
+    renderThumbs(); syncCardImg();
+
+    const warn=(d.warnings||[]).length ? ' · <b style="color:var(--accent)">Lưu ý:</b> '+esc(d.warnings.join(' ')) : '';
+    msg.innerHTML='Đã lấy '+added+' ảnh'+(p.name?' · tên + ':' · ')+'giá từ Shopee. Kiểm lại rồi bấm "Viết bài".'+warn;
+    toast('Đã nhập từ Shopee');
+  }catch(e){
+    msg.innerHTML='<b style="color:var(--red)">Lỗi:</b> '+esc(String(e&&e.message||e));
+  }finally{
+    btn.disabled=false; btn.textContent=old;
+  }
+}
+$('shopeeBtn').onclick=importShopee;
+$('shopeeUrl').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); importShopee(); } });
+
 $('genBtn').onclick=()=>generate(false); $('regenBtn').onclick=()=>generate(true);
 $('statusChoice').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; [...$('statusChoice').children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); state.pubStatus=b.dataset.st; updatePubLabel(); });
 $('tagChips').addEventListener('click',e=>{ const x=e.target.closest('.x'); if(x) x.parentElement.remove(); });
