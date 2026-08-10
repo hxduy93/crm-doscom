@@ -6,3 +6,8 @@ node_modules/
 .DS_Store
 dist/
 __pycache__/
+
+# File trung gian của pipeline lấy dữ liệu: ~10.000 SĐT khách lấy từ Pancake CRM.
+# Repo này PUBLIC → KHÔNG commit. Workflow build-lead-to-order.yml fetch rồi dùng
+# ngay trong cùng job, chỉ commit lead-to-order.json (số tổng hợp).
+data/pancake-crm-contacts.json
