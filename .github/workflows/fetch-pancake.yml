@@ -13,7 +13,9 @@ permissions:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # 2026-08-10: script quét TOÀN BỘ đơn của shop (không lọc nguồn phía Pancake nữa)
+    # → ~13 lát × ~7 page, chạy lâu hơn trước (~6 phút). Nới timeout cho chắc.
+    timeout-minutes: 25
 
     steps:
       - name: Checkout repo

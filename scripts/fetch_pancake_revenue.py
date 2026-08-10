@@ -5,9 +5,9 @@ Fetch revenue data from Pancake POS API and aggregate by product × source group
 Output: data/product-revenue.json
 
 Logic:
-- Fetch 5 source groups: DUY, PHƯƠNG NAM, Website, Zalo OA, Hotline
-- DUY + PHƯƠNG NAM: via saved_filters_id (UUID)
-- Website / Zalo OA / Hotline: via explicit order_sources[] IDs
+- Fetch 1 lần TẤT CẢ đơn của shop trong window, rồi gán vào 6 source group
+- DUY + PHƯƠNG NAM: theo tiền tố tên nguồn ("DUY - ...", "PHƯƠNG NAM - ...")
+- Website / Zalo OA / Hotline / Page Facebook: theo ID nguồn cố định
 - Range: 90 ngày gần nhất
 - Revenue per item: variation_info.retail_price × quantity (Pancake giá thật, đã tính discount)
 - Breakdown theo status: delivered (3), returning (4), returned (5), canceled (6), other
@@ -186,75 +186,58 @@ SHOP_ID = os.environ.get("PANCAKE_SHOP_ID", "").strip()
 BASE_URL = "https://pos.pancake.vn/api/v1"
 LOOKBACK_DAYS = 90
 
-# ── 5 SOURCE GROUPS — captured từ Pancake UI ───────────────────────
-# Mỗi nhóm được fetch riêng và aggregate thành 1 bucket trong output.
-# "filter_id" = saved filter UUID (POST kèm saved_filters_id).
-# "sources"   = list order_sources[] payload để POST cùng (hoặc chỉ 1 ID).
-# Nếu chỉ có filter_id mà không có sources → dùng saved filter nguyên gốc.
-# Nếu chỉ có sources mà không có filter_id → dùng raw source IDs.
+# ── 6 SOURCE GROUPS — phân loại đơn theo NGUỒN ĐƠN của Pancake ─────
+#
+# 2026-08-10 — ĐỔI CÁCH LẤY ĐƠN: fetch 1 lần TẤT CẢ đơn của shop trong window rồi
+# gán từng đơn vào nhóm bằng rule bên dưới. Trước đây fetch riêng từng nhóm bằng
+# `saved_filters_id` + danh sách `order_sources[]` HARDCODE, nên mỗi lần sale tạo
+# nguồn đơn mới trên Pancake là đơn của nguồn đó BIẾN MẤT khỏi dashboard cho tới
+# khi có người phát hiện và khai tay source ID (xem lịch sử: 2026-07-31 vá tay
+# "PHƯƠNG NAM - DR1"). Tuần 03–09/08/2026 DUY mất 85 đơn / 12.526.000đ vì 3 nguồn
+# mới "DUY - NOMA 680 / NOMA 230 / NOMA 350" — POS 221 đơn/88.645.000đ nhưng
+# dashboard chỉ 136 đơn/76.119.000đ.
+# Gán theo TÊN/ID nguồn thì nguồn mới tự vào đúng nhóm, không phải khai tay nữa.
+#
+# "name_prefix" = gán theo tiền tố `order_sources_name` (nguồn do nhân sự tự đặt tên,
+#                 quy ước "<TÊN NHÂN SỰ> - <SẢN PHẨM>").
+# "source_ids"  = gán theo ID nguồn cố định của Pancake (nguồn hệ thống, không đổi tên).
+# Thứ tự trong list = thứ tự ưu tiên khi 1 đơn khớp nhiều rule.
+# Đơn không khớp rule nào (Shopee, Tiktok, Woocommerce, RESELL, bán tại quầy...)
+# nằm ngoài phạm vi dashboard — bỏ qua, y như trước. Log cuối bước fetch liệt kê
+# các nguồn bị bỏ kèm số đơn, để soát khi nghi thiếu doanh số.
 
 SOURCE_GROUPS = [
-    # 2026-05-08: Pancake saved_filters_id NOT pure-prefix — include ca don
-    # Facebook generic (-1) ma seller DUY/PN chot. Them `name_prefix` post-filter
-    # sau khi fetch -> chi giu don co order_sources_name khop prefix.
     {
         "key": "DUY",
         "label": "DUY",
-        "filter_id": "8350fe1d-fd9b-41d8-bb3a-f075a5e94df5",
-        "sources": [
-            '["308004272"]', '["1536003777"]', '["615005571"]', '["308003603"]',
-            '["922003735"]', '["1843001674"]', '["922002510"]', '["1843000628"]',
-            '["307500561"]', '["921500725"]', '["921041344"]', '["307040304"]',
-            '["39739"]', '["614046174"]', '["1842044041"]', '["307039298"]',
-            '["1842043463"]', '["1228044436"]', '["614044869"]', '["921041902"]',
-            '["1535037303"]', '["1228042142"]', '["1535038664"]',
-            '["-1","842243695641184"]',
-        ],
-        "name_prefix": ["DUY -", "DUY-"],   # post-filter: chi don co ten "DUY -..."
+        "name_prefix": ["DUY -", "DUY-"],
     },
     {
         "key": "PHUONG_NAM",
         "label": "PHƯƠNG NAM",
-        "filter_id": "78a874c7-0601-4416-a377-481dce360b87",
-        # 1008799 = nguồn PN cũ · 1536008673 = PHƯƠNG NAM - NOMA911 · 1229011407 = PHƯƠNG NAM - D1
-        # 2026-07-31: THÊM 1536016559 = "PHƯƠNG NAM - DR1" (nguồn tạo ~28/07, chưa từng khai).
-        #   Triệu chứng trước khi vá: DR1 của Nam chỉ hiện 3 đơn/3,9tr tháng 7 trên dashboard
-        #   trong khi Pancake POS có 18-21 đơn/24-28tr. Nguyên nhân: nguồn không được fetch ở
-        #   nhóm này nên đơn rơi xuống FB_PAGE — nhóm cuối trong thứ tự dedup, fetch source -1
-        #   và KHÔNG có name_prefix nên hứng mọi đơn Facebook chưa nhóm nào nhận.
-        # LƯU Ý VẬN HÀNH: mỗi lần tạo nguồn "PHƯƠNG NAM - <SP>" hay "DUY - <SP>" mới trên
-        #   Pancake, PHẢI thêm source ID vào đây, nếu không doanh số nhân sự sẽ hụt âm thầm.
-        #   Dò nguồn thiếu bằng workflow `list-all-order-sources.yml`.
-        "sources": [
-            '["1008799"]', '["1536008673"]', '["1229011407"]', '["1536016559"]',
-        ],
         "name_prefix": ["PHƯƠNG NAM -", "PHUONG NAM -", "PHƯƠNG NAM-", "PHUONG NAM-"],
     },
     {
         "key": "WEBSITE",
         "label": "Website",
-        "filter_id": None,  # sub-nhóm của Website saved filter, fetch bằng raw source ID
-        "sources": ['["921043352"]'],
+        "source_ids": ["921043352"],
     },
     {
         "key": "ZALO_OA",
         "label": "Zalo OA",
-        "filter_id": None,
-        "sources": ['["37931"]'],
+        "source_ids": ["37931"],
     },
     {
         "key": "HOTLINE",
         "label": "Hotline",
-        "filter_id": None,
-        "sources": ['["614042808"]'],
+        "source_ids": ["614042808"],
     },
     {
         # Don nhan tin truc tiep qua page Facebook (organic Messenger, KHONG qua ad).
         # Source ID -1 = Pancake builtin "Facebook" generic source.
         "key": "FB_PAGE",
         "label": "Page Facebook",
-        "filter_id": None,
-        "sources": ['["-1"]'],
+        "source_ids": ["-1"],
     },
 ]
 
@@ -432,8 +415,20 @@ def _load_retail_prices():
 RETAIL_PRICES = _load_retail_prices()
 
 
-def fetch_orders(group, page=1, page_size=100, start_date=None, end_date=None, max_retries=4):
-    """Fetch 1 page đơn từ Pancake cho 1 source group."""
+PAGE_SIZE = 500          # Pancake cho tối đa 500 đơn/page — ít request hơn
+MAX_PAGES = 60           # trần page MỖI LÁT thời gian (60 × 500 = 30k đơn/lát)
+# Cắt window thành từng lát 7 ngày rồi mới phân trang. Lý do: Pancake phân trang
+# sâu rất chậm (đo 2026-08-10: 90 ngày = 92 page, page 1 ~3s nhưng page 80 ~42s
+# → cả run >15 phút). Mỗi lát 7 ngày chỉ ~7 page nên page nào cũng ~3s.
+CHUNK_DAYS = 7
+
+
+def fetch_orders(page=1, page_size=PAGE_SIZE, start_date=None, end_date=None, max_retries=4):
+    """Fetch 1 page đơn của shop trong date range (KHÔNG lọc nguồn).
+
+    Lọc nguồn làm ở phía mình (`group_of_order`) thay vì nhờ Pancake, để nguồn
+    đơn mới do sale tự tạo không bị rơi ra ngoài dashboard.
+    """
     params = [
         ("api_key", API_KEY),
         ("page", page),
@@ -442,34 +437,29 @@ def fetch_orders(group, page=1, page_size=100, start_date=None, end_date=None, m
         ("updateStatus", "inserted_at"),
         ("option_sort", "inserted_at_desc"),
         ("es_only", "true"),
-        ("is_filter_multiple_source", "true"),
     ]
-    if group.get("filter_id"):
-        params.append(("saved_filters_id", group["filter_id"]))
     if start_date:
         params.append(("startDateTime", int(start_date.timestamp())))
     if end_date:
         params.append(("endDateTime", int(end_date.timestamp())))
-    for s in group.get("sources", []):
-        params.append(("order_sources[]", s))
 
     url = f"{BASE_URL}/shops/{SHOP_ID}/orders/get_orders?{urlencode(params)}"
 
     for attempt in range(1, max_retries + 1):
         req = urllib.request.Request(url, headers={"Accept": "application/json"}, method="POST")
         try:
-            with urllib.request.urlopen(req, timeout=45) as resp:
+            with urllib.request.urlopen(req, timeout=120) as resp:
                 raw = resp.read().decode("utf-8")
                 return json.loads(raw)
         except urllib.error.HTTPError as e:
             body = e.read().decode("utf-8", errors="ignore")[:200]
-            print(f"[WARN] group={group['key']} HTTP {e.code} page={page} attempt={attempt}: {body}", file=sys.stderr)
+            print(f"[WARN] HTTP {e.code} page={page} attempt={attempt}: {body}", file=sys.stderr)
             if e.code in (429, 500, 502, 503, 504) and attempt < max_retries:
                 time.sleep(2 ** attempt)
                 continue
             return None
         except Exception as e:
-            print(f"[WARN] group={group['key']} {type(e).__name__} page={page} attempt={attempt}: {e}", file=sys.stderr)
+            print(f"[WARN] {type(e).__name__} page={page} attempt={attempt}: {e}", file=sys.stderr)
             if attempt < max_retries:
                 time.sleep(2 ** attempt)
                 continue
@@ -477,58 +467,97 @@ def fetch_orders(group, page=1, page_size=100, start_date=None, end_date=None, m
     return None
 
 
-def fetch_all_orders_for_group(group, start_dt, end_dt):
-    """Fetch tất cả orders của 1 source group trong date range.
+def group_of_order(order):
+    """Trả về key nhóm nguồn của 1 đơn, hoặc None nếu đơn ngoài phạm vi dashboard.
 
-    Nếu group có `name_prefix`, post-filter theo `order_sources_name` (chỉ giữ
-    đơn có tên nguồn khớp prefix) — Pancake saved_filters_id không pure-prefix,
-    có thể include cả đơn Facebook generic (ID -1) mà seller chốt.
+    Ưu tiên theo thứ tự SOURCE_GROUPS: tên nguồn khớp prefix trước, rồi ID nguồn.
     """
-    all_orders = []
-    page = 1
-    consecutive_fails = 0
-    while True:
-        data = fetch_orders(group, page=page, page_size=100, start_date=start_dt, end_date=end_dt)
-        if data is None:
-            consecutive_fails += 1
-            if consecutive_fails >= 3:
-                print(f"[WARN] group={group['key']}: 3 pages fail liên tiếp, dừng fetch", file=sys.stderr)
+    name = (order.get("order_sources_name") or "").strip()
+    sid = str(order.get("order_sources") if order.get("order_sources") is not None else "").strip()
+    for group in SOURCE_GROUPS:
+        for p in group.get("name_prefix", []):
+            if name.startswith(p):
+                return group["key"]
+        if sid and sid in group.get("source_ids", []):
+            return group["key"]
+    return None
+
+
+def fetch_orders_by_group(start_dt, end_dt):
+    """Fetch TẤT CẢ đơn của shop trong date range → dict {group_key: [orders]}.
+
+    Quét theo từng lát CHUNK_DAYS ngày (tránh phân trang sâu, xem CHUNK_DAYS).
+    Đơn được gán nhóm ngay khi nhận từng page — đơn ngoài nhóm bị bỏ luôn, không
+    giữ trong RAM (window 90 ngày có ~46k đơn nhưng chỉ ~10k thuộc 6 nhóm).
+    Dedup theo order.id để phòng trùng ở ranh giới lát / khi có đơn mới chèn vào.
+    Đơn không thuộc nhóm nào được in ra cuối log theo tên nguồn — để phát hiện
+    sớm nguồn mới đặt tên sai quy ước.
+    """
+    by_group = {g["key"]: [] for g in SOURCE_GROUPS}
+    skipped = {}
+    seen_ids = set()
+    total_seen = 0
+
+    chunks = []
+    cur = start_dt
+    while cur < end_dt:
+        nxt = min(cur + timedelta(days=CHUNK_DAYS), end_dt)
+        chunks.append((cur, nxt))
+        cur = nxt
+
+    for ci, (c_start, c_end) in enumerate(chunks, 1):
+        page = 1
+        consecutive_fails = 0
+        chunk_seen = 0
+        while page <= MAX_PAGES:
+            data = fetch_orders(page=page, start_date=c_start, end_date=c_end)
+            if data is None:
+                consecutive_fails += 1
+                if consecutive_fails >= 3:
+                    print(f"[WARN] lát {ci}: 3 page fail liên tiếp, bỏ qua phần còn lại của lát",
+                          file=sys.stderr)
+                    break
+                page += 1
+                time.sleep(3)
+                continue
+            consecutive_fails = 0
+            batch = data.get("data") or data.get("orders") or []
+            if not batch:
+                break
+
+            for o in batch:
+                oid = o.get("id")
+                if oid is not None:
+                    if oid in seen_ids:
+                        continue
+                    seen_ids.add(oid)
+                total_seen += 1
+                chunk_seen += 1
+                key = group_of_order(o)
+                if key:
+                    by_group[key].append(o)
+                else:
+                    nm = (o.get("order_sources_name") or "(none)").strip()
+                    skipped[nm] = skipped.get(nm, 0) + 1
+
+            if len(batch) < PAGE_SIZE:
                 break
             page += 1
-            time.sleep(3)
-            continue
-        consecutive_fails = 0
-        batch = data.get("data") or data.get("orders") or []
-        if not batch:
-            break
-        all_orders.extend(batch)
-        print(f"[INFO] group={group['key']} page {page}: {len(batch)} đơn (tổng {len(all_orders)})")
-        if len(batch) < 100:
-            break
-        page += 1
-        time.sleep(0.3)
-        if page > 200:
-            print(f"[WARN] group={group['key']}: Hit 200-page safety cap", file=sys.stderr)
-            break
+            time.sleep(0.3)
+        else:
+            print(f"[WARN] lát {ci}: chạm trần {MAX_PAGES} page", file=sys.stderr)
 
-    # Post-filter theo name_prefix nếu có — chỉ giữ đơn có order_sources_name
-    # khớp prefix (loại đơn Facebook generic / Hotline mà saved_filter include nhầm)
-    prefixes = group.get("name_prefix")
-    if prefixes:
-        before = len(all_orders)
-        all_orders = [
-            o for o in all_orders
-            if any(
-                (o.get("order_sources_name") or "").strip().startswith(p)
-                for p in prefixes
-            )
-        ]
-        skipped = before - len(all_orders)
-        if skipped > 0:
-            print(f"[INFO] group={group['key']}: post-filter prefix {prefixes} -> "
-                  f"giữ {len(all_orders)} / {before} đơn (skip {skipped} đơn không khớp prefix)")
+        kept = sum(len(v) for v in by_group.values())
+        print(f"[INFO] lát {ci}/{len(chunks)} {c_start.date()} → {c_end.date()}: "
+              f"{chunk_seen} đơn mới (tổng quét {total_seen}, giữ {kept})", flush=True)
 
-    return all_orders
+    print(f"\n[INFO] Tổng quét {total_seen} đơn → giữ "
+          f"{sum(len(v) for v in by_group.values())} đơn thuộc {len(SOURCE_GROUPS)} nhóm")
+    if skipped:
+        print("[INFO] Nguồn NGOÀI dashboard (bỏ qua):")
+        for nm, c in sorted(skipped.items(), key=lambda kv: -kv[1]):
+            print(f"    {nm:40s} {c:6d} đơn")
+    return by_group
 
 
 def phone_last9(s):
@@ -1075,38 +1104,25 @@ def main():
     print(f"[INFO] Fetching Pancake orders {start_dt.date()} → {end_dt.date()} ({LOOKBACK_DAYS}d)")
     print(f"[INFO] Source groups: {[g['label'] for g in SOURCE_GROUPS]}\n")
 
+    # ── Fetch 1 lần toàn bộ đơn của shop, gán nhóm ngay khi nhận ──
+    # (2026-08-10: thay cho 6 lần fetch riêng theo saved filter + source ID hardcode.
+    #  Mỗi đơn chỉ vào đúng 1 nhóm nên không còn cần dedup chéo giữa các nhóm.)
+    print("─── [FETCH TOÀN BỘ ĐƠN] ─────────────────────────")
+    orders_by_group = fetch_orders_by_group(start_dt, end_dt)
+    print()
+
     # Per-group aggregates
     per_group = {}
     per_group_orders = {}   # NEW: cache raw orders để build top_products_website_by_period
     grand_total_orders = 0
     all_orders_combined = []
-    # 2026-05-06: dedup theo order.id giữa các groups. Pancake saved filters
-    # DUY và PHƯƠNG NAM có thể overlap → 1 đơn fetch ở cả 2 groups → double count.
-    # Đơn nào đã xuất hiện ở group trước thì SKIP ở group sau (priority order:
-    # DUY → PHUONG_NAM → WEBSITE → ZALO_OA → HOTLINE — matches SOURCE_GROUPS order).
-    seen_order_ids = set()
-    duplicate_count_by_group = {}
 
     for group in SOURCE_GROUPS:
         key = group["key"]
         label = group["label"]
         print(f"─── [{label}] ───────────────────────────────────")
-        raw_orders = fetch_all_orders_for_group(group, start_dt, end_dt)
-        # Dedup
-        orders = []
-        dup = 0
-        for o in raw_orders:
-            oid = o.get("id")
-            if oid is None:
-                orders.append(o)
-                continue
-            if oid in seen_order_ids:
-                dup += 1
-                continue
-            seen_order_ids.add(oid)
-            orders.append(o)
-        duplicate_count_by_group[key] = dup
-        print(f"[INFO] group={key}: fetched {len(raw_orders)} đơn → {len(orders)} unique (skip {dup} đã thấy ở group trước)")
+        orders = orders_by_group.get(key, [])
+        print(f"[INFO] group={key}: {len(orders)} đơn")
 
         status_counter = Counter(o.get("status") for o in orders)
         print(f"[DEBUG] {key} status: {dict(status_counter.most_common())}")
