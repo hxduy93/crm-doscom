@@ -144,6 +144,37 @@ def detect_product(name: str):
     return None
 
 
+def _strip_accents(s: str) -> str:
+    """Bỏ dấu tiếng Việt để so tên campaign không phụ thuộc người gõ có dấu hay không.
+    'Thái Lan' và 'THAI LAN' phải ra cùng một chuỗi."""
+    import unicodedata
+    s = unicodedata.normalize("NFD", str(s or ""))
+    s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
+    return s.replace("đ", "d").replace("Đ", "D").lower()
+
+
+# Dấu hiệu campaign chạy THỊ TRƯỜNG THÁI LAN, khớp trên tên đã bỏ dấu + bỏ khoảng trắng.
+#
+# CHỈ nhận nguyên cụm. TUYỆT ĐỐI KHÔNG bắt mỗi chữ "thai": trong tài khoản đang chạy có
+# sẵn 4 campaign Việt Nam tên "Noma911 - Thái Vũ BlackBi" / "...-Phương Nam-Thaivu" —
+# Thái Vũ là TÊN NGƯỜI. Bắt "thai" là 4 campaign đó bị loại khỏi chi phí Việt Nam và tiền
+# biến mất âm thầm, đúng vết xe đã ngã của bộ lọc nguồn Pancake trước đây.
+# Tương tự "Thái Nguyên", "Thái Bình" (tên tỉnh, campaign target theo địa phương).
+_TH_MARKERS = ("thailan", "thailand", "thai-lan")
+
+
+def detect_market(name: str) -> str:
+    """'th' nếu tên campaign ghi rõ Thái Lan, ngược lại 'vn'.
+
+    Bỏ hết khoảng trắng trước khi so, để 'Thái Lan', 'Thai  Lan', 'THAILAND' cùng khớp;
+    'Thái Vũ' -> 'thaivu' không chứa 'thailan' nên vẫn là 'vn'.
+    """
+    if not name:
+        return "vn"
+    flat = _strip_accents(name).replace(" ", "").replace("_", "")
+    return "th" if any(m.replace("-", "") in flat for m in _TH_MARKERS) else "vn"
+
+
 def detect_profit_product(name: str):
     """
     Extract 1 trong 14 PROFIT_PRODUCTS từ tên campaign — để phân bổ ad spend
@@ -494,6 +525,9 @@ def build_data():
                     "name": r.get("campaign_name", ""),
                     "account_id": f"act_{acc['id']}",
                     "product": detect_product(r.get("campaign_name", "")),
+                    # 'vn' | 'th' — chi tiêu campaign Thái KHÔNG được cộng vào chi phí
+                    # Doscom Việt Nam; xem khối ad_spend_thailand phía dưới.
+                    "market": detect_market(r.get("campaign_name", "")),
                     "daily": [],
                 }
             camps[cid]["daily"].append({
@@ -525,6 +559,7 @@ def build_data():
                     "account_id": f"act_{acc['id']}",
                     "campaign": r.get("campaign_name", ""),
                     "product": detect_product(r.get("campaign_name", "")),
+                    "market": detect_market(r.get("campaign_name", "")),
                     "daily": [],
                 }
             ads[aid]["daily"].append({
@@ -543,6 +578,10 @@ def build_data():
         bucket = {}
         for c in data["campaigns"]:
             if c["product"] != p:
+                continue
+            # Bỏ campaign Thái: ba rổ này là số Việt Nam. Cùng mã "D1" nhưng khác thị
+            # trường, gộp vào là biểu đồ sản phẩm D1 phồng lên bằng tiền chạy ở Thái.
+            if c.get("market") == "th":
                 continue
             for d in c["daily"]:
                 dt = d["date"]
@@ -574,16 +613,49 @@ def build_data():
 
     ad_spend_by_staff = {"DUY": {}, "PHUONG_NAM": {}}
     excluded = {"DUY": {"_total": 0.0, "by_date": {}}, "PHUONG_NAM": {"_total": 0.0, "by_date": {}}}
+
+    # Chi tiêu THỊ TRƯỜNG THÁI LAN — rổ RIÊNG, không đụng gì tới hai nhân sự Việt Nam.
+    # Nhánh 'th' được kiểm TRƯỚC cả bước gán sản phẩm: campaign Thái không gán được SP
+    # vẫn phải nằm ở đây, tuyệt đối không rơi vào rổ "campaign tương tác chạy hộ" của
+    # nhân sự Việt — rơi vào đó là tiền Thái đội lốt tiền Việt bị loại.
+    thailand = {"_total": 0.0, "by_date": {}, "by_product": {}, "campaigns": []}
+    th_names = []
+
+    def _add(bucket, date, amount):
+        bucket["_total"] += amount
+        bucket["by_date"][date] = bucket["by_date"].get(date, 0.0) + amount
+
     from_link, excluded_names = [], []
     for c in data["campaigns"]:
         staff = account_to_staff.get(c.get("account_id"))
         if not staff:
             continue
+
         prod = detect_profit_product(c.get("name", ""))
         if not prod:
             prod = link_products.get(str(c.get("id") or ""))
-            if prod:
+            if prod and c.get("market") != "th":
                 from_link.append(c.get("name", "")[:40])
+
+        if c.get("market") == "th":
+            # SP không nhận ra thì vẫn giữ tiền lại dưới nhãn rõ ràng, KHÔNG bỏ im lặng.
+            key = prod or "(chưa rõ SP)"
+            pb = thailand["by_product"].setdefault(key, {"_total": 0.0, "by_date": {}})
+            spent = 0.0
+            for d in c["daily"]:
+                sp = float(d.get("spend") or 0)
+                if sp <= 0:
+                    continue
+                _add(pb, d["date"], sp)
+                _add(thailand, d["date"], sp)
+                spent += sp
+            thailand["campaigns"].append({
+                "id": c.get("id"), "name": c.get("name", ""),
+                "product": key, "spend": round(spent), "source": "facebook",
+            })
+            th_names.append(c.get("name", "")[:40])
+            continue
+
         if not prod:
             bucket = excluded[staff]
             excluded_names.append(c.get("name", "")[:40])
@@ -593,8 +665,7 @@ def build_data():
             sp = float(d.get("spend") or 0)
             if sp <= 0:
                 continue
-            bucket["_total"] += sp
-            bucket["by_date"][d["date"]] = bucket["by_date"].get(d["date"], 0.0) + sp
+            _add(bucket, d["date"], sp)
     data["ad_spend_by_staff"] = ad_spend_by_staff
     data["ad_spend_excluded"] = excluded
     if from_link:
@@ -634,6 +705,36 @@ def build_data():
             "by_category": g_ads.get("by_category", {}),
             "campaigns_raw": g_ads.get("campaigns_raw", []),
         }
+        # --- Trừ campaign Google chạy Thái khỏi by_category ---
+        # by_category do fetch_google_ads_spend.py gộp sẵn, KHÔNG biết thị trường. Ở đây
+        # dò lại từ campaigns_raw (có tên + ngày + tiền) rồi trừ ngược ra, để chi phí
+        # Google của Việt Nam không cõng tiền chạy Thái. Hiện chưa có campaign Google nào
+        # gắn Thái Lan — khối này là để lúc có thì không phải nhớ sửa thêm chỗ nữa.
+        g_th = 0.0
+        for row in (data["google_ads"].get("campaigns_raw") or []):
+            if detect_market(row.get("campaign", "")) != "th":
+                continue
+            cat, dt = row.get("category"), row.get("date")
+            sp = float(row.get("spend") or 0)
+            if sp <= 0:
+                continue
+            g_th += sp
+            key = detect_profit_product(row.get("campaign", "")) or "(chưa rõ SP)"
+            pb = thailand["by_product"].setdefault(key, {"_total": 0.0, "by_date": {}})
+            _add(pb, dt, sp)
+            _add(thailand, dt, sp)
+            thailand["campaigns"].append({
+                "id": None, "name": row.get("campaign", ""),
+                "product": key, "spend": round(sp), "source": "google",
+            })
+            bc = data["google_ads"]["by_category"].get(cat)
+            if bc:
+                bc["_total"] = max(0.0, float(bc.get("_total") or 0) - sp)
+                if dt in (bc.get("by_date") or {}):
+                    bc["by_date"][dt] = max(0.0, float(bc["by_date"][dt]) - sp)
+        if g_th:
+            print(f"   ↪ Google: trừ {g_th:,.0f}đ campaign chạy Thái khỏi by_category")
+
         total_gads = sum(v.get("_total", 0) for v in g_ads.get("by_category", {}).values())
         print(f"   ✓ loaded Google Ads spend: {total_gads:,.0f}đ · "
               f"{len(g_ads.get('by_category', {}))} categories · "
@@ -641,6 +742,20 @@ def build_data():
     except Exception as e:
         print(f"   ✗ Google Ads load failed: {e}")
         data["google_ads"] = {"by_category": {}, "campaigns_raw": []}
+
+    # --- CHI TIÊU THỊ TRƯỜNG THÁI LAN -------------------------------
+    # Ghi SAU khối Google để gộp được cả FB lẫn Google vào một rổ.
+    # Số này KHÔNG nằm trong ad_spend_by_staff, KHÔNG nằm trong products[], và đã bị trừ
+    # khỏi google_ads.by_category. Riêng accounts[].daily vẫn là số THÔ khớp Ads Manager —
+    # giao diện tự trừ ở chỗ dùng (xem thSpendRange trong index.html), CỐ Ý không sửa số
+    # thô ở đây để agent Facebook còn đối chiếu được với Trình quản lý quảng cáo.
+    thailand["campaigns"].sort(key=lambda x: -x["spend"])
+    data["ad_spend_thailand"] = thailand
+    if thailand["_total"]:
+        print(f"   ✓ THÁI LAN: {thailand['_total']:,.0f}đ / {len(thailand['campaigns'])} campaign "
+              f"({', '.join(th_names[:5])}) — đã tách khỏi chi phí Việt Nam")
+    else:
+        print("   · THÁI LAN: chưa có campaign nào gắn 'Thái Lan' trong tên")
 
     # --- PRODUCT COSTS (xlsx Kho tổng → product-costs.json) ------
     # Merge thứ tự (ưu tiên cao → thấp):

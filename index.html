@@ -1098,9 +1098,33 @@
   function inR(d){ return d>=range.start && d<=range.end; }
   function sumByDate(obj){ var s=0; if(!obj)return 0; for(var d in obj){ if(inR(d)) s+=Number(obj[d])||0; } return s; }
 
-  // FB spend từ accounts[].daily
-  function fbSpend(){ var s=0; (D.accounts||[]).forEach(function(a){ (a.daily||[]).forEach(function(x){ if(inR(x.date)) s+=Number(x.spend)||0; }); }); return s; }
-  function fbRegs(){ var s=0; (D.accounts||[]).forEach(function(a){ (a.daily||[]).forEach(function(x){ if(inR(x.date)) s+=Number(x.registrations)||0; }); }); return s; }
+  /* Chi tiêu campaign chạy THÁI LAN, theo ngày (FB + Google gộp sẵn ở build).
+     accounts[].daily là số THÔ của Facebook — cố ý giữ nguyên để khớp Trình quản lý
+     quảng cáo (agent FB còn đối chiếu). Nên phải TRỪ ở đây, đúng chỗ đang tính "chi phí
+     Doscom Việt Nam". Số Thái xem riêng ở menu "Thị trường Thái Lan".
+     Google thì đã bị trừ ngay từ build (by_category), KHÔNG trừ lại ở đây kẻo trừ hai lần. */
+  function thSpend(){ return sumByDate(((D.ad_spend_thailand||{}).by_date)||{}); }
+  function thSpendFb(){
+    var s=0,ths=(D.ad_spend_thailand||{}).campaigns||[];
+    var ids={}; ths.forEach(function(c){ if(c.source==='facebook'&&c.id) ids[String(c.id)]=1; });
+    (D.campaigns||[]).forEach(function(c){
+      if(c.market!=='th' && !ids[String(c.id)]) return;
+      (c.daily||[]).forEach(function(x){ if(inR(x.date)) s+=Number(x.spend)||0; });
+    });
+    return s;
+  }
+  function thRegsFb(){
+    var s=0;
+    (D.campaigns||[]).forEach(function(c){
+      if(c.market!=='th') return;
+      (c.daily||[]).forEach(function(x){ if(inR(x.date)) s+=Number(x.registrations)||0; });
+    });
+    return s;
+  }
+  // FB spend từ accounts[].daily, TRỪ phần chạy Thái. max(0,…) phòng trường hợp số cộng
+  // theo campaign nhỉnh hơn số theo tài khoản (Facebook có lệch nhỏ giữa hai cấp).
+  function fbSpend(){ var s=0; (D.accounts||[]).forEach(function(a){ (a.daily||[]).forEach(function(x){ if(inR(x.date)) s+=Number(x.spend)||0; }); }); return Math.max(0, s-thSpendFb()); }
+  function fbRegs(){ var s=0; (D.accounts||[]).forEach(function(a){ (a.daily||[]).forEach(function(x){ if(inR(x.date)) s+=Number(x.registrations)||0; }); }); return Math.max(0, s-thRegsFb()); }
   // Google spend từ google_ads.by_category[].by_date
   function ggSpend(){ var s=0,ga=(D.google_ads||{}).by_category||{}; for(var k in ga){ s+=sumByDate(ga[k].by_date); } return s; }
   // Pancake: tổng đơn + doanh thu mọi trạng thái
@@ -1316,6 +1340,11 @@
       }
     }
     (D.accounts||[]).forEach(function(a){ (a.daily||[]).forEach(function(x){ if(inR(x.date)){ var m=x.date.slice(0,7); mfb[m]=(mfb[m]||0)+(Number(x.spend)||0); } }); });
+    // Trừ chi tiêu campaign Thái theo từng tháng — cùng lý do như fbSpend(): accounts[]
+    // là số thô của Facebook, gồm cả tiền chạy Thái. Không trừ thì bảng lợi nhuận tháng
+    // gánh chi phí Thái trong khi doanh thu Thái không nằm ở đây -> lợi nhuận hụt giả.
+    (D.campaigns||[]).forEach(function(c){ if(c.market!=='th') return;
+      (c.daily||[]).forEach(function(x){ if(inR(x.date)){ var mt=x.date.slice(0,7); mfb[mt]=Math.max(0,(mfb[mt]||0)-(Number(x.spend)||0)); } }); });
     var ga=(D.google_ads||{}).by_category||{}; for(var k in ga){ var b=ga[k].by_date||{}; for(var d3 in b){ if(inR(d3)){ var m3=d3.slice(0,7); mgg[m3]=(mgg[m3]||0)+(Number(b[d3])||0); } } }
     // Lấy tháng từ bản GỘP: tháng chỉ có đơn hoàn vẫn phải hiện (doanh thu sau hoàn = 0),
     // nếu lấy từ mrev thì tháng đó biến mất khỏi bảng.
@@ -2596,14 +2625,64 @@
     var peak=byDate.reduce(function(a,b){ return n0(b.leads)>n0(a.leads)?b:a; },{leads:0});
     var avg=activeDays?(total/activeDays):0;
 
+    /* Chi tiêu campaign chạy Thái, lấy từ snapshot dashboard (D.ad_spend_thailand).
+       Cộng theo ĐÚNG khoảng ngày của màn hình này, không mượn bộ lọc của dashboard VN. */
+    var snapReady=!!window.D;            // dashboard-data.json đã tải xong chưa
+    var TH=(window.D||{}).ad_spend_thailand||{};
+    var thByDate=TH.by_date||{};
+    var spend=0, hasAnyThCampaign=false;
+    if(L.range){
+      for(var dk in thByDate){
+        hasAnyThCampaign=true;
+        if(dk>=L.range.from && dk<=L.range.to) spend+=Number(thByDate[dk])||0;
+      }
+    }
+    var cpl=(spend>0&&total>0)?(spend/total):0;
+    /* Ba trạng thái KHÁC NHAU, đừng gộp làm một: chưa tải snapshot / đã tải nhưng chưa
+       có campaign Thái nào / có rồi. Gộp lại là lúc mạng chậm người dùng đọc thành
+       "không có campaign nào" rồi đi đặt lại tên campaign vô ích. */
+    var spendCell = !snapReady
+      ? kpiNA('Chi phí QC','Snapshot dashboard chưa tải xong. Mở tab Tổng quan một lần rồi quay lại đây.')
+      : (hasAnyThCampaign
+          ? kpi('Chi phí QC (VNĐ)',num(Math.round(spend)),'Campaign có chữ "Thái Lan" trong tên — đã trừ khỏi chi phí Việt Nam')
+          : kpiNA('Chi phí QC','Chưa có campaign nào gắn "Thái Lan" trong tên. Đặt tên campaign kèm chữ Thái Lan + tên sản phẩm là số tự về đây.'));
+
     kpis.innerHTML=
       kpi('Tổng lead',num(total),L.range?(L.range.from+' → '+L.range.to):'')+
       kpi('Số ngày có lead',num(activeDays))+
       kpi('Trung bình / ngày có lead',(Math.round(avg*10)/10).toLocaleString('vi-VN'))+
       kpi('Ngày cao nhất',peak.leads?(num(peak.leads)+' lead'):'—',peak.created_date||'')+
-      kpiNA('Chi phí QC · CPL · ROAS','Tài khoản quảng cáo Thái chưa nối vào snapshot data/*.json — hiện chỉ có tài khoản Việt Nam.');
+      /* Chi phí ghi bằng VNĐ vì campaign Thái chạy trên chính tài khoản quảng cáo Việt
+         Nam — Facebook xuất hoá đơn VNĐ. Đừng đổi nhãn sang ฿ nếu chưa đổi tài khoản. */
+      spendCell+
+      (cpl>0
+        ? kpi('CPL (VNĐ/lead)',num(Math.round(cpl)),'Chi phí QC ÷ số lead trong cùng khoảng')
+        : kpiNA('CPL','Cần có đồng thời chi phí QC và lead trong cùng khoảng ngày.'))+
+      kpiNA('Doanh thu · ROAS','Bảng landing_leads không lưu số tiền, và đơn Thái chưa nối về Pancake. KHÔNG quy đổi lead × 3.590 ฿ thành doanh thu — lead chưa phải đơn chốt.');
 
     var html='';
+
+    // ---- Chi phí theo sản phẩm (chỉ hiện khi đã có campaign Thái) ----
+    var byProd=TH.by_product||{};
+    var prodKeys=Object.keys(byProd);
+    if(prodKeys.length&&L.range){
+      var rows=prodKeys.map(function(k){
+        var s=0,bd=byProd[k].by_date||{};
+        for(var d in bd){ if(d>=L.range.from&&d<=L.range.to) s+=Number(bd[d])||0; }
+        return {k:k,spend:s};
+      }).filter(function(r){return r.spend>0;}).sort(function(a,b){return b.spend-a.spend;});
+      if(rows.length){
+        var sumSp=rows.reduce(function(t,r){return t+r.spend;},0);
+        html+='<div class="th-card"><h3>Chi phí quảng cáo theo sản phẩm</h3>'+
+              '<table><thead><tr><th>Sản phẩm</th><th class="num">Chi phí (VNĐ)</th><th class="num">%</th></tr></thead><tbody>';
+        rows.forEach(function(r){
+          html+='<tr><td style="font-weight:700">'+esc(r.k)+'</td><td class="num" style="font-weight:800">'+num(Math.round(r.spend))+
+                '</td><td class="num" style="color:var(--text-2)">'+(r.spend/sumSp*100).toFixed(1)+'%</td></tr>';
+        });
+        html+='<tr class="tot"><td>Tổng</td><td class="num">'+num(Math.round(sumSp))+'</td><td class="num">100%</td></tr>';
+        html+='</tbody></table></div>';
+      }
+    }
 
     // ---- Theo landing ----
     var byLanding=(L.by_landing||[]).slice().sort(function(a,b){return n0(b.leads)-n0(a.leads);});

@@ -16,8 +16,9 @@
 
 ## Chưa làm (cần quyết định của chủ dự án)
 
-- [ ] 7. Nối tài khoản quảng cáo Thái vào snapshot `data/*.json` để có Chi phí QC / CPL /
-      ROAS. Hiện ô đó hiện "thiếu dữ liệu".
+- [x] 7. Tách chi phí QC theo thị trường qua `detect_market()` — xong 12/08/2026. Menu Thái
+      đã có Chi phí QC + CPL. Riêng Doanh thu / ROAS vẫn "thiếu dữ liệu" vì đơn Thái chưa
+      nối về Pancake và `landing_leads` không lưu số tiền.
 - [ ] 8. Landing Thái (`doscom-d1-th`) chưa cộng dồn cột `submits` (migration 0016) — đang
       dùng `INSERT OR IGNORE` nên lần gửi trùng biến mất, không đối soát được với pixel
       như landing DR1 đang làm. Muốn có chỉ số "số lần bấm gửi vs lead thật" thì phải sửa
