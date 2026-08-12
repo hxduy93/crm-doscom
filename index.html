@@ -223,6 +223,7 @@
     </div>
     <button class="nav-item" data-view="agent-fb"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M9 2h6M8 13h.01M16 13h.01M9 17h6"/></svg></span><span class="lb">Agent Facebook Ads</span></button>
     <button class="nav-item" data-view="agent-gg"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg></span><span class="lb">Agent Google Ads</span></button>
+    <button class="nav-item" data-view="thailand"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/></svg></span><span class="lb">Thị trường Thái Lan</span></button>
     <button class="nav-item" data-view="heatmap"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s5 4 5 9a5 5 0 0 1-10 0c0-1.5.5-2.8 1.2-3.8"/><path d="M12 13a2.5 2.5 0 0 0 2.5-2.5C14.5 9 12 6.5 12 6.5S9.5 9 9.5 10.5A2.5 2.5 0 0 0 12 13z"/></svg></span><span class="lb">Heatmap sản phẩm</span></button>
     <div class="nav-label">Công cụ</div>
     <button class="nav-item" data-view="tiktok"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M12 12V3c.7 2.3 2.4 3.8 5 4"/></svg></span><span class="lb">TikTok Shop</span></button>
@@ -504,6 +505,52 @@
       </div><!-- /view-geo -->
       <div class="view" id="view-landing"></div>
       <div class="view" id="view-warehouse"></div>
+      <!-- ===== THỊ TRƯỜNG THÁI LAN — TÁCH HẲN KHỎI SỐ VIỆT NAM =====
+           Landing noma955.click ghi vào CÙNG bảng landing_leads với product='D1TH'.
+           Màn hình này gọi /api/landing-leads?market=th, dashboard VN gọi market=vn —
+           hai tập rời nhau, cộng lại đúng bằng toàn bộ bảng. -->
+      <div class="view" id="view-thailand">
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
+          <div>
+            <h2 style="margin:0 0 4px">🇹🇭 Thị trường Thái Lan</h2>
+            <p style="margin:0;color:var(--text-2);font-size:13px;max-width:660px">Lead từ landing <b>noma955.click</b> — máy dò D1 bản tiếng Thái, giá <b>3.590 ฿</b>. Đơn về Google Sheet <i>"Data D1 Thái Lan"</i> để gọi, và về D1 để đếm ở đây.</p>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <select id="th-range" class="btn-cl" style="cursor:pointer">
+              <option value="7">7 ngày qua</option>
+              <option value="30" selected>30 ngày qua</option>
+              <option value="90">90 ngày qua</option>
+            </select>
+            <button class="btn-cl" id="th-refresh" type="button">↻ Tải lại</button>
+          </div>
+        </div>
+
+        <div class="th-warn">⚠️ Số trên màn hình này <b>chỉ của Thái Lan</b> và <b>không</b> được cộng vào bất kỳ bảng nào ở Tổng quan Dashboard. Ngược lại, bảng Việt Nam cũng đã loại hết lead Thái.</div>
+
+        <div class="th-kpis" id="th-kpis"></div>
+        <div id="th-body"><div class="th-empty">Đang tải…</div></div>
+
+        <style>
+          #view-thailand .th-warn{background:#eef4ff;border:1px solid #c7d8ff;color:#1f3d8f;border-radius:12px;padding:10px 14px;font-size:12.5px;margin-bottom:14px;line-height:1.6}
+          #view-thailand .th-kpis{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));margin-bottom:16px}
+          #view-thailand .th-kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:13px;padding:13px}
+          #view-thailand .th-kpi .k{font-size:12px;color:var(--text-2);font-weight:700}
+          #view-thailand .th-kpi .v{font-size:21px;font-weight:800;margin-top:4px;letter-spacing:-.02em}
+          #view-thailand .th-kpi.na .v{font-size:14px;color:var(--text-2);font-weight:700}
+          #view-thailand .th-kpi .why{font-size:11px;color:var(--text-2);margin-top:4px;line-height:1.5}
+          #view-thailand .th-card{background:var(--surface-2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+          #view-thailand .th-card h3{margin:0 0 10px;font-size:14px}
+          #view-thailand table{width:100%;border-collapse:collapse;font-size:13px}
+          #view-thailand th{text-align:left;font-size:11.5px;color:var(--text-2);font-weight:800;padding:6px 8px;border-bottom:1px solid var(--border)}
+          #view-thailand td{padding:7px 8px;border-bottom:1px solid var(--border)}
+          #view-thailand td.num,#view-thailand th.num{text-align:right;font-variant-numeric:tabular-nums}
+          #view-thailand tr.tot td{font-weight:800;border-top:2px solid var(--border);border-bottom:0}
+          #view-thailand .bar{height:7px;border-radius:4px;background:linear-gradient(90deg,#3257E6,#6b8cff);min-width:2px}
+          #view-thailand .th-empty{color:var(--text-2);padding:18px;font-size:13px}
+          #view-thailand .th-err{background:#fdeced;border:1px solid #f4b8bc;color:#b3261e;border-radius:12px;padding:12px 14px;font-size:13px}
+        </style>
+      </div>
+
       <div class="view" id="view-health">
         <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
           <div>
@@ -772,7 +819,7 @@
 
   // ===== Menu chính: chuyển VIEW (trang) + sub-nav cuộn trong Dashboard =====
   (function(){
-    var TITLES={'dashboard':'Tổng quan Dashboard','agent-fb':'Agent Facebook Ads','agent-gg':'Agent Google Ads','heatmap':'Heatmap sản phẩm','tiktok':'TikTok Shop','ads-creator':'Tạo Ads tự động','product-pub':'Đăng sản phẩm','brandcore-fix':'Sửa brandcore','fix-images':'Sửa ảnh hỏng','sync-us':'Đồng bộ web US','geo':'GEO Monitor','landing':'Landing Builder','warehouse':'Kho tổng Doscom','health':'Sức khỏe API & Token'};
+    var TITLES={'dashboard':'Tổng quan Dashboard','agent-fb':'Agent Facebook Ads','agent-gg':'Agent Google Ads','heatmap':'Heatmap sản phẩm','tiktok':'TikTok Shop','ads-creator':'Tạo Ads tự động','product-pub':'Đăng sản phẩm','brandcore-fix':'Sửa brandcore','fix-images':'Sửa ảnh hỏng','sync-us':'Đồng bộ web US','geo':'GEO Monitor','landing':'Landing Builder','warehouse':'Kho tổng Doscom','health':'Sức khỏe API & Token','thailand':'Thị trường Thái Lan'};
     var DESC={'agent-gg':'Phân tích keyword / banner / category Google Ads bằng AI — chuyển từ dashboard cũ.','ads-creator':'Tự sinh & đăng campaign theo mẫu, gợi ý ngân sách + đối tượng.','geo':'Theo dõi thứ hạng GEO/SEO, đối thủ và nội dung.','landing':'Dựng landing page kéo-thả, xuất bản nhanh.','warehouse':'Tồn kho, nhập–xuất, định giá vốn toàn Doscom.'};
     function comingHtml(v){ return '<div class="hero"><h2>'+TITLES[v]+'</h2><p>Module sắp được chuyển sang CRM</p></div>'+
       '<div class="coming"><div class="coming-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg></div>'+
@@ -2085,7 +2132,13 @@
 
     // Lead landing khác (Máy dò D1, Ghi âm DR1) — nguồn riêng, chỉ dùng cho cột Lead
     // của bảng "theo nhân sự" và bảng "Lead theo landing", không vào bảng đơn đăng ký.
-    fetch('/api/landing-leads?from='+from+'&to='+to,{cache:'no-store'})
+    //
+    // market=vn BẮT BUỘC: landing D1 bản Thái (noma955.click) ghi vào CÙNG bảng
+    // landing_leads với product='D1TH', staff='th'. Không lọc thì dòng /d1th tuy không
+    // được vẽ ra (vòng lặp chỉ chạy 'duy'/'pn') nhưng VẪN cộng vào `grand`, `tot` và
+    // `items.length` của renderLeadLanding -> dòng tổng lớn hơn tổng các dòng nhìn thấy
+    // và cột % lệch vì mẫu số phồng. Số Thái xem ở menu "Thị trường Thái Lan".
+    fetch('/api/landing-leads?market=vn&from='+from+'&to='+to,{cache:'no-store'})
       .then(function(r){return r.ok?r.json():null;})
       .then(function(L){ OTHER_LEADS=(L&&L.ok)?L:{__failed:true}; fillStaffLeads(NOMA_LEADS||{__failed:true}); })
       .catch(function(){ OTHER_LEADS={__failed:true}; fillStaffLeads(NOMA_LEADS||{__failed:true}); });
@@ -2502,6 +2555,106 @@
   var nav=document.querySelector('.sidebar .nav-item[data-view="health"]');
   if(nav) nav.addEventListener('click',function(){ if(loaded)return; loaded=true; load(false); });
   if(btn) btn.addEventListener('click',function(){ loaded=true; load(true); });
+})();
+
+/* ===== THỊ TRƯỜNG THÁI LAN — tải lazy khi mở menu =====
+   CỐ Ý tách hẳn khỏi mọi biến của dashboard Việt Nam (NOMA_LEADS / OTHER_LEADS):
+   dùng chung biến là sớm muộn cũng có người cộng nhầm hai thị trường vào một con số.
+   Ở đây chỉ gọi /api/landing-leads?market=th và tự vẽ, không đụng gì bên kia. */
+(function(){
+  var nav=document.querySelector('.sidebar .nav-item[data-view="thailand"]');
+  var body=document.getElementById('th-body');
+  var kpis=document.getElementById('th-kpis');
+  if(!nav||!body||!kpis) return;
+
+  var rangeSel=document.getElementById('th-range');
+  var refreshBtn=document.getElementById('th-refresh');
+  var loaded=false;
+
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function n0(v){ return Number(v)||0; }
+
+  function kpi(label,val,extra){
+    return '<div class="th-kpi"><div class="k">'+esc(label)+'</div><div class="v">'+val+'</div>'+
+           (extra?'<div class="why">'+esc(extra)+'</div>':'')+'</div>';
+  }
+  /* Ô "chưa có nguồn dữ liệu". RED LINE của dự án: KHÔNG bịa số. Đặc biệt KHÔNG quy đổi
+     lead × 3.590 ฿ thành doanh thu — lead mới là người để lại số, chưa phải đơn chốt. */
+  function kpiNA(label,why){
+    return '<div class="th-kpi na"><div class="k">'+esc(label)+'</div><div class="v">thiếu dữ liệu</div><div class="why">'+esc(why)+'</div></div>';
+  }
+
+  function render(L){
+    if(!L||!L.ok){
+      kpis.innerHTML='';
+      body.innerHTML='<div class="th-err">Không đọc được số liệu Thái Lan'+(L&&L.error?(' — '+esc(L.error)):'')+'. Đây là lỗi đọc, KHÔNG có nghĩa là không có lead.</div>';
+      return;
+    }
+    var byDate=(L.by_date||[]).slice();
+    var total=n0(L.total);
+    var activeDays=byDate.filter(function(d){return n0(d.leads)>0;}).length;
+    var peak=byDate.reduce(function(a,b){ return n0(b.leads)>n0(a.leads)?b:a; },{leads:0});
+    var avg=activeDays?(total/activeDays):0;
+
+    kpis.innerHTML=
+      kpi('Tổng lead',num(total),L.range?(L.range.from+' → '+L.range.to):'')+
+      kpi('Số ngày có lead',num(activeDays))+
+      kpi('Trung bình / ngày có lead',(Math.round(avg*10)/10).toLocaleString('vi-VN'))+
+      kpi('Ngày cao nhất',peak.leads?(num(peak.leads)+' lead'):'—',peak.created_date||'')+
+      kpiNA('Chi phí QC · CPL · ROAS','Tài khoản quảng cáo Thái chưa nối vào snapshot data/*.json — hiện chỉ có tài khoản Việt Nam.');
+
+    var html='';
+
+    // ---- Theo landing ----
+    var byLanding=(L.by_landing||[]).slice().sort(function(a,b){return n0(b.leads)-n0(a.leads);});
+    html+='<div class="th-card"><h3>Lead theo landing</h3>';
+    if(!byLanding.length){
+      html+='<div class="th-empty">Chưa có lead nào trong khoảng này.</div>';
+    }else{
+      html+='<table><thead><tr><th>Landing</th><th>Sản phẩm</th><th class="num">Lead</th><th class="num">%</th></tr></thead><tbody>';
+      byLanding.forEach(function(r){
+        var p=total?(n0(r.leads)/total*100):0;
+        html+='<tr><td>noma955.click'+esc(r.landing||'')+'</td><td style="color:var(--text-2);font-weight:700">'+esc(r.product||'—')+
+              '</td><td class="num" style="font-weight:800">'+num(r.leads)+'</td><td class="num" style="color:var(--text-2)">'+p.toFixed(1)+'%</td></tr>';
+      });
+      html+='<tr class="tot"><td colspan="2">Tổng '+byLanding.length+' landing</td><td class="num">'+num(total)+'</td><td class="num">100%</td></tr>';
+      html+='</tbody></table>';
+    }
+    html+='</div>';
+
+    // ---- Theo ngày (mới nhất lên trên) ----
+    html+='<div class="th-card"><h3>Lead theo ngày</h3>';
+    if(!byDate.length){
+      html+='<div class="th-empty">Chưa có lead nào trong khoảng này.</div>';
+    }else{
+      var max=byDate.reduce(function(m,d){return Math.max(m,n0(d.leads));},0)||1;
+      html+='<table><thead><tr><th>Ngày</th><th class="num">Lead</th><th style="width:45%">&nbsp;</th></tr></thead><tbody>';
+      byDate.slice().reverse().forEach(function(d){
+        var w=n0(d.leads)/max*100;
+        html+='<tr><td>'+esc(d.created_date)+'</td><td class="num" style="font-weight:800">'+num(d.leads)+
+              '</td><td><div class="bar" style="width:'+w.toFixed(1)+'%"></div></td></tr>';
+      });
+      html+='<tr class="tot"><td>Tổng</td><td class="num">'+num(total)+'</td><td></td></tr>';
+      html+='</tbody></table>';
+    }
+    html+='</div>';
+
+    body.innerHTML=html;
+  }
+
+  function load(){
+    body.innerHTML='<div class="th-empty">Đang tải…</div>';
+    kpis.innerHTML='';
+    var days=rangeSel?rangeSel.value:'30';
+    fetch('/api/landing-leads?market=th&days='+encodeURIComponent(days),{cache:'no-store'})
+      .then(function(r){ return r.json().catch(function(){return null;}); })
+      .then(render)
+      .catch(function(){ render(null); });
+  }
+
+  nav.addEventListener('click',function(){ if(loaded)return; loaded=true; load(); });
+  if(refreshBtn) refreshBtn.addEventListener('click',load);
+  if(rangeSel) rangeSel.addEventListener('change',function(){ if(loaded) load(); });
 })();
 
 // ===== TikTok Shop (đọc Lark Base) — tải lazy khi mở menu =====
