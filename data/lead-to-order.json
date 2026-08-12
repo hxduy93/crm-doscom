@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-08-12T11:50:12.094257+00:00",
-  "crm_generated_at": "2026-08-12T11:50:11.766173+00:00",
+  "generated_at": "2026-08-12T12:53:24.499286+00:00",
+  "crm_generated_at": "2026-08-12T12:53:24.205549+00:00",
   "pos_generated_at": "2026-08-12 11:02 UTC",
   "attribution_window_days": 60,
   "summary": {
-    "total_leads_with_ad_id": 9548,
+    "total_leads_with_ad_id": 9551,
     "total_leads_with_order": 6955,
-    "leads_conversion_rate": 72.84,
+    "leads_conversion_rate": 72.82,
     "total_orders_attributed": 7052,
     "total_orders_in_pos": 8706,
     "orders_skipped_no_phone": 2,
@@ -19,11 +19,11 @@
   "by_ad_id": {
     "120251321519350530": {
       "ad_id": "120251321519350530",
-      "utm_campaign": "120251321519360530#tinh-nang",
-      "leads": 103,
-      "leads_with_phone9": 103,
+      "utm_campaign": "120251321519360530",
+      "leads": 104,
+      "leads_with_phone9": 104,
       "leads_with_order": 61,
-      "leads_conversion_rate": 59.22,
+      "leads_conversion_rate": 58.65,
       "orders_total": 62,
       "orders_delivered": 20,
       "orders_canceled": 1,
@@ -32,6 +32,22 @@
       "revenue_delivered": 31104000,
       "top_owner": "Sale -  Lê Thị Thùy Anh",
       "top_nguoi_chay_qc": "PHƯƠNG NAM - DR1"
+    },
+    "120252471518490058": {
+      "ad_id": "120252471518490058",
+      "utm_campaign": "120252471517660058",
+      "leads": 9,
+      "leads_with_phone9": 9,
+      "leads_with_order": 5,
+      "leads_conversion_rate": 55.56,
+      "orders_total": 5,
+      "orders_delivered": 0,
+      "orders_canceled": 0,
+      "orders_other": 5,
+      "revenue_total": 2031000,
+      "revenue_delivered": 0,
+      "top_owner": "Sale - Kiều Trúc Tùng",
+      "top_nguoi_chay_qc": "PHƯƠNG NAM - NOMA911"
     },
     "120252124600630058": {
       "ad_id": "120252124600630058",
@@ -144,22 +160,6 @@
       "revenue_delivered": 0,
       "top_owner": "Sale - Tống Thị Huyền",
       "top_nguoi_chay_qc": "NOMA 911 - DUY"
-    },
-    "120252471518490058": {
-      "ad_id": "120252471518490058",
-      "utm_campaign": "120252471517660058",
-      "leads": 7,
-      "leads_with_phone9": 7,
-      "leads_with_order": 5,
-      "leads_conversion_rate": 71.43,
-      "orders_total": 5,
-      "orders_delivered": 0,
-      "orders_canceled": 0,
-      "orders_other": 5,
-      "revenue_total": 2031000,
-      "revenue_delivered": 0,
-      "top_owner": "Sale - Kiều Trúc Tùng",
-      "top_nguoi_chay_qc": "PHƯƠNG NAM - NOMA911"
     },
     "120251304879440530": {
       "ad_id": "120251304879440530",
@@ -3451,10 +3451,10 @@
     },
     "PHƯƠNG NAM": {
       "staff": "PHƯƠNG NAM",
-      "leads": 5119,
-      "leads_with_phone9": 4862,
+      "leads": 5122,
+      "leads_with_phone9": 4865,
       "leads_with_order": 3873,
-      "leads_conversion_rate": 75.66,
+      "leads_conversion_rate": 75.61,
       "orders_total": 3938,
       "orders_delivered": 3406,
       "orders_canceled": 35,
@@ -3487,11 +3487,11 @@
       "top_products_by_leads": [
         {
           "product": "Noma 911",
-          "leads": 4856
+          "leads": 4858
         },
         {
           "product": "DR1",
-          "leads": 192
+          "leads": 193
         },
         {
           "product": "D1",
@@ -8760,6 +8760,53 @@
         }
       },
       {
+        "utm_campaign": "120251321519360530",
+        "product": "DR1",
+        "is_organic": false,
+        "is_no_crm": false,
+        "leads": 10,
+        "leads_with_phone9": 10,
+        "leads_with_order": 3,
+        "leads_conversion_rate": 30.0,
+        "orders_total": 3,
+        "orders_delivered": 1,
+        "orders_canceled": 0,
+        "orders_returning": 0,
+        "orders_returned": 0,
+        "orders_other": 2,
+        "revenue_total": 3900000,
+        "revenue_delivered": 1300000,
+        "unique_ad_ids": 1,
+        "leads_by_date": {
+          "2026-08-12": 1,
+          "2026-08-11": 2,
+          "2026-08-09": 1,
+          "2026-08-07": 1,
+          "2026-08-06": 1,
+          "2026-08-04": 1,
+          "2026-08-03": 1,
+          "2026-08-02": 1,
+          "2026-08-01": 1
+        },
+        "orders_total_by_date": {
+          "2026-08-04": 1,
+          "2026-08-07": 2
+        },
+        "orders_delivered_by_date": {
+          "2026-08-04": 1
+        },
+        "orders_canceled_by_date": {},
+        "orders_returning_by_date": {},
+        "orders_returned_by_date": {},
+        "revenue_total_by_date": {
+          "2026-08-04": 1300000,
+          "2026-08-07": 2600000
+        },
+        "revenue_delivered_by_date": {
+          "2026-08-04": 1300000
+        }
+      },
+      {
         "utm_campaign": "120251304823520530",
         "product": "DR1",
         "is_organic": false,
@@ -8799,52 +8846,6 @@
         },
         "revenue_delivered_by_date": {
           "2026-08-06": 1300000
-        }
-      },
-      {
-        "utm_campaign": "120251321519360530",
-        "product": "DR1",
-        "is_organic": false,
-        "is_no_crm": false,
-        "leads": 9,
-        "leads_with_phone9": 9,
-        "leads_with_order": 3,
-        "leads_conversion_rate": 33.33,
-        "orders_total": 3,
-        "orders_delivered": 1,
-        "orders_canceled": 0,
-        "orders_returning": 0,
-        "orders_returned": 0,
-        "orders_other": 2,
-        "revenue_total": 3900000,
-        "revenue_delivered": 1300000,
-        "unique_ad_ids": 1,
-        "leads_by_date": {
-          "2026-08-11": 2,
-          "2026-08-09": 1,
-          "2026-08-07": 1,
-          "2026-08-06": 1,
-          "2026-08-04": 1,
-          "2026-08-03": 1,
-          "2026-08-02": 1,
-          "2026-08-01": 1
-        },
-        "orders_total_by_date": {
-          "2026-08-04": 1,
-          "2026-08-07": 2
-        },
-        "orders_delivered_by_date": {
-          "2026-08-04": 1
-        },
-        "orders_canceled_by_date": {},
-        "orders_returning_by_date": {},
-        "orders_returned_by_date": {},
-        "revenue_total_by_date": {
-          "2026-08-04": 1300000,
-          "2026-08-07": 2600000
-        },
-        "revenue_delivered_by_date": {
-          "2026-08-04": 1300000
         }
       },
       {
@@ -9118,10 +9119,10 @@
         "product": "Noma 911",
         "is_organic": false,
         "is_no_crm": false,
-        "leads": 9,
-        "leads_with_phone9": 9,
+        "leads": 10,
+        "leads_with_phone9": 10,
         "leads_with_order": 7,
-        "leads_conversion_rate": 77.78,
+        "leads_conversion_rate": 70.0,
         "orders_total": 7,
         "orders_delivered": 1,
         "orders_canceled": 0,
@@ -9132,6 +9133,7 @@
         "revenue_delivered": 219000,
         "unique_ad_ids": 2,
         "leads_by_date": {
+          "2026-08-12": 1,
           "2026-08-11": 6,
           "2026-08-10": 3
         },
@@ -11397,8 +11399,8 @@
         "product": "Noma 911",
         "is_organic": false,
         "is_no_crm": false,
-        "leads": 1,
-        "leads_with_phone9": 1,
+        "leads": 2,
+        "leads_with_phone9": 2,
         "leads_with_order": 0,
         "leads_conversion_rate": 0.0,
         "orders_total": 0,
@@ -11411,7 +11413,7 @@
         "revenue_delivered": 0,
         "unique_ad_ids": 1,
         "leads_by_date": {
-          "2026-08-12": 1
+          "2026-08-12": 2
         },
         "orders_total_by_date": {},
         "orders_delivered_by_date": {},
