@@ -18,6 +18,11 @@ rm -rf dist && mkdir dist
 cp index.html dist/
 [ -f _headers ] && cp _headers dist/
 cp -r data dist/data
+
+# Thư viện dùng chung giữa trình duyệt và bộ test: trang Đăng sản phẩm nạp
+# js/price-discount.js dạng module thay vì chép lại công thức giá vào HTML.
+mkdir -p dist/js
+cp functions/lib/price-discount.js dist/js/
 [ -d demos ] && cp -r demos dist/demos
 
 # File TRUNG GIAN của pipeline lấy dữ liệu (gộp từ repo cũ 2026-08-10): chỉ dùng

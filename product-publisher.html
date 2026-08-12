@@ -43,6 +43,9 @@
   select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235A6478' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media (max-width:560px){.row2{grid-template-columns:1fr}}
+  /* Giá bán · % giảm · Giá gốc — ô % hẹp hơn vì chỉ chứa 2 chữ số */
+  .row3{display:grid;grid-template-columns:1fr 92px 1fr;gap:12px}
+  @media (max-width:560px){.row3{grid-template-columns:1fr 84px}}
   .hint{font-size:11px;color:var(--text-2);margin-top:5px;font-weight:600}
   .price-wrap{position:relative}.price-wrap .cur{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:800;color:var(--text-2)}
   .inp.money{font-variant-numeric:tabular-nums;padding-right:34px}
@@ -202,10 +205,12 @@
           <label class="lab">Tên sản phẩm <span class="req">*</span></label>
           <input class="inp" id="nameInp" placeholder="VD: Máy dò sóng Doscom D5"/>
         </div>
-        <div class="row2">
+        <div class="row3">
           <div class="field"><label class="lab">Giá bán <span class="req">*</span></label><div class="price-wrap"><input class="inp money" id="priceInp" placeholder="4.500.000"/><span class="cur">₫</span></div></div>
+          <div class="field"><label class="lab">Giảm giá</label><div class="price-wrap"><input class="inp" id="discInp" placeholder="20" inputmode="decimal"/><span class="cur">%</span></div></div>
           <div class="field"><label class="lab">Giá gốc <span style="color:var(--text-2);font-weight:700">(gạch)</span></label><div class="price-wrap"><input class="inp money" id="oldInp" placeholder="5.900.000"/><span class="cur">₫</span></div></div>
         </div>
+        <div class="hint" id="discHint" style="margin:-6px 0 12px">Điền 2 trong 3 ô, ô còn lại tự tính. Giá làm tròn tới 1.000đ.</div>
         <div class="hint" id="usdHint" style="display:none;color:var(--accent);font-weight:700;margin:-6px 0 12px">Giá nhập bằng VND — nomaauto.us sẽ tự đổi sang USD (÷ 26.500).</div>
         <div class="row2">
           <div class="field"><label class="lab">Tồn kho</label><input class="inp money" id="stockInp" value="100" placeholder="100"/></div>
@@ -297,6 +302,13 @@
 </div>
 <div class="toast" id="toast"></div>
 
+<!-- Logic giá ↔ % giảm dùng CHUNG với bộ test (tests/price-discount.test.mjs).
+     Nạp dạng module để không phải chép lại công thức vào đây rồi lệch nhau.
+     Module chạy trước DOMContentLoaded nên phần nối sự kiện bên dưới luôn thấy window.PD. -->
+<script type="module">
+  import * as PD from "./js/price-discount.js";
+  window.PD = PD;
+</script>
 <script>
 const $ = id => document.getElementById(id);
 const state = { site:'doscom', csite:'doscom', cats:{doscom:null,noma:null,nomaauto:null}, mainImg:null, imgs:[], gen:null, pubStatus:'draft' };
@@ -547,6 +559,7 @@ async function importShopee(){
     if(p.price && !$('priceInp').value.trim()) $('priceInp').value=money(String(p.price));
     if(p.old_price && !$('oldInp').value.trim()) $('oldInp').value=money(String(p.old_price));
     if(p.note && !$('noteInp').value.trim()) $('noteInp').value=p.note.slice(0,4000);
+    if(window.syncDiscount) window.syncDiscount();
 
     // Ảnh: dựng lại đúng khuôn như ảnh user tự chọn (url/full/small) để mọi bước sau dùng chung.
     let added=0;
@@ -614,6 +627,7 @@ async function applyShopeePayload(raw){
   if(nums.length>1 && !$('oldInp').value.trim()) $('oldInp').value=money(String(nums[nums.length-1]));
   const desc=String(raw.description||'').replace(/^\s*MÔ TẢ SẢN PHẨM\s*/i,'').trim();
   if(desc && !$('noteInp').value.trim()) $('noteInp').value=desc.slice(0,4000);
+  if(window.syncDiscount) window.syncDiscount();
 
   msg.innerHTML='Đang tải ảnh từ Shopee…';
   let added=0;
@@ -652,6 +666,51 @@ $('statusChoice').addEventListener('click',e=>{ const b=e.target.closest('button
 $('tagChips').addEventListener('click',e=>{ const x=e.target.closest('.x'); if(x) x.parentElement.remove(); });
 $('pubBtn').onclick=publish; $('keyBtn').onclick=askToken;
 ['nameInp','priceInp','oldInp'].forEach(id=>$(id).addEventListener('input',()=>{ if(!$('pvResult').classList.contains('show'))return; $('pcName').textContent=$('nameInp').value; $('pcNow').textContent=money($('priceInp').value)+'₫'; $('pcOld').textContent=$('oldInp').value?money($('oldInp').value)+'₫':''; }));
+
+// ---------- giá bán ↔ % giảm ↔ giá gốc ----------
+// Điền 2 trong 3 ô, ô còn lại tự tính. Công thức nằm ở functions/lib/price-discount.js
+// (dùng chung với test) — ở đây chỉ nối sự kiện.
+//
+// Chống tính vòng: mỗi lần script tự điền một ô thì bật cờ `quiet` để sự kiện
+// 'input' do chính mình gây ra không chạy ngược lại tính tiếp.
+// `anchor` = ô GIÁ người dùng gõ gần nhất; gõ % thì giữ ô đó, tính ô giá còn lại.
+(function(){
+  const PD=window.PD;
+  if(!PD){ console.warn('Thiếu js/price-discount.js — bỏ qua phần tính % giảm'); return; }
+  const price=$('priceInp'), old=$('oldInp'), disc=$('discInp'), hint=$('discHint');
+  let quiet=false, anchor='old';
+
+  const setVal=(el,v)=>{ quiet=true; el.value=v; quiet=false; };
+  const note=(s)=>{ hint.textContent=s||'Điền 2 trong 3 ô, ô còn lại tự tính. Giá làm tròn tới 1.000đ.'; };
+
+  function showPercent(){
+    const p=PD.computePercent(old.value, price.value);
+    setVal(disc, PD.formatPercent(p));
+    if(PD.parseMoney(old.value) && PD.parseMoney(price.value) && p==null)
+      note('Giá gốc phải CAO HƠN giá bán thì mới có phần trăm giảm.');
+    else note('');
+  }
+
+  price.addEventListener('input',()=>{ if(quiet)return; anchor='sale'; showPercent(); });
+  old.addEventListener('input',()=>{ if(quiet)return; anchor='old'; showPercent(); });
+
+  disc.addEventListener('input',()=>{
+    if(quiet) return;
+    const r=PD.applyPercent({ old:old.value, sale:price.value, percent:disc.value, anchor });
+    if(r.changed==='sale'){ setVal(price, PD.formatMoney(r.sale)); note('Giá bán tính từ giá gốc − '+disc.value+'%.'); }
+    else if(r.changed==='old'){ setVal(old, PD.formatMoney(r.old)); note('Giá gốc tính ngược từ giá bán + '+disc.value+'%.'); }
+    else if(disc.value.trim()) note('Nhập giá bán hoặc giá gốc trước, rồi mới nhập %.');
+    else note('');
+    // Cập nhật khung xem trước TRỰC TIẾP, không bắn lại sự kiện 'input' lên ô giá —
+    // bắn lại sẽ khiến % vừa gõ bị tính đè bằng số làm tròn ngay giữa lúc đang gõ.
+    if($('pvResult').classList.contains('show')){
+      $('pcNow').textContent=money(price.value)+'₫';
+      $('pcOld').textContent=old.value?money(old.value)+'₫':'';
+    }
+  });
+
+  window.syncDiscount=showPercent;   // gọi sau khi nhập từ Shopee
+})();
 
 loadSite('doscom');
 </script>
