@@ -182,6 +182,21 @@
             <button class="btn" id="shopeeBtn" type="button" style="white-space:nowrap">Đọc link</button>
           </div>
           <div class="hint" id="shopeeMsg" style="margin-top:6px"></div>
+          <details style="margin-top:8px">
+            <summary style="cursor:pointer;font-weight:800;color:var(--accent)">Lấy ĐỦ giá + mô tả + toàn bộ ảnh (nút bookmarklet)</summary>
+            <div class="hint" style="margin-top:8px;line-height:1.7">
+              Dán link chỉ lấy được phần công khai (tên + ảnh đại diện) vì Shopee chặn mọi request đến từ máy chủ.
+              Muốn đủ dữ liệu thì để việc đọc xảy ra ngay trong trình duyệt của bạn:
+              <ol style="margin:8px 0 8px 18px">
+                <li>Hiện thanh bookmark (<b>Ctrl+Shift+B</b>), rồi <b>kéo nút dưới đây</b> lên thanh đó.</li>
+                <li>Mở trang sản phẩm Shopee → bấm nút vừa kéo → chờ nó cuộn hết trang.</li>
+                <li>Bấm OK, trang này tự mở với dữ liệu điền sẵn.</li>
+              </ol>
+              <a id="bmLink" href="#" style="display:inline-block;background:var(--accent);color:#fff;padding:8px 14px;border-radius:10px;font-weight:800;text-decoration:none;cursor:grab">📥 Lấy sang CRM</a>
+              <span style="margin-left:10px">← kéo lên thanh bookmark (bấm thẳng vào đây không chạy)</span>
+              <div style="margin-top:10px"><button class="btn" id="pasteBtn" type="button">Hoặc dán JSON đã copy</button></div>
+            </div>
+          </details>
         </div>
         <div class="field">
           <label class="lab">Tên sản phẩm <span class="req">*</span></label>
@@ -556,6 +571,81 @@ async function importShopee(){
 }
 $('shopeeBtn').onclick=importShopee;
 $('shopeeUrl').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); importShopee(); } });
+
+// ---------- bookmarklet: đọc Shopee ngay trong trình duyệt người dùng ----------
+// Shopee chặn mọi request từ máy chủ (đo 2026-08-10: Cloudflare Browser Rendering
+// lẫn fetch thường đều nhận "Page Unavailable / Login Required"). Trong tab của
+// người dùng thì trang mở bình thường → bóc ở đó rồi đẩy sang đây qua fragment
+// (#shopee=...). Fragment KHÔNG được gửi lên máy chủ nên dữ liệu không vào log.
+// Bản gốc đọc được của đoạn này: scripts/shopee-bookmarklet.js — sửa thì sửa cả hai.
+const BOOKMARKLET_SRC = `(async function(){var CRM=location.origin+"/product-publisher.html";
+var m=location.pathname.match(/-i\\.(\\d+)\\.(\\d+)/);if(!m){alert("Mở đúng TRANG SẢN PHẨM Shopee rồi bấm lại nút này.");return;}
+var h0=0;for(var i=0;i<12;i++){window.scrollTo(0,document.body.scrollHeight);await new Promise(r=>setTimeout(r,350));if(document.body.scrollHeight===h0)break;h0=document.body.scrollHeight;}
+window.scrollTo(0,0);await new Promise(r=>setTimeout(r,300));
+var h1=document.querySelector("h1");var name=(h1&&h1.innerText||document.title||"").trim();
+var text=document.body.innerText||"";var prices=[];var re=/₫\\s?([0-9][0-9.,]{2,})/g,mm;while((mm=re.exec(text)))prices.push(mm[1]);
+var imgs=[];document.querySelectorAll("img").forEach(function(el){var s=el.currentSrc||el.src||"";if(s.indexOf("susercontent.com/file/")>-1)imgs.push(s);});
+document.querySelectorAll('[style*="susercontent"]').forEach(function(el){var s=el.getAttribute("style")||"";var g=s.match(/susercontent\\.com\\/file\\/[A-Za-z0-9._-]+/);if(g)imgs.push("https://"+g[0]);});
+var desc="";var nodes=document.querySelectorAll("div,section,article");for(var j=0;j<nodes.length;j++){var t=(nodes[j].innerText||"").trim();if(/^MÔ TẢ SẢN PHẨM/i.test(t)&&t.length>60){desc=t;break;}}
+var crumbs=[];document.querySelectorAll('a[href*="-cat."]').forEach(function(a){var t=(a.innerText||"").trim();if(t&&crumbs.indexOf(t)<0)crumbs.push(t);});
+var data={v:1,url:location.href,shop_id:m[1],item_id:m[2],name:name,prices:prices,images:imgs,description:desc,breadcrumb:crumbs};
+var js=JSON.stringify(data);try{await navigator.clipboard.writeText(js);}catch(e){}
+var b64=btoa(String.fromCharCode.apply(null,new TextEncoder().encode(js)));
+if(confirm("Lấy được: "+(name?"tên":"KHÔNG có tên")+" · "+prices.length+" mức giá · "+imgs.length+" ảnh · mô tả "+(desc?desc.length+" ký tự":"KHÔNG có")+"\\n\\nBấm OK để mở CRM với dữ liệu điền sẵn.\\n(JSON cũng đã copy vào clipboard.)"))window.open(CRM+"#shopee="+encodeURIComponent(b64),"_blank");})();`;
+
+$('bmLink').href='javascript:'+encodeURIComponent(BOOKMARKLET_SRC);
+$('bmLink').onclick=e=>{ e.preventDefault(); toast('Kéo nút này lên thanh bookmark, đừng bấm.',true); };
+
+// Nhận dữ liệu từ bookmarklet: qua fragment #shopee=<base64> hoặc dán tay JSON.
+function decodeShopeeB64(b64){
+  const bin=atob(decodeURIComponent(b64));
+  const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+async function applyShopeePayload(raw){
+  const msg=$('shopeeMsg');
+  const headers={'content-type':'application/json'};
+  const tok=getToken(); if(tok) headers['X-Products-Token']=tok;
+
+  const name=String(raw.name||'').replace(/\s*\|\s*Shopee Việt Nam.*$/i,'').replace(/^\s*Mua\s+/i,'').trim();
+  const nums=[...new Set((raw.prices||[]).map(x=>Number(String(x).replace(/[^\d]/g,''))).filter(n=>n>=1000&&n<=500000000))].sort((a,b)=>a-b);
+  if(name && !$('nameInp').value.trim()) $('nameInp').value=name;
+  if(nums.length && !$('priceInp').value.trim()) $('priceInp').value=money(String(nums[0]));
+  if(nums.length>1 && !$('oldInp').value.trim()) $('oldInp').value=money(String(nums[nums.length-1]));
+  const desc=String(raw.description||'').replace(/^\s*MÔ TẢ SẢN PHẨM\s*/i,'').trim();
+  if(desc && !$('noteInp').value.trim()) $('noteInp').value=desc.slice(0,4000);
+
+  msg.innerHTML='Đang tải ảnh từ Shopee…';
+  let added=0;
+  if((raw.images||[]).length){
+    const {d}=await api('/api/products/fetch-images',{method:'POST',headers,body:JSON.stringify({urls:raw.images})});
+    if(d.ok){
+      for(const im of d.images||[]){
+        if(state.imgs.length>=20) break;
+        const dataURL='data:'+(im.media_type||'image/jpeg')+';base64,'+im.data;
+        const small=await downscale(dataURL,1152);
+        state.imgs.push({ url:dataURL, full:im.data, small, media_type:im.media_type||'image/jpeg', name:'shopee-'+(++added)+'.jpg' });
+      }
+      renderThumbs(); syncCardImg();
+    }
+  }
+  const crumb=(raw.breadcrumb||[]).length?' · Ngành hàng: <b>'+esc(raw.breadcrumb.join(' › '))+'</b>':'';
+  msg.innerHTML='Đã nhận từ bookmarklet: '+[name&&'tên',nums.length&&'giá',added&&(added+' ảnh'),desc&&'mô tả'].filter(Boolean).join(' + ')+'.'+crumb;
+  toast('Đã nhập '+added+' ảnh từ Shopee');
+}
+$('pasteBtn').onclick=async()=>{
+  const s=prompt('Dán JSON mà bookmarklet đã copy:');
+  if(!s) return;
+  try{ await applyShopeePayload(JSON.parse(s)); }
+  catch(e){ $('shopeeMsg').innerHTML='<b style="color:var(--red)">JSON không đọc được:</b> '+esc(String(e.message||e)); }
+};
+(function(){
+  const m=(location.hash||'').match(/#shopee=(.+)$/);
+  if(!m) return;
+  history.replaceState(null,'',location.pathname+location.search);  // xoá dữ liệu khỏi thanh địa chỉ
+  try{ applyShopeePayload(decodeShopeeB64(m[1])); }
+  catch(e){ $('shopeeMsg').innerHTML='<b style="color:var(--red)">Không đọc được dữ liệu bookmarklet:</b> '+esc(String(e.message||e)); }
+})();
 
 $('genBtn').onclick=()=>generate(false); $('regenBtn').onclick=()=>generate(true);
 $('statusChoice').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; [...$('statusChoice').children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); state.pubStatus=b.dataset.st; updatePubLabel(); });
