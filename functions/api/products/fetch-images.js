@@ -41,7 +41,7 @@ async function fetchOne(src) {
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  const id = await getIdentity(request, env);
+  const id = await getIdentity(context);
   if (id.role === "open") {
     const tok = request.headers.get("x-products-token") || "";
     if (!env.PRODUCTS_TOKEN || tok !== env.PRODUCTS_TOKEN) {

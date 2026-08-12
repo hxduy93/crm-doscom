@@ -258,7 +258,7 @@ export async function onRequestPost(context) {
 
   // Cùng lớp bảo vệ với /api/products/publish: Access bật thì theo Access,
   // chưa bật thì bắt buộc X-Products-Token.
-  const id = await getIdentity(request, env);
+  const id = await getIdentity(context);
   if (id.role === "open") {
     const tok = request.headers.get("x-products-token") || "";
     if (!env.PRODUCTS_TOKEN || tok !== env.PRODUCTS_TOKEN) {
