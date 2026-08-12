@@ -674,7 +674,11 @@ $('pubBtn').onclick=publish; $('keyBtn').onclick=askToken;
 // Chống tính vòng: mỗi lần script tự điền một ô thì bật cờ `quiet` để sự kiện
 // 'input' do chính mình gây ra không chạy ngược lại tính tiếp.
 // `anchor` = ô GIÁ người dùng gõ gần nhất; gõ % thì giữ ô đó, tính ô giá còn lại.
-(function(){
+// PHẢI chờ DOMContentLoaded: <script type="module"> luôn bị hoãn tới sau khi
+// trình duyệt phân tích xong trang, còn khối <script> thường này chạy ngay —
+// nên nếu nối sự kiện ở đây thì window.PD CHƯA tồn tại, phần tính % im lặng
+// không chạy (lỗi thật 2026-08-12: gõ giá gốc + % mà giá bán không nhảy).
+document.addEventListener('DOMContentLoaded',function(){
   const PD=window.PD;
   if(!PD){ console.warn('Thiếu js/price-discount.js — bỏ qua phần tính % giảm'); return; }
   const price=$('priceInp'), old=$('oldInp'), disc=$('discInp'), hint=$('discHint');
@@ -710,7 +714,8 @@ $('pubBtn').onclick=publish; $('keyBtn').onclick=askToken;
   });
 
   window.syncDiscount=showPercent;   // gọi sau khi nhập từ Shopee
-})();
+  showPercent();                     // trang mở lại còn số cũ thì hiện % luôn
+});
 
 loadSite('doscom');
 </script>
