@@ -595,7 +595,7 @@
         <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
           <div>
             <h2 style="margin:0 0 4px">🛍️ TikTok Shop</h2>
-            <p style="margin:0;color:var(--text-2);font-size:13px;max-width:760px">Video KOC 3 shop TikTok (Noma Auto · Doscom Mart · Bao Mat Doscom), chia theo <b>tab sản phẩm</b>. Gộp <b>2 nguồn</b>: Lark Base <b>Hiep_Tiktokshop_Auto</b> + kho <b>TikTok Shop API</b> (sale-report). Video trùng được khử theo mã video, mỗi chỉ số lấy <b>số đo cao nhất</b> giữa hai nguồn.</p>
+            <p style="margin:0;color:var(--text-2);font-size:13px;max-width:760px">Video KOC 3 shop TikTok (Noma Auto · Doscom Mart · Bao Mat Doscom), chia thành <b>2 ô brand</b> — bấm vào ô để xổ danh sách sản phẩm, chọn sản phẩm để lọc video. Gộp <b>2 nguồn</b>: Lark Base <b>Hiep_Tiktokshop_Auto</b> + kho <b>TikTok Shop API</b> (sale-report). Video trùng được khử theo mã video, mỗi chỉ số lấy <b>số đo cao nhất</b> giữa hai nguồn.</p>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <button class="btn-cl" id="tt-refresh" type="button">↻ Tải lại</button>
@@ -622,7 +622,7 @@
             <br>Muốn tự tải file: bấm <b>Tải video về máy</b> → chọn thư mục lưu → mở <b>Tạo Ads tự động</b> chọn đúng thư mục đó. Chrome không cho chọn ổ đĩa gốc <code>C:\</code>, <code>D:\</code> hay thư mục hệ thống — phải chọn <b>một thư mục con</b> (vd <code>D:\video-ads</code>).
             <br>Khai báo kênh của công ty vào ô dưới để phân biệt với creator ngoài (video của creator cần xin phép trước khi chạy quảng cáo).
           </p>
-          <div id="tt-tabs" class="tt-tabs"></div>
+          <div id="tt-brands" class="tt-brands"></div>
           <div id="tt-filters" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
             <select class="btn-cl" id="tt-sort" style="padding:6px 9px;font-size:12px">
               <option value="gmv">↓ GMV cao nhất</option>
@@ -661,14 +661,32 @@
           #view-tiktok .tt-grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
           @media (max-width:900px){#view-tiktok .tt-grid2{grid-template-columns:1fr}}
           #view-tiktok .tt-h{font-size:13.5px;font-weight:800;margin-bottom:10px}
-          /* Tab sản phẩm: cuộn ngang trong khung riêng, không bao giờ để body cuộn ngang. */
-          #view-tiktok .tt-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid var(--line,rgba(0,0,0,.08))}
-          #view-tiktok .tt-tabs:empty{display:none}
-          #view-tiktok .tt-tab{flex:0 0 auto;cursor:pointer;border:1px solid var(--line,rgba(0,0,0,.12));background:var(--bg-1,#fff);color:var(--text-1,inherit);border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:700;white-space:nowrap;line-height:1.3}
-          #view-tiktok .tt-tab:hover{border-color:var(--primary,#3b82f6)}
-          #view-tiktok .tt-tab .n{font-weight:600;opacity:.62;margin-left:5px}
-          #view-tiktok .tt-tab.on{background:var(--primary,#3b82f6);border-color:transparent;color:#fff}
-          #view-tiktok .tt-tab.on .n{opacity:.85}
+          /* Ô brand xổ ra danh sách sản phẩm. Thay cho dải tab ngang cũ: 20+ sản phẩm nhét
+             vào một hàng cuộn ngang thì phải kéo mới thấy hết, và không phân biệt được
+             hàng Noma với hàng Doscom. Hai ô đứng cạnh nhau, mặc định đóng. */
+          #view-tiktok .tt-brands{margin-bottom:12px}
+          #view-tiktok .tt-brands:empty{display:none}
+          #view-tiktok .tt-bgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+          @media (max-width:900px){#view-tiktok .tt-bgrid{grid-template-columns:1fr}}
+          #view-tiktok .tt-brand{border:1px solid var(--line,rgba(0,0,0,.12));border-radius:14px;overflow:hidden;background:var(--bg-1,#fff)}
+          #view-tiktok .tt-brand.open{border-color:color-mix(in srgb,var(--primary) 45%,transparent)}
+          #view-tiktok .tt-bhead{width:100%;display:flex;gap:10px;align-items:center;cursor:pointer;border:0;background:transparent;color:var(--text-1,inherit);padding:11px 13px;text-align:left;font:inherit}
+          #view-tiktok .tt-bhead:hover{background:color-mix(in srgb,var(--primary) 6%,transparent)}
+          #view-tiktok .tt-bname{font-size:14px;font-weight:800;letter-spacing:-.01em}
+          #view-tiktok .tt-bsub{display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-top:2px}
+          #view-tiktok .tt-bnum{margin-left:auto;text-align:right;font-size:11.5px;font-weight:700;color:var(--text-2);white-space:nowrap}
+          #view-tiktok .tt-caret{font-size:11px;color:var(--text-2);transition:transform .15s}
+          #view-tiktok .tt-brand.open .tt-caret{transform:rotate(180deg)}
+          #view-tiktok .tt-blist{border-top:1px solid var(--line,rgba(0,0,0,.08));max-height:290px;overflow:auto;padding:6px}
+          #view-tiktok .tt-sp{width:100%;display:flex;gap:10px;align-items:center;cursor:pointer;border:0;background:transparent;color:var(--text-1,inherit);border-radius:9px;padding:7px 9px;text-align:left;font:inherit;font-size:12.5px}
+          #view-tiktok .tt-sp:hover{background:color-mix(in srgb,var(--primary) 9%,transparent)}
+          #view-tiktok .tt-sp.on{background:var(--primary,#3b82f6);color:#fff}
+          #view-tiktok .tt-spn{font-weight:700;line-height:1.35}
+          #view-tiktok .tt-spm{margin-left:auto;font-size:11.5px;font-weight:600;opacity:.7;white-space:nowrap}
+          #view-tiktok .tt-all{cursor:pointer;border:1px solid var(--line,rgba(0,0,0,.12));background:var(--bg-1,#fff);color:var(--text-1,inherit);border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:700;margin-bottom:10px;line-height:1.3}
+          #view-tiktok .tt-all:hover{border-color:var(--primary,#3b82f6)}
+          #view-tiktok .tt-all.on{background:var(--primary,#3b82f6);border-color:transparent;color:#fff}
+          #view-tiktok .tt-all .n{font-weight:600;opacity:.66;margin-left:5px}
           #view-tiktok .tt-sub{font-size:11.5px;font-weight:600;color:var(--text-2)}
           #view-tiktok .tt-scroll{max-height:340px;overflow:auto}
           #view-tiktok table{width:100%;border-collapse:collapse;font-size:13px}
@@ -2751,9 +2769,10 @@
       cartEl=document.getElementById('tt-cart'),
       sortSel=document.getElementById('tt-sort'), fCampSel=document.getElementById('tt-fcamp'),
       fStaffSel=document.getElementById('tt-fstaff'), filterN=document.getElementById('tt-filter-n'),
-      tabsEl=document.getElementById('tt-tabs');
+      brandsEl=document.getElementById('tt-brands');
   var loaded=false;
-  var activeSP='';                // tab sản phẩm đang mở ('' = tất cả)
+  var activeSP='';                // sản phẩm đang chọn ('' = tất cả)
+  var openBrand=new Set();        // ô brand đang xổ — giữ qua mỗi lần vẽ lại
   var lastVideos=[];              // kết quả lần tải gần nhất, để đối chiếu khi tick
   var shown=[];                   // lastVideos sau khi lọc + sắp xếp — data-i trỏ vào đây
   var picked=new Map();           // link video → bản ghi đã chọn (giữ khi đổi khoảng ngày)
@@ -2805,37 +2824,102 @@
   // một việc: chọn video KOC theo sản phẩm để chạy ads. Endpoint /api/lark/tiktok
   // (doanh thu shop theo ngày) không còn được gọi từ đây nữa.
 
-  // ── Tab sản phẩm ──────────────────────────────────────────────────────────
-  // Dựng TỪ dữ liệu đang có chứ không hard-code: shop thêm/bớt SKU thì tab tự theo.
+  // ── Ô brand → xổ ra danh sách sản phẩm ────────────────────────────────────
+  // Dựng TỪ dữ liệu đang có chứ không hard-code: shop thêm/bớt SKU thì danh sách tự theo.
   // Xếp theo GMV giảm dần — doanh thu lệch rất mạnh về vài SKU, xếp theo tên sẽ đẩy
-  // tab đáng bấm nhất xuống cuối.
+  // sản phẩm đáng bấm nhất xuống cuối.
   function spKeyOf(v){ return v && (v.product_key || String(v.product_short||v.product||'').toLowerCase()) || ''; }
 
-  function renderTabs(){
-    if(!lastVideos.length){ tabsEl.innerHTML=''; return; }
+  var BRANDS=[
+    { id:'noma',   ten:'NOMA',   mo:'Noma Auto' },
+    { id:'doscom', ten:'DOSCOM', mo:'Doscom Mart · Bao Mat Doscom' },
+    { id:'khac',   ten:'Khác',   mo:'chưa nhận ra brand' },
+  ];
+
+  // Brand của 1 video: đọc TÊN SẢN PHẨM trước, tên shop chỉ là phương án dự phòng.
+  // Lý do: kho TikTok Shop API đóng cứng shop = "Noma Auto" cho mọi dòng nó trả về
+  // (xem functions/lib/gop-video.js), nên tin shop trước là gán nhầm hàng Doscom
+  // bán trong shop đó sang brand Noma.
+  function brandOf(v){
+    var p=String((v&&(v.product_short||v.product))||'');
+    if(/noma/i.test(p)) return 'noma';
+    if(/doscom/i.test(p)||/^\s*(D[RAVIT]?\d|CS\d)/i.test(p)) return 'doscom';
+    var s=String((v&&v.shop)||'');
+    if(/noma/i.test(s)) return 'noma';
+    if(/doscom/i.test(s)) return 'doscom';
+    return 'khac';
+  }
+
+  // Gom video → sản phẩm → brand. Brand của một sản phẩm lấy theo SỐ PHIẾU của video
+  // trong nhóm, không lấy video đầu tiên: vài dòng lẻ thiếu tên sản phẩm sẽ rơi vào
+  // "Khác" và kéo cả sản phẩm đi theo nếu nó tình cờ đứng đầu.
+  function gomTheoBrand(){
     var gom=new Map();
     lastVideos.forEach(function(v){
       var k=spKeyOf(v);
-      var a=gom.get(k)||{ key:k, name:v.product_short||v.product||'(chưa rõ sản phẩm)', gmv:0, n:0 };
+      var a=gom.get(k)||{ key:k, name:v.product_short||v.product||'(chưa rõ sản phẩm)', gmv:0, n:0, phieu:{} };
       a.gmv+=Number(v.gmv)||0; a.n++;
+      var b=brandOf(v); a.phieu[b]=(a.phieu[b]||0)+1;
       gom.set(k,a);
     });
+    var theoBrand={};
+    BRANDS.forEach(function(b){ theoBrand[b.id]={ sp:[], gmv:0, n:0 }; });
     // Array.from chứ KHÔNG phải slice.call: gom.values() là iterator, không có length,
-    // slice.call sẽ trả mảng rỗng và tab biến mất sạch.
-    var ds=Array.from(gom.values()).sort(function(a,b){ return b.gmv-a.gmv; });
-    // Tab đang mở biến mất khi đổi khoảng ngày (sản phẩm đó không có video) → quay về "Tất cả",
-    // nếu không bảng rỗng mà người dùng không hiểu vì sao.
+    // slice.call sẽ trả mảng rỗng và danh sách biến mất sạch.
+    Array.from(gom.values()).forEach(function(a){
+      a.brand=Object.keys(a.phieu).sort(function(x,y){ return a.phieu[y]-a.phieu[x]; })[0]||'khac';
+      var o=theoBrand[a.brand]; o.sp.push(a); o.gmv+=a.gmv; o.n+=a.n;
+    });
+    BRANDS.forEach(function(b){ theoBrand[b.id].sp.sort(function(x,y){ return y.gmv-x.gmv; }); });
+    return { gom:gom, theoBrand:theoBrand };
+  }
+
+  function renderBrands(){
+    if(!lastVideos.length){ brandsEl.innerHTML=''; return; }
+    var g=gomTheoBrand(), gom=g.gom, theoBrand=g.theoBrand;
+    // Sản phẩm đang chọn biến mất khi đổi khoảng ngày (không có video nào) → quay về
+    // "Tất cả", nếu không bảng rỗng mà người dùng không hiểu vì sao.
     if(activeSP && !gom.has(activeSP)) activeSP='';
-    tabsEl.innerHTML=
-      '<button type="button" class="tt-tab'+(activeSP?'':' on')+'" data-sp="">Tất cả'+
-        '<span class="n">'+lastVideos.length+'</span></button>'+
-      ds.map(function(a){
-        return '<button type="button" class="tt-tab'+(activeSP===a.key?' on':'')+'" data-sp="'+esc(a.key)+'" '+
-          'title="'+esc(a.name)+' — '+money(a.gmv)+' · '+a.n+' video">'+esc(a.name)+
-          '<span class="n">'+a.n+'</span></button>';
-      }).join('');
-    Array.prototype.forEach.call(tabsEl.querySelectorAll('.tt-tab'),function(b){
-      b.addEventListener('click',function(){ activeSP=b.getAttribute('data-sp')||''; renderVideos(); });
+    // Chọn sản phẩm nào thì ô brand của nó phải đang mở, kể cả khi vừa tải lại trang.
+    if(activeSP && gom.get(activeSP)) openBrand.add(gom.get(activeSP).brand);
+
+    var o=BRANDS.filter(function(b){ return theoBrand[b.id].sp.length; }).map(function(b){
+      var d=theoBrand[b.id], mo=openBrand.has(b.id);
+      return '<section class="tt-brand'+(mo?' open':'')+'" data-b="'+b.id+'">'+
+        '<button type="button" class="tt-bhead" data-b="'+b.id+'" aria-expanded="'+(mo?'true':'false')+'">'+
+          '<span><span class="tt-bname">'+esc(b.ten)+'</span><span class="tt-bsub">'+esc(b.mo)+'</span></span>'+
+          '<span class="tt-bnum">'+d.sp.length+' sản phẩm · '+d.n+' video<br>'+money(d.gmv)+' GMV</span>'+
+          '<span class="tt-caret">▼</span>'+
+        '</button>'+
+        '<div class="tt-blist"'+(mo?'':' hidden')+'>'+
+          d.sp.map(function(a){
+            return '<button type="button" class="tt-sp'+(activeSP===a.key?' on':'')+'" data-sp="'+esc(a.key)+'" '+
+              'title="'+esc(a.name)+' — '+money(a.gmv)+' · '+a.n+' video">'+
+              '<span class="tt-spn">'+esc(a.name)+'</span>'+
+              '<span class="tt-spm">'+a.n+' video · '+money(a.gmv)+'</span></button>';
+          }).join('')+
+        '</div></section>';
+    }).join('');
+
+    brandsEl.innerHTML=
+      '<button type="button" class="tt-all'+(activeSP?'':' on')+'">Tất cả sản phẩm'+
+        '<span class="n">'+lastVideos.length+' video</span></button>'+
+      '<div class="tt-bgrid">'+o+'</div>';
+
+    brandsEl.querySelector('.tt-all').addEventListener('click',function(){ activeSP=''; renderVideos(); });
+    Array.prototype.forEach.call(brandsEl.querySelectorAll('.tt-bhead'),function(h){
+      h.addEventListener('click',function(){
+        var id=h.getAttribute('data-b');
+        if(openBrand.has(id)) openBrand.delete(id); else openBrand.add(id);
+        renderBrands();          // chỉ đóng/mở ô — bảng video bên dưới không đổi
+      });
+    });
+    Array.prototype.forEach.call(brandsEl.querySelectorAll('.tt-sp'),function(b){
+      b.addEventListener('click',function(){
+        var k=b.getAttribute('data-sp')||'';
+        activeSP=(activeSP===k)?'':k;   // bấm lại đúng sản phẩm đang chọn = bỏ lọc
+        renderVideos();
+      });
     });
   }
 
@@ -2854,17 +2938,17 @@
       if(fStaff && fStaff!=='free' && (!c || c.staff!==fStaff)) return false;
       return true;
     }).sort(function(a,b){ return (Number(b[sortKey])||0)-(Number(a[sortKey])||0); });
-    // Mẫu số là số video CỦA TAB đang mở, không phải toàn bộ — đang xem tab NOMA 911
+    // Mẫu số là số video CỦA SẢN PHẨM đang chọn, không phải toàn bộ — đang xem NOMA 911
     // mà báo "12/457" thì đọc ra vô nghĩa.
     filterN.innerHTML = (shown.length===poolN
       ? 'Hiện tất cả '+poolN+' video'
       : 'Hiện '+shown.length+'/'+poolN+' video')+
-      (activeSP ? ' trong tab này' : '')+
+      (activeSP ? ' trong sản phẩm này' : '')+
       (claimsErr ? ' · <span style="color:#b3261e">'+esc(claimsErr)+'</span>' : '');
   }
 
   function renderVideos(){
-    renderTabs();
+    renderBrands();
     applyFilters();
     if(!lastVideos.length){ vidsEl.innerHTML='<div class="tt-empty">Không có video trong khoảng này.</div>'; renderCart(); return; }
     if(!shown.length){ vidsEl.innerHTML='<div class="tt-empty">Không video nào khớp bộ lọc. Nới bộ lọc ở trên để xem thêm.</div>'; renderCart(); return; }
