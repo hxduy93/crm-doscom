@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-13 18:35",
+  "generated_at": "2026-08-13 19:36",
   "source_data_date_range": {
     "start_7d": "2026-08-06",
     "end": "2026-08-12",
@@ -1532,24 +1532,50 @@
         ]
       },
       {
-        "search_term": "camera ezviz",
-        "spend_30d": 107520.0,
-        "clicks_30d": 9,
+        "search_term": "máy dò định vị xe",
+        "spend_30d": 79469.0,
+        "clicks_30d": 8,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.0474,
+        "ctr_30d": 0.2581,
         "match_types": [
-          "BROAD"
+          "PHRASE"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
+        "search_term": "máy dò camera",
+        "spend_30d": 278360.0,
+        "clicks_30d": 26,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1871,
+        "match_types": [
+          "NEAR_PHRASE"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
+        "search_term": "máy dò camera ghi âm",
+        "spend_30d": 252488.0,
+        "clicks_30d": 17,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.2881,
+        "match_types": [
+          "NEAR_PHRASE"
         ],
         "statuses": [
           "NONE"
         ]
       },
       {
-        "search_term": "camera không cần wifi mini",
-        "spend_30d": 33677.0,
-        "clicks_30d": 4,
+        "search_term": "máy ghi âm remin",
+        "spend_30d": 69716.0,
+        "clicks_30d": 10,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.5714,
+        "ctr_30d": 0.0893,
         "match_types": [
           "PHRASE"
         ],
@@ -1558,55 +1584,13 @@
         ]
       },
       {
-        "search_term": "camera mini kết nối điện thoại không cần wifi",
-        "spend_30d": 20650.0,
+        "search_term": "thiết bị ghi âm kết nối điện thoại",
+        "spend_30d": 40132.0,
         "clicks_30d": 3,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.1579,
+        "ctr_30d": 0.2143,
         "match_types": [
-          "BROAD",
-          "EXACT",
           "PHRASE"
-        ],
-        "statuses": [
-          "ADDED",
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "cameras",
-        "spend_30d": 57895.0,
-        "clicks_30d": 1,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.04,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "doscom",
-        "spend_30d": 79672.0,
-        "clicks_30d": 41,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.313,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "h8c pro 3mp",
-        "spend_30d": 35960.0,
-        "clicks_30d": 2,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.2857,
-        "match_types": [
-          "BROAD"
         ],
         "statuses": [
           "NONE"
@@ -1624,6 +1608,19 @@
         ],
         "statuses": [
           "ADDED"
+        ]
+      },
+      {
+        "search_term": "camera không cần wifi mini",
+        "spend_30d": 33677.0,
+        "clicks_30d": 4,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.5714,
+        "match_types": [
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
         ]
       }
     ],
@@ -2134,17 +2131,17 @@
       }
     ],
     "match_type_breakdown": {
+      "EXACT": {
+        "spend_30d": 2814907.0,
+        "clicks_30d": 372,
+        "conversions_30d": 5.0,
+        "term_count": 50
+      },
       "NEAR_PHRASE": {
         "spend_30d": 6391232.0,
         "clicks_30d": 802,
         "conversions_30d": 6.31,
         "term_count": 572
-      },
-      "BROAD": {
-        "spend_30d": 11795757.0,
-        "clicks_30d": 1456,
-        "conversions_30d": 25.33,
-        "term_count": 2261
       },
       "PHRASE": {
         "spend_30d": 7100191.0,
@@ -2152,11 +2149,11 @@
         "conversions_30d": 14.33,
         "term_count": 585
       },
-      "EXACT": {
-        "spend_30d": 2814907.0,
-        "clicks_30d": 372,
-        "conversions_30d": 5.0,
-        "term_count": 50
+      "BROAD": {
+        "spend_30d": 11795757.0,
+        "clicks_30d": 1456,
+        "conversions_30d": 25.33,
+        "term_count": 2261
       },
       "NEAR_EXACT": {
         "spend_30d": 71662.0,
@@ -2168,7 +2165,7 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 7053,
+      "total_unique_placements": 7069,
       "total_spend_30d": 7554917.0
     },
     "network_breakdown": {
@@ -2181,11 +2178,11 @@
         "campaign_count": 5
       },
       "SEARCH": {
-        "spend_30d": 43211458.0,
-        "clicks_30d": 5197,
+        "spend_30d": 43184308.0,
+        "clicks_30d": 5196,
         "impressions_30d": 44339,
         "ctr_30d": 0.1172,
-        "cpc_30d": 8315.0,
+        "cpc_30d": 8311.0,
         "campaign_count": 5
       }
     },
@@ -2193,9 +2190,9 @@
       "WEBSITE": {
         "spend_30d": 7554917.0,
         "clicks_30d": 3179,
-        "impressions_30d": 234183,
+        "impressions_30d": 234339,
         "ctr_30d": 0.0136,
-        "placement_count": 7053
+        "placement_count": 7069
       }
     },
     "top_waste_placements": [],
@@ -2407,20 +2404,20 @@
   "ad_insights": {
     "summary": {
       "total_ads": 61,
-      "total_spend_30d": 50765809.0
+      "total_spend_30d": 50738659.0
     },
     "format_breakdown": {
       "DISPLAY_BANNER": {
         "spend_30d": 2609235.0,
         "clicks_30d": 1145,
-        "impressions_30d": 120790,
+        "impressions_30d": 120791,
         "ctr_30d": 0.0095,
         "ad_count": 9
       },
       "OTHER": {
-        "spend_30d": 48156574.0,
-        "clicks_30d": 7229,
-        "impressions_30d": 329357,
+        "spend_30d": 48129424.0,
+        "clicks_30d": 7228,
+        "impressions_30d": 329358,
         "ctr_30d": 0.0219,
         "ad_count": 52
       }
