@@ -1,14 +1,16 @@
 // GET /api/lark/tiktok-videos?days=14&top=20
+// GET /api/lark/tiktok-videos?ky=hom-nay|hom-qua|tuan-nay|thang-nay&top=3000
 // Top video TikTok Shop theo GMV, đọc từ Lark Base → bảng hieu_suat_video.
 //
 // ⚠️ Bảng này ~6.000 dòng (mỗi video × mỗi ngày 1 dòng). Quét sạch mất ~24s →
 // Cloudflare Pages Function HẾT GIỜ. Nên lọc theo ngày NGAY Ở PHÍA LARK bằng
 // /records/search: 14 ngày còn ~700 dòng, chạy ~2s. Thêm cache KV 30 phút.
 //
-// days: số ngày gần nhất (mặc định 14, trần 90).
-// top : số video trả về (mặc định 20, trần 100).
+// days: số ngày gần nhất (mặc định 14, trần 90). Giữ nguyên cho tương thích cũ.
+// ky  : kỳ có tên — hom-nay / hom-qua / tuan-nay / thang-nay. Có `ky` thì bỏ qua `days`.
+// top : số video trả về (mặc định 20, trần 3000).
 //
-// Trả: { ok, days, since, scanned, unique_videos, videos[], cached }
+// Trả: { ok, ky, nhan_ky, start, end, days, since, scanned, unique_videos, videos[], cached }
 
 import {
   searchRecordsSince, listRecords, resolveAppToken,
@@ -22,18 +24,43 @@ import { gopVideo, phangTuSaleReport } from "../../lib/gop-video.js";
 const SALE_REPORT = "https://sale-report-doscom.pages.dev/api/koc-daily";
 
 // Lùi n ngày theo giờ VN, trả "YYYY-MM-DD".
-const ngayVN = (lui) => new Date(Date.now() + 7 * 3600e3 - lui * 86400e3).toISOString().slice(0, 10);
+const ngayVNTu = (luc, lui) => new Date(luc + 7 * 3600e3 - lui * 86400e3).toISOString().slice(0, 10);
+const ngayVN = (lui) => ngayVNTu(Date.now(), lui);
+
+// Nửa đêm giờ VN của một ngày "YYYY-MM-DD", quy về mốc ms UTC.
+const mocVN = (ngay) => Date.parse(`${ngay}T00:00:00Z`) - 7 * 3600e3;
+
+// Kỳ có tên → khoảng ngày ĐÓNG [start, end] theo giờ VN. Tính hết trên chuỗi
+// "YYYY-MM-DD" chứ không trên mốc ms: so chuỗi thì không có cửa nào cho lệch múi giờ chui vào.
+// `luc` chỉ để test đóng băng thời gian; chạy thật luôn là bây giờ.
+export function khoangKy(ky, days, luc = Date.now()) {
+  const ngay = (lui) => ngayVNTu(luc, lui);
+  const homNay = ngay(0);
+  if (ky === "hom-nay") return { start: homNay, end: homNay, nhan: "hôm nay" };
+  if (ky === "hom-qua") { const h = ngay(1); return { start: h, end: h, nhan: "hôm qua" }; }
+  if (ky === "tuan-nay") {
+    // getUTCDay() trên mốc ĐÃ cộng 7 giờ = thứ trong tuần theo giờ VN. JS đánh số CN=0,
+    // nhưng tuần ở VN bắt đầu từ THỨ HAI → (thứ + 6) % 7 mới ra số ngày cần lùi
+    // (thứ 2 lùi 0, chủ nhật lùi 6). Dùng thẳng getUTCDay() là tuần bắt đầu từ chủ nhật,
+    // sáng thứ hai sẽ hiện số của cả tuần trước.
+    const thu = new Date(luc + 7 * 3600e3).getUTCDay();
+    return { start: ngay((thu + 6) % 7), end: homNay, nhan: "tuần này" };
+  }
+  if (ky === "thang-nay") return { start: `${homNay.slice(0, 8)}01`, end: homNay, nhan: "tháng này" };
+  // Không phải kỳ có tên → giữ nguyên đường cũ: N ngày gần nhất tính lùi từ hôm nay.
+  return { start: ngay(days), end: homNay, nhan: `${days} ngày` };
+}
 
 // Nguồn phụ hỏng thì TRẢ MẢNG RỖNG chứ không ném lỗi: mất thêm video thì tiếc,
 // nhưng để cả menu TikTok Shop trắng vì một dashboard khác sập thì tệ hơn nhiều.
-async function layTuSaleReport(days) {
+async function layTuSaleReport(start, end) {
   try {
     const u = new URL(SALE_REPORT);
     u.searchParams.set("by", "koc");
     u.searchParams.set("limit", "200");
     u.searchParams.set("videos", "300");
-    u.searchParams.set("start", ngayVN(days));
-    u.searchParams.set("end", ngayVN(0));
+    u.searchParams.set("start", start);
+    u.searchParams.set("end", end);
     const r = await fetch(u, { signal: AbortSignal.timeout(20000) });
     if (!r.ok) return { videos: [], loi: `HTTP ${r.status}` };
     const j = await r.json();
@@ -99,16 +126,19 @@ export async function onRequestGet(context) {
   const { request, env } = context;
   const q = new URL(request.url).searchParams;
   const days = Math.min(Math.max(Number(q.get("days")) || 14, 1), 90);
-  // Trần cũ là 100. Nâng lên 3000 vì menu TikTok Shop giờ chia TAB THEO SẢN PHẨM:
+  // Trần cũ là 100. Nâng lên 3000 vì menu TikTok Shop giờ chia Ô THEO SẢN PHẨM:
   // cắt ở 100 video GMV cao nhất thì các sản phẩm bán ít không còn video nào để hiện,
-  // tab của chúng rỗng trong khi thực tế có video. Gộp theo video nên 3000 dòng Lark
+  // ô của chúng rỗng trong khi thực tế có video. Gộp theo video nên 3000 dòng Lark
   // rút lại còn vài trăm video — trả hết vẫn nhẹ.
   const top = Math.min(Math.max(Number(q.get("top")) || 20, 1), 3000);
   const nocache = q.get("nocache") === "1";
   // ?merge=0 để xem riêng số Lark khi cần soát lệch giữa hai nguồn.
   const gopNguonPhu = q.get("merge") !== "0";
   const kv = env.INVENTORY;
-  const cacheKey = `lark:tiktok_videos:v4:${days}:${top}:${gopNguonPhu ? 1 : 0}`;
+  const { start, end, nhan } = khoangKy(q.get("ky") || "", days);
+  // Khoá cache theo KHOẢNG NGÀY chứ không theo tên kỳ: "hôm nay" hôm qua và "hôm nay"
+  // hôm nay là hai tập dữ liệu khác nhau, dùng chung khoá là trả số của ngày cũ.
+  const cacheKey = `lark:tiktok_videos:v5:${start}:${end}:${top}:${gopNguonPhu ? 1 : 0}`;
 
   if (!nocache && kv) {
     try {
@@ -122,7 +152,11 @@ export async function onRequestGet(context) {
   }
 
   try {
-    const since = Date.now() - days * 86400 * 1000;
+    // Lọc phía Lark nới rộng 2 NGÀY so với mốc thật, rồi mới cắt chính xác ở dưới bằng
+    // chuỗi ngày. Cố ý: cột "Ngày dữ liệu" là kiểu ngày, không rõ Lark neo vào nửa đêm
+    // UTC hay nửa đêm VN — chênh 7 giờ là mất trắng ngày đầu kỳ. Nới rồi cắt lại thì
+    // đúng trong cả hai trường hợp, mà chỉ tốn thêm vài chục dòng quét.
+    const since = mocVN(start) - 2 * 86400e3;
     const { appToken } = await resolveAppToken(env, kv, {
       wiki: env.LARK_WIKI_TOKEN,
       base: env.LARK_BASE_TOKEN,
@@ -134,13 +168,19 @@ export async function onRequestGet(context) {
         maxRecords: 3000,
       }),
       shopNameMap(env, kv, appToken),
-      gopNguonPhu ? layTuSaleReport(days) : Promise.resolve({ videos: [], loi: null }),
+      gopNguonPhu ? layTuSaleReport(start, end) : Promise.resolve({ videos: [], loi: null }),
     ]);
 
     // 1 video có nhiều dòng (mỗi ngày 1 bản ghi) → gộp theo link rồi cộng GMV.
     const byVideo = new Map();
+    let trongKy = 0;
     for (const rec of out.records) {
       const f = rec.fields;
+      // Cắt đúng khoảng: dòng nằm ngoài [start, end] phải bị loại TRƯỚC khi cộng GMV,
+      // nếu không "hôm qua" sẽ gánh luôn doanh thu hôm nay.
+      const ngay = toVnDate(f[DATE_FIELD]);
+      if (ngay && (ngay < start || ngay > end)) continue;
+      trongKy++;
       const link = larkText(f["Link video"]);
       const title = larkText(f["Tiêu đề video"]) || "(không tiêu đề)";
       const key = link || title;
@@ -159,8 +199,7 @@ export async function onRequestGet(context) {
       v.gmv += larkNum(f["GMV"]);
       v.orders += larkNum(f["Số đơn"]);
       v.views += larkNum(f["Lượt xem video"]);
-      const d = toVnDate(f["Ngày dữ liệu"]);
-      if (d && (!v.last_date || d > v.last_date)) v.last_date = d;
+      if (ngay && (!v.last_date || ngay > v.last_date)) v.last_date = ngay;
     }
 
     // Gộp hai nguồn rồi mới cắt `top`: cắt trước thì video chỉ có ở nguồn kia bị vứt
@@ -193,9 +232,17 @@ export async function onRequestGet(context) {
 
     const payload = {
       ok: true,
+      ky: q.get("ky") || "",
+      nhan_ky: nhan,
+      start,
+      end,
       days,
-      since: toVnDate(since),
+      // `since` giữ lại cho phần giao diện cũ đang đọc nó — nay bằng đúng ngày đầu kỳ,
+      // không còn là mốc "lùi N ngày" nữa.
+      since: start,
       scanned: out.records.length,
+      // scanned = số dòng Lark quét về (đã nới 2 ngày), trong_ky = số dòng THẬT SỰ tính.
+      trong_ky: trongKy,
       products,
       // true = còn dòng chưa quét (chạm trần) → "top" chỉ đúng trong phạm vi đã quét.
       has_more: out.has_more,

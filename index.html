@@ -612,6 +612,10 @@
           <div class="tt-h" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
             <span>Top video theo GMV <span id="tt-vid-sub" class="tt-sub"></span></span>
             <select class="btn-cl" id="tt-vid-days" style="padding:6px 9px;font-size:12px">
+              <option value="hom-nay">Hôm nay</option>
+              <option value="hom-qua">Hôm qua</option>
+              <option value="tuan-nay">Tuần này</option>
+              <option value="thang-nay">Tháng này</option>
               <option value="7">7 ngày</option>
               <option value="14" selected>14 ngày</option>
               <option value="30">30 ngày</option>
@@ -3307,7 +3311,7 @@
         gmv: v.gmv, orders: v.orders, views: v.views,
       });
     });
-    var payload={ generated_at:new Date().toISOString(), days:vidDaysSel.value, count:items.length, videos:items };
+    var payload={ generated_at:new Date().toISOString(), ky:vidDaysSel.value, count:items.length, videos:items };
     var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
     var a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
@@ -3316,16 +3320,28 @@
     setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },1000);
   }
 
+  // Ô thời gian nhận HAI loại giá trị: số ("7"/"14"/"30") → tham số days như cũ, còn
+  // chữ ("hom-nay"…) → tham số ky, để SERVER tự quy ra khoảng ngày. Cố ý không tính
+  // ngày ở đây: máy người dùng có thể đặt sai múi giờ, còn server luôn tính theo giờ VN.
+  function thamSoKy(){
+    var v=vidDaysSel.value||'14';
+    return /^\d+$/.test(v) ? 'days='+v : 'ky='+encodeURIComponent(v);
+  }
+
   function loadVideos(){
     vidsEl.innerHTML='<div class="tt-empty">Đang tải… (gộp Lark + TikTok Shop, có thể mất vài giây)</div>';
-    // top=3000 = lấy hết. Cắt nhỏ thì các sản phẩm bán ít không còn video nào và tab
-    // của chúng rỗng, trong khi phần nặng là quét Lark thì vẫn phải chạy y nguyên.
-    fetch('/api/lark/tiktok-videos?days='+vidDaysSel.value+'&top=3000',{credentials:'same-origin'})
+    // top=3000 = lấy hết. Cắt nhỏ thì các sản phẩm bán ít không còn video nào và ô sản
+    // phẩm của chúng rỗng, trong khi phần nặng là quét Lark thì vẫn phải chạy y nguyên.
+    fetch('/api/lark/tiktok-videos?'+thamSoKy()+'&top=3000',{credentials:'same-origin'})
       .then(function(r){return r.json();})
       .then(function(j){
         if(!j.ok) throw new Error(j.error||'lỗi');
         var g=j.gop||{};
-        vidSub.textContent='· từ '+dm(j.since)+' · '+vnd(j.unique_videos)+' video'+
+        // Kỳ 1 ngày thì ghi thẳng "hôm nay 13/8", không ghi "từ 13/8 đến 13/8".
+        var khoang = (j.start===j.end)
+          ? (j.nhan_ky||'')+' '+dm(j.start)
+          : 'từ '+dm(j.start)+' đến '+dm(j.end);
+        vidSub.textContent='· '+khoang+' · '+vnd(j.unique_videos)+' video'+
           (g.trung_ma!=null?' (Lark '+vnd(g.lark)+' + TikTok Shop '+vnd(g.tts)+', trùng '+vnd((g.trung_ma||0)+(g.trung_ten||0))+')':'')+
           (g.loi_nguon_phu?' · ⚠ thiếu nguồn TikTok Shop':'')+
           (j.cached?' · bộ nhớ đệm':'');
