@@ -25,9 +25,17 @@ test("bảng gộp đủ năm landing, mỗi landing hai nguồn", () => {
   for (const key of ["noma911", "noma680", "noma350", "noma230", "noma120"]) {
     assert.match(list[0], new RegExp(`key:'${key}'`), `thiếu ${key} trong bảng gộp`);
   }
-  for (const slug of ["nm911d", "911tpn", "nm680d", "nm680tpn", "nm350d", "nm350tpn",
-                      "nm230d", "nm230tpn", "nm120d", "nm120tpn"]) {
-    assert.match(list[0], new RegExp(slug), `thiếu landing ${slug}`);
+  // Canh ĐẦY ĐỦ đường dẫn chứ không chỉ phần đuôi. 2026-08-14: landing 120 gắn tên miền
+  // riêng và đổi sang đường rút gọn /d + /tpn — nếu chỉ canh đuôi thì "d" và "tpn" khớp
+  // với gần như mọi chuỗi, test xanh cả khi link sai hoàn toàn.
+  for (const link of [
+    "noma.io.vn/nm911d", "noma.io.vn/911tpn",
+    "nomaautocares.cloud/nm680d", "nomaautocares.cloud/nm680tpn",
+    "noma890.click/nm350d", "noma890.click/nm350tpn",
+    "noma620.click/nm230d", "noma620.click/nm230tpn",
+    "noma120.asia/d", "noma120.asia/tpn",
+  ]) {
+    assert.ok(list[0].includes(link), `thiếu hoặc sai link landing: ${link}`);
   }
 });
 

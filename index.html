@@ -373,11 +373,13 @@
         </div>
       </section>
 
-      <!-- MỘT bảng chung cho đơn đăng ký của MỌI landing sản phẩm (911 · 680 · 350 · 230).
+      <!-- MỘT bảng chung cho đơn đăng ký của MỌI landing sản phẩm
+           (911 · 680 · 350 · 230 · 120 — thêm 120 ngày 14/08/2026).
            Trước 05/08/2026 tách làm hai module (911 riêng, ba cái kia riêng) — cùng một
            nghĩa "1 lượt điền form = 1 đơn đăng ký" mà phải nhìn hai chỗ, cộng tay mới ra
-           tổng. Bốn endpoint /api/noma{911,680,350,230}/stats gọi song song, cái nào chết
-           thì báo lỗi ở đúng dòng sản phẩm đó. -->
+           tổng. Các endpoint /api/noma<mã>/stats gọi song song, cái nào chết thì báo lỗi ở
+           đúng dòng sản phẩm đó. Thêm landing mới chỉ cần thêm một dòng vào DK_LIST —
+           đường gọi dựng từ `sp.key` nên không phải sửa chỗ nào khác. -->
       <section class="mod wide" style="margin-bottom:16px" id="noma-mod">
         <div class="mod-h"><div class="t"><i style="background:#0EA5E9"></i><h3>Đơn đăng ký landing sản phẩm</h3></div><span class="s" id="dk-range">…</span></div>
         <div class="mod-b" id="dk-body" style="overflow-x:auto"><div class="skl">Đang tải đơn đăng ký…</div></div>
@@ -2074,9 +2076,10 @@
       link:{ duy:'noma890.click/nm350d', pn:'noma890.click/nm350tpn' } },
     { key:'noma230', ten:'NOMA 230', mo:'Xịt dưỡng nhựa nhám', mau:'#8B5CF6',
       link:{ duy:'noma620.click/nm230d', pn:'noma620.click/nm230tpn' } },
-    // 120 CHƯA có tên miền riêng nên link còn để .pages.dev. Gắn domain xong thì sửa ở đây.
+    // 120 dùng đường rút gọn /d và /tpn (không lặp lại số SP trong path như 4 landing kia)
+    // vì tên miền riêng noma120.asia gắn ngày 14/08/2026 đã mang sẵn số hiệu sản phẩm.
     { key:'noma120', ten:'NOMA 120', mo:'Vệ sinh kim phun & buồng đốt', mau:'#DC2626',
-      link:{ duy:'noma120-landing.pages.dev/nm120d', pn:'noma120-landing.pages.dev/nm120tpn' } }
+      link:{ duy:'noma120.asia/d', pn:'noma120.asia/tpn' } }
   ];
   var DK_DATA={};   // key -> response | {__loading:true} | {__failed:true}
   var DK_STAFF=[{k:'duy',ten:'Duy'},{k:'pn',ten:'Phương Nam'}];
