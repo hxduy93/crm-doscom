@@ -99,19 +99,36 @@ test("by_combo chỉ chứa combo của NOMA 120", async (t) => {
   }
 });
 
-// ── TEST 5: KHÔNG CHẠY QUÀ — by_gift chỉ được có '(không quà)' ───────────
-// Landing 120 cố ý không có chương trình quà (khác 230/350/911). Nếu một ngày có mã quà
-// lọt vào đây thì hoặc landing đã bật quà mà quên khai ở CRM, hoặc đơn của sản phẩm khác
-// ghi nhầm sang bảng 120 — cả hai đều phải biết ngay.
-test("by_gift không có mã quà nào (landing 120 không chạy quà)", async (t) => {
+// ── TEST 5: QUÀ TẶNG — chỉ được có đúng hai giá trị ─────────────────────
+// Từ 14/08/2026 landing 120 tặng NOMA 250 cho mọi gói từ hai sản phẩm trở lên; gói lẻ
+// 1 chai không có quà. Nên by_gift chỉ được ra 'noma250' hoặc '(không quà)'.
+// Mã quà lạ lọt vào đây nghĩa là hoặc landing đổi chính sách quà mà quên khai COMBO_META
+// bên CRM, hoặc đơn của sản phẩm khác ghi nhầm sang bảng 120.
+const QUA_HOP_LE = new Set(["noma250", "(không quà)"]);
+
+test("by_gift chỉ chứa quà của NOMA 120", async (t) => {
   const kq = await layThongKe();
   if (!kq) return t.skip(CHUA_DEPLOY);
 
   for (const dong of kq.by_gift || []) {
-    assert.equal(
-      dong.gift,
-      "(không quà)",
-      `Quà "${dong.gift}" xuất hiện trong thống kê 120 — landing này chưa chạy quà bao giờ`
+    assert.ok(
+      QUA_HOP_LE.has(dong.gift),
+      `Quà lạ "${dong.gift}" lọt vào thống kê 120 — chính sách quà ở landing và ở CRM đang lệch nhau`
     );
   }
+});
+
+// ── TEST 6: TOÀN VẸN — mọi đơn phải rơi vào đúng một nhóm quà ────────────
+// by_gift dùng CASE WHEN nên không đơn nào bị bỏ sót; test này canh nếu ai đó sửa câu
+// SQL thành lọc `WHERE gift IS NOT NULL` thì tổng hụt đi và báo đỏ ngay.
+test("tổng đơn theo quà = tổng đơn", async (t) => {
+  const kq = await layThongKe();
+  if (!kq) return t.skip(CHUA_DEPLOY);
+
+  const tongTuQua = (kq.by_gift || []).reduce((s, d) => s + d.orders, 0);
+  assert.equal(
+    tongTuQua,
+    kq.summary.orders,
+    `tổng đơn theo quà (${tongTuQua}) phải = summary.orders (${kq.summary.orders})`
+  );
 });

@@ -20,10 +20,12 @@ function vnDate(epochSec) {
 }
 
 const STAFF_LABEL = { duy: "Duy", pn: "Phương Nam" };
-// Landing 120 KHÔNG chạy quà tặng nên bảng này rỗng và by_gift luôn trả đúng một dòng
-// '(không quà)'. Giữ lại bảng tra để bật quà về sau không phải sửa dashboard — thiếu nhãn
-// thì dashboard hiện mã thô.
-const GIFT_LABEL = {};
+// Quà tặng bật 14/08/2026: mọi gói từ hai sản phẩm trở lên tặng 1 chai NOMA 250, gói lẻ
+// 1 chai không có quà. Vì vậy by_gift trả về HAI dòng: 'noma250' và '(không quà)'.
+// Thiếu nhãn ở đây thì dashboard hiện mã thô chứ không vỡ.
+const GIFT_LABEL = {
+  noma250: "NOMA 250",
+};
 
 export async function onRequestGet(context) {
   const { request, env } = context;

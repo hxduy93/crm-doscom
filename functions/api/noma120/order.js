@@ -8,11 +8,15 @@
 // Giá chốt ở đây theo COMBO_META — `amount` client gửi lên bị bỏ qua. Đây là lớp chốt giá
 // thứ hai (lớp đầu ở Function của landing); cố ý, để kênh khác gọi thẳng vẫn đúng tiền.
 
+// Quà tặng bật 14/08/2026: mọi gói từ hai sản phẩm trở lên tặng 1 chai NOMA 250.
+// Mã quà chốt Ở ĐÂY, KHÔNG lấy `b.gift` client gửi lên — cùng lý do với `amount`:
+// đây là lớp chốt thứ hai, kênh nào gọi thẳng endpoint này cũng phải ra đúng quà.
+// (Khác noma230/order.js — bản đó còn tin `b.gift` của client. Đừng chép ngược lại.)
 const COMBO_META = {
-  "le-120":        { label: "1 chai NOMA 120 vệ sinh kim phun",      amount: 189000 },
-  "combo-2x120":   { label: "2 chai NOMA 120 vệ sinh kim phun",      amount: 339000 },
-  "combo-120-350": { label: "NOMA 120 + NOMA 350 vệ sinh phanh đĩa", amount: 329000 },
-  "combo-120-130": { label: "NOMA 120 + NOMA 130 dưỡng ron cao su",  amount: 349000 },
+  "le-120":        { label: "1 chai NOMA 120 vệ sinh kim phun",      amount: 189000, gift: "" },
+  "combo-2x120":   { label: "2 chai NOMA 120 vệ sinh kim phun",      amount: 339000, gift: "noma250" },
+  "combo-120-350": { label: "NOMA 120 + NOMA 350 vệ sinh phanh đĩa", amount: 329000, gift: "noma250" },
+  "combo-120-130": { label: "NOMA 120 + NOMA 130 dưỡng ron cao su",  amount: 349000, gift: "noma250" },
 };
 
 function json(obj, status = 200) {
@@ -67,9 +71,6 @@ export async function onRequestPost({ request, env }) {
   try {
     // INSERT OR IGNORE + unique(created_date, phone, combo): khách bấm gửi 2 lần chỉ
     // thành 1 đơn, doanh thu không bị cộng đôi.
-    //
-    // Cột `gift` ghi rỗng: landing 120 không chạy quà. Vẫn bind để câu lệnh khớp khuôn
-    // 230/350/680, đổi chính sách quà sau này chỉ phải sửa một chỗ.
     const res = await env.DB.prepare(
       `INSERT OR IGNORE INTO noma120_orders
          (staff, combo, combo_label, gift, name, note, source, province, phone, amount,
@@ -79,7 +80,7 @@ export async function onRequestPost({ request, env }) {
       staff,
       b.combo,
       meta.label,
-      clip(b.gift, 100),
+      meta.gift,
       clip(b.name, 120),
       clip(b.note, 500),
       clip(b.source, 120) || "landing-120",
@@ -97,7 +98,7 @@ export async function onRequestPost({ request, env }) {
     return json({
       ok: true,
       duplicate: written === 0,
-      stored: { combo: b.combo, combo_label: meta.label, amount: meta.amount, staff },
+      stored: { combo: b.combo, combo_label: meta.label, amount: meta.amount, gift: meta.gift, staff },
     });
   } catch (err) {
     return json({ ok: false, error: String(err?.message || err).slice(0, 300) }, 500);
