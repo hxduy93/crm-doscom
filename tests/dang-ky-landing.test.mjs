@@ -17,13 +17,16 @@ test("chỉ còn MỘT khối đơn đăng ký trên trang", () => {
     "còn hàm vẽ của module cũ");
 });
 
-test("bảng gộp đủ bốn landing, mỗi landing hai nguồn", () => {
+// 2026-08-14: thêm NOMA 120 thành landing thứ NĂM. Test này canh việc đăng ký — quên
+// thêm dòng vào DK_LIST là đơn 120 chảy về D1 mà dashboard không hiện, im lặng không báo.
+test("bảng gộp đủ năm landing, mỗi landing hai nguồn", () => {
   const list = html.match(/var DK_LIST=\[[\s\S]*?\n  \];/);
   assert.ok(list, "không trích được DK_LIST từ index.html");
-  for (const key of ["noma911", "noma680", "noma350", "noma230"]) {
+  for (const key of ["noma911", "noma680", "noma350", "noma230", "noma120"]) {
     assert.match(list[0], new RegExp(`key:'${key}'`), `thiếu ${key} trong bảng gộp`);
   }
-  for (const slug of ["nm911d", "911tpn", "nm680d", "nm680tpn", "nm350d", "nm350tpn", "nm230d", "nm230tpn"]) {
+  for (const slug of ["nm911d", "911tpn", "nm680d", "nm680tpn", "nm350d", "nm350tpn",
+                      "nm230d", "nm230tpn", "nm120d", "nm120tpn"]) {
     assert.match(list[0], new RegExp(slug), `thiếu landing ${slug}`);
   }
 });
