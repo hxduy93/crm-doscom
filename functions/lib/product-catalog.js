@@ -256,6 +256,54 @@ export const PRODUCTS = {
     fbPolicyNotes: "Ảnh trước/sau phải kèm câu 'mức độ phục hồi tuỳ tình trạng nhựa lúc bắt đầu' như trên landing. Nêu thời gian hiệu lực theo điều kiện đỗ xe, KHÔNG hứa vĩnh viễn.",
   },
 
+  // Thêm 15/08/2026 cùng lúc landing noma120.asia lên sóng. Mọi con số dưới đây lấy
+  // NGUYÊN từ landing đang chạy (public/index.html repo noma120-landing), không suy diễn.
+  "Noma 120": {
+    name: "Noma 120",
+    brand: "NOMA",
+    fullName: "Dung dịch vệ sinh súc rửa kim phun & buồng đốt Noma 120 — chai 300ml",
+    priceRange: "189.000đ / chai 300ml (2 chai 339.000đ, tặng 1 chai NOMA 250)",
+    category: "Chăm sóc ô tô & xe máy — vệ sinh hệ thống nhiên liệu",
+    source: "noma-sku-specs.js mã 120 + PRICING landing noma120 (đối chiếu 2026-08-15)",
+    guarantee: null,
+    usps: [
+      "Đổ thẳng vào bình xăng rồi chạy hết bình — không tháo một con ốc nào, không phải gửi xe",
+      "Hoạt chất PEA đi cùng xăng tới đúng đầu kim phun và buồng đốt, chỗ mà súc rửa bên ngoài không với tới",
+      "Giảm tới 90% cặn carbon và tiết kiệm tới 7% nhiên liệu (số trên landing, luôn dùng chữ 'tới')",
+      "Thấy rõ sau 1-2 bình xăng, không phải chờ hàng tháng",
+      "Một chai 300ml đủ một lần súc rửa cho ô tô, hoặc sáu lượt cho xe máy",
+    ],
+    painPoints: [
+      "Xe ì, đạp ga không bốc như trước dù máy chưa hỏng gì",
+      "Hao xăng dần lên mà không rõ lý do",
+      "Giật cục, rung lúc tăng ga",
+      "Cặn carbon đóng dày làm tia phun tõe lệch thành giọt — xăng vào nhiều hơn mà cháy được ít hơn",
+      "Muội bám đỉnh piston và tán xu-páp giữ nhiệt, làm hoà khí cháy sớm, máy rung và nổ có tiếng lạ",
+    ],
+    usage: [
+      "Dùng khi vừa đổ đầy bình xăng",
+      "Lắc nhẹ chai, gắn vòi rót",
+      "Rót toàn bộ 1 chai 300ml vào bình xăng",
+      "Đóng nắp bình, lau sạch nếu rớt ra ngoài",
+      "Chạy hết bình xăng để dung dịch đi qua hệ thống nhiên liệu",
+      "Theo dõi sau 1-2 bình; ô tô dùng lại mỗi 10.000km, xe máy mỗi 2.000-3.000km",
+    ],
+    effectDuration: "Rõ sau 1-2 bình xăng; dùng lại mỗi 10.000km (ô tô) hoặc 2.000-3.000km (xe máy)",
+    targetAudience: "Chủ ô tô và xe máy CHẠY XĂNG, xe đã đi nhiều thấy ì máy hoặc hao xăng",
+    tonePreferred: "Giải thích cơ chế trước rồi mới bán — nói rõ vì sao cặn carbon làm xe ì, sau đó mới tới sản phẩm",
+    avoidWords: [
+      "rẻ", "siêu rẻ", "số 1", "tốt nhất", "đỉnh", "vượt trội", "đột phá",
+      "100%", "tuyệt đối", "hoàn toàn", "như mới 100%",
+      "Made in USA", "chính hãng Mỹ", "công nghệ Mỹ", "sản xuất tại Mỹ", "nhập khẩu từ Mỹ",
+    ],
+    // Cảnh báo nhiên liệu là điều kiện dùng được hay không, KHÔNG phải chi tiết phụ:
+    // đổ nhầm vào xe máy dầu là khách mất tiền mà không được gì, và là nguồn khiếu nại.
+    fbPolicyNotes:
+      "BẮT BUỘC nêu 'chỉ dùng cho xe chạy xăng' trong mọi bài — NOMA 120 là phụ gia cho động cơ xăng, " +
+      "không đổ vào ô tô/xe máy chạy dầu (diesel). Hai con số 90% cặn carbon và 7% tiết kiệm xăng phải " +
+      "giữ chữ 'tới', không viết thành cam kết. Không hứa chữa được lỗi cơ khí.",
+  },
+
   "DA8.1": {
     name: "Camera DA8.1",
     brand: "DOSCOM",

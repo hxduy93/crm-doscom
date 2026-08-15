@@ -240,6 +240,13 @@ function AdsCreatorPanel() {
     // BM YODAY và gán đủ 7/7 tkqc (dò lại chiều 06/08/2026) — dùng được bình thường.
     "Noma 230":  { pixel: "2082661435656423", page: "681202051750505", account: "act_1655506672244826", pixelName: "NOMA 230",
                    link: "https://noma620.click/nm230d", linkPn: "https://noma620.click/nm230tpn" },
+    // NOMA 120 (thêm 15/08/2026). Pixel và hai link đã đối chiếu trên landing đang chạy.
+    // `page` và `account` CỐ Ý để rỗng: chưa ai xác nhận 120 chạy trên tkqc/trang nào, mà
+    // đây đúng là chỗ điền sai thì tiền chạy sang tài khoản khác. Để rỗng thì chọn sản
+    // phẩm sẽ XOÁ hai ô đó, buộc người chạy tự chọn — an toàn hơn hẳn việc giữ nguyên
+    // lựa chọn của sản phẩm vừa xem trước đó. Xác nhận được thì điền vào đây.
+    "Noma 120":  { pixel: "1028891276586190", page: "", account: "", pixelName: "NOMA 120",
+                   link: "https://noma120.asia/d", linkPn: "https://noma120.asia/tpn" },
     // DA8.1 Pro đã ngừng bán (2026-07-22) → bỏ khỏi danh sách chọn để không tạo
     // camp mới. Pixel của nó vẫn giữ ở PIXELS bên dưới cho camp cũ đọc tên đúng.
   }
@@ -290,6 +297,7 @@ function AdsCreatorPanel() {
     "1045069881269455":  "NOMA 350",
     "1281580350573958":  "NOMA 680",
     "2082661435656423":  "NOMA 230",
+    "1028891276586190":  "NOMA 120",
   }
 
   // ── Mục tiêu chiến dịch (6 ODAX objectives) — Text y hệt FB Ads Manager tiếng Việt ──
