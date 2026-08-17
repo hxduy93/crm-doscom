@@ -58,9 +58,11 @@
       401 khi sai token, chuyển trạng thái done/failed đúng.
 - [x] 5.2 Test tính mức cảnh báo dữ liệu cũ theo 3 ngưỡng.
 - [x] 5.3 Chạy `node --test tests/*.mjs` — phải xanh toàn bộ trước khi deploy.
-- [ ] 5.4 Chạy thử thật một lượt từ nút trên web tới khi web cập nhật, đối chiếu
+- [x] 5.4 Chạy thử thật một lượt từ nút trên web tới khi web cập nhật, đối chiếu
       `generated_at` mới.
-- [ ] 5.5 Nếu bật Cloudflare Access: thêm bypass cho `/api/refresh/next` và
-      `/api/refresh/report`, chạy lại 5.4 để chắc runner không nhận trang đăng nhập.
+- [ ] 5.5 XÁC NHẬN 17/08: Access ĐANG BẬT (endpoint ngoài trả 302, meta báo
+      service_token_status=false). App chặn có AUD 4e14eafe6a57c2981cbfd826bcfbe1bd9056e217ef692268a134ac1586121424.
+      Cần thêm policy Service Auth cho token `crm-refresh-runner` vào ĐÚNG app đó,
+      hoặc tạo app Bypass cho 2 đường /api/refresh/next + /report. CHỜ NGƯỜI DÙNG.
 - [x] 5.6 Ghi vào `README.md`: khi GitHub mở khoá Actions trở lại thì chọn MỘT đường
       (cron GitHub hoặc runner), không bật cả hai cùng ghi `data/*.json`.
