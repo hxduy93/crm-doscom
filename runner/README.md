@@ -69,18 +69,29 @@ cd C:\Users\HXDUy\jarvis-1\crm-doscom
 Cửa sổ này phải để mở. Đóng cửa sổ là nút trên web hết tác dụng (giao diện sẽ báo
 "runner chưa chạy" sau 5 phút).
 
-**Cách 2 — chạy nền bằng Task Scheduler** (tiện hơn, chạy sẵn từ lúc đăng nhập):
+**Cách 2 — chạy nền, khởi động cùng Windows** (đang dùng, cài 17/08/2026):
 
-```powershell
-$action  = New-ScheduledTaskAction -Execute "powershell.exe" `
-  -Argument '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "C:\Users\HXDUy\jarvis-1\crm-doscom\runner\refresh-runner.ps1"'
-$trigger = New-ScheduledTaskTrigger -AtLogOn
-Register-ScheduledTask -TaskName "CRM Doscom Refresh Runner" -Action $action -Trigger $trigger -RunLevel Highest
+Một file `.vbs` đặt ở thư mục Startup của người dùng:
+
+```
+C:\Users\HXDUy\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\crm-refresh-runner.vbs
 ```
 
-→ PASS nếu in ra bảng có `TaskName: CRM Doscom Refresh Runner`, `State: Ready`.
+Đăng nhập Windows là runner tự chạy ẩn, không hiện cửa sổ.
 
-Gỡ: `Unregister-ScheduledTask -TaskName "CRM Doscom Refresh Runner" -Confirm:$false`
+- **Gỡ**: xoá file `.vbs` đó.
+- **Chạy ngay không cần đăng xuất**: bấm đúp vào chính file `.vbs`.
+- **Kiểm đang chạy hay không**: mở giao diện CRM, nếu nút không báo "Runner chưa chạy" thì nó đang sống. Hoặc xem `runner/logs/`.
+
+> Vì sao không dùng Task Scheduler: `Register-ScheduledTask` đòi quyền admin (`Access is denied`
+> khi chạy bằng quyền thường). Thư mục Startup cho kết quả tương đương mà không cần nâng quyền.
+> Nếu bạn có quyền admin và muốn dùng Task Scheduler, mở PowerShell **Run as Administrator**:
+> ```powershell
+> $action  = New-ScheduledTaskAction -Execute "powershell.exe" `
+>   -Argument '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "C:\Users\HXDUy\jarvis-1\crm-doscom\runner\refresh-runner.ps1"'
+> Register-ScheduledTask -TaskName "CRM Doscom Refresh Runner" -Action $action -Trigger (New-ScheduledTaskTrigger -AtLogOn)
+> ```
+> Dùng Task Scheduler thì nhớ xoá file `.vbs` ở Startup, không thì chạy 2 runner cùng lúc.
 
 Chạy nền thì không thấy log trực tiếp — xem ở `runner/logs/`.
 
@@ -108,7 +119,7 @@ Log giữ 14 ngày gần nhất, tự dọn. Log trên D1 chỉ có 2000 ký t�
 | 2 | Facebook Ads | `fetch_fb_ads.py` |
 | 3–6 | Google Ads: chi phí, ad-level, placement, search terms | 4 script `fetch_google_ads_*.py` |
 | 7 | Google Ads context (cho agent AI) | `compute_google_ads_metrics.py` |
-| 8 | Contacts CRM Pancake | `fetch_pancake_crm_contacts.py` — **lâu nhất, ~25 phút** |
+| 8 | Contacts CRM Pancake | `fetch_pancake_crm_contacts.py` — **lâu nhất, ~8 phút** |
 | 9 | Lead → Order | `build_lead_to_order.py` |
 | 10 | Ráp dashboard | `build_dashboard_data.py` |
 | 11 | Kiểm landing Noma | gọi `/api/nomaXXX/stats` × 5 |
@@ -116,6 +127,10 @@ Log giữ 14 ngày gần nhất, tự dọn. Log trên D1 chỉ có 2000 ký t�
 | 13 | Deploy | `build-dist.sh` + `wrangler pages deploy` |
 
 Bước nào lỗi thì dừng cả pipeline, không deploy, và báo `failed` về CRM.
+
+Thời gian đo thật (job #3, 17/08/2026): **trọn 13 bước hết 16 phút**. Con số 40 phút ước
+lượng ban đầu đến từ một lượt chạy dính retry timeout của Pancake ở bước 8 — không phải mức
+bình thường.
 
 ## Về bước 11 — landing Noma
 

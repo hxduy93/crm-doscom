@@ -278,7 +278,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Báo cáo tuần
         </button>
       </div>
-      <button class="btn-refresh" id="btnRefresh" title="Chạy lại toàn bộ pipeline lấy dữ liệu: Facebook Ads, Google Ads, Pancake (doanh thu + contacts CRM), lead→order, và kiểm đường đẩy đơn của 5 landing Noma. Chạy ở máy vận hành, mất khoảng 40 phút.">
+      <button class="btn-refresh" id="btnRefresh" title="Chạy lại toàn bộ pipeline lấy dữ liệu: Facebook Ads, Google Ads, Pancake (doanh thu + contacts CRM), lead→order, và kiểm đường đẩy đơn của 5 landing Noma. Chạy ở máy vận hành, khoảng 15–20 phút.">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         <span id="btnRefreshLabel">Cập nhật dữ liệu</span>
       </button>
@@ -2507,7 +2507,9 @@
         lbl.textContent='Đang cập nhật…';
         var n=job.current_step||0, tot=job.total_steps||13;
         var name=job.current_step_name||'đang khởi động';
-        setNote('Bước '+n+'/'+tot+' — '+name+'. Toàn bộ mất khoảng 40 phút, bước "Contacts CRM Pancake" lâu nhất (~25 phút).','');
+        // Số phút đo thật ở job #3 (17/08/2026): trọn 13 bước hết 16 phút, riêng bước
+        // Contacts CRM Pancake 8 phút. Đừng đổi thành số ước lượng.
+        setNote('Bước '+n+'/'+tot+' — '+name+'. Trọn bộ khoảng 15–20 phút, bước "Contacts CRM Pancake" lâu nhất (~8 phút).','');
         return;
       }
 
