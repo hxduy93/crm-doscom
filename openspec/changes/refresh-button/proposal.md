@@ -10,8 +10,17 @@ GitHub, và nhìn thấy rõ dữ liệu tươi tới thời điểm nào.
 
 ## What Changes
 
-- Thêm nút **"Cập nhật dữ liệu"** trên giao diện CRM. Bấm nút KHÔNG chạy pipeline ngay
-  trong Cloudflare mà **ghi một yêu cầu (job) vào D1** rồi trả về ngay.
+- Thêm nút **"Cập nhật dữ liệu"** trên **trang Tổng quan Dashboard** (thanh trên cùng,
+  cạnh ô "cập nhật <giờ>"). Bấm nút KHÔNG chạy pipeline ngay trong Cloudflare mà
+  **ghi một yêu cầu (job) vào D1** rồi trả về ngay.
+- Một lần bấm phủ hết mọi nguồn: Facebook Ads, Google Ads, Pancake (doanh thu + contacts
+  CRM), và **kiểm tra dữ liệu 5 landing Noma** (911 / 120 / 230 / 350 / 680).
+  - Landing KHÔNG có bước "lấy dữ liệu": landing đẩy đơn thẳng vào D1 của CRM qua
+    `POST /api/nomaXXX/order` và dashboard đọc live qua `/api/nomaXXX/stats` — dữ liệu
+    luôn tươi sẵn. Cái cần làm là **kiểm chứng đường đẩy đơn còn sống**: mỗi lần chạy,
+    gọi stats cả 5 landing, ghi lại mốc đơn gần nhất, cảnh báo landing nào im bất thường.
+    Đây đúng là chỗ đã từng hỏng âm thầm — deploy lại landing làm lệch
+    `NOMA911_INGEST_TOKEN`, đơn ngừng về CRM mà stats vẫn trả 200 kèm số cũ.
 - Thêm **runner** chạy trên máy người vận hành: cứ ~60 giây hỏi CRM "có yêu cầu nào
   không", có thì chạy đúng 8 bước pipeline Python hiện có + deploy, và báo tiến độ
   từng bước ngược về CRM.

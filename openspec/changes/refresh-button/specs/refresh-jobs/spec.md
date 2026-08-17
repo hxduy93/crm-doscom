@@ -102,6 +102,30 @@ báo rõ khi snapshot quá cũ. Hệ thống KHÔNG được hiển thị số c
 - **THEN** nút "Cập nhật dữ liệu" chuyển sang trạng thái báo runner chưa chạy, thay vì
   cho bấm rồi chờ vô hạn
 
+### Requirement: Kiểm chứng đường đẩy đơn của landing Noma
+
+Pipeline PHẢI có một bước kiểm tra 5 landing Noma (911, 120, 230, 350, 680). Bước này
+KHÔNG lấy dữ liệu về — đơn landing đã nằm sẵn trong D1 của CRM — mà xác minh đường đẩy
+đơn còn sống, vì lỗi lệch token làm đơn ngừng về mà giao diện vẫn hiện số cũ.
+
+#### Scenario: Cả 5 landing đều có đơn gần đây
+
+- **WHEN** bước kiểm landing gọi `/api/nomaXXX/stats` cho cả 5 landing và landing nào
+  cũng có đơn trong 48 giờ gần nhất
+- **THEN** bước báo `ok` kèm mốc đơn gần nhất của từng landing
+
+#### Scenario: Một landing im lặng bất thường
+
+- **WHEN** một landing không có đơn nào trong 48 giờ trong khi các landing khác vẫn có
+- **THEN** bước vẫn báo `ok` nhưng cộng vào `warnings` và ghi rõ tên landing im lặng
+- **AND** giao diện hiện cảnh báo nêu đích danh landing đó cùng gợi ý kiểm token
+  `NOMA911_INGEST_TOKEN` của landing
+
+#### Scenario: Endpoint stats của một landing lỗi
+
+- **WHEN** `/api/nomaXXX/stats` trả mã lỗi hoặc không phải JSON hợp lệ
+- **THEN** bước cộng vào `warnings` kèm tên landing và mã lỗi, KHÔNG làm hỏng cả pipeline
+
 ### Requirement: Cổng chất lượng trước khi deploy
 
 Runner PHẢI chạy `node --test tests/*.mjs` trước bước deploy và PHẢI dừng nếu có test đỏ.

@@ -40,5 +40,22 @@ Thiếu secret nào thì workflow tương ứng **đỏ và dừng**, KHÔNG ghi
 đã có guard ở cả 3 chỗ (FB insights rỗng, Pancake fetch lỗi/tụt >50%, CRM contacts thiếu).
 Kiểm token FB trước khi nạp: `FB_TOKEN=EAA... node scripts/fb-token-check.mjs`.
 
+## Nút "Cập nhật dữ liệu" (đường bấm tay)
+
+⚠️ **Từ 15/08/2026 bảng workflow ở trên KHÔNG chạy**: GitHub khoá Actions toàn tài khoản
+`hxduy93` (mọi dispatch trả `422 Actions has been disabled for this user`). Dữ liệu đứng
+3 ngày mà không có dấu hiệu gì trên giao diện.
+
+Đường thay thế: nút **"Cập nhật dữ liệu"** ở thanh trên cùng trang Tổng quan. Bấm nút ghi
+một yêu cầu vào D1; **runner** chạy trên máy người vận hành nhận việc rồi chạy 13 bước
+pipeline thật + deploy. Cài đặt và vận hành: [`runner/README.md`](runner/README.md).
+
+Kèm theo đó, ô "cập nhật …" cạnh nút nay **đổi màu theo tuổi dữ liệu** (dưới 24h bình
+thường / 24–72h vàng / trên 72h đỏ) — để lần sau dữ liệu đứng thì nhìn là biết ngay.
+
+**Khi GitHub mở khoá Actions trở lại: chọn MỘT đường, đừng bật cả hai.** Cron GitHub và
+runner cùng ghi `data/*.json` rồi cùng deploy là đúng kiểu race đã làm hỏng workflow trước
+đây. Quay về GitHub thì tắt Task Scheduler của runner trước.
+
 ## Chạy thử cục bộ
 Cần server (vì fetch /data): `python -m http.server 8125` rồi mở http://127.0.0.1:8125/
