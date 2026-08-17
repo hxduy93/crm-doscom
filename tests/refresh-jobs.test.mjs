@@ -227,6 +227,25 @@ test("báo done kèm cảnh báo: job done nhưng warnings được giữ", asyn
   assert.match(state.jobs[0].warning_text, /764394829882083/);
 });
 
+// Trong lúc chạy job ~40 phút, runner KHÔNG gọi /next lần nào. Nếu nhịp tim chỉ đến từ
+// /next thì giao diện sẽ báo "runner chưa chạy" ngay giữa lúc runner đang chạy thật.
+test("báo cáo bước cũng làm tươi nhịp tim của runner", async () => {
+  const ts = Math.floor(Date.now() / 1000);
+  const state = {
+    jobs: [{ id: 1, status: "running", created_at: ts, started_at: ts, current_step: 0, total_steps: 13, warnings: 0 }],
+    runner: { last_seen_at: ts - 30 * 60, runner_version: "1.0" },
+  };
+  const env = makeEnv(state);
+
+  await reportPost({
+    request: req("https://x/api/refresh/report", {
+      method: "POST", body: JSON.stringify({ job_id: 1, step_index: 8, step: "Contacts CRM Pancake", status: "ok" }), ...withToken(),
+    }), env,
+  });
+
+  assert.ok(state.runner.last_seen_at >= ts, "nhịp tim phải được cập nhật khi runner báo bước");
+});
+
 test("status trả runner offline khi nhịp tim quá 5 phút", async () => {
   const ts = Math.floor(Date.now() / 1000);
   const state = { jobs: [], runner: { last_seen_at: ts - 6 * 60, runner_version: "1.0" } };

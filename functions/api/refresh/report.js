@@ -38,6 +38,14 @@ export async function onRequestPost(context) {
     const job = await env.DB.prepare(`SELECT * FROM refresh_jobs WHERE id = ?`).bind(jobId).first();
     if (!job) return json({ ok: false, error: "job_not_found" }, 404);
 
+    // Báo cáo bước cũng TÍNH LÀ nhịp tim. Trong lúc chạy job (~40 phút) runner không gọi
+    // /next lần nào, nên nếu chỉ dựa vào /next thì nhịp tim hoá cũ và giao diện báo
+    // "runner chưa chạy" ngay giữa lúc runner đang chạy thật.
+    await env.DB.prepare(
+      `INSERT INTO refresh_runner_state (id, last_seen_at) VALUES (1, ?)
+       ON CONFLICT(id) DO UPDATE SET last_seen_at = excluded.last_seen_at`
+    ).bind(ts).run();
+
     if (status === "failed") {
       // Bước lỗi → dừng cả pipeline. Runner KHÔNG chạy bước sau và KHÔNG deploy.
       await env.DB.prepare(
