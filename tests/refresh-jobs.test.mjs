@@ -254,7 +254,28 @@ test("danh sách bước: khoá đúng thứ tự CI, không trùng key, deploy 
   assert.equal(NOMA_LANDINGS.length, 5);
 });
 
-// ── 5. Cảnh báo snapshot cũ ─────────────────────────────────────────────────
+// ── 5. Runner script ────────────────────────────────────────────────────────
+// Đã cắn HAI LẦN ngày 17/08/2026: một dấu "—" trong comment làm Windows PowerShell 5.1
+// vỡ cú pháp toàn file. Lý do: PowerShell 5.1 đọc .ps1 KHÔNG có BOM theo ANSI, nên ký tự
+// nhiều byte biến thành rác giữa chuỗi. Runner chạy nền bằng Task Scheduler nên vỡ kiểu
+// này là im lặng — không ai thấy cho tới khi bấm nút mà không có gì xảy ra.
+test("runner/refresh-runner.ps1 chỉ được chứa ký tự ASCII", () => {
+  const ps1 = readFileSync(new URL("../runner/refresh-runner.ps1", import.meta.url), "utf8");
+  const bad = [...ps1.matchAll(/[^\x00-\x7F]/g)].map(m => m[0]);
+  assert.equal(bad.length, 0,
+    `còn ${bad.length} ký tự non-ASCII (${[...new Set(bad)].join(" ")}) — PowerShell 5.1 sẽ vỡ cú pháp`);
+});
+
+// Lỗi thứ hai cùng ngày: runner gọi "bash" theo PATH, trúng
+// C:\Program Files\Git\usr\bin\bash.exe (bản MSYS) → build-dist.sh chết, job failed ở
+// bước deploy. Bản chạy được là Git\bin\bash.exe.
+test("runner phải ưu tiên Git\\bin\\bash.exe, không gọi bash trần theo PATH", () => {
+  const ps1 = readFileSync(new URL("../runner/refresh-runner.ps1", import.meta.url), "utf8");
+  assert.match(ps1, /Program Files\\Git\\bin\\bash\.exe/, "phải thử đường dẫn Git\\bin\\bash.exe trước");
+  assert.doesNotMatch(ps1, /&\s*bash\s+scripts\//, "không được gọi `bash` trần — PATH trỏ nhầm bản MSYS");
+});
+
+// ── 6. Cảnh báo snapshot cũ ─────────────────────────────────────────────────
 // Trích thẳng hàm từ index.html theo đúng cách tests/brand-split-reconcile.test.mjs làm.
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const src = html.match(/^[ \t]*function freshnessLevel\(generatedAt, nowMs\)\{[\s\S]*?\n[ \t]*\}/m);

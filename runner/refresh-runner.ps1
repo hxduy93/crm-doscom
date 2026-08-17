@@ -44,6 +44,23 @@ function Write-Log {
   [System.IO.File]::AppendAllText($script:LogFile, $line + [Environment]::NewLine, $script:Utf8)
 }
 
+# Tim bash chay duoc scripts/build-dist.sh.
+# BAY (dinh that 17/08/2026): trong PATH cua PowerShell, "bash" thuong tro toi
+# C:\Program Files\Git\usr\bin\bash.exe - ban MSYS, chay script lai bao
+# "The system cannot find the file specified" va job that bai o buoc deploy.
+# Ban dung la C:\Program Files\Git\bin\bash.exe. Uu tien no truoc, PATH chi la duong lui.
+function Resolve-Bash {
+  $candidates = @(
+    "C:\Program Files\Git\bin\bash.exe",
+    "C:\Program Files (x86)\Git\bin\bash.exe",
+    "$env:LOCALAPPDATA\Programs\Git\bin\bash.exe"
+  )
+  foreach ($c in $candidates) { if (Test-Path $c) { return $c } }
+  $cmd = Get-Command bash -ErrorAction SilentlyContinue
+  if ($cmd) { return $cmd.Source }
+  return $null
+}
+
 # Don log cu, giu 14 ngay gan nhat.
 function Clear-OldLogs {
   Get-ChildItem $LogDir -Filter "*.log" -ErrorAction SilentlyContinue |
@@ -223,7 +240,15 @@ function Invoke-RefreshJob {
 
       "deploy" {
         Push-Location $RepoRoot
-        $bd = & bash scripts/build-dist.sh 2>&1 | Out-String
+        $bashExe = Resolve-Bash
+        if (-not $bashExe) {
+          Pop-Location
+          Write-Log "Khong tim thay bash.exe - cai Git for Windows roi chay lai." "FAIL"
+          Send-Report -JobId $JobId -StepIndex $idx -Step $label -Status "failed" `
+                      -Message "Khong tim thay bash.exe de chay scripts/build-dist.sh" -Warnings $totalWarnings
+          return $false
+        }
+        $bd = & $bashExe scripts/build-dist.sh 2>&1 | Out-String
         $bdCode = $LASTEXITCODE
         if ($bdCode -ne 0) {
           Pop-Location
