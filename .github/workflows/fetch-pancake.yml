@@ -1,10 +1,14 @@
 name: Fetch Pancake Revenue
 
-# Chạy mỗi 30 phút trong giờ hành chính VN: 10:00 → 17:30 (= 03:00 → 10:30 UTC)
-# 16 lần/ngày: 10:00, 10:30, 11:00, ..., 17:00, 17:30 VN
+# Chạy 3 lần/ngày lúc 07:00, 11:00, 15:00 VN (= 00:00, 04:00, 08:00 UTC).
+# Mở đầu chuỗi fetch, chạy trước 2 tiếng so với mốc refresh dashboard (9h/13h/17h VN)
+# để job nặng (timeout 40 phút) kịp xong.
+#
+# 2026-08-17 — GIẢM TỪ 16 → 3 lượt/ngày. Lý do: GitHub khoá Actions TOÀN tài khoản
+# hxduy93 ngày 15/08 vì tổng tải cron của repo lên tới 258 lượt/ngày. Đừng tăng lại.
 on:
   schedule:
-    - cron: "0,30 3-10 * * *"
+    - cron: "0 0,4,8 * * *"
   workflow_dispatch:            # cho phép chạy thủ công từ tab Actions
 
 permissions:

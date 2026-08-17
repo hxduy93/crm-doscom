@@ -1,10 +1,12 @@
 name: Fetch Google Ads Search Terms
 
-# Cron mỗi 60 phút phút 10 — lệch cron của fetch-google-ads (5,35) và fetch-pancake (0,30)
-# tránh race condition khi push đồng thời.
+# Chạy 3 lần/ngày lúc 07:20, 11:20, 15:20 VN (= 00:20, 04:20, 08:20 UTC).
+# Lệch 10 phút sau fetch-google-ads (:10) để tránh race condition khi push.
+#
+# 2026-08-17 — GIẢM TỪ 24 → 3 lượt/ngày (xem ghi chú ở fetch-pancake.yml).
 on:
   schedule:
-    - cron: "10 * * * *"
+    - cron: "20 0,4,8 * * *"
   workflow_dispatch:
 
 permissions:

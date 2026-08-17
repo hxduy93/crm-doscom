@@ -1,13 +1,17 @@
 name: Fetch Google Ads Spend
 
-# Chạy mỗi 30 phút, 24/7 — fetch Google Ads spend từ Windsor.ai JSON API,
-# transform thành data/google-ads-spend.json theo schema dashboard.
+# Chạy 3 lần/ngày lúc 07:10, 11:10, 15:10 VN (= 00:10, 04:10, 08:10 UTC) —
+# fetch Google Ads spend từ Windsor.ai JSON API, transform thành
+# data/google-ads-spend.json theo schema dashboard.
+#
+# 2026-08-17 — GIẢM TỪ 48 → 3 lượt/ngày (xem ghi chú ở fetch-pancake.yml).
+# Fetch dày hơn là vô ích: dashboard chỉ dựng lại 3 lần/ngày (9h/13h/17h VN).
 #
 # Yêu cầu GitHub Secret:
 #   WINDSOR_API_KEY  — lấy từ https://onboard.windsor.ai/ → Data Sources → JSON API
 on:
   schedule:
-    - cron: "5,35 * * * *"
+    - cron: "10 0,4,8 * * *"
   workflow_dispatch:            # cho phép chạy thủ công từ tab Actions
 
 permissions:

@@ -1,8 +1,10 @@
 name: Build Lead-to-Order Funnel
 
 # Join CRM contacts (phone9 + ad_id) với POS orders (phone9 + cod) → funnel theo ad_id.
-# Chạy lệch 25 phút sau cron POS (POS chạy lúc 0,30, hết sau ~10p).
-# Cron: 25,55 trong khung 10:00 → 18:00 VN (= 03-11 UTC, mở rộng 1h để cover lần cuối ngày).
+# Chạy 3 lần/ngày lúc 07:45, 11:45, 15:45 VN (= 00:45, 04:45, 08:45 UTC) —
+# sau khi fetch-pancake (:00, timeout 40 phút) đã đẩy xong product-revenue.json.
+#
+# 2026-08-17 — GIẢM TỪ 18 → 3 lượt/ngày (xem ghi chú ở fetch-pancake.yml).
 #
 # 2026-08-10 — KHÁC repo cũ: bước lấy CRM contacts được gộp vào ĐÂY thay vì đứng riêng.
 # Lý do: data/pancake-crm-contacts.json chứa ~10.000 SĐT khách, repo này PUBLIC nên
@@ -10,7 +12,7 @@ name: Build Lead-to-Order Funnel
 # chỉ commit lead-to-order.json (số liệu tổng hợp).
 on:
   schedule:
-    - cron: "25,55 3-11 * * *"
+    - cron: "45 0,4,8 * * *"
   workflow_dispatch:
 
 permissions:

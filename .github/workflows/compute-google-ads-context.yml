@@ -1,13 +1,16 @@
 name: Compute Google Ads Context
 
-# Chạy sau khi các workflow fetch Google Ads xong (spend phút 5,35; search-terms 10;
-# placement 15; ads 20). Gộp 5 file data/*.json → data/google-ads-context.json
+# Chạy sau khi 4 workflow fetch Google Ads xong (spend :10; search-terms :20;
+# placement :30; ads :40). Gộp 5 file data/*.json → data/google-ads-context.json
 # để agent AI đọc.
 #
-# Cron: phút 25 và 55 — 5 phút sau khi fetch cuối cùng xong ở nửa đầu và nửa sau giờ.
+# Chạy 3 lần/ngày lúc 07:55, 11:55, 15:55 VN (= 00:55, 04:55, 08:55 UTC) —
+# 15 phút sau lượt fetch cuối cùng.
+#
+# 2026-08-17 — GIẢM TỪ 48 → 3 lượt/ngày (xem ghi chú ở fetch-pancake.yml).
 on:
   schedule:
-    - cron: "25,55 * * * *"
+    - cron: "55 0,4,8 * * *"
   workflow_dispatch:
 
 permissions:

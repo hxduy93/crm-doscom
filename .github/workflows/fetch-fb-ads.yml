@@ -1,14 +1,17 @@
 name: Fetch FB Ads Insights
 
-# Chạy mỗi 3 GIỜ (lệch 30 phút với Google Ads) — fetch Facebook Ads insights
-# từ Meta Marketing API cho 6 ad accounts Doscom, save vào data/fb-ads-data.json.
+# Chạy 3 lần/ngày lúc 08:00, 12:00, 16:00 VN (= 01:00, 05:00, 09:00 UTC) —
+# fetch Facebook Ads insights từ Meta Marketing API cho 6 ad accounts Doscom,
+# save vào data/fb-ads-data.json. Chốt sổ 1 tiếng trước mốc refresh dashboard.
+#
+# 2026-08-17 — GIẢM TỪ 8 → 3 lượt/ngày (xem ghi chú ở fetch-pancake.yml).
 #
 # Yêu cầu GitHub Secret:
 #   FB_ACCESS_TOKEN  — Long-lived User Access Token từ Meta (hết hạn ~60 ngày)
 #                      Lấy từ: developers.facebook.com/tools/explorer → Generate → Extend
 on:
   schedule:
-    - cron: "30 */3 * * *"
+    - cron: "0 1,5,9 * * *"
   workflow_dispatch:            # cho phép chạy thủ công từ tab Actions
 
 permissions:

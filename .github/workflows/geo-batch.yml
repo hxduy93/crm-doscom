@@ -6,7 +6,9 @@ name: GEO Monitor — batch processor (CRM)
 # Cost ~ 30 query × 3 engine × 1 run/ngày × ~$0.0135 ≈ $1.2/ngày.
 on:
   schedule:
-    - cron: '*/30 * * * *'   # 30 phút/tick, idempotent
+    # 2026-08-17 — GIẢM TỪ 48 → 6 lượt/ngày (xem ghi chú ở fetch-pancake.yml).
+    # 6 job/tick × 6 tick = 36 job/ngày, vẫn dư so với ~30 query/ngày.
+    - cron: '0 */4 * * *'    # 4 giờ/tick, idempotent
   workflow_dispatch:
 
 concurrency:
