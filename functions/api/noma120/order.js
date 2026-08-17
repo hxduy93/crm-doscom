@@ -12,11 +12,16 @@
 // Mã quà chốt Ở ĐÂY, KHÔNG lấy `b.gift` client gửi lên — cùng lý do với `amount`:
 // đây là lớp chốt thứ hai, kênh nào gọi thẳng endpoint này cũng phải ra đúng quà.
 // (Khác noma230/order.js — bản đó còn tin `b.gift` của client. Đừng chép ngược lại.)
+//
+// LUẬT GIÁ (chủ sản phẩm chốt 17/08/2026): NOMA 120 cố định 189.000đ/chai, giá combo
+// = CỘNG THẲNG giá lẻ, KHÔNG giảm thêm. Ưu đãi nằm ở chai NOMA 250 tặng kèm (99.000đ).
+//   189 × 2 = 378.000 | 189 + 159 (NOMA 350) = 348.000 | 189 + 179 (NOMA 130) = 368.000
+// Ba bảng phải khớp: bảng này, PRICING của landing, và `pricing` trong index.html landing.
 const COMBO_META = {
   "le-120":        { label: "1 chai NOMA 120 vệ sinh kim phun",      amount: 189000, gift: "" },
-  "combo-2x120":   { label: "2 chai NOMA 120 vệ sinh kim phun",      amount: 339000, gift: "noma250" },
-  "combo-120-350": { label: "NOMA 120 + NOMA 350 vệ sinh phanh đĩa", amount: 329000, gift: "noma250" },
-  "combo-120-130": { label: "NOMA 120 + NOMA 130 dưỡng ron cao su",  amount: 349000, gift: "noma250" },
+  "combo-2x120":   { label: "2 chai NOMA 120 vệ sinh kim phun",      amount: 378000, gift: "noma250" },
+  "combo-120-350": { label: "NOMA 120 + NOMA 350 vệ sinh phanh đĩa", amount: 348000, gift: "noma250" },
+  "combo-120-130": { label: "NOMA 120 + NOMA 130 dưỡng ron cao su",  amount: 368000, gift: "noma250" },
 };
 
 function json(obj, status = 200) {

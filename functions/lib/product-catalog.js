@@ -262,7 +262,7 @@ export const PRODUCTS = {
     name: "Noma 120",
     brand: "NOMA",
     fullName: "Dung dịch vệ sinh súc rửa kim phun & buồng đốt Noma 120 — chai 300ml",
-    priceRange: "189.000đ / chai 300ml (2 chai 339.000đ, tặng 1 chai NOMA 250)",
+    priceRange: "189.000đ / chai 300ml — combo cộng thẳng giá lẻ, không giảm giá (2 chai 378.000đ); ưu đãi là 1 chai NOMA 250 tặng kèm trị giá 99.000đ",
     category: "Chăm sóc ô tô & xe máy — vệ sinh hệ thống nhiên liệu",
     source: "noma-sku-specs.js mã 120 + PRICING landing noma120 (đối chiếu 2026-08-15)",
     guarantee: null,

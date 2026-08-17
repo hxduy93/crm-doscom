@@ -17,17 +17,48 @@ import assert from "node:assert/strict";
 
 const BASE_URL = process.env.BASE_URL || "https://crm-doscom.pages.dev";
 
-// Giá cố định từng combo (lấy đúng từ COMBO_META trong functions/api/noma120/order.js)
+// Giá cố định từng combo (lấy đúng từ COMBO_META trong functions/api/noma120/order.js).
+// Sửa giá 17/08/2026: chủ sản phẩm chốt NOMA 120 cố định 189.000đ/chai và giá combo
+// CỘNG THẲNG, không giảm thêm — ưu đãi nằm ở chai NOMA 250 tặng kèm.
+const GIA_LE_120 = 189000;
 const GIA_COMBO = {
-  "le-120": 189000,
-  "combo-2x120": 339000,
-  "combo-120-350": 329000,
-  "combo-120-130": 349000,
+  "le-120": GIA_LE_120,
+  "combo-2x120": 378000,
+  "combo-120-350": 348000,
+  "combo-120-130": 368000,
 };
+
+// Giá lẻ sản phẩm đi kèm, lấy từ doanh thu bán thật (data/product-revenue.json).
+const GIA_SP_PHU = { "combo-120-350": 159000, "combo-120-130": 179000 };
+
+// Ngày bảng giá trên có hiệu lực. Đơn đặt TRƯỚC ngày này giữ giá cũ (vd 2 chai 120 bán
+// 339.000đ tới hết 16/08/2026) — đó là số tiền khách đã được báo, KHÔNG sửa lại.
+// Vì vậy mọi test đối chiếu tiền chỉ soi từ ngày này trở đi; soi cả quá khứ thì test đỏ
+// vì một đơn thật hợp lệ, rồi lần sau đổi giá lại phải đi sửa test.
+const NGAY_DOI_GIA = "2026-08-17";
+
+// ── TEST 0: LUẬT GIÁ — combo phải là phép CỘNG THẲNG, không giảm thêm ────
+// Chạy được cả khi endpoint chưa deploy vì chỉ kiểm số học trên hằng số.
+// Đây là lá chắn cho quyết định 17/08/2026 của chủ sản phẩm: ưu đãi của combo nằm ở
+// chai NOMA 250 tặng kèm, KHÔNG nằm ở giá. Ai đó "khuyến mãi thêm" bằng cách hạ giá
+// combo là test này đỏ ngay, thay vì âm thầm bán hụt tiền.
+test("giá combo = cộng thẳng giá lẻ, không giảm thêm đồng nào", () => {
+  assert.equal(GIA_COMBO["le-120"], GIA_LE_120, "giá lẻ NOMA 120 phải là 189.000đ");
+  assert.equal(
+    GIA_COMBO["combo-2x120"], GIA_LE_120 * 2,
+    `2 chai 120 phải = ${GIA_LE_120} × 2 = ${GIA_LE_120 * 2}đ`
+  );
+  for (const [khoa, giaPhu] of Object.entries(GIA_SP_PHU)) {
+    assert.equal(
+      GIA_COMBO[khoa], GIA_LE_120 + giaPhu,
+      `${khoa} phải = ${GIA_LE_120} + ${giaPhu} = ${GIA_LE_120 + giaPhu}đ`
+    );
+  }
+});
 
 // Gọi API 1 lần. Trả null nếu endpoint chưa deploy để test tự bỏ qua.
 async function layThongKe() {
-  const res = await fetch(`${BASE_URL}/api/noma120/stats?days=365`);
+  const res = await fetch(`${BASE_URL}/api/noma120/stats?from=${NGAY_DOI_GIA}&to=2099-12-31`);
   if (res.status === 404) return null;
   // Pages trả HTML fallback 200 cho route chưa tồn tại → không phải JSON nghĩa là chưa có.
   if (!(res.headers.get("content-type") || "").includes("application/json")) return null;
