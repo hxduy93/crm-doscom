@@ -25,11 +25,11 @@ function jsonResponse(data, status = 200) {
 const MODEL = "@cf/black-forest-labs/flux-1-schnell";
 const GATEWAY_ID = "doscom-erp";
 
-async function generateFluxImage(env, { prompt, steps, width, height }) {
+async function generateFluxImage(env, { prompt, steps }) {
   if (!env.AI) throw new Error("Workers AI binding 'AI' missing");
+  // 2026-08-16: Cloudflare bỏ width/height khỏi input schema của flux-1-schnell —
+  // gửi kèm sẽ fail 5006. Xem chú thích đầy đủ ở generate-image.js.
   const inputs = { prompt, steps };
-  if (width)  inputs.width  = width;
-  if (height) inputs.height = height;
   const response = await env.AI.run(MODEL, inputs, { gateway: { id: GATEWAY_ID } });
   if (!response?.image) throw new Error("Flux returned empty response");
   return response.image;  // base64 PNG
@@ -129,8 +129,6 @@ export async function onRequestPost(context) {
       const b64 = await generateFluxImage(env, {
         prompt: safePrompt.slice(0, 2000),
         steps,
-        width,
-        height,
       });
 
       const usage = await logAIUsage(env, { neurons: neuronsPerImage, isImage: true });

@@ -27,12 +27,15 @@ function jsonResponse(data, status = 200) {
 const MODEL = "@cf/black-forest-labs/flux-1-schnell";
 const GATEWAY_ID = "doscom-erp";
 
-async function generateFluxImage(env, { prompt, steps, width, height }) {
+async function generateFluxImage(env, { prompt, steps }) {
   if (!env.AI) throw new Error("Workers AI binding 'AI' missing — vào Cloudflare Pages → Settings → Functions → Bindings → Add → Workers AI → name: AI");
 
+  // 2026-08-16: Cloudflare bỏ width/height khỏi input schema của flux-1-schnell.
+  // Gửi kèm 2 field này làm MỌI lượt gen fail:
+  //   5006: Additional or unevaluated properties '/width, /height' at '/' not allowed
+  // Model tự trả 1024x1024. Body vẫn nhận width/height để không breaking frontend,
+  // nhưng chỉ dùng cho estimateNeurons (ước lượng cost nội bộ), KHÔNG gửi lên Workers AI.
   const inputs = { prompt, steps };
-  if (width)  inputs.width  = width;
-  if (height) inputs.height = height;
 
   let response;
   try {
@@ -85,8 +88,6 @@ export async function onRequestPost(context) {
     const result = await generateFluxImage(env, {
       prompt: safePrompt.slice(0, 2000),
       steps,
-      width,
-      height,
     });
 
     // Log usage trước khi update DB content (để banner cảnh báo tự refresh)
