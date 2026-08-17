@@ -4,7 +4,7 @@
 # Co thi chay 13 buoc pipeline that o may nay roi deploy, bao tien do nguoc ve CRM.
 #
 # Vi sao khong chay thang tren Cloudflare: Pages Functions khong co runtime Python, va
-# pipeline do that mat ~40 phut (rieng fetch_pancake_crm_contacts ~25 phut).
+# pipeline do that mat ~16 phut (rieng fetch_pancake_crm_contacts ~8 phut).
 # Chi tiet: openspec/changes/refresh-button/design.md
 #
 # Cach chay (PowerShell, dung dau .\ vi PowerShell khong tu chay file trong thu muc hien tai):
@@ -121,6 +121,18 @@ function Invoke-Crm {
   return Invoke-RestMethod @params
 }
 
+# Ghi noi dung loi vao log truoc khi bao ve CRM.
+# THIEU SOT da dinh o job #4: buoc 'Google Ads - chi phi' hong, log chi ghi mot dong
+# "loi (exit 1)" ma khong co ly do, phai vao D1 moi biet Windsor tra HTTP 500.
+# Log o may la cho dau tien nguoi ta mo ra xem, no phai du de tra.
+function Write-FailDetail {
+  param([string]$Step, [string]$Output)
+  Write-Log "----- chi tiet loi buoc '$Step' -----" "FAIL"
+  $tail = ($Output -split "`n" | Where-Object { $_.Trim() } | Select-Object -Last 25) -join [Environment]::NewLine
+  Write-Log $tail "FAIL"
+  Write-Log "----- het chi tiet loi -----" "FAIL"
+}
+
 function Send-Report {
   param([int]$JobId, [int]$StepIndex, [string]$Step, [string]$Status,
         [string]$Message = "", [int]$Warnings = 0)
@@ -230,6 +242,7 @@ function Invoke-RefreshJob {
         Pop-Location
         if ($code -ne 0) {
           Write-Log "Test DO - dung pipeline, KHONG deploy." "FAIL"
+          Write-FailDetail -Step $label -Output $out
           Send-Report -JobId $JobId -StepIndex $idx -Step $label -Status "failed" `
                       -Message $out -Warnings $totalWarnings
           return $false
@@ -253,6 +266,7 @@ function Invoke-RefreshJob {
         if ($bdCode -ne 0) {
           Pop-Location
           Write-Log "build-dist.sh loi - khong deploy." "FAIL"
+          Write-FailDetail -Step $label -Output $bd
           Send-Report -JobId $JobId -StepIndex $idx -Step $label -Status "failed" `
                       -Message $bd -Warnings $totalWarnings
           return $false
@@ -264,6 +278,7 @@ function Invoke-RefreshJob {
         Pop-Location
         if ($dpCode -ne 0) {
           Write-Log "Deploy loi." "FAIL"
+          Write-FailDetail -Step $label -Output $dp
           Send-Report -JobId $JobId -StepIndex $idx -Step $label -Status "failed" `
                       -Message $dp -Warnings $totalWarnings
           return $false
@@ -276,6 +291,7 @@ function Invoke-RefreshJob {
         $r = Invoke-PipelineScript -ScriptPath $step.script
         if ($r.ExitCode -ne 0) {
           Write-Log "Buoc '$label' loi (exit $($r.ExitCode)) - dung pipeline." "FAIL"
+          Write-FailDetail -Step $label -Output $r.Output
           Send-Report -JobId $JobId -StepIndex $idx -Step $label -Status "failed" `
                       -Message $r.Output -Warnings $totalWarnings
           return $false

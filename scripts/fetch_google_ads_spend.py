@@ -15,8 +15,8 @@ import os
 import json
 import sys
 import re
-import urllib.request
-import urllib.error
+
+from windsor_http import windsor_get
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 
@@ -78,17 +78,17 @@ def fetch_windsor_data() -> list:
     print(f"[INFO] Fetching Windsor.ai (all connectors, filter Google Ads sau)")
     print(f"[INFO] Date range: {DATE_PRESET} · fields: {FIELDS}")
 
-    req = urllib.request.Request(url, headers={"Accept": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            raw = resp.read().decode("utf-8")
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="ignore")[:500]
-        print(f"[FATAL] HTTP {e.code}: {body}", file=sys.stderr)
-        sys.exit(1)
-    except Exception as e:
-        print(f"[FATAL] Windsor.ai fetch failed: {type(e).__name__}: {e}", file=sys.stderr)
-        sys.exit(1)
+    # 17/08/2026: Windsor.ai tra HTTP 500 nhat thoi lam chet ca pipeline 13 buoc
+    # (job #4). Nay thu lai co backoff; het luot van hong thi GIU NGUYEN file cu
+    # va thoat 0 kem canh bao SKIP, thay vi keo do ca day chuyen. Xem windsor_http.py.
+    raw = windsor_get(url, timeout=60)
+    if raw is None:
+        print(
+            "   \u26a0 SKIP chi phi Google Ads: Windsor.ai khong phan hoi "
+            "— GIU NGUYEN file cu, khong overwrite.",
+            file=sys.stderr,
+        )
+        sys.exit(0)
 
     try:
         data = json.loads(raw)
