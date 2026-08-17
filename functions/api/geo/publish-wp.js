@@ -95,6 +95,29 @@ function base64ToBlob(b64, mime = "image/png") {
   return new Blob([new Uint8Array(byteNumbers)], { type: mime });
 }
 
+// Nhận dạng định dạng ảnh từ magic bytes thay vì giả định PNG.
+// 2026-08-16 Cloudflare đổi flux-1-schnell: model nay trả JPEG (ff d8 ff), trước là PNG.
+// WordPress đối chiếu nội dung file với đuôi/MIME (wp_check_filetype_and_ext) nên gửi
+// JPEG mà khai "image/png" + đuôi .png sẽ bị chặn "file type is not permitted".
+// Đọc magic bytes để luôn khai đúng, không phụ thuộc model trả gì.
+export function detectImageType(base64) {
+  const head = atob(base64.slice(0, 32));
+  const b = [];
+  for (let i = 0; i < Math.min(head.length, 12); i++) b.push(head.charCodeAt(i));
+
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return { mime: "image/jpeg", ext: "jpg" };
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return { mime: "image/png", ext: "png" };
+  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+      b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return { mime: "image/webp", ext: "webp" };
+  // Không nhận ra → để JPEG (định dạng Flux đang trả) thay vì đoán PNG.
+  return { mime: "image/jpeg", ext: "jpg" };
+}
+
+// Đổi đuôi file cho khớp định dạng thật đã dò được.
+function withExt(filename, ext) {
+  return `${filename.replace(/\.(png|jpe?g|webp)$/i, "")}.${ext}`;
+}
+
 async function uploadMedia(siteConfig, { base64, filename, alt, caption, title }) {
   // WP REST API hỗ trợ raw body upload (Approach B) — đơn giản hơn multipart,
   // hoạt động ngon trên Cloudflare Workers fetch.
@@ -102,12 +125,15 @@ async function uploadMedia(siteConfig, { base64, filename, alt, caption, title }
   const bytes = new Uint8Array(byteChars.length);
   for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
 
+  const { mime, ext } = detectImageType(base64);
+  const safeName = withExt(filename, ext);
+
   const res = await fetch(`${siteConfig.url}/wp-json/wp/v2/media`, {
     method: "POST",
     headers: {
       "Authorization": authHeader(siteConfig.user, siteConfig.pwd),
-      "Content-Type": "image/png",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Type": mime,
+      "Content-Disposition": `attachment; filename="${safeName}"`,
     },
     body: bytes,
   });
