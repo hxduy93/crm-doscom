@@ -11,3 +11,6 @@ __pycache__/
 # Repo này PUBLIC → KHÔNG commit. Workflow build-lead-to-order.yml fetch rồi dùng
 # ngay trong cùng job, chỉ commit lead-to-order.json (số tổng hợp).
 data/pancake-crm-contacts.json
+
+# Log của runner cập nhật dữ liệu — chỉ có ý nghĩa trên máy chạy nó, giữ 14 ngày rồi tự dọn.
+runner/logs/
