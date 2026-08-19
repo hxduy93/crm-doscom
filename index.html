@@ -359,7 +359,7 @@
       </section>
 
       <section class="mod wide tbl-dense" style="margin-bottom:16px" id="sec-product-staff">
-        <div class="mod-h"><div class="t"><i style="background:#0EA5E9"></i><h3>Chi phí QC Facebook &amp; doanh thu theo sản phẩm × nhân sự</h3><span class="note" tabindex="0" role="button" aria-label="Chú thích">*<span class="note-src" hidden><b>Chỉ Facebook Ads</b> — Google Ads không tách được theo nhân sự nên không có ở bảng này (xem bảng theo nhân sự). · <b>Chi phí</b> gán sản phẩm theo <b>LINK LANDING trước, tên campaign sau</b> (QUYẾT 19/08/2026): mỗi landing trên Cloudflare bán đúng 1 sản phẩm nên link đích là bằng chứng chắc nhất; tên campaign chỉ dùng khi quảng cáo không có link (ad Messenger) hoặc campaign trỏ nhiều landing khác nhau. Campaign không gán được bằng cả hai (chạy hộ team content) KHÔNG nằm ở đây (QUYẾT 31/07/2026).<br>· <b>Doanh thu lấy từ Pancake POS.</b> SKU không bán qua shop POS này thì cột doanh thu để trống và CIR hiện <b>∞</b> — dòng NOMA chăm xe (120/230/350/680) đang như vậy, đơn của chúng nằm ở CRM landing chứ không ở POS. Xem bảng <b>Đơn đăng ký landing sản phẩm</b>.<br>· <b>Doanh thu</b> đếm theo <b>dòng sản phẩm trong đơn</b> của chính nguồn nhân sự đó, gồm mọi trạng thái (kể cả hoàn/huỷ, khớp gốc Pancake). Dòng sản phẩm lấy <b>giá niêm yết</b> nên tổng cao hơn giá trị đơn thật khách trả khoảng <b>3,6%</b> (chiết khấu cấp đơn không phản ánh xuống dòng) — vì vậy <b>đừng cộng bảng này để đối chiếu doanh thu</b> với bảng theo nhân sự; bảng này để so <b>tương quan chi phí ↔ doanh thu của từng sản phẩm</b>.<br>· Hàng <b>SP khác (không chạy QC riêng)</b> = doanh thu các sản phẩm nguồn đó bán được nhưng không có campaign FB gắn tên — bán kèm, khách cũ, hoặc ăn theo quảng cáo sản phẩm khác.<br>· <b>CIR = Chi phí ÷ Doanh thu</b>, thấp = tốt. Trên 100% (đỏ) = tiền quảng cáo cho sản phẩm đó lớn hơn doanh thu nó mang về.</span></span></div><span class="s">chỉ Facebook Ads · theo khoảng ngày đang lọc</span></div>
+        <div class="mod-h"><div class="t"><i style="background:#0EA5E9"></i><h3>Chi phí QC Facebook &amp; doanh thu theo sản phẩm × nhân sự</h3><span class="note" tabindex="0" role="button" aria-label="Chú thích">*<span class="note-src" hidden><b>Chỉ Facebook Ads</b> — Google Ads không tách được theo nhân sự nên không có ở bảng này (xem bảng theo nhân sự). · <b>Chi phí</b> gán sản phẩm theo <b>LINK LANDING trước, tên campaign sau</b> (QUYẾT 19/08/2026): mỗi landing trên Cloudflare bán đúng 1 sản phẩm nên link đích là bằng chứng chắc nhất; tên campaign chỉ dùng khi quảng cáo không có link (ad Messenger) hoặc campaign trỏ nhiều landing khác nhau. Campaign không gán được bằng cả hai (chạy hộ team content) KHÔNG nằm ở đây (QUYẾT 31/07/2026).<br>· <b>Doanh thu lọc theo NGUỒN ĐƠN Pancake POS</b>, tên nguồn đặt theo quy ước <b>"&lt;NHÂN SỰ&gt; - &lt;SẢN PHẨM&gt;"</b> (DUY - NOMA 230, PHƯƠNG NAM - DR1). Đây là tiền khách trả thật của đúng nguồn đó, nên cộng lại <b>khớp cột Doanh thu của bảng theo nhân sự</b> — không còn phóng đại ~3,6% như cách cộng dòng sản phẩm trong đơn, và bắt được cả SKU không nằm trong danh mục POS.<br>· Sale mở sản phẩm mới thì <b>phải tạo nguồn đơn đúng quy ước</b>, nếu không doanh thu rơi xuống hàng <b>Nguồn khác</b>. Quảng cáo không có link đích đọc được (ad Messenger/inbox) nằm ở hàng <b>Chưa đọc được link</b> — tiền vẫn tính vào chi phí, chỉ chưa quy được về sản phẩm.<br>· <b>CIR = Chi phí ÷ Doanh thu</b>, thấp = tốt. Trên 100% (đỏ) = tiền quảng cáo cho sản phẩm đó lớn hơn doanh thu nó mang về.</span></span></div><span class="s">chỉ Facebook Ads · theo khoảng ngày đang lọc</span></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
             <thead>
@@ -1327,80 +1327,110 @@
   //  · Chi phí: FB = ad_spend_by_staff (tài khoản×SP, split theo tên SP), Google = by_category.
   //  · Doanh thu: CẤP ĐƠN (order-level), gồm mọi trạng thái (EXCL rỗng) — khớp bảng "theo nhân sự" ở trên.
   //    Doscom = Σ SP không-Noma (per-product); Noma = tổng đơn nguồn − Doscom (residual, combo về đúng Noma).
-  /* Chi phí QC Facebook & doanh thu theo SẢN PHẨM × NHÂN SỰ (thêm 19/08/2026).
+  /* Chi phí QC Facebook & doanh thu theo SẢN PHẨM × NHÂN SỰ (19/08/2026).
      Trả lời câu "sản phẩm nào của ai đang ăn tiền quảng cáo mà không ra doanh thu".
-      · Chi phí: ad_spend_by_staff[nhân sự][sản phẩm] — CHỈ Facebook Ads. Google Ads gom theo
-        category, không tách được nhân sự, nên cố ý KHÔNG đưa vào bảng này.
-      · Doanh thu: dòng sản phẩm trong đơn của chính nguồn đó (products_by_status), gộp mọi
-        trạng thái để cùng gốc với bảng theo nhân sự.
-      · CẢNH BÁO: dòng sản phẩm lấy GIÁ NIÊM YẾT nên tổng nhỉnh hơn giá trị đơn thật ~3,6%
-        (chiết khấu cấp đơn không phản ánh xuống dòng — cùng lý do đã ghi ở renderBrandCost).
-        Bảng này để so TƯƠNG QUAN chi phí ↔ doanh thu từng SP, KHÔNG để đối chiếu tổng doanh thu. */
+
+      · CHI PHÍ — ad_spend_by_staff[nhân sự][sản phẩm], CHỈ Facebook Ads (Google Ads gom
+        theo category, không tách được nhân sự). Sản phẩm gán theo LINK LANDING của quảng
+        cáo, KHÔNG theo tên campaign (chủ dự án chốt 19/08/2026 — tên do người đặt tay,
+        campaign "NOMA 230 · …" từng bị dồn hết vào bucket Noma 911).
+
+      · DOANH THU — lọc theo NGUỒN ĐƠN Pancake POS (chủ dự án chốt 19/08/2026), tên nguồn
+        đặt theo quy ước "<NHÂN SỰ> - <SẢN PHẨM>": "DUY - NOMA 230", "PHƯƠNG NAM - DR1".
+        Hơn hẳn cách cũ (cộng dòng sản phẩm trong đơn) ở hai chỗ:
+          - dòng SP lấy giá niêm yết nên tổng cao hơn tiền khách trả thật ~3,6%;
+          - SKU ngoài danh mục POS (NOMA 120/230/350/680) không có dòng nào để cộng, nhìn
+            như "chi quảng cáo mà không ra đồng doanh thu nào".
+        Nay cột này cùng gốc số với cột Doanh thu của bảng theo nhân sự, cộng lại khớp. */
   function renderProductStaff(){
     var el=document.getElementById('product-staff-rows'); if(!el||!D) return;
     var GR=[{label:'Duy',ad:'DUY',key:'DUY'},{label:'Phương Nam',ad:'PHUONG_NAM',key:'PHUONG_NAM'}];
+    var NO_LINK='(không đọc được link)';
+
+    /* Tên nguồn Pancake → sản phẩm. Bỏ tiền tố nhân sự rồi đọc mã SP; hậu tố tự do
+       ("DUY - NOMA 911 MESSENGER") vẫn về đúng Noma 911. Tên nguồn không suy được thì
+       trả null → dồn vào hàng "Nguồn khác", tuyệt đối không bỏ rơi doanh thu. */
+    function productFromSource(name){
+      var n=String(name||'').replace(/^\s*(duy|phương nam|phuong nam)\s*[-–]\s*/i,'')
+              .toLowerCase().replace(/[_\-]/g,' ').replace(/\s+/g,' ').trim();
+      var m=n.match(/noma\s*(911|922|250|310|120|130|230|350|680|692)/);
+      if(m) return 'Noma '+m[1];
+      if(/(^|\s)dr1(\s|$)/.test(n)) return 'DR1';
+      if(/(^|\s)d1 pro(\s|$)/.test(n)) return 'D1 Pro';
+      if(/(^|\s)d1(\s|$)/.test(n)) return 'D1';
+      if(/(^|\s)da8\.?1(\s|$)/.test(n)) return 'DA8.1';
+      return null;
+    }
     function costOf(ad,p){ var o=((D.ad_spend_by_staff||{})[ad]||{})[p]; return o?sumByDate(o.by_date):0; }
-    function revOf(key,p){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0;
-      var pbs=g.products_by_status||{},s=0;
-      for(var st in pbs){ if(EXCL[st])continue; var o=pbs[st][p]; if(o) s+=sumByDate(o.by_date); } return s; }
-    function revAll(key){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0;
-      var pbs=g.products_by_status||{},s=0;
-      for(var st in pbs){ if(EXCL[st])continue; var prods=pbs[st]; for(var p in prods){ s+=sumByDate(prods[p].by_date); } } return s; }
+    // {sản phẩm|'?': doanh thu} của 1 nhóm nhân sự, gộp mọi trạng thái như bảng theo nhân sự.
+    function revBySource(key){
+      var g=((D.revenue||{}).source_groups||{})[key]||{}, out={};
+      var srcs=g.sources||{};
+      for(var name in srcs){
+        var byStatus=srcs[name].revenue_by_status_by_date||{}, v=0;
+        for(var st in byStatus){ if(EXCL[st])continue; v+=sumByDate(byStatus[st]); }
+        if(!v) continue;
+        var p=productFromSource(name);
+        out[p||'?']=(out[p||'?']||0)+v;
+      }
+      return out;
+    }
     // Ngưỡng màu GIỮ ĐÚNG bảng theo nhân sự: >100% đỏ, ≤50% xanh, giữa cam.
-    function cirTd(cost,rev,extra){
-      var st=extra||'';
-      // Không chi đồng nào trong kỳ thì KHÔNG có tỉ lệ để so — để gạch ngang, đừng in "0%"
-      // (0% đọc như "quảng cáo siêu rẻ", trong khi thực tế là doanh thu không đến từ QC kỳ này).
+    function cirTd(cost,rev,sep){
+      var st=sep?';border-left:2px solid var(--border)':'';
       if(!(cost>0)) return '<td class="num tnum" style="color:var(--text-2)'+st+'">—</td>';
-      // Có chi mà POS không ghi nhận đồng doanh thu nào cho SKU đó: có thể SP bán qua
-      // kênh khác (đơn landing nằm ở CRM, không qua shop Pancake này) hoặc thật sự chưa
-      // ra đơn. Ghi rõ ở tooltip thay vì để dấu ∞ đỏ tự nó doạ người đọc.
-      if(!(rev>0)) return '<td class="num tnum" style="color:#E5484D;font-weight:800'+st+'" title="Đã chi '+vnd(cost)+' nhưng không có doanh thu Pancake POS cho SKU này trong kỳ — kiểm tra xem SP có bán qua shop POS này không (đơn landing của dòng NOMA chăm xe nằm ở CRM, xem bảng Đơn đăng ký landing sản phẩm)">∞</td>';
+      if(!(rev>0)) return '<td class="num tnum" style="color:#E5484D;font-weight:800'+st+'" title="Đã chi '+vnd(cost)+' mà nguồn đơn Pancake tương ứng không ghi nhận doanh thu nào trong kỳ — kiểm tra sale đã tạo nguồn cho sản phẩm này chưa, hoặc quảng cáo thật sự chưa ra đơn">∞</td>';
       var v=cost/rev, col=v>1?'#E5484D':(v<=0.5?'#16A34A':'#E08600');
       return '<td class="num tnum" style="color:'+col+';font-weight:800'+st+'">'+Math.round(v*100)+'%</td>';
     }
-    var SEP=';border-left:2px solid var(--border)';
-    // Danh sách SP = mọi sản phẩm có chi tiêu FB của ít nhất 1 nhân sự trong kỳ.
-    var names={}; GR.forEach(function(g){ var o=(D.ad_spend_by_staff||{})[g.ad]||{}; for(var p in o) names[p]=1; });
-    var rows=Object.keys(names).map(function(p){
-      var cells=GR.map(function(g){ return {cost:costOf(g.ad,p), rev:revOf(g.key,p)}; });
-      return {p:p, c:cells, cost:cells.reduce(function(t,x){return t+x.cost;},0), rev:cells.reduce(function(t,x){return t+x.rev;},0)};
-    }).filter(function(r){ return r.cost>0 || r.rev>0; })
-      .sort(function(a,b){ return b.cost-a.cost; });
+    var SEP='border-left:2px solid var(--border)';
+    function money(v,sep){ return '<td class="num tnum" style="'+(sep?SEP:'')+'">'+(v>0?vnd(v):'—')+'</td>'; }
 
-    // SP không có campaign FB gắn tên: bán kèm / khách cũ / ăn theo QC sản phẩm khác.
-    var other=GR.map(function(g){
-      var used=0; for(var p in names) used+=revOf(g.key,p);
-      return {cost:0, rev:Math.max(0, revAll(g.key)-used)};
-    });
+    var revs=GR.map(function(g){ return revBySource(g.key); });
+    // Danh sách SP: có chi tiêu FB, hoặc có doanh thu từ nguồn mang tên SP đó.
+    var names={};
+    GR.forEach(function(g){ var o=(D.ad_spend_by_staff||{})[g.ad]||{}; for(var p in o){ if(p!==NO_LINK) names[p]=1; } });
+    revs.forEach(function(r){ for(var p in r){ if(p!=='?') names[p]=1; } });
+
     var tot=GR.map(function(){ return {cost:0,rev:0}; });
-    var html=rows.map(function(r){
-      var td='<tr><td><b>'+r.p+'</b></td>';
-      r.c.forEach(function(x,i){ tot[i].cost+=x.cost; tot[i].rev+=x.rev;
-        td+='<td class="num tnum" style="'+SEP.slice(1)+'">'+(x.cost>0?vnd(x.cost):'—')+'</td>'+
-            '<td class="num tnum">'+(x.rev>0?vnd(x.rev):'—')+'</td>'+cirTd(x.cost,x.rev);
-      });
-      td+='<td class="num tnum" style="'+SEP.slice(1)+'">'+(r.cost>0?vnd(r.cost):'—')+'</td>'+
-          '<td class="num tnum">'+(r.rev>0?vnd(r.rev):'—')+'</td>'+cirTd(r.cost,r.rev);
-      return td+'</tr>';
-    }).join('');
+    function line(label,cells,title,noCir){
+      // noCir: hàng mà CIR vô nghĩa (chi phí chưa quy được về SP nào / doanh thu không có
+      // chi phí đối ứng) — để gạch ngang thay vì bôi đỏ ∞ làm người đọc tưởng lỗ nặng.
+      var cir=function(c,r){ return noCir?'<td class="num tnum" style="color:var(--text-2)">—</td>':cirTd(c,r); };
+      var td='<tr><td'+(title?' title="'+title+'"':'')+'>'+label+'</td>';
+      cells.forEach(function(x,i){ tot[i].cost+=x.cost; tot[i].rev+=x.rev;
+        td+=money(x.cost,true)+money(x.rev)+cir(x.cost,x.rev); });
+      var c=cells.reduce(function(t,x){return t+x.cost;},0), r=cells.reduce(function(t,x){return t+x.rev;},0);
+      return td+money(c,true)+money(r)+cir(c,r)+'</tr>';
+    }
 
-    var oc=0,orv=0;
-    var oth='<tr><td style="color:var(--text-2)" title="Doanh thu của sản phẩm nguồn đó bán được nhưng KHÔNG có campaign Facebook gắn tên — bán kèm, khách cũ, hoặc ăn theo quảng cáo sản phẩm khác">SP khác (không chạy QC riêng)</td>';
-    other.forEach(function(x,i){ oc+=x.cost; orv+=x.rev; tot[i].rev+=x.rev;
-      oth+='<td class="num tnum" style="'+SEP.slice(1)+'">—</td><td class="num tnum">'+(x.rev>0?vnd(x.rev):'—')+'</td><td class="num tnum" style="color:var(--text-2)">—</td>';
-    });
-    oth+='<td class="num tnum" style="'+SEP.slice(1)+'">—</td><td class="num tnum">'+(orv>0?vnd(orv):'—')+'</td><td class="num tnum" style="color:var(--text-2)">—</td></tr>';
+    var rows=Object.keys(names).map(function(p){
+      var c=GR.map(function(g,i){ return {cost:costOf(g.ad,p), rev:revs[i][p]||0}; });
+      return {p:p, c:c, cost:c.reduce(function(t,x){return t+x.cost;},0), rev:c.reduce(function(t,x){return t+x.rev;},0)};
+    }).filter(function(r){ return r.cost>0 || r.rev>0; })
+      .sort(function(a,b){ return (b.cost-a.cost) || (b.rev-a.rev); });
+    var html=rows.map(function(r){ return line('<b>'+r.p+'</b>', r.c); }).join('');
 
-    var tc=0,tr=0;
-    var trow='<tr class="tot"><td>Tổng</td>';
+    // Chi tiêu KHÔNG đọc được link landing (ad Messenger/inbox): vẫn là tiền của nhân sự
+    // đó, chỉ chưa biết của SP nào → cho một hàng riêng thay vì giấu đi.
+    var noLink=GR.map(function(g){ return {cost:costOf(g.ad,NO_LINK), rev:0}; });
+    if(noLink.some(function(x){ return x.cost>0; })){
+      html+=line('<span style="color:var(--text-2)">Chưa đọc được link quảng cáo</span>', noLink,
+        'Quảng cáo không có link đích đọc được (ad Messenger/inbox, hoặc creative đã xoá). Tiền vẫn tính vào chi phí của nhân sự, chỉ chưa quy được về sản phẩm nào.', true);
+    }
+    // Doanh thu từ nguồn không suy được sản phẩm (nguồn đặt tên ngoài quy ước).
+    var other=GR.map(function(g,i){ return {cost:0, rev:revs[i]['?']||0}; });
+    if(other.some(function(x){ return x.rev>0; })){
+      html+=line('<span style="color:var(--text-2)">Nguồn khác (tên không theo quy ước)</span>', other,
+        'Đơn từ nguồn Pancake không đặt theo quy ước NHÂN SỰ - SẢN PHẨM nên không quy được về sản phẩm. Đặt lại tên nguồn là hàng này tự hết.', true);
+    }
+
+    var trow='<tr class="tot"><td>Tổng</td>', tc=0, tr=0;
     tot.forEach(function(x){ tc+=x.cost; tr+=x.rev;
-      trow+='<td class="num tnum" style="'+SEP.slice(1)+'">'+vnd(x.cost)+'</td><td class="num tnum">'+vnd(x.rev)+'</td>'+cirTd(x.cost,x.rev);
-    });
-    trow+='<td class="num tnum" style="'+SEP.slice(1)+'">'+vnd(tc)+'</td><td class="num tnum">'+vnd(tr)+'</td>'+cirTd(tc,tr)+'</tr>';
+      trow+=money(x.cost,true)+money(x.rev)+cirTd(x.cost,x.rev); });
+    trow+=money(tc,true)+money(tr)+cirTd(tc,tr)+'</tr>';
 
-    el.innerHTML=(html||'<tr><td colspan="10" style="color:var(--text-2);padding:16px">Không có chi tiêu Facebook theo sản phẩm trong kỳ.</td></tr>')+
-      (orv>0?oth:'')+trow;
+    el.innerHTML=(html||'<tr><td colspan="10" style="color:var(--text-2);padding:16px">Không có chi tiêu Facebook theo sản phẩm trong kỳ.</td></tr>')+trow;
   }
 
   function renderBrandCost(){

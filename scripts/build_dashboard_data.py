@@ -281,6 +281,11 @@ def fb_get(url, params=None):
 # bị tính thành Noma 911 trong 01→19/08).
 #
 # Key = host + path, đã bỏ "www." và bỏ query/fragment.
+# Nhãn cho chi tiêu KHÔNG đọc được link landing (ad Messenger/inbox, ad đã xoá creative).
+# Cố ý là một "sản phẩm" hiện trong bảng thay vì bị loại: tiền vẫn phải nằm trong chi phí
+# của nhân sự, chỉ là chưa biết của SP nào.
+NO_LINK_BUCKET = "(không đọc được link)"
+
 LANDING_TO_PRODUCT = {
     # NOMA 911 — noma.io.vn (project noma-landings)
     "noma.io.vn/nm911d":     "Noma 911",
@@ -296,6 +301,10 @@ LANDING_TO_PRODUCT = {
     "senso.io.vn/dr1tpn":    "DR1",
     # Camera DA8.1
     "doscom.store/da8.1tpn": "DA8.1",
+    # NOMA 120 — chủ dự án chốt 19/08/2026: CHỈ path /d (bản Việt) mới tính là Noma 120.
+    # Domain noma120.asia nay phục vụ landing NOMA 911 tiếng Thái ở "/" — phần Thái
+    # KHÔNG ghi nhận, nên cố ý chỉ khai đúng path này chứ không khai cả domain.
+    "noma120.asia/d":        "Noma 120",
 }
 
 # Domain chỉ bán MỘT sản phẩm → mọi path trên domain đó (kể cả biến thể theo nhân
@@ -379,28 +388,38 @@ def fetch_campaign_products_from_links(account_id: str):
     """{campaign_id: product} suy từ link landing của các ad trong campaign.
 
     Chỉ nhận khi MỌI link đọc được trong campaign cùng trỏ về 1 sản phẩm. Campaign có
-    link mâu thuẫn → trả None cho campaign đó, nhường quyền cho tên campaign.
-    Lỗi mạng ở đây KHÔNG được làm hỏng cả run: trả về {} rồi chạy tiếp bằng tên.
+    link mâu thuẫn → không trả gì cho campaign đó.
+
+    Lỗi giữa chừng KHÔNG được xoá sạch phần đã đọc (sửa 19/08/2026): tài khoản
+    act_764394829882083 nhiều ad tới mức Facebook trả HTTP 500 ở trang thứ n, bản cũ
+    `return {}` nên MẤT TOÀN BỘ link của tài khoản đó — 94,6tr chi tiêu (30,2% của
+    01→19/08) phải rơi về tên campaign mà không ai biết. Nay: trang nào hỏng thì dừng,
+    GIỮ những trang đã đọc, và in rõ đã đọc được bao nhiêu.
     """
     found = {}
-    try:
-        url = f"https://graph.facebook.com/{FB_API_VERSION}/act_{account_id}/ads"
-        params = {"access_token": FB_TOKEN, "fields": _AD_CREATIVE_FIELDS, "limit": 200}
-        while url:
+    pages = 0
+    url = f"https://graph.facebook.com/{FB_API_VERSION}/act_{account_id}/ads"
+    # limit nhỏ hơn (100 thay vì 200): mỗi ad kéo theo cả creative lồng nhiều tầng,
+    # trang quá to là Facebook trả 500 thay vì cắt bớt.
+    params = {"access_token": FB_TOKEN, "fields": _AD_CREATIVE_FIELDS, "limit": 100}
+    while url:
+        try:
             data = fb_get(url, params=params)
-            for ad in data.get("data", []):
-                cid = ad.get("campaign_id")
-                if not cid:
-                    continue
-                for link in _links_of_creative(ad.get("creative")):
-                    prod = _product_from_link(link)
-                    if prod:
-                        found.setdefault(cid, set()).add(prod)
-            url = data.get("paging", {}).get("next")
-            params = None
-    except Exception as e:
-        print(f"   ⚠ đọc link landing act_{account_id} lỗi ({e}) — bỏ qua, dùng tên campaign", file=sys.stderr)
-        return {}
+        except Exception as e:
+            print(f"   ⚠ act_{account_id}: đọc link dừng ở trang {pages + 1} ({type(e).__name__}) — "
+                  f"giữ {len(found)} campaign đã đọc được", file=sys.stderr)
+            break
+        pages += 1
+        for ad in data.get("data", []):
+            cid = ad.get("campaign_id")
+            if not cid:
+                continue
+            for link in _links_of_creative(ad.get("creative")):
+                prod = _product_from_link(link)
+                if prod:
+                    found.setdefault(cid, set()).add(prod)
+        url = data.get("paging", {}).get("next")
+        params = None
     return {cid: next(iter(s)) for cid, s in found.items() if len(s) == 1}
 
 
@@ -690,7 +709,7 @@ def build_data():
         bucket["_total"] += amount
         bucket["by_date"][date] = bucket["by_date"].get(date, 0.0) + amount
 
-    from_link, excluded_names, conflicts = [], [], []
+    from_link, excluded_names, conflicts, no_link = [], [], [], []
     for c in data["campaigns"]:
         staff = account_to_staff.get(c.get("account_id"))
         if not staff:
@@ -698,9 +717,25 @@ def build_data():
 
         by_name = detect_profit_product(c.get("name", ""))
         by_link = link_products.get(str(c.get("id") or ""))
-        prod = by_link or by_name
-        if by_link and c.get("market") != "th":
-            if by_name and by_name != by_link:
+
+        if c.get("market") == "th":
+            # Rổ Thái vẫn dùng tên: landing Thái dùng chung domain với landing Việt cũ
+            # (noma120.asia) nên link ở đây không phân biệt được thị trường.
+            prod = by_link or by_name
+        else:
+            # CHỈ LINK quyết định sản phẩm (chủ dự án chốt 19/08/2026). Tên campaign
+            # KHÔNG còn được gán sản phẩm — người đặt tên tay, sai lúc nào không biết.
+            prod = by_link
+            if not prod:
+                # Không đọc được link. Tên campaign chỉ dùng để trả lời MỘT câu hỏi:
+                # đây là quảng cáo bán hàng hay bài tương tác chạy hộ team content?
+                #   có tên SP  → vẫn là tiền bán hàng, giữ lại dưới nhãn rõ ràng để
+                #                KHÔNG mất tiền khỏi bảng (26tr/8,3% của 01→19/08).
+                #   không có   → bài tương tác → loại như QUYẾT 31/07/2026.
+                if by_name:
+                    prod = NO_LINK_BUCKET
+                    no_link.append((c.get("name", "")[:46], by_name))
+            elif by_name and by_name != by_link:
                 conflicts.append((c.get("name", "")[:46], by_name, by_link))
             elif not by_name:
                 from_link.append(c.get("name", "")[:40])
@@ -738,6 +773,11 @@ def build_data():
     data["ad_spend_excluded"] = excluded
     if from_link:
         print(f"   ↪ {len(from_link)} campaign gán SP nhờ LINK landing (tên campaign chịu): {', '.join(from_link[:6])}")
+    if no_link:
+        print(f"   ↪ {len(no_link)} campaign KHÔNG đọc được link → gom vào '{NO_LINK_BUCKET}' "
+              f"(vẫn tính là chi phí, chỉ không biết của SP nào):")
+        for nm, bn in no_link[:8]:
+            print(f"       tên gợi ý '{bn}' ←  {nm}")
     if conflicts:
         # Tên nói một đằng, link trỏ một nẻo. Link thắng (QUYẾT 19/08/2026) nhưng phải
         # in ra: hoặc campaign đặt tên sai, hoặc ad gắn nhầm link — cả hai đều cần sửa tay.

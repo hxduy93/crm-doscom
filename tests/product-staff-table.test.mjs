@@ -2,9 +2,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-// Bảng "Chi phí QC Facebook & doanh thu theo sản phẩm × nhân sự" (thêm 19/08/2026).
-// Trích thẳng renderProductStaff() từ index.html rồi chạy trên dữ liệu giả — đổi công
-// thức hay đổi nguồn số là đỏ ngay, cùng cách làm với revenue-after-returns.test.mjs.
+/* Bảng "Chi phí QC Facebook & doanh thu theo sản phẩm × nhân sự".
+
+   19/08/2026 đổi nguồn số của cột doanh thu: trước cộng DÒNG SẢN PHẨM trong đơn, nay lọc
+   theo NGUỒN ĐƠN Pancake ("DUY - NOMA 230"). Lý do: dòng SP lấy giá niêm yết nên tổng cao
+   hơn tiền khách trả ~3,6%, và SKU ngoài danh mục POS (NOMA 120/230/350/680) không có dòng
+   nào để cộng — nhìn như chi quảng cáo mà không ra doanh thu.
+
+   Trích thẳng renderProductStaff() từ index.html rồi chạy trên dữ liệu giả. */
 
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
@@ -29,98 +34,106 @@ const deps = [
 function run(D) {
   let out = "";
   const document = {
-    getElementById: (id) => (id === "product-staff-rows" ? { set innerHTML(v) { out = v; }, get innerHTML() { return out; } } : null),
+    getElementById: (id) => (id === "product-staff-rows" ? { set innerHTML(v) { out = v; } } : null),
   };
   const build = new Function("D", "range", "document", `${deps}\n${fnSrc}\nrenderProductStaff();`);
   build(D, { start: "2026-07-01", end: "2026-07-31" }, document);
   return out;
 }
 
+const day = "2026-07-05";
+const src = (amount) => ({ revenue_by_status_by_date: { delivered: { [day]: amount } } });
+const spend = (amount) => ({ by_date: { [day]: amount } });
+
 const D = {
   ad_spend_by_staff: {
     DUY: {
-      P1: { by_date: { "2026-07-05": 1_000_000 } },
-      // Có chạy QC ở kỳ khác, kỳ này không chi đồng nào
-      P3: { by_date: { "2026-06-01": 900_000 } },
+      "Noma 911": spend(1_000_000),
+      "Noma 230": spend(3_000_000),
+      "(không đọc được link)": spend(700_000),
     },
     PHUONG_NAM: {
-      P1: { by_date: { "2026-07-05": 500_000 } },
-      P2: { by_date: { "2026-07-05": 2_000_000 } },
+      "Noma 911": spend(500_000),
+      DR1: spend(2_000_000),
     },
   },
   revenue: {
     source_groups: {
       DUY: {
-        products_by_status: {
-          delivered: {
-            P1: { by_date: { "2026-07-05": 4_000_000 } },
-            P3: { by_date: { "2026-07-05": 300_000 } },
-            P9: { by_date: { "2026-07-05": 700_000 } },
-          },
-          returned: { P1: { by_date: { "2026-07-06": 0 } } },
+        sources: {
+          "DUY - NOMA 911": src(4_000_000),
+          "DUY - NOMA 911 MESSENGER": src(1_000_000),   // hậu tố tự do, vẫn là Noma 911
+          "DUY - NOMA 230": src(6_000_000),
+          "DUY - NOMA 922": src(800_000),               // có doanh thu, không chạy QC
+          "DUY - Khách cũ": src(900_000),               // ngoài quy ước → Nguồn khác
         },
       },
       PHUONG_NAM: {
-        products_by_status: {
-          delivered: {
-            P1: { by_date: { "2026-07-05": 2_000_000 } },
-            P2: { by_date: { "2026-07-05": 1_000_000 } },
-          },
+        sources: {
+          "PHƯƠNG NAM - NOMA911": src(2_000_000),       // viết liền, không có dấu cách
+          "PHƯƠNG NAM - DR1": src(1_000_000),
         },
       },
     },
   },
 };
 
-test("chi phí lấy từ ad_spend_by_staff, doanh thu lấy từ dòng SP của chính nguồn đó", () => {
-  const rows = run(D).split("</tr>");
-  const p1 = rows.find((r) => r.includes("<b>P1</b>"));
-  assert.ok(p1, "thiếu hàng P1");
-  // Duy: 1tr chi / 4tr doanh thu = 25%; PN: 0,5tr / 2tr = 25%; tổng 1,5tr / 6tr = 25%
-  assert.match(p1, /1\.000\.000đ/);
-  assert.match(p1, /4\.000\.000đ/);
-  assert.match(p1, /500\.000đ/);
-  assert.match(p1, /2\.000\.000đ/);
-  assert.match(p1, /1\.500\.000đ/);
-  assert.match(p1, /6\.000\.000đ/);
-  assert.equal((p1.match(/>25%</g) || []).length, 3, "cả 3 cột CIR của P1 phải là 25%");
+const rowsOf = (D2) => run(D2).split("</tr>");
+const rowOf = (D2, label) => rowsOf(D2).find((r) => r.includes(label));
+
+test("doanh thu lấy theo NGUỒN ĐƠN, gộp mọi nguồn cùng sản phẩm", () => {
+  const r = rowOf(D, "<b>Noma 911</b>");
+  assert.ok(r, "thiếu hàng Noma 911");
+  // Duy: 4tr + 1tr (MESSENGER) = 5tr, chi 1tr → CIR 20%
+  assert.match(r, /5\.000\.000đ/);
+  assert.match(r, /color:#16A34A;font-weight:800">20%/);
+  // Phương Nam viết liền "NOMA911" vẫn về đúng hàng này: 2tr doanh thu / 0,5tr chi = 25%
+  assert.match(r, /2\.000\.000đ/);
+  assert.match(r, />25%</);
 });
 
-test("SP chỉ một nhân sự chạy: nhân sự kia để gạch ngang, CIR>100% tô đỏ", () => {
-  const p2 = run(D).split("</tr>").find((r) => r.includes("<b>P2</b>"));
-  assert.ok(p2, "thiếu hàng P2");
-  assert.match(p2, /2\.000\.000đ/);
-  assert.match(p2, /1\.000\.000đ/);
-  assert.match(p2, /color:#E5484D;font-weight:800">200%/, "CIR 200% phải đỏ");
+test("SKU ngoài danh mục POS vẫn có doanh thu nhờ nguồn đơn", () => {
+  const r = rowOf(D, "<b>Noma 230</b>");
+  assert.ok(r, "thiếu hàng Noma 230");
+  assert.match(r, /3\.000\.000đ/);   // chi
+  assert.match(r, /6\.000\.000đ/);   // thu
+  assert.match(r, />50%</);
 });
 
-test("hàng SP khác gom doanh thu của SP không có campaign FB gắn tên", () => {
-  const oth = run(D).split("</tr>").find((r) => r.includes("SP khác"));
-  assert.ok(oth, "thiếu hàng SP khác");
-  assert.match(oth, /700\.000đ/, "P9 (không chạy QC) phải rơi vào hàng này");
+test("sản phẩm có doanh thu mà không chạy QC vẫn hiện, CIR để trống", () => {
+  const r = rowOf(D, "<b>Noma 922</b>");
+  assert.ok(r, "thiếu hàng Noma 922");
+  assert.match(r, /800\.000đ/);
+  assert.doesNotMatch(r, />\d+%</, "không có chi phí thì không được bịa ra CIR");
 });
 
-test("hàng Tổng cộng đủ cả SP có chạy QC lẫn SP khác", () => {
-  const tot = run(D).split("</tr>").find((r) => r.includes('class="tot"'));
-  assert.ok(tot, "thiếu hàng Tổng");
-  // Duy: chi 1tr, DT 4tr (P1) + 0,3tr (P3) + 0,7tr (SP khác) = 5tr
-  // PN: chi 0,5tr + 2tr = 2,5tr, DT 2tr + 1tr = 3tr · Tổng: 3,5tr chi / 8tr DT
-  assert.match(tot, /1\.000\.000đ/);
-  assert.match(tot, /5\.000\.000đ/);
-  assert.match(tot, /2\.500\.000đ/);
-  assert.match(tot, /3\.000\.000đ/);
-  assert.match(tot, /3\.500\.000đ/);
-  assert.match(tot, /8\.000\.000đ/);
+test("nguồn đặt tên ngoài quy ước không bị bỏ rơi — dồn vào hàng Nguồn khác", () => {
+  const r = rowOf(D, "Nguồn khác");
+  assert.ok(r, "thiếu hàng Nguồn khác");
+  assert.match(r, /900\.000đ/);
+});
+
+test("chi phí không đọc được link vẫn tính, nhưng CIR để gạch ngang", () => {
+  const r = rowOf(D, "Chưa đọc được link");
+  assert.ok(r, "thiếu hàng chưa đọc được link");
+  assert.match(r, /700\.000đ/);
+  assert.doesNotMatch(r, /∞/, "hàng này bôi đỏ ∞ sẽ bị đọc nhầm là lỗ nặng");
+});
+
+test("hàng Tổng cộng đủ mọi nguồn — không được hụt so với doanh thu nhóm", () => {
+  const r = rowOf(D, 'class="tot"');
+  assert.ok(r, "thiếu hàng Tổng");
+  // Duy: chi 1 + 3 + 0,7 = 4,7tr · thu 4 + 1 + 6 + 0,8 + 0,9 = 12,7tr
+  assert.match(r, /4\.700\.000đ/);
+  assert.match(r, /12\.700\.000đ/);
+  // Phương Nam: chi 2,5tr · thu 3tr · Tổng hai người: 7,2tr chi / 15,7tr thu
+  assert.match(r, /2\.500\.000đ/);
+  assert.match(r, /3\.000\.000đ/);
+  assert.match(r, /7\.200\.000đ/);
+  assert.match(r, /15\.700\.000đ/);
 });
 
 test("kỳ không có chi tiêu FB nào thì báo rõ, không vẽ bảng rỗng", () => {
   const out = run({ ad_spend_by_staff: {}, revenue: { source_groups: {} } });
   assert.match(out, /Không có chi tiêu Facebook theo sản phẩm trong kỳ/);
-});
-
-test("kỳ này không chi đồng nào mà vẫn có doanh thu → CIR để gạch ngang, KHÔNG in 0%", () => {
-  const p3 = run(D).split("</tr>").find((r) => r.includes("<b>P3</b>"));
-  assert.ok(p3, "thiếu hàng P3");
-  assert.match(p3, /300\.000đ/);
-  assert.doesNotMatch(p3, />0%</, "chi phí 0 mà in CIR 0% là đọc sai thành quảng cáo siêu rẻ");
 });

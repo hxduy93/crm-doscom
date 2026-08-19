@@ -734,6 +734,53 @@ def merge_buckets(*bucket_dicts):
     return result
 
 
+def aggregate_by_source(orders):
+    """{tên nguồn: {orders_by_date, revenue_by_status_by_date}} — doanh thu tách theo NGUỒN ĐƠN.
+
+    Vì sao cần (chủ dự án chốt 19/08/2026): nguồn đơn Pancake đặt theo quy ước
+    "<NHÂN SỰ> - <SẢN PHẨM>" — "DUY - NOMA 230", "PHƯƠNG NAM - DR1", "DUY - NOMA 911
+    MESSENGER". Đây là cách duy nhất biết doanh thu của MỘT SẢN PHẨM thuộc về AI:
+      · Cộng dòng sản phẩm trong đơn thì dòng lấy giá niêm yết → tổng cao hơn tiền khách
+        trả thật ~3,6% (chiết khấu cấp đơn không phản ánh xuống dòng).
+      · Và SKU ngoài danh mục POS (dòng NOMA chăm xe 120/230/350/680) không có dòng nào
+        để cộng, nên nhìn như "chi quảng cáo mà không ra doanh thu".
+    Số ở đây dùng CÙNG order_revenue() với mọi chỗ khác, nên cộng lại khớp cột doanh thu
+    của nhóm.
+
+    KHÔNG diễn giải tên nguồn ở đây — chỉ trả về tên thô. Việc suy ra sản phẩm để phía
+    dashboard làm, để mỗi khi sale đặt tên nguồn kiểu mới thì chỉ sửa một chỗ.
+    """
+    out = {}
+    for o in orders:
+        name = (o.get("order_sources_name") or "").strip() or "(không tên)"
+        status = o.get("status")
+        if status == STATUS_DELIVERED:
+            bucket_key = "delivered"
+        elif status == STATUS_RETURNING:
+            bucket_key = "returning"
+        elif status == STATUS_RETURNED:
+            bucket_key = "returned"
+        elif status == STATUS_CANCELED:
+            bucket_key = "canceled"
+        else:
+            bucket_key = "other"
+
+        inserted_at = o.get("inserted_at") or o.get("created_at") or ""
+        date = "unknown"
+        if inserted_at:
+            try:
+                _dt = datetime.fromisoformat(inserted_at[:26]).replace(tzinfo=timezone.utc)
+                date = (_dt + timedelta(hours=7)).date().isoformat()
+            except Exception:
+                date = inserted_at[:10]
+
+        e = out.setdefault(name, {"orders_by_date": {}, "revenue_by_status_by_date": {}})
+        e["orders_by_date"][date] = e["orders_by_date"].get(date, 0) + 1
+        rv = e["revenue_by_status_by_date"].setdefault(bucket_key, {})
+        rv[date] = rv.get(date, 0.0) + order_revenue(o)
+    return out
+
+
 def aggregate(orders):
     """Aggregate orders vào 5 bucket theo status Pancake.
 
@@ -1206,6 +1253,9 @@ def main():
             "summary": summary,
             "products": products_all,
             "products_by_status": buckets,
+            # MỚI 19/08/2026: doanh thu tách theo TÊN NGUỒN ĐƠN ("DUY - NOMA 230"…) —
+            # để dashboard ghép doanh thu về đúng SẢN PHẨM của đúng nhân sự.
+            "sources": aggregate_by_source(orders),
         }
         grand_total_orders += group_total
         all_orders_combined.extend(orders)

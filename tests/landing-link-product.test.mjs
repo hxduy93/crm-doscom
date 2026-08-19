@@ -65,12 +65,15 @@ test("mọi landing đang chạy đều suy ra đúng sản phẩm từ link", {
   cases.forEach(([url, want], i) => assert.equal(got[i], want, url));
 });
 
-test("domain noma120.asia KHÔNG được map — đã đổi sản phẩm 18/08/2026", { skip }, () => {
-  // Trước phục vụ landing NOMA 120 (Việt), nay là landing NOMA 911 tiếng Thái. Ad cũ của
-  // campaign "NOMA 120 · …" vẫn trỏ vào đây → map domain này là gán sai sản phẩm.
-  assert.deepEqual(call("_product_from_link", ["https://noma120.asia/d"]), [null]);
-  assert.match(readFileSync(SCRIPT, "utf8"), /noma120\.asia CỐ Ý KHÔNG map/,
-    "mất lý do vì sao domain này để trống — người sau sẽ 'sửa' bằng cách thêm lại");
+test("noma120.asia: chỉ path /d (bản Việt) là Noma 120, phần Thái không ghi nhận", { skip }, () => {
+  // Domain này đổi sản phẩm 18/08/2026: "/" nay là landing NOMA 911 tiếng Thái, còn ad
+  // NOMA 120 bản Việt vẫn trỏ /d. Khai cả domain là gán nhầm doanh số Thái sang SP Việt.
+  assert.deepEqual(
+    call("_product_from_link", ["https://noma120.asia/d", "https://noma120.asia/", "https://noma120.asia/911th"]),
+    ["Noma 120", null, null],
+  );
+  assert.match(readFileSync(SCRIPT, "utf8"), /phần Thái[\s\S]{0,20}KHÔNG ghi nhận/,
+    "mất lý do vì sao chỉ khai path /d — người sau sẽ 'sửa' bằng cách khai cả domain");
 });
 
 test("tên campaign nhận đủ model NOMA, không dồn hết về 911", { skip }, () => {
@@ -88,8 +91,32 @@ test("tên campaign nhận đủ model NOMA, không dồn hết về 911", { ski
   ]);
 });
 
-test("link đi TRƯỚC tên campaign trong bước gán chi phí", { skip }, () => {
+test("CHỈ link gán sản phẩm — tên campaign không còn quyền đó", { skip }, () => {
+  // Chủ dự án chốt 19/08/2026: bỏ tên, chỉ theo link quảng cáo.
   const src = readFileSync(SCRIPT, "utf8");
-  assert.match(src, /prod = by_link or by_name/, "thứ tự ưu tiên đã bị đổi ngược lại");
+  assert.ok(src.includes("            prod = by_link"), "tên campaign lại được gán sản phẩm");
+  assert.ok(!src.includes("prod = by_link or by_name\n        if not prod"),
+    "vẫn còn fallback theo tên cho campaign Việt");
   assert.match(src, /conflicts\.append/, "mất phần in cảnh báo vênh tên↔link");
+});
+
+test("chi phí không đọc được link KHÔNG bị bốc hơi — có rổ riêng", { skip }, () => {
+  // 01→19/08/2026 có 25,5tr ad Messenger/inbox không đọc được link. Nếu để rơi vào rổ
+  // "chạy hộ team content" (không tính chi phí) thì lợi nhuận bị thổi lên đúng số đó.
+  const src = readFileSync(SCRIPT, "utf8");
+  assert.match(src, /NO_LINK_BUCKET = "\(không đọc được link\)"/, "mất rổ chi phí chưa gán được SP");
+  assert.match(src, /prod = NO_LINK_BUCKET/, "chi phí không có link không còn được giữ lại");
+});
+
+test("đọc link hỏng giữa chừng thì GIỮ phần đã đọc, không trả rỗng", { skip }, () => {
+  // Bản cũ `return {}` khi gặp HTTP 500 ở trang thứ n → mất sạch link của tài khoản
+  // act_764394829882083 (nhiều ad nhất), 94,6tr chi tiêu phải đoán bằng tên.
+  const src = readFileSync(SCRIPT, "utf8");
+  const from = src.indexOf("def fetch_campaign_products_from_links");
+  const fn = src.slice(from, src.indexOf(String.fromCharCode(10) + "def ", from + 10));
+  // So theo DÒNG CODE, không so cả đoạn: docstring của hàm có nhắc chữ "return {}" khi
+  // kể lại lỗi cũ — so cả đoạn là test đỏ oan.
+  const codeLines = fn.split(String.fromCharCode(10)).map((l) => l.trim());
+  assert.ok(!codeLines.includes("return {}"), "vẫn còn nhánh vứt sạch kết quả đã đọc");
+  assert.match(fn, /giữ \{len\(found\)\} campaign đã đọc được/, "mất log cho biết đã đọc được bao nhiêu");
 });
