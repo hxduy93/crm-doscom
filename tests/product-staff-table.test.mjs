@@ -26,6 +26,7 @@ const fnSrc = html.slice(start, end).trim();
 
 const deps = [
   grab(/^[ \t]*var EXCL=\{[^}]*\};/m, "EXCL"),
+  grab(/^[ \t]*var EXCL_RET=\{[^}]*\};/m, "EXCL_RET"),
   grab(/^[ \t]*function inR\(d\)\{.*\}$/m, "inR"),
   grab(/^[ \t]*function sumByDate\(obj\)\{.*\}$/m, "sumByDate"),
   grab(/^[ \t]*function vnd\(n\)\{.*\}$/m, "vnd"),
@@ -42,7 +43,20 @@ function run(D) {
 }
 
 const day = "2026-07-05";
-const src = (amount) => ({ revenue_by_status_by_date: { delivered: { [day]: amount } } });
+// src(giao, hoàn, huỷ) — số đơn quy ước: mỗi 1.000.000đ = 1 đơn, để kiểm cả tỉ lệ hoàn
+// theo tiền lẫn theo số đơn.
+const src = (delivered, returned = 0, canceled = 0) => {
+  const rev = {}, ord = {};
+  const put = (st, amount) => {
+    if (!amount) return;
+    rev[st] = { [day]: amount };
+    ord[st] = { [day]: Math.round(amount / 1_000_000) };
+  };
+  put("delivered", delivered);
+  put("returning", returned);
+  put("canceled", canceled);
+  return { revenue_by_status_by_date: rev, orders_by_status_by_date: ord };
+};
 const spend = (amount) => ({ by_date: { [day]: amount } });
 
 const D = {
@@ -63,7 +77,8 @@ const D = {
         sources: {
           "DUY - NOMA 911": src(4_000_000),
           "DUY - NOMA 911 MESSENGER": src(1_000_000),   // hậu tố tự do, vẫn là Noma 911
-          "DUY - NOMA 230": src(6_000_000),
+          // 6tr giao + 2tr hoàn + 1tr huỷ: hoàn = 2/9 tiền, huỷ KHÔNG tính là hoàn
+          "DUY - NOMA 230": src(6_000_000, 2_000_000, 1_000_000),
           "DUY - NOMA 922": src(800_000),               // có doanh thu, không chạy QC
           "DUY - Khách cũ": src(900_000),               // ngoài quy ước → Nguồn khác
         },
@@ -96,15 +111,31 @@ test("SKU ngoài danh mục POS vẫn có doanh thu nhờ nguồn đơn", () => 
   const r = rowOf(D, "<b>Noma 230</b>");
   assert.ok(r, "thiếu hàng Noma 230");
   assert.match(r, /3\.000\.000đ/);   // chi
-  assert.match(r, /6\.000\.000đ/);   // thu
-  assert.match(r, />50%</);
+  assert.match(r, /9\.000\.000đ/);   // thu gộp: 6tr giao + 2tr hoàn + 1tr huỷ
+  assert.match(r, />33%</);          // CIR = 3/9
+});
+
+test("tỉ lệ hoàn tính theo tiền, đơn HUỶ không bị tính là hoàn", () => {
+  const r = rowOf(D, "<b>Noma 230</b>");
+  // 2tr hoàn / 9tr gộp = 22,2% (nếu gộp nhầm 1tr huỷ vào hoàn sẽ ra 33,3%)
+  assert.match(r, />22,2%</, "tỉ lệ hoàn sai — kiểm xem có đang tính cả đơn huỷ không");
+  // tooltip phải kèm tỉ lệ theo SỐ ĐƠN: 2/9 đơn = 22%
+  assert.match(r, /theo số đơn: 2\/9 đơn = 22%/);
+});
+
+test("không có doanh thu thì không bịa tỉ lệ hoàn", () => {
+  const r = rowOf(D, "Chưa đọc được link");
+  const cells = r.split("<td").filter((c) => c.includes("%"));
+  assert.equal(cells.length, 0, "hàng không có doanh thu mà vẫn hiện phần trăm");
 });
 
 test("sản phẩm có doanh thu mà không chạy QC vẫn hiện, CIR để trống", () => {
   const r = rowOf(D, "<b>Noma 922</b>");
   assert.ok(r, "thiếu hàng Noma 922");
   assert.match(r, /800\.000đ/);
-  assert.doesNotMatch(r, />\d+%</, "không có chi phí thì không được bịa ra CIR");
+  // CIR (font-weight:800) phải trống; ô Hoàn (font-weight:700) vẫn được hiện 0%
+  assert.doesNotMatch(r, /font-weight:800">\d+%/, "không có chi phí thì không được bịa ra CIR");
+  assert.match(r, /font-weight:700[^>]*>0%</, "vẫn phải hiện tỉ lệ hoàn dù không chạy QC");
 });
 
 test("nguồn đặt tên ngoài quy ước không bị bỏ rơi — dồn vào hàng Nguồn khác", () => {
@@ -123,14 +154,14 @@ test("chi phí không đọc được link vẫn tính, nhưng CIR để gạch 
 test("hàng Tổng cộng đủ mọi nguồn — không được hụt so với doanh thu nhóm", () => {
   const r = rowOf(D, 'class="tot"');
   assert.ok(r, "thiếu hàng Tổng");
-  // Duy: chi 1 + 3 + 0,7 = 4,7tr · thu 4 + 1 + 6 + 0,8 + 0,9 = 12,7tr
+  // Duy: chi 1 + 3 + 0,7 = 4,7tr · thu 4 + 1 + 9 + 0,8 + 0,9 = 15,7tr
   assert.match(r, /4\.700\.000đ/);
-  assert.match(r, /12\.700\.000đ/);
-  // Phương Nam: chi 2,5tr · thu 3tr · Tổng hai người: 7,2tr chi / 15,7tr thu
+  assert.match(r, /15\.700\.000đ/);
+  // Phương Nam: chi 2,5tr · thu 3tr · Tổng hai người: 7,2tr chi / 18,7tr thu
   assert.match(r, /2\.500\.000đ/);
   assert.match(r, /3\.000\.000đ/);
   assert.match(r, /7\.200\.000đ/);
-  assert.match(r, /15\.700\.000đ/);
+  assert.match(r, /18\.700\.000đ/);
 });
 
 test("kỳ không có chi tiêu FB nào thì báo rõ, không vẽ bảng rỗng", () => {

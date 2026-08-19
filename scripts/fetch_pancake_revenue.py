@@ -774,10 +774,20 @@ def aggregate_by_source(orders):
             except Exception:
                 date = inserted_at[:10]
 
-        e = out.setdefault(name, {"orders_by_date": {}, "revenue_by_status_by_date": {}})
+        e = out.setdefault(name, {
+            "orders_by_date": {},
+            "revenue_by_status_by_date": {},
+            # Số ĐƠN theo trạng thái (thêm 19/08/2026) — để tính TỈ LỆ HOÀN theo số đơn,
+            # song song với tỉ lệ hoàn theo tiền. Hai con số này lệch nhau là chuyện thường
+            # (đơn hoàn thường là đơn giá trị cao/thấp bất thường), nên phải có cả hai mới
+            # nói được câu "hoàn nhiều" là hoàn nhiều tiền hay hoàn nhiều đơn.
+            "orders_by_status_by_date": {},
+        })
         e["orders_by_date"][date] = e["orders_by_date"].get(date, 0) + 1
         rv = e["revenue_by_status_by_date"].setdefault(bucket_key, {})
         rv[date] = rv.get(date, 0.0) + order_revenue(o)
+        oc = e["orders_by_status_by_date"].setdefault(bucket_key, {})
+        oc[date] = oc.get(date, 0) + 1
     return out
 
 

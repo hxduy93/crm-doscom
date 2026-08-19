@@ -1251,10 +1251,42 @@ OUT_FILE = os.path.join("data", "dashboard-data.json")
 TRIM_FIELDS = ["orders_minimal", "web_items_flat"]
 
 
+# Ngưỡng cảnh giác: snapshot mới tụt dưới ngần này so với bản cũ = nghi fetch hỏng.
+# Đặt 0.6 chứ không phải 0.5 vì mất 40% campaign đã là mất cả một nhân sự.
+MIN_CAMPAIGN_RATIO = 0.6
+
+
 def write_dashboard_data(data_obj):
+    """Ghi snapshot — nhưng CHẶN nếu số campaign tụt bất thường so với bản cũ.
+
+    Vì sao (sự cố 19/08/2026): Facebook trả 403 cho 3 tài khoản (chặn vì gọi quá nhiều
+    trong ngày). Các bước fetch đều "SKIP account …" rồi chạy tiếp, nên script vẫn ghi ra
+    snapshot chỉ còn 80/155 campaign và báo ✅ Done — chi phí của Phương Nam tụt từ 677tr
+    xuống 142tr mà không có lỗi nào. Deploy bản đó là dashboard sai cả ngày.
+
+    Cùng một luật đã có ở fetch_pancake_revenue.py ("tụt quá nửa → GIỮ NGUYÊN file cũ").
+    Chặn ở tầng ghi file, KHÔNG chặn ở tầng fetch: fetch được bao nhiêu vẫn cứ fetch, chỉ
+    là không cho phép một lần fetch thiếu ghi đè lên dữ liệu đầy đủ.
+    """
     rev = data_obj.get("revenue") or {}
     for f in TRIM_FIELDS:
         rev.pop(f, None)
+
+    new_camps = len(data_obj.get("campaigns") or [])
+    if os.path.exists(OUT_FILE):
+        try:
+            with open(OUT_FILE, "r", encoding="utf-8") as f:
+                old_camps = len(json.load(f).get("campaigns") or [])
+        except Exception:
+            old_camps = 0
+        if old_camps and new_camps < old_camps * MIN_CAMPAIGN_RATIO:
+            raise SystemExit(
+                f"[FATAL] Snapshot mới chỉ {new_camps} campaign, bản cũ có {old_camps} "
+                f"— nghi Facebook chặn/lỗi giữa chừng (xem dòng 'SKIP … account' phía trên). "
+                f"GIỮ NGUYÊN file cũ, KHÔNG ghi đè. Chờ hết rate limit rồi chạy lại; "
+                f"nếu đúng là giảm thật thì xoá {OUT_FILE} rồi chạy lại."
+            )
+
     with open(OUT_FILE, "w", encoding="utf-8") as f:
         json.dump(data_obj, f, ensure_ascii=False, separators=(",", ":"))
     return os.path.getsize(OUT_FILE)
