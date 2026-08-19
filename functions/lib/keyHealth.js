@@ -158,13 +158,37 @@ async function probeOpenAI(env) {
 }
 
 async function probeGemini(env) {
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(env.GEMINI_API_KEY)}&pageSize=1`,
-    { signal: T() },
-  );
+  // Đi qua Cloudflare AI Gateway y như phần quét GEO (_utils/ai-engines/gemini.js).
+  //
+  // VÌ SAO (sửa 19/08/2026): bản cũ gọi thẳng generativelanguage.googleapis.com từ Worker.
+  // Worker của tài khoản này chạy ở colo Hong Kong, mà Google CHẶN Gemini theo vị trí địa lý
+  // → trả 400 "User location is not supported", và bản cũ quy mọi 400 thành "key chết".
+  // Kết quả: banner đỏ "Gemini KEY CHẾT" suốt trong khi key vẫn chạy tốt — geo_runs ghi 372
+  // lượt quét Gemini liên tiếp KHÔNG lỗi cùng thời điểm. Báo động giả kiểu này nguy hiểm hơn
+  // im lặng: nó khiến người ta đi thay key thay vì tìm lỗi thật.
+  const base = env.CF_ACCOUNT_ID
+    ? `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/doscom-erp/google-ai-studio/v1beta`
+    : "https://generativelanguage.googleapis.com/v1beta";
+  const r = await fetch(`${base}/models?key=${encodeURIComponent(env.GEMINI_API_KEY)}&pageSize=1`, { signal: T() });
   if (r.status === 200) return { status: "ok", detail: "Key còn sống (200)." };
-  if (r.status === 400 || r.status === 403) return { status: "dead", detail: `Key chết / sai (HTTP ${r.status}).` };
-  return { status: "unknown", detail: `HTTP ${r.status} — chưa rõ.` };
+
+  // Đọc luôn câu Google nói. "API key not valid" = key chết thật; "User location is not
+  // supported" = key sống, chỉ sai đường đi — hai chuyện khác hẳn nhau, đừng gộp làm một.
+  let msg = "";
+  try {
+    const body = await r.json();
+    msg = String(body?.error?.message || "").slice(0, 120);
+  } catch { /* không phải JSON → thôi */ }
+  const tail = msg ? ` — Google: "${msg}"` : "";
+
+  if (/api key not valid|api key expired|invalid api key/i.test(msg)) {
+    return { status: "dead", detail: `Key chết / sai (HTTP ${r.status})${tail}` };
+  }
+  if (/user location is not supported/i.test(msg)) {
+    return { status: "unknown", detail: `Google chặn theo vị trí máy chủ, KHÔNG phải key hỏng (HTTP ${r.status})${tail}` };
+  }
+  if (r.status === 403) return { status: "dead", detail: `Bị từ chối (HTTP 403)${tail}` };
+  return { status: "unknown", detail: `HTTP ${r.status} — chưa rõ${tail}` };
 }
 
 async function probeGoogleSA(env, item) {
