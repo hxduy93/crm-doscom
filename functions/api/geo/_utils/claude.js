@@ -8,6 +8,8 @@
 // 2026-05-27: cả "haiku" và "sonnet" map đều trỏ về Haiku 4.5 để cắt cost.
 // Code cũ gọi model:"sonnet" vẫn chạy, chỉ là không thực sự dùng Sonnet nữa.
 // Đổi lại nếu cần: sonnet: "claude-sonnet-4-6"
+import { callOpenAIChat } from "./openai-chat.js";
+
 export const CLAUDE_MODELS = {
   haiku:  "claude-haiku-4-5",
   sonnet: "claude-haiku-4-5",
@@ -18,7 +20,37 @@ const PRICING = {
   "claude-sonnet-4-6": { in: 3,  out: 15 },  // giữ pricing để code legacy không break
 };
 
-export async function callClaude(env, {
+/* callClaude — Claude trước, KHÔNG được thì tự chuyển sang OpenAI (19/08/2026).
+
+   Vì sao: key Anthropic bị từ chối HTTP 403 "Request not allowed" (cả gọi thẳng lẫn qua AI
+   Gateway, cả trên endpoint chỉ-đọc /v1/models → là chuyện của key/tổ chức, không phải prompt).
+   Cả pipeline nội dung GEO đứng theo. Đường lui đặt ở ĐÂY chứ không ở từng chỗ gọi, để
+   analyze-gaps.js và generate-content.js cùng được che mà không phải sửa gì.
+
+   Giữ nguyên tên + hình dạng trả về: chỗ gọi không cần biết đang chạy nhà nào, chỉ có thêm
+   trường `provider`. Ai muốn ép dùng OpenAI thì đặt env USE_CLAUDE=false (cùng kiểu kill
+   switch đã có ở agent FB/Google). */
+export async function callClaude(env, opts) {
+  const forceOpenAI = String(env.USE_CLAUDE || "").toLowerCase() === "false";
+  if (!forceOpenAI) {
+    try {
+      return await callAnthropic(env, opts);
+    } catch (e) {
+      const msg = String(e?.message || e);
+      // Không có OpenAI thì đừng nuốt lỗi Claude — ném nguyên văn để còn debug.
+      if (!env.OPENAI_API_KEY) throw e;
+      console.error("Claude lỗi, chuyển sang OpenAI:", msg.slice(0, 200));
+      // BỎ opts.model: chỗ gọi truyền alias của Anthropic ("haiku"/"sonnet"), ném thẳng
+      // sang OpenAI là 404 "model haiku does not exist". Để openai-chat.js tự chọn model.
+      const out = await callOpenAIChat(env, { ...opts, model: undefined });
+      // Ghi lại lý do phải đi đường vòng, để log/DB còn truy được vì sao bài này do OpenAI viết.
+      return { ...out, fallback_from: msg.slice(0, 200) };
+    }
+  }
+  return { ...(await callOpenAIChat(env, { ...opts, model: undefined })), fallback_from: "USE_CLAUDE=false" };
+}
+
+async function callAnthropic(env, {
   model = "haiku",
   systemPrompt,
   userPrompt,
@@ -81,6 +113,7 @@ export async function callClaude(env, {
     tokens_output: tOut,
     cost_usd: Number(cost.toFixed(6)),
     model: modelId,
+    provider: "anthropic",
     raw_usage: usage,
   };
 }

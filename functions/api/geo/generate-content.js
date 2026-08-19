@@ -418,6 +418,9 @@ export async function onRequestPost(context) {
           userPrompt,
           maxTokens: 16000,
           jsonOutput: true,
+          // Chỉ đường lui OpenAI dùng tới (xem _utils/openai-chat.js): model OpenAI viết
+          // ngắn hơn hẳn Claude nếu không bị nhắc lại độ dài ở cuối prompt.
+          minWords: targetWords,
         });
       } catch (e) {
         guardErr = `Claude/parse fail lượt ${attempt}: ${String(e?.message || e).slice(0, 160)}`;

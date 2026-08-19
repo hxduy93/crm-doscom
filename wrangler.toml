@@ -27,6 +27,14 @@ binding = "AI"
 #   - LARK_APP_SECRET    (App Secret Lark)
 [vars]
 CF_ACCOUNT_ID = "cffb0c35f8c649872436b2087a64b7bc"
+# Model OpenAI dùng khi Claude không gọi được (xem functions/api/geo/_utils/openai-chat.js).
+# ĐO THẬT 19/08/2026, cùng prompt yêu cầu 2000 từ:
+#   claude-haiku-4-5  ~1.872 từ/bài (158 bài)  ~$0,03
+#   gpt-4o-mini         ~790 từ/bài            ~$0,002
+#   gpt-4o              ~670 từ/bài            ~$0,032   ← đắt gấp 16 lần mà còn ngắn hơn
+# Nhắc lại yêu cầu độ dài ở cuối prompt cũng không kéo dài thêm (642 từ). Nên chọn bản rẻ:
+# đây là đường lui tạm trong lúc key Claude bị từ chối, bài vẫn phải người duyệt trước khi đăng.
+OPENAI_CONTENT_MODEL = "gpt-4o-mini"
 # URL Worker agent tối ưu (để UI xem agent vừa làm gì).
 OPTIMIZER_WORKER_URL = "https://fb-ads-auto-agent.doscom-vietnam.workers.dev"
 # Lark Base "Hiep_Tiktokshop_Auto" (dữ liệu TikTok Shop). Base nằm trong WIKI nên
