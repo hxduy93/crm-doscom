@@ -138,13 +138,36 @@ async function probeFb(env, item, now) {
 }
 
 async function probeAnthropic(env) {
-  const r = await fetch("https://api.anthropic.com/v1/models?limit=1", {
+  // Đi qua Cloudflare AI Gateway y như mọi agent gọi Claude (quy ước bắt buộc trong
+  // openspec/config.yaml), và ĐỌC nội dung lỗi thay vì chỉ nhìn mã HTTP.
+  //
+  // Vì sao (19/08/2026): key bị trả 403 mà bản cũ chỉ ghi "HTTP 403 — chưa rõ", không nói
+  // được là key hỏng hay bị chặn. Cùng key đó gọi từ máy ở Việt Nam thì 200 — nên phải in
+  // câu Anthropic nói ra mới phân biệt được "key sai" với "chặn theo vị trí máy chủ"
+  // (Worker của tài khoản này chạy ở colo Hong Kong — đúng thứ đã làm Gemini chết giả).
+  const base = env.CF_ACCOUNT_ID
+    ? `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/doscom-erp/anthropic`
+    : "https://api.anthropic.com";
+  const r = await fetch(`${base}/v1/models?limit=1`, {
     headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
     signal: T(),
   });
   if (r.status === 200) return { status: "ok", detail: "Key còn sống (200). Số dư tiền không có API để đọc." };
-  if (r.status === 401) return { status: "dead", detail: "Key chết / sai (401)." };
-  return { status: "unknown", detail: `HTTP ${r.status} — chưa rõ.` };
+
+  let msg = "";
+  try {
+    const body = await r.json();
+    msg = String(body?.error?.message || body?.message || "").slice(0, 140);
+  } catch { /* không phải JSON */ }
+  const tail = msg ? ` — Anthropic: "${msg}"` : "";
+
+  if (r.status === 401) return { status: "dead", detail: `Key chết / sai (401)${tail}` };
+  if (r.status === 403) {
+    // "Request not allowed" là câu Anthropic trả khi CHẶN Ở BIÊN (vị trí/hạ tầng gọi tới),
+    // khác hẳn key sai (401) và khác hết tiền (400 credit_balance_too_low).
+    return { status: "unknown", detail: `Bị chặn ở biên Anthropic, không phải key sai (403)${tail}` };
+  }
+  return { status: "unknown", detail: `HTTP ${r.status} — chưa rõ${tail}` };
 }
 
 async function probeOpenAI(env) {
