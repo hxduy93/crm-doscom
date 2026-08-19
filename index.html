@@ -150,6 +150,19 @@
   .mod-h .t i{width:7px;height:19px;border-radius:6px;display:inline-block}
   .mod-h h3{font-size:14.5px;font-weight:800;letter-spacing:-.2px;margin:0}
   .mod-h .s{font-size:11.5px;color:var(--text-2);font-weight:700}
+  /* Chú thích gọn: 1 dấu sao cạnh tiêu đề, rê chuột (hoặc Tab tới) mới bung nội dung.
+     Trước 19/08/2026 mấy đoạn này nằm thẳng dưới bảng, dài tới 5 dòng, đẩy số liệu
+     xuống dưới màn hình. Nội dung KHÔNG cắt bớt — chỉ chuyển vào lớp nổi. */
+  .note{margin-left:7px;width:17px;height:17px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+        border:1px solid var(--border);border-radius:50%;background:var(--surface-2);color:var(--text-2);
+        font-size:12px;font-weight:900;line-height:1;cursor:help;user-select:none;transition:var(--t)}
+  .note:hover,.note:focus-visible{background:var(--brand,#3257E6);border-color:transparent;color:#fff;outline:none}
+  /* Lớp nổi đặt ở <body> chứ KHÔNG lồng trong .mod — .mod có overflow:hidden nên bảng
+     chú thích nằm trong đó sẽ bị cắt cụt. */
+  #note-layer{position:fixed;z-index:999;display:none;max-width:min(620px,92vw);background:var(--surface);
+        border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 34px rgba(15,23,42,.18);
+        padding:12px 14px;font-size:11.5px;font-weight:600;color:var(--text-2);line-height:1.75;text-align:left}
+  #note-layer b{color:var(--text)}
   .mod-b{padding:8px 18px 18px}
 
   .donut-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center}
@@ -323,18 +336,17 @@
       </section>
 
       <section class="mod wide tbl-dense" style="margin-bottom:16px" id="sec-staff">
-        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo nhân sự</h3></div><span class="s">Website/Hotline = gộp Website + Zalo + Hotline (kênh Google) · DT &amp; Giá vốn gồm mọi trạng thái (kể cả hoàn/huỷ, khớp Pancake) · LN tạm tính = DT − Chi phí QC − Giá vốn (chưa trừ VAT &amp; phụ phí agency) · <b>LN sau hoàn = DT sau hoàn − Chi phí QC − GV sau hoàn</b> · CIR = Chi phí QC ÷ Doanh thu, thấp = tốt · <b>Sau hoàn</b> = đã trừ đơn ĐANG HOÀN + ĐÃ HOÀN trên Pancake POS (đơn huỷ vẫn tính) · Lead = đăng ký từ landing trên Cloudflare: NOMA 911 (nm911d/911tpn) + Máy dò D1 (d1cb/d1tpn) + Ghi âm DR1 (dr1lad/dr1tpn)</span></div>
+        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo nhân sự</h3><span class="note" tabindex="0" role="button" aria-label="Chú thích">*<span class="note-src" hidden>Website/Hotline = gộp Website + Zalo + Hotline (kênh Google) · DT &amp; Giá vốn gồm mọi trạng thái (kể cả hoàn/huỷ, khớp Pancake) · LN tạm tính = DT − Chi phí QC − Giá vốn (chưa trừ VAT &amp; phụ phí agency) · <b>LN sau hoàn = DT sau hoàn − Chi phí QC − GV sau hoàn</b> · CIR = Chi phí QC ÷ Doanh thu, thấp = tốt · <b>Sau hoàn</b> = đã trừ đơn ĐANG HOÀN + ĐÃ HOÀN trên Pancake POS (đơn huỷ vẫn tính) · Lead = đăng ký từ landing trên Cloudflare: NOMA 911 (nm911d/911tpn) + Máy dò D1 (d1cb/d1tpn) + Ghi âm DR1 (dr1lad/dr1tpn)<br>* Cột LN ở bảng này cố ý dùng <b>công thức đơn thuần DT − Chi phí QC − Giá vốn</b> (QUYẾT 31/07/2026) — <b>CHƯA trừ VAT 10% và phụ phí agency</b>, nên nó là <b>lãi gộp</b> để so hiệu quả giữa các nhân sự, KHÔNG phải lãi cuối. Lãi cuối xem ở <b>Bảng lợi nhuận theo tháng</b> bên dưới; hai bảng lệch nhau là bình thường, tháng 7/2026 lệch ~159tr (VAT ~120tr + phụ phí agency ~80tr, bù lại khác cơ sở doanh thu ~41tr).<br>* Dấu <b>*</b> cạnh Chi phí QC = có tiền quảng cáo <b>đã bị LOẠI</b> khỏi cột này: campaign không gán được sản phẩm bằng <b>cả tên lẫn link landing</b> → là bài tương tác chạy hộ team content, không phải chi phí bán hàng (QUYẾT 31/07/2026). Rê chuột vào ô để xem đã loại bao nhiêu.</span></span></div></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
             <thead><tr><th>Nhân sự / Nguồn</th><th class="num">Chi phí QC</th><th class="num">Doanh thu</th><th class="num col-net" title="Doanh thu đã trừ đơn đang hoàn + đã hoàn trên Pancake POS">DT sau hoàn</th><th class="num">Giá vốn</th><th class="num col-net" title="Giá vốn ĐÃ LOẠI hàng của đơn đang hoàn + đã hoàn — hàng quay về kho nên không tính là đã bán. Đây mới là số dùng trong cột LN sau hoàn (cột Giá vốn bên trái là số gộp).">GV sau hoàn</th><th class="num" title="CIR = Chi phí QC ÷ Doanh thu (thấp = tốt). Tính trên doanh thu gộp để khớp bảng brand × nhân sự — rê chuột vào ô để xem CIR sau hoàn.">CIR</th><th class="num" title="Tổng đăng ký từ mọi landing trên Cloudflare (NOMA 911 + Máy dò D1 + Ghi âm DR1), theo đúng khoảng ngày đang lọc">Lead</th><th class="num">Đơn</th><th class="num" title="Lợi nhuận TẠM TÍNH — chưa trừ VAT 10% và phụ phí agency">Lợi nhuận tạm tính (DT−CP−GV)</th><th class="num col-net" title="DT sau hoàn − Chi phí QC − Giá vốn sau hoàn (hàng hoàn về kho nên không tính giá vốn)">LN sau hoàn</th></tr></thead>
             <tbody id="staff-rows"></tbody>
           </table>
-          <p style="font-size:11.5px;color:var(--text-2);margin:10px 2px 0;font-weight:600">* Cột LN ở bảng này cố ý dùng <b>công thức đơn thuần DT − Chi phí QC − Giá vốn</b> (QUYẾT 31/07/2026) — <b>CHƯA trừ VAT 10% và phụ phí agency</b>, nên nó là <b>lãi gộp</b> để so hiệu quả giữa các nhân sự, KHÔNG phải lãi cuối. Lãi cuối xem ở <b>Bảng lợi nhuận theo tháng</b> bên dưới; hai bảng lệch nhau là bình thường, tháng 7/2026 lệch ~159tr (VAT ~120tr + phụ phí agency ~80tr, bù lại khác cơ sở doanh thu ~41tr).<br>* Dấu <b>*</b> cạnh Chi phí QC = có tiền quảng cáo <b>đã bị LOẠI</b> khỏi cột này: campaign không gán được sản phẩm bằng <b>cả tên lẫn link landing</b> → là bài tương tác chạy hộ team content, không phải chi phí bán hàng (QUYẾT 31/07/2026). Rê chuột vào ô để xem đã loại bao nhiêu.</p>
         </div>
       </section>
 
       <section class="mod wide tbl-dense" style="margin-bottom:16px" id="sec-brand-cost">
-        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo brand × nhân sự</h3></div><span class="s">Noma = SP "Noma…", Doscom = còn lại · DT lấy theo <b>giá trị đơn thật</b> rồi chia tỉ lệ theo doanh thu từng brand trong nguồn → <b>cộng lại khớp đúng bảng theo nhân sự</b> · CIR = Chi phí ÷ Doanh thu (thấp = tốt) · <b>Sau hoàn</b> = đã trừ đơn ĐANG HOÀN + ĐÃ HOÀN trên Pancake POS (đơn huỷ vẫn tính) · LN sau hoàn = DT sau hoàn − Chi phí − Giá vốn sau hoàn</span></div>
+        <div class="mod-h"><div class="t"><i style="background:#8B5CF6"></i><h3>Chi phí &amp; doanh thu theo brand × nhân sự</h3><span class="note" tabindex="0" role="button" aria-label="Chú thích">*<span class="note-src" hidden>Noma = SP "Noma…", Doscom = còn lại · DT lấy theo <b>giá trị đơn thật</b> rồi chia tỉ lệ theo doanh thu từng brand trong nguồn → <b>cộng lại khớp đúng bảng theo nhân sự</b> · CIR = Chi phí ÷ Doanh thu (thấp = tốt) · <b>Sau hoàn</b> = đã trừ đơn ĐANG HOÀN + ĐÃ HOÀN trên Pancake POS (đơn huỷ vẫn tính) · LN sau hoàn = DT sau hoàn − Chi phí − Giá vốn sau hoàn</span></span></div></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
             <thead>
@@ -342,6 +354,19 @@
               <tr><th class="num" style="border-left:2px solid var(--border)">Chi phí</th><th class="num">Doanh thu</th><th class="num">CIR</th><th class="num col-net" title="Doanh thu đã trừ đơn đang hoàn + đã hoàn trên Pancake POS">DT sau hoàn</th><th class="num col-net" title="DT sau hoàn − Chi phí − Giá vốn sau hoàn">LN sau hoàn</th><th class="num" style="border-left:2px solid var(--border)">Chi phí</th><th class="num">Doanh thu</th><th class="num">CIR</th><th class="num col-net" title="Doanh thu đã trừ đơn đang hoàn + đã hoàn trên Pancake POS">DT sau hoàn</th><th class="num col-net" title="DT sau hoàn − Chi phí − Giá vốn sau hoàn">LN sau hoàn</th></tr>
             </thead>
             <tbody id="brand-cost-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="mod wide tbl-dense" style="margin-bottom:16px" id="sec-product-staff">
+        <div class="mod-h"><div class="t"><i style="background:#0EA5E9"></i><h3>Chi phí QC Facebook &amp; doanh thu theo sản phẩm × nhân sự</h3><span class="note" tabindex="0" role="button" aria-label="Chú thích">*<span class="note-src" hidden><b>Chỉ Facebook Ads</b> — Google Ads không tách được theo nhân sự nên không có ở bảng này (xem bảng theo nhân sự). · <b>Chi phí</b> lấy từ <b>ad_spend_by_staff</b>: campaign của nhân sự đó đã gán được sản phẩm bằng tên campaign hoặc link landing; campaign không gán được sản phẩm (chạy hộ team content) KHÔNG nằm ở đây, đúng như bảng theo nhân sự (QUYẾT 31/07/2026).<br>· <b>Doanh thu</b> đếm theo <b>dòng sản phẩm trong đơn</b> của chính nguồn nhân sự đó, gồm mọi trạng thái (kể cả hoàn/huỷ, khớp gốc Pancake). Dòng sản phẩm lấy <b>giá niêm yết</b> nên tổng cao hơn giá trị đơn thật khách trả khoảng <b>3,6%</b> (chiết khấu cấp đơn không phản ánh xuống dòng) — vì vậy <b>đừng cộng bảng này để đối chiếu doanh thu</b> với bảng theo nhân sự; bảng này để so <b>tương quan chi phí ↔ doanh thu của từng sản phẩm</b>.<br>· Hàng <b>SP khác (không chạy QC riêng)</b> = doanh thu các sản phẩm nguồn đó bán được nhưng không có campaign FB gắn tên — bán kèm, khách cũ, hoặc ăn theo quảng cáo sản phẩm khác.<br>· <b>CIR = Chi phí ÷ Doanh thu</b>, thấp = tốt. Trên 100% (đỏ) = tiền quảng cáo cho sản phẩm đó lớn hơn doanh thu nó mang về.</span></span></div><span class="s">chỉ Facebook Ads · theo khoảng ngày đang lọc</span></div>
+        <div class="mod-b" style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr><th rowspan="2">Sản phẩm</th><th class="num" colspan="3" style="border-left:2px solid var(--border)">DUY</th><th class="num" colspan="3" style="border-left:2px solid var(--border)">PHƯƠNG NAM</th><th class="num" colspan="3" style="border-left:2px solid var(--border)">TỔNG</th></tr>
+              <tr><th class="num" style="border-left:2px solid var(--border)">Chi phí FB</th><th class="num">Doanh thu</th><th class="num">CIR</th><th class="num" style="border-left:2px solid var(--border)">Chi phí FB</th><th class="num">Doanh thu</th><th class="num">CIR</th><th class="num" style="border-left:2px solid var(--border)">Chi phí FB</th><th class="num">Doanh thu</th><th class="num">CIR</th></tr>
+            </thead>
+            <tbody id="product-staff-rows"></tbody>
           </table>
         </div>
       </section>
@@ -372,18 +397,17 @@
       </section>
 
       <section class="mod wide" style="margin-bottom:16px" id="sec-profit">
-        <div class="mod-h"><div class="t"><i style="background:#16A34A"></i><h3>Bảng lợi nhuận theo tháng (chưa VAT)</h3></div><span class="s"><b>Đã trừ đơn hoàn</b> · LN trước VAT = DT sau hoàn − Chi phí QC − Giá vốn sau hoàn − Phụ phí agency</span></div>
+        <div class="mod-h"><div class="t"><i style="background:#16A34A"></i><h3>Bảng lợi nhuận theo tháng (chưa VAT)</h3><span class="note" tabindex="0" role="button" aria-label="Chú thích">*<span class="note-src" hidden><b>Đã trừ đơn hoàn</b> · LN trước VAT = DT sau hoàn − Chi phí QC − Giá vốn sau hoàn − Phụ phí agency<br>* <b>Bảng này là lợi nhuận SAU HOÀN</b> (QUYẾT 31/07/2026): doanh thu &amp; giá vốn đã loại đơn <b>đang hoàn + đã hoàn</b> trên Pancake POS — hàng hoàn quay về kho nên không tính giá vốn. Đơn <b>huỷ</b> vẫn tính, cùng gốc với các bảng khác.<br>* Doanh thu lấy theo <b>giá trị đơn thật khách trả</b>, không cộng từng dòng sản phẩm — cộng theo dòng lấy giá niêm yết nên cao hơn thực tế (tháng 7/2026 lệch 41,3tr ≈ 3,6%) vì chiết khấu cấp đơn không phản ánh vào dòng. Nhờ vậy doanh thu ở đây <b>khớp đúng cột "DT sau hoàn"</b> của bảng theo nhân sự. <b>LN trước VAT = DT sau hoàn − Chi phí QC (FB+Google) − Giá vốn sau hoàn (số lượng × giá nhập kho) − Phụ phí agency</b> (QUYẾT 31/07/2026).<br>* <b>Chưa trừ VAT phải nộp và thuế TNDN</b> — VAT đầu ra trừ đầu vào phụ thuộc hoá đơn thực tế nên không tính ước lượng ở đây. Cũng chưa trừ lương, vận chuyển, phí COD, kho bãi. Muốn ra lãi ròng thì lấy số này trừ tiếp các khoản đó.<br>* Vì vậy doanh thu ở bảng này <b>thấp hơn</b> KPI "Doanh thu" ở đầu trang và bảng theo nhân sự — hai chỗ đó cố ý để gộp cho khớp "doanh số" Pancake. Rê chuột vào ô doanh thu để xem số gộp và % bị hoàn.<br>* <b>Phụ phí agency = 15% chi phí FB Ads</b> — VAT 8% + phí dịch vụ 7%, cả hai cộng thẳng trên chi phí gốc (không lũy kế), đúng cách agency đối soát top-up. <b>Chỉ FB Ads chịu phí này; Google Ads chi trực tiếp nên không tính</b> — nên cột Chi phí QC (gồm cả Google) luôn lớn hơn phần sinh ra phụ phí.</span></span></div></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
             <thead><tr><th>Tháng</th><th class="num col-net" title="Đã trừ đơn đang hoàn + đã hoàn. Rê chuột vào từng ô để xem doanh thu gộp khớp Pancake và % bị hoàn.">Doanh thu sau hoàn</th><th class="num">Chi phí QC</th><th class="num" title="Agency nạp tiền QC hộ và thu VAT 8% + phí dịch vụ 7%, cộng thẳng trên chi phí gốc (không lũy kế). Chỉ áp cho FB Ads.">Phụ phí agency</th><th class="num col-net" title="Không tính giá vốn hàng đã hoàn về kho">Giá vốn sau hoàn</th><th class="num col-net" title="Lợi nhuận TRƯỚC VAT — chưa trừ VAT phải nộp và thuế TNDN">Lợi nhuận trước VAT</th><th class="num" title="Lợi nhuận trước VAT ÷ Doanh thu sau hoàn">Biên LN</th></tr></thead>
             <tbody id="profit-rows"></tbody>
           </table>
-          <p style="font-size:11.5px;color:var(--text-2);margin:10px 2px 0;font-weight:600">* <b>Bảng này là lợi nhuận SAU HOÀN</b> (QUYẾT 31/07/2026): doanh thu &amp; giá vốn đã loại đơn <b>đang hoàn + đã hoàn</b> trên Pancake POS — hàng hoàn quay về kho nên không tính giá vốn. Đơn <b>huỷ</b> vẫn tính, cùng gốc với các bảng khác.<br>* Doanh thu lấy theo <b>giá trị đơn thật khách trả</b>, không cộng từng dòng sản phẩm — cộng theo dòng lấy giá niêm yết nên cao hơn thực tế (tháng 7/2026 lệch 41,3tr ≈ 3,6%) vì chiết khấu cấp đơn không phản ánh vào dòng. Nhờ vậy doanh thu ở đây <b>khớp đúng cột "DT sau hoàn"</b> của bảng theo nhân sự. <b>LN trước VAT = DT sau hoàn − Chi phí QC (FB+Google) − Giá vốn sau hoàn (số lượng × giá nhập kho) − Phụ phí agency</b> (QUYẾT 31/07/2026).<br>* <b>Chưa trừ VAT phải nộp và thuế TNDN</b> — VAT đầu ra trừ đầu vào phụ thuộc hoá đơn thực tế nên không tính ước lượng ở đây. Cũng chưa trừ lương, vận chuyển, phí COD, kho bãi. Muốn ra lãi ròng thì lấy số này trừ tiếp các khoản đó.<br>* Vì vậy doanh thu ở bảng này <b>thấp hơn</b> KPI "Doanh thu" ở đầu trang và bảng theo nhân sự — hai chỗ đó cố ý để gộp cho khớp "doanh số" Pancake. Rê chuột vào ô doanh thu để xem số gộp và % bị hoàn.<br>* <b>Phụ phí agency = 15% chi phí FB Ads</b> — VAT 8% + phí dịch vụ 7%, cả hai cộng thẳng trên chi phí gốc (không lũy kế), đúng cách agency đối soát top-up. <b>Chỉ FB Ads chịu phí này; Google Ads chi trực tiếp nên không tính</b> — nên cột Chi phí QC (gồm cả Google) luôn lớn hơn phần sinh ra phụ phí.</p>
         </div>
       </section>
 
       <section class="mod wide" style="margin-bottom:16px" id="lead-landing-mod">
-        <div class="mod-h"><div class="t"><i style="background:#0EA5E9"></i><h3>Lead theo landing &amp; nhân sự</h3></div><span class="s">Mọi landing đang chạy trên Cloudflare · lead = lượt điền form thành công · theo đúng khoảng ngày đang lọc</span></div>
+        <div class="mod-h"><div class="t"><i style="background:#0EA5E9"></i><h3>Lead theo landing &amp; nhân sự</h3><span class="note" tabindex="0" role="button" aria-label="Chú thích">*<span class="note-src" hidden>Mọi landing đang chạy trên Cloudflare · lead = lượt điền form thành công · theo đúng khoảng ngày đang lọc</span></span></div></div>
         <div class="mod-b" style="overflow-x:auto">
           <table>
             <thead><tr><th>Nhân sự</th><th>Landing</th><th>Sản phẩm</th><th class="num">Lead</th><th class="num">Tỉ trọng</th></tr></thead>
@@ -400,7 +424,7 @@
            đúng dòng sản phẩm đó. Thêm landing mới chỉ cần thêm một dòng vào DK_LIST —
            đường gọi dựng từ `sp.key` nên không phải sửa chỗ nào khác. -->
       <section class="mod wide" style="margin-bottom:16px" id="noma-mod">
-        <div class="mod-h"><div class="t"><i style="background:#0EA5E9"></i><h3>Đơn đăng ký landing sản phẩm</h3></div><span class="s" id="dk-range">…</span></div>
+        <div class="mod-h"><div class="t"><i style="background:#0EA5E9"></i><h3>Đơn đăng ký landing sản phẩm</h3><span class="note" tabindex="0" role="button" aria-label="Chú thích">*<span class="note-src" hidden><b>Đơn đăng ký</b> = lượt điền form thành công trên landing (lead), chưa phải đơn chốt POS · <b>DT đăng ký</b> = doanh thu dự kiến theo giá combo · <b>Tỉ trọng</b> = phần của dòng đó trên tổng đơn cả bảng · Đơn trùng (cùng SĐT + cùng phương án trong ngày) chỉ tính <b>một</b>.</span></span></div><span class="s" id="dk-range">…</span></div>
         <div class="mod-b" id="dk-body" style="overflow-x:auto"><div class="skl">Đang tải đơn đăng ký…</div></div>
       </section>
 
@@ -1287,6 +1311,8 @@
     if(NOMA_LEADS) fillStaffLeads(NOMA_LEADS);
     // chi phí QC tách theo brand
     renderBrandCost();
+    // Chi phí QC Facebook & doanh thu theo từng sản phẩm, tách theo nhân sự
+    renderProductStaff();
     // biểu đồ ngày theo nhân sự
     drawDayChart();
     // biểu đồ đăng ký + CPL theo ngày, từng sản phẩm
@@ -1301,6 +1327,79 @@
   //  · Chi phí: FB = ad_spend_by_staff (tài khoản×SP, split theo tên SP), Google = by_category.
   //  · Doanh thu: CẤP ĐƠN (order-level), gồm mọi trạng thái (EXCL rỗng) — khớp bảng "theo nhân sự" ở trên.
   //    Doscom = Σ SP không-Noma (per-product); Noma = tổng đơn nguồn − Doscom (residual, combo về đúng Noma).
+  /* Chi phí QC Facebook & doanh thu theo SẢN PHẨM × NHÂN SỰ (thêm 19/08/2026).
+     Trả lời câu "sản phẩm nào của ai đang ăn tiền quảng cáo mà không ra doanh thu".
+      · Chi phí: ad_spend_by_staff[nhân sự][sản phẩm] — CHỈ Facebook Ads. Google Ads gom theo
+        category, không tách được nhân sự, nên cố ý KHÔNG đưa vào bảng này.
+      · Doanh thu: dòng sản phẩm trong đơn của chính nguồn đó (products_by_status), gộp mọi
+        trạng thái để cùng gốc với bảng theo nhân sự.
+      · CẢNH BÁO: dòng sản phẩm lấy GIÁ NIÊM YẾT nên tổng nhỉnh hơn giá trị đơn thật ~3,6%
+        (chiết khấu cấp đơn không phản ánh xuống dòng — cùng lý do đã ghi ở renderBrandCost).
+        Bảng này để so TƯƠNG QUAN chi phí ↔ doanh thu từng SP, KHÔNG để đối chiếu tổng doanh thu. */
+  function renderProductStaff(){
+    var el=document.getElementById('product-staff-rows'); if(!el||!D) return;
+    var GR=[{label:'Duy',ad:'DUY',key:'DUY'},{label:'Phương Nam',ad:'PHUONG_NAM',key:'PHUONG_NAM'}];
+    function costOf(ad,p){ var o=((D.ad_spend_by_staff||{})[ad]||{})[p]; return o?sumByDate(o.by_date):0; }
+    function revOf(key,p){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0;
+      var pbs=g.products_by_status||{},s=0;
+      for(var st in pbs){ if(EXCL[st])continue; var o=pbs[st][p]; if(o) s+=sumByDate(o.by_date); } return s; }
+    function revAll(key){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0;
+      var pbs=g.products_by_status||{},s=0;
+      for(var st in pbs){ if(EXCL[st])continue; var prods=pbs[st]; for(var p in prods){ s+=sumByDate(prods[p].by_date); } } return s; }
+    // Ngưỡng màu GIỮ ĐÚNG bảng theo nhân sự: >100% đỏ, ≤50% xanh, giữa cam.
+    function cirTd(cost,rev,extra){
+      var st=extra||'';
+      // Không chi đồng nào trong kỳ thì KHÔNG có tỉ lệ để so — để gạch ngang, đừng in "0%"
+      // (0% đọc như "quảng cáo siêu rẻ", trong khi thực tế là doanh thu không đến từ QC kỳ này).
+      if(!(cost>0)) return '<td class="num tnum" style="color:var(--text-2)'+st+'">—</td>';
+      if(!(rev>0)) return '<td class="num tnum" style="color:#E5484D;font-weight:800'+st+'">∞</td>';
+      var v=cost/rev, col=v>1?'#E5484D':(v<=0.5?'#16A34A':'#E08600');
+      return '<td class="num tnum" style="color:'+col+';font-weight:800'+st+'">'+Math.round(v*100)+'%</td>';
+    }
+    var SEP=';border-left:2px solid var(--border)';
+    // Danh sách SP = mọi sản phẩm có chi tiêu FB của ít nhất 1 nhân sự trong kỳ.
+    var names={}; GR.forEach(function(g){ var o=(D.ad_spend_by_staff||{})[g.ad]||{}; for(var p in o) names[p]=1; });
+    var rows=Object.keys(names).map(function(p){
+      var cells=GR.map(function(g){ return {cost:costOf(g.ad,p), rev:revOf(g.key,p)}; });
+      return {p:p, c:cells, cost:cells.reduce(function(t,x){return t+x.cost;},0), rev:cells.reduce(function(t,x){return t+x.rev;},0)};
+    }).filter(function(r){ return r.cost>0 || r.rev>0; })
+      .sort(function(a,b){ return b.cost-a.cost; });
+
+    // SP không có campaign FB gắn tên: bán kèm / khách cũ / ăn theo QC sản phẩm khác.
+    var other=GR.map(function(g){
+      var used=0; for(var p in names) used+=revOf(g.key,p);
+      return {cost:0, rev:Math.max(0, revAll(g.key)-used)};
+    });
+    var tot=GR.map(function(){ return {cost:0,rev:0}; });
+    var html=rows.map(function(r){
+      var td='<tr><td><b>'+r.p+'</b></td>';
+      r.c.forEach(function(x,i){ tot[i].cost+=x.cost; tot[i].rev+=x.rev;
+        td+='<td class="num tnum" style="'+SEP.slice(1)+'">'+(x.cost>0?vnd(x.cost):'—')+'</td>'+
+            '<td class="num tnum">'+(x.rev>0?vnd(x.rev):'—')+'</td>'+cirTd(x.cost,x.rev);
+      });
+      td+='<td class="num tnum" style="'+SEP.slice(1)+'">'+(r.cost>0?vnd(r.cost):'—')+'</td>'+
+          '<td class="num tnum">'+(r.rev>0?vnd(r.rev):'—')+'</td>'+cirTd(r.cost,r.rev);
+      return td+'</tr>';
+    }).join('');
+
+    var oc=0,orv=0;
+    var oth='<tr><td style="color:var(--text-2)" title="Doanh thu của sản phẩm nguồn đó bán được nhưng KHÔNG có campaign Facebook gắn tên — bán kèm, khách cũ, hoặc ăn theo quảng cáo sản phẩm khác">SP khác (không chạy QC riêng)</td>';
+    other.forEach(function(x,i){ oc+=x.cost; orv+=x.rev; tot[i].rev+=x.rev;
+      oth+='<td class="num tnum" style="'+SEP.slice(1)+'">—</td><td class="num tnum">'+(x.rev>0?vnd(x.rev):'—')+'</td><td class="num tnum" style="color:var(--text-2)">—</td>';
+    });
+    oth+='<td class="num tnum" style="'+SEP.slice(1)+'">—</td><td class="num tnum">'+(orv>0?vnd(orv):'—')+'</td><td class="num tnum" style="color:var(--text-2)">—</td></tr>';
+
+    var tc=0,tr=0;
+    var trow='<tr class="tot"><td>Tổng</td>';
+    tot.forEach(function(x){ tc+=x.cost; tr+=x.rev;
+      trow+='<td class="num tnum" style="'+SEP.slice(1)+'">'+vnd(x.cost)+'</td><td class="num tnum">'+vnd(x.rev)+'</td>'+cirTd(x.cost,x.rev);
+    });
+    trow+='<td class="num tnum" style="'+SEP.slice(1)+'">'+vnd(tc)+'</td><td class="num tnum">'+vnd(tr)+'</td>'+cirTd(tc,tr)+'</tr>';
+
+    el.innerHTML=(html||'<tr><td colspan="10" style="color:var(--text-2);padding:16px">Không có chi tiêu Facebook theo sản phẩm trong kỳ.</td></tr>')+
+      (orv>0?oth:'')+trow;
+  }
+
   function renderBrandCost(){
     var el=document.getElementById('brand-cost-rows'); if(!el||!D) return;
     var isNomaP=function(p){ return /^\s*noma/i.test(p||''); };
@@ -2190,14 +2289,13 @@
       noKpi('Đã giao (POS)', num(t.giao)+' · '+(t.don?(t.giao/t.don*100):0).toFixed(1).replace('.',',')+'%', '#F59E0B', 'Số đơn đã giao thành công (đối chiếu POS Pancake) + tỉ lệ chốt = đã giao / đơn đăng ký.')+
       '</div>';
 
-    var ghi='<div style="font-size:11.5px;color:var(--text-2);font-weight:600;line-height:1.65;margin-bottom:13px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;padding:10px 13px">ℹ️ <b>Đơn đăng ký</b> = lượt điền form thành công trên landing (lead), chưa phải đơn chốt POS · <b>DT đăng ký</b> = doanh thu dự kiến theo giá combo · <b>Tỉ trọng</b> = phần của dòng đó trên tổng đơn cả bảng · Đơn trùng (cùng SĐT + cùng phương án trong ngày) chỉ tính <b>một</b>.</div>';
 
     var rows=DK_LIST.map(function(sp){ return dkDongSanPham(sp, DK_DATA[sp.key], t.don); }).join('');
     var tongRow='<tr class="tot"><td>Tổng '+t.ok+'/'+DK_LIST.length+' sản phẩm</td><td colspan="2" style="color:var(--text-2);font-weight:700">'+(t.ok*DK_STAFF.length)+' landing đọc được</td>'+
       '<td class="num tnum">'+num(t.don)+'</td><td class="num tnum">'+vnd(t.dt)+'</td><td class="num">100%</td></tr>';
     var canhBao=t.loi? '<div style="font-size:11.5px;color:#8a5a00;font-weight:700;margin-top:9px">⚠ '+t.loi+' sản phẩm không đọc được số — dòng Tổng đang THIẾU phần của các sản phẩm đó.</div>' : '';
 
-    body.innerHTML=kpi+ghi+
+    body.innerHTML=kpi+
       '<table><thead><tr><th>Sản phẩm</th><th>Landing (nguồn)</th><th>Nhân sự</th><th class="num">Đơn ĐK</th><th class="num">DT đăng ký</th><th class="num">Tỉ trọng</th></tr></thead><tbody>'+
       rows+tongRow+'</tbody></table>'+canhBao+dkChiTietCombo();
   }
@@ -3575,6 +3673,53 @@
       el.style.display = "block";
     })
     .catch(function(){ /* im lặng — cảnh báo là phụ, không chặn dashboard */ });
+})();
+
+/* ── Chú thích gọn (19/08/2026) ─────────────────────────────────────────────
+   Mỗi bảng chỉ còn 1 dấu sao cạnh tiêu đề; nội dung chú thích nằm trong
+   <span class="note-src" hidden> và chỉ hiện khi rê chuột / Tab tới.
+   Vì sao dựng lớp nổi ở body thay vì popup CSS lồng trong .note: .mod có
+   overflow:hidden, popup lồng bên trong bị cắt mất phần dưới. */
+(function(){
+  var layer=null, cur=null, hideTimer=null;
+  function ensure(){
+    if(layer) return layer;
+    layer=document.createElement('div'); layer.id='note-layer';
+    // Rê chuột vào chính bảng chú thích thì giữ nguyên, để còn bôi đen copy được.
+    layer.addEventListener('mouseenter',function(){ clearTimeout(hideTimer); });
+    layer.addEventListener('mouseleave',hide);
+    document.body.appendChild(layer);
+    return layer;
+  }
+  function place(star){
+    var r=star.getBoundingClientRect(), el=ensure();
+    el.style.display='block'; el.style.left='0px'; el.style.top='0px';
+    var w=el.offsetWidth, h=el.offsetHeight, pad=10;
+    var left=Math.min(Math.max(pad, r.left-4), window.innerWidth-w-pad);
+    // Không đủ chỗ bên dưới thì lật lên trên, khỏi phải cuộn mới đọc được.
+    var top=(r.bottom+8+h>window.innerHeight-pad && r.top-8-h>pad) ? (r.top-8-h) : (r.bottom+8);
+    el.style.left=left+'px'; el.style.top=top+'px';
+  }
+  function show(star){
+    var src=star.querySelector('.note-src'); if(!src) return;
+    clearTimeout(hideTimer); cur=star;
+    ensure().innerHTML=src.innerHTML; place(star);
+  }
+  function hide(){ hideTimer=setTimeout(function(){ if(layer) layer.style.display='none'; cur=null; },120); }
+  document.addEventListener('mouseover',function(e){
+    var st=e.target.closest?e.target.closest('.note'):null;
+    if(st) show(st);
+  });
+  document.addEventListener('mouseout',function(e){
+    var st=e.target.closest?e.target.closest('.note'):null;
+    if(st && !(e.relatedTarget&&e.relatedTarget.closest&&e.relatedTarget.closest('#note-layer'))) hide();
+  });
+  document.addEventListener('focusin',function(e){ if(e.target.classList&&e.target.classList.contains('note')) show(e.target); });
+  document.addEventListener('focusout',function(e){ if(e.target.classList&&e.target.classList.contains('note')) hide(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&layer){ layer.style.display='none'; cur=null; } });
+  // Cuộn/đổi cỡ màn hình: bám theo dấu sao thay vì đứng yên một chỗ.
+  window.addEventListener('scroll',function(){ if(cur&&layer&&layer.style.display==='block') place(cur); },true);
+  window.addEventListener('resize',function(){ if(cur&&layer&&layer.style.display==='block') place(cur); });
 })();
 </script>
 </body>
