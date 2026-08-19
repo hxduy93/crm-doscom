@@ -198,13 +198,21 @@ def detect_profit_product(name: str):
     if "da8.1" in n or "da 8.1" in n or "da8 1" in n:
         return "DA8.1"
 
-    # Noma — model cụ thể trước, fallback NomaVietNam → Noma 911
-    if "noma 922" in n or "noma922" in n:
-        return "Noma 922"
-    if "noma 911" in n or "noma911" in n:
-        return "Noma 911"
-    if "noma 250" in n or "noma250" in n:
-        return "Noma 250"
+    # Noma — model cụ thể trước, fallback NomaVietNam → Noma 911.
+    # 19/08/2026: bổ sung 120/130/230/310/350/680. Trước đó chỉ nhận 911/922/250 nên
+    # campaign "NOMA 230 · Chai Xit Duong…", "2/8 - Noma 680 - 4 vid" rơi vào nhánh
+    # generic bên dưới và bị tính thành Noma 911 — 28,8tr trong 01→19/08.
+    # Tên nhắc nhiều model (campaign combo "NOMA 230 + NOMA 911") thì lấy model ĐỨNG
+    # TRƯỚC — đó là SP chính đang chạy, model sau chỉ là quà/bán kèm.
+    _hits = []
+    for code in ("911", "922", "250", "310", "120", "130", "230", "350", "680"):
+        for form in (f"noma {code}", f"noma{code}"):
+            i = n.find(form)
+            if i >= 0:
+                _hits.append((i, code))
+                break
+    if _hits:
+        return "Noma " + min(_hits)[1]
     # Generic "NomaVietNam" / "Noma" không kèm model → mặc định Noma 911
     # (account Phương Nam config: NOMA = Noma 911 default SKU)
     if "nomavietnam" in n or "noma vietnam" in n or " noma " in f" {n} ":
@@ -262,22 +270,62 @@ def fb_get(url, params=None):
     raise RuntimeError("fb_get failed after retries")
 
 # ── LINK LANDING → SẢN PHẨM ──────────────────────────────────────────────
-# Chủ dự án chốt 2026-07-31. Key = host + path (bỏ "www.", bỏ query/fragment).
-# Dùng BỔ SUNG cho việc đọc tên campaign, không thay thế: đo trên 90 ngày cho thấy
-# 12,2% chi tiêu CHỈ tên gán được (ad Messenger không có link), còn 1,9% CHỈ link gán
-# được. Và link KHÔNG đáng tin hơn tên — đã gặp campaign "Thiet Bi Ghi Am DR1" trỏ
-# nhầm về nm911d. Vì vậy thứ tự là TÊN trước, LINK vớt sau.
+# Nguồn sự thật: các landing đang chạy trên tài khoản Cloudflare doscom.vietnam.
+# Mỗi landing bán ĐÚNG MỘT sản phẩm, nên link đích của quảng cáo là bằng chứng
+# chắc chắn nhất về việc tiền đó chạy cho sản phẩm nào — chắc hơn tên campaign,
+# vốn do người đặt tay và hay đặt kiểu "Doscom-NomaVietNam-…".
+#
+# ⚠ MỞ LANDING MỚI THÌ PHẢI THÊM VÀO ĐÂY. Thiếu một dòng là chi phí của landing
+# đó rơi về tên campaign, mà tên campaign generic "Noma …" thì dồn hết vào
+# Noma 911 (đúng lỗi phát hiện 19/08/2026: 28,8tr của NOMA 230/350/680/120
+# bị tính thành Noma 911 trong 01→19/08).
+#
+# Key = host + path, đã bỏ "www." và bỏ query/fragment.
 LANDING_TO_PRODUCT = {
-    "noma.io.vn/911tpn":     "Noma 911",
+    # NOMA 911 — noma.io.vn (project noma-landings)
     "noma.io.vn/nm911d":     "Noma 911",
+    "noma.io.vn/911tpn":     "Noma 911",
     "noma.io.vn/noma911":    "Noma 911",
+    "noma.io.vn/250tpn":     "Noma 250",
+    # Máy dò D1 — doscom.click (project doscom-d1-lp)
     "doscom.click/d1cb":     "D1",
     "doscom.click/d1tpn":    "D1",
+    "doscom.click/dr1tpn":   "DR1",     # path DR1 cũ nằm nhờ trên domain D1
+    # Máy ghi âm DR1 — senso.io.vn (project dr1-lp)
     "senso.io.vn/dr1lad":    "DR1",
     "senso.io.vn/dr1tpn":    "DR1",
-    "doscom.click/dr1tpn":   "DR1",
+    # Camera DA8.1
     "doscom.store/da8.1tpn": "DA8.1",
-    "noma.io.vn/250tpn":     "Noma 250",
+}
+
+# Domain chỉ bán MỘT sản phẩm → mọi path trên domain đó (kể cả biến thể theo nhân
+# sự: /nm230d, /230pn, /d, /tpn… và bản *.pages.dev) đều về cùng sản phẩm.
+# Tra bảng này SAU LANDING_TO_PRODUCT, nên path đặc biệt ở trên vẫn thắng.
+LANDING_HOST_TO_PRODUCT = {
+    # Dòng chăm xe NOMA — mỗi domain 1 sản phẩm (xem tiêu đề trang để đối chiếu)
+    "noma620.click":              "Noma 230",   # NOMA 230 xịt dưỡng nhựa nhám
+    "noma230-landing.pages.dev":  "Noma 230",
+    "noma890.click":              "Noma 350",   # NOMA 350 vệ sinh phanh đĩa
+    "noma350-landing.pages.dev":  "Noma 350",
+    "nomaautocares.cloud":        "Noma 680",   # NOMA 680 bọt tuyết 650ml
+    "noma680-landing.pages.dev":  "Noma 680",
+    "noma120-landing.pages.dev":  "Noma 120",   # NOMA 120 súc rửa kim phun
+    # Bản *.pages.dev của các landing ở trên (ad thường dán link pages.dev lúc test)
+    "noma-landings.pages.dev":       "Noma 911",
+    "noma911.pages.dev":             "Noma 911",
+    "noma911-phuongnam.pages.dev":   "Noma 911",
+    "doscom-d1-lp.pages.dev":        "D1",
+    "dr1-lp.pages.dev":              "DR1",
+    # Thị trường Thái — campaign 'th' được tách rổ riêng từ trước bước này, map ở
+    # đây chỉ để rổ Thái hiện đúng tên SP thay vì "(chưa rõ SP)".
+    "noma955.click":                 "D1",
+    "doscom-d1-th.pages.dev":        "D1",
+    "noma911-th.pages.dev":          "Noma 911",
+    # ⛔ noma120.asia CỐ Ý KHÔNG map: domain này ĐỔI SẢN PHẨM ngày 18/08/2026 —
+    # trước phục vụ landing NOMA 120 (Việt), nay trỏ landing NOMA 911 tiếng Thái.
+    # Ad cũ của campaign "NOMA 120 · …" vẫn đang trỏ vào đây, nên đọc link sẽ ra
+    # "Noma 911" — SAI với thứ campaign đó thực sự quảng cáo. Để trống cho tên
+    # campaign quyết định. (Bài học: domain tái sử dụng thì link hết là bằng chứng.)
 }
 
 _AD_CREATIVE_FIELDS = (
@@ -294,6 +342,17 @@ def _norm_url(u):
         return (p.netloc or "").lower().replace("www.", "") + ((p.path or "/").rstrip("/") or "/")
     except Exception:
         return ""
+
+
+def _product_from_link(url):
+    """Link đích của quảng cáo → tên sản phẩm. Path cụ thể thắng, sau đó tới domain."""
+    key = _norm_url(url)
+    if not key:
+        return None
+    if key in LANDING_TO_PRODUCT:
+        return LANDING_TO_PRODUCT[key]
+    host = key.split("/", 1)[0]
+    return LANDING_HOST_TO_PRODUCT.get(host)
 
 
 def _links_of_creative(cr):
@@ -334,7 +393,7 @@ def fetch_campaign_products_from_links(account_id: str):
                 if not cid:
                     continue
                 for link in _links_of_creative(ad.get("creative")):
-                    prod = LANDING_TO_PRODUCT.get(_norm_url(link))
+                    prod = _product_from_link(link)
                     if prod:
                         found.setdefault(cid, set()).add(prod)
             url = data.get("paging", {}).get("next")
@@ -594,15 +653,21 @@ def build_data():
         data["products"][p] = sorted(bucket.values(), key=lambda x: x["date"])
 
     # --- AD SPEND PER STAFF × PROFIT PRODUCT -----------------------
-    # Duy cầm 3 TK, Phương Nam cầm 3 TK; campaign name chứa tên SP → detect_profit_product.
-    # THỨ TỰ GÁN SẢN PHẨM (QUYẾT 2026-07-31, đo trên 90 ngày trước khi chốt):
-    #   1. Tên campaign  — phủ 97,7%; riêng 12,2% chi tiêu CHỈ tên gán được (ad Messenger
-    #      không có link nào), nên KHÔNG được thay tên bằng link.
-    #   2. Link landing  — vớt thêm 1,9% mà tên chịu (campaign đặt tên kiểu "New folder #1").
-    #      Đặt SAU vì link không đáng tin hơn tên: đã gặp "Thiet Bi Ghi Am DR1" trỏ nhầm nm911d.
+    # THỨ TỰ GÁN SẢN PHẨM (chủ dự án ĐỔI 2026-08-19 — trước đó tên campaign đi trước):
+    #   1. Link landing  — landing trên Cloudflare doscom.vietnam mỗi cái bán đúng 1 SP,
+    #      nên link đích là bằng chứng chắc nhất tiền chạy cho SP nào. Chỉ nhận khi MỌI
+    #      link đọc được trong campaign cùng trỏ 1 SP.
+    #   2. Tên campaign  — vẫn cần: ad Messenger không có link nào (đo 90 ngày: 12,2% chi
+    #      tiêu CHỈ tên gán được), và campaign trỏ nhiều landing khác nhau thì link bỏ cuộc.
     #   3. Cả hai chịu   → campaign TƯƠNG TÁC chạy hộ team content → KHÔNG TÍNH vào chi phí
-    #      (chủ dự án chốt: "cái đó không tính"). Ghi riêng vào ad_spend_excluded để số bị
-    #      loại vẫn tra được, KHÔNG biến mất âm thầm như lỗi cũ.
+    #      (chủ dự án chốt 31/07). Ghi riêng vào ad_spend_excluded để số bị loại vẫn tra được.
+    #
+    # VÌ SAO ĐỔI: tên campaign generic ("Doscom-NomaVietNam-…", "NOMA 230 · …") bị nhánh
+    # fallback dồn hết về Noma 911 — 01→19/08 có 28,8tr của NOMA 230/350/680/120 nằm trong
+    # bucket Noma 911. Link landing không nói dối chuyện đó.
+    # Ghi chú giữ lại từ QUYẾT 31/07: đã từng gặp campaign "Thiet Bi Ghi Am DR1" trỏ nhầm về
+    # nm911d. Nay link thắng nên trường hợp đó sẽ tính vào Noma 911 — mọi vênh tên↔link đều
+    # được in ra cuối bước này để còn soát, KHÔNG im lặng.
     account_to_staff = {f"act_{a['id']}": a["staff"] for a in ACCOUNTS}
 
     link_products = {}
@@ -625,16 +690,19 @@ def build_data():
         bucket["_total"] += amount
         bucket["by_date"][date] = bucket["by_date"].get(date, 0.0) + amount
 
-    from_link, excluded_names = [], []
+    from_link, excluded_names, conflicts = [], [], []
     for c in data["campaigns"]:
         staff = account_to_staff.get(c.get("account_id"))
         if not staff:
             continue
 
-        prod = detect_profit_product(c.get("name", ""))
-        if not prod:
-            prod = link_products.get(str(c.get("id") or ""))
-            if prod and c.get("market") != "th":
+        by_name = detect_profit_product(c.get("name", ""))
+        by_link = link_products.get(str(c.get("id") or ""))
+        prod = by_link or by_name
+        if by_link and c.get("market") != "th":
+            if by_name and by_name != by_link:
+                conflicts.append((c.get("name", "")[:46], by_name, by_link))
+            elif not by_name:
                 from_link.append(c.get("name", "")[:40])
 
         if c.get("market") == "th":
@@ -669,7 +737,13 @@ def build_data():
     data["ad_spend_by_staff"] = ad_spend_by_staff
     data["ad_spend_excluded"] = excluded
     if from_link:
-        print(f"   ↪ {len(from_link)} campaign gán SP nhờ LINK landing: {', '.join(from_link[:6])}")
+        print(f"   ↪ {len(from_link)} campaign gán SP nhờ LINK landing (tên campaign chịu): {', '.join(from_link[:6])}")
+    if conflicts:
+        # Tên nói một đằng, link trỏ một nẻo. Link thắng (QUYẾT 19/08/2026) nhưng phải
+        # in ra: hoặc campaign đặt tên sai, hoặc ad gắn nhầm link — cả hai đều cần sửa tay.
+        print(f"   ⚠ {len(conflicts)} campaign VÊNH tên↔link (lấy theo LINK):")
+        for nm, bn, bl in conflicts[:12]:
+            print(f"       tên nói '{bn}' · link nói '{bl}'  ←  {nm}")
     if excluded_names:
         tot_ex = sum(v['_total'] for v in excluded.values())
         print(f"   ↪ LOẠI {len(excluded_names)} campaign tương tác (chạy hộ team content) = {tot_ex:,.0f}đ: "
