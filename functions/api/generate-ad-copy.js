@@ -1,3 +1,4 @@
+import { anthropicBase, proxyHeaders } from "../lib/ai-endpoint.js";
 // Endpoint: POST /api/generate-ad-copy
 // Body: { product: "D1" | "DR1" | ..., format: "lead_gen" | ..., formatLabel, cta, notes, promotion,
 //         styles?, count?, seed?, rotate? }
@@ -60,13 +61,16 @@ async function callClaudeViaGateway(env, systemPrompt, userPrompt) {
   if (!env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY chưa set trong Cloudflare env");
   if (!env.CF_ACCOUNT_ID) throw new Error("CF_ACCOUNT_ID chưa set trong Cloudflare env");
 
-  const url = `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/doscom-erp/anthropic/v1/messages`;
+  // Đường ra do lib/ai-endpoint.js chọn: proxy ghim vùng Bắc Mỹ nếu có (Anthropic chặn
+  // colo Hong Kong — xem file đó), không thì AI Gateway như cũ.
+  const url = `${anthropicBase(env)}/v1/messages`;
   const r = await fetch(url, {
     method: "POST",
     headers: {
       "x-api-key": env.ANTHROPIC_API_KEY,
       "anthropic-version": "2023-06-01",
       "content-type": "application/json",
+      ...proxyHeaders(env),
     },
     body: JSON.stringify({
       model: CLAUDE_MODEL,

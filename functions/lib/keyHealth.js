@@ -1,3 +1,5 @@
+import { anthropicBase, googleAiBase, proxyHeaders } from "./ai-endpoint.js";
+
 // keyHealth.js — kiểm "sức khỏe" toàn bộ API key / token / link dịch vụ CRM đang dùng.
 //
 // NGUYÊN TẮC (bám RED LINES + LUẬT TÍNH DỮ LIỆU của dự án):
@@ -145,11 +147,8 @@ async function probeAnthropic(env) {
   // được là key hỏng hay bị chặn. Cùng key đó gọi từ máy ở Việt Nam thì 200 — nên phải in
   // câu Anthropic nói ra mới phân biệt được "key sai" với "chặn theo vị trí máy chủ"
   // (Worker của tài khoản này chạy ở colo Hong Kong — đúng thứ đã làm Gemini chết giả).
-  const base = env.CF_ACCOUNT_ID
-    ? `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/doscom-erp/anthropic`
-    : "https://api.anthropic.com";
-  const r = await fetch(`${base}/v1/models?limit=1`, {
-    headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+  const r = await fetch(`${anthropicBase(env)}/v1/models?limit=1`, {
+    headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", ...proxyHeaders(env) },
     signal: T(),
   });
   if (r.status === 200) return { status: "ok", detail: "Key còn sống (200). Số dư tiền không có API để đọc." };
@@ -189,10 +188,8 @@ async function probeGemini(env) {
   // Kết quả: banner đỏ "Gemini KEY CHẾT" suốt trong khi key vẫn chạy tốt — geo_runs ghi 372
   // lượt quét Gemini liên tiếp KHÔNG lỗi cùng thời điểm. Báo động giả kiểu này nguy hiểm hơn
   // im lặng: nó khiến người ta đi thay key thay vì tìm lỗi thật.
-  const base = env.CF_ACCOUNT_ID
-    ? `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/doscom-erp/google-ai-studio/v1beta`
-    : "https://generativelanguage.googleapis.com/v1beta";
-  const r = await fetch(`${base}/models?key=${encodeURIComponent(env.GEMINI_API_KEY)}&pageSize=1`, { signal: T() });
+  const r = await fetch(`${googleAiBase(env)}/v1beta/models?key=${encodeURIComponent(env.GEMINI_API_KEY)}&pageSize=1`,
+    { headers: proxyHeaders(env), signal: T() });
   if (r.status === 200) return { status: "ok", detail: "Key còn sống (200)." };
 
   // Đọc luôn câu Google nói. "API key not valid" = key chết thật; "User location is not

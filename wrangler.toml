@@ -35,6 +35,10 @@ CF_ACCOUNT_ID = "cffb0c35f8c649872436b2087a64b7bc"
 # Nhắc lại yêu cầu độ dài ở cuối prompt cũng không kéo dài thêm (642 từ). Nên chọn bản rẻ:
 # đây là đường lui tạm trong lúc key Claude bị từ chối, bài vẫn phải người duyệt trước khi đăng.
 OPENAI_CONTENT_MODEL = "gpt-4o-mini"
+# Proxy ghim vùng Bắc Mỹ cho lời gọi Anthropic/Gemini (repo jarvis-1/ai-proxy).
+# Không có nó thì mọi lời gọi đi từ colo Hong Kong và bị chặn — xem functions/lib/ai-endpoint.js.
+# Secret đi kèm: wrangler pages secret put AI_PROXY_TOKEN --project-name crm-doscom
+AI_PROXY_URL = "https://ai-proxy.doscom-vietnam.workers.dev"
 # URL Worker agent tối ưu (để UI xem agent vừa làm gì).
 OPTIMIZER_WORKER_URL = "https://fb-ads-auto-agent.doscom-vietnam.workers.dev"
 # Lark Base "Hiep_Tiktokshop_Auto" (dữ liệu TikTok Shop). Base nằm trong WIKI nên

@@ -15,9 +15,18 @@ import { readFileSync } from "node:fs";
 const src = readFileSync(new URL("../functions/lib/keyHealth.js", import.meta.url), "utf8");
 const probe = src.slice(src.indexOf("async function probeGemini"), src.indexOf("async function probeGoogleSA"));
 
-test("probe Gemini đi qua AI Gateway, không gọi thẳng Google từ Worker", () => {
-  assert.match(probe, /gateway\.ai\.cloudflare\.com/, "probe không còn đi qua AI Gateway");
-  assert.match(probe, /doscom-erp\/google-ai-studio/, "sai gateway/provider path so với phần quét GEO");
+test("probe Gemini KHÔNG gọi thẳng Google từ Worker mà đi qua lib/ai-endpoint.js", () => {
+  // 19/08/2026 (bản 2): đường ra do lib/ai-endpoint.js chọn — proxy ghim vùng Bắc Mỹ nếu có
+  // (worker ai-proxy), không có thì AI Gateway. Gọi thẳng generativelanguage.googleapis.com
+  // từ Worker là dính chặn vị trí, đó là cả gốc rễ vụ này.
+  assert.match(probe, /googleAiBase\(env\)/, "probe không dùng bộ chọn đường chung");
+  assert.match(probe, /proxyHeaders\(env\)/, "thiếu header xác thực với proxy");
+  assert.doesNotMatch(probe, /https:\/\/generativelanguage\.googleapis\.com/,
+    "vẫn còn gọi thẳng Google trong probe");
+
+  const helper = readFileSync(new URL("../functions/lib/ai-endpoint.js", import.meta.url), "utf8");
+  assert.match(helper, /AI_PROXY_URL/, "helper mất cấu hình proxy");
+  assert.match(helper, /gateway\.ai\.cloudflare\.com/, "helper phải còn đường lui AI Gateway khi chưa cấu hình proxy");
 });
 
 test("đọc nội dung lỗi Google trả về, không quy hết 400 thành key chết", () => {

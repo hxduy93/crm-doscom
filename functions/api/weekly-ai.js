@@ -1,3 +1,4 @@
+import { anthropicBase, proxyHeaders } from "../lib/ai-endpoint.js";
 // POST /api/weekly-ai
 // Nhận summary số liệu báo cáo tuần (đã tính sẵn ở client) → Claude viết NHẬN XÉT
 // hiệu quả quảng cáo + ĐỀ XUẤT cải thiện (markdown tiếng Việt).
@@ -64,7 +65,9 @@ async function callClaude(env, userPrompt) {
   if (!env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY chưa set trên Cloudflare Pages");
   if (!env.CF_ACCOUNT_ID) throw new Error("CF_ACCOUNT_ID chưa set trên Cloudflare Pages");
 
-  const url = `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/doscom-erp/anthropic/v1/messages`;
+  // Đường ra do lib/ai-endpoint.js chọn: proxy ghim vùng Bắc Mỹ nếu có (Anthropic chặn
+  // colo Hong Kong — xem file đó), không thì AI Gateway như cũ.
+  const url = `${anthropicBase(env)}/v1/messages`;
   const body = {
     model: CLAUDE_MODEL,
     max_tokens: 2800,
@@ -78,6 +81,7 @@ async function callClaude(env, userPrompt) {
       "x-api-key": env.ANTHROPIC_API_KEY,
       "anthropic-version": "2023-06-01",
       "content-type": "application/json",
+      ...proxyHeaders(env),
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(90000),

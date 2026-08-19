@@ -1,3 +1,4 @@
+import { anthropicBase, proxyHeaders } from "../lib/ai-endpoint.js";
 // API Agent FB Ads AI v1 — Cloudflare Workers AI + filter qua DUY+PHƯƠNG NAM
 // Endpoint: POST /api/agent-fb-ai
 // Body: {
@@ -1088,7 +1089,9 @@ async function callClaudeViaGateway(env, systemPrompt, userPrompt, jsonOutput) {
   if (!env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY chưa set trong Cloudflare env vars");
   if (!env.CF_ACCOUNT_ID) throw new Error("CF_ACCOUNT_ID chưa set trong Cloudflare env vars");
 
-  const url = `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/doscom-erp/anthropic/v1/messages`;
+  // Đường ra do lib/ai-endpoint.js chọn: proxy ghim vùng Bắc Mỹ nếu có (Anthropic chặn
+  // colo Hong Kong — xem file đó), không thì AI Gateway như cũ.
+  const url = `${anthropicBase(env)}/v1/messages`;
   const body = {
     model: CLAUDE_MODEL,
     max_tokens: jsonOutput ? 6000 : 4000,  // tăng để tránh JSON bị cắt giữa
@@ -1108,6 +1111,7 @@ async function callClaudeViaGateway(env, systemPrompt, userPrompt, jsonOutput) {
       "x-api-key": env.ANTHROPIC_API_KEY,
       "anthropic-version": "2023-06-01",
       "content-type": "application/json",
+      ...proxyHeaders(env),
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(90000),

@@ -1,3 +1,4 @@
+import { anthropicBase, proxyHeaders } from "../lib/ai-endpoint.js";
 // API Agent Google Ads AI v3.2 — Anthropic Claude Sonnet 4.6 (qua Cloudflare AI Gateway)
 //                              + Cloudflare Workers AI Llama (fallback khi Claude fail)
 // Endpoint: POST /api/agent-google-ai
@@ -1144,7 +1145,9 @@ async function callClaudeViaGateway(env, systemPrompt, userPrompt, jsonOutput) {
   if (!env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY chưa set trong Cloudflare env vars");
   if (!env.CF_ACCOUNT_ID) throw new Error("CF_ACCOUNT_ID chưa set trong Cloudflare env vars");
 
-  const url = `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/doscom-erp/anthropic/v1/messages`;
+  // Đường ra do lib/ai-endpoint.js chọn: proxy ghim vùng Bắc Mỹ nếu có (Anthropic chặn
+  // colo Hong Kong — xem file đó), không thì AI Gateway như cũ.
+  const url = `${anthropicBase(env)}/v1/messages`;
   const body = {
     model: CLAUDE_MODEL,
     max_tokens: jsonOutput ? 6000 : 4000,
@@ -1164,6 +1167,7 @@ async function callClaudeViaGateway(env, systemPrompt, userPrompt, jsonOutput) {
       "x-api-key": env.ANTHROPIC_API_KEY,
       "anthropic-version": "2023-06-01",
       "content-type": "application/json",
+      ...proxyHeaders(env),
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(90000),

@@ -9,6 +9,7 @@
 // Code cũ gọi model:"sonnet" vẫn chạy, chỉ là không thực sự dùng Sonnet nữa.
 // Đổi lại nếu cần: sonnet: "claude-sonnet-4-6"
 import { callOpenAIChat } from "./openai-chat.js";
+import { anthropicBase, proxyHeaders } from "../../../lib/ai-endpoint.js";
 
 export const CLAUDE_MODELS = {
   haiku:  "claude-haiku-4-5",
@@ -62,7 +63,9 @@ async function callAnthropic(env, {
   if (!env.CF_ACCOUNT_ID)     throw new Error("CF_ACCOUNT_ID missing in Cloudflare env");
 
   const modelId = CLAUDE_MODELS[model] || model;
-  const url = `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/doscom-erp/anthropic/v1/messages`;
+  // Đường ra do lib/ai-endpoint.js chọn: proxy ghim vùng Bắc Mỹ nếu có (Anthropic trả 403
+  // "Request not allowed" khi gọi từ colo Hong Kong), không thì AI Gateway như cũ.
+  const url = `${anthropicBase(env)}/v1/messages`;
 
   const systemBlock = cacheSystem
     ? [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }]
@@ -81,6 +84,7 @@ async function callAnthropic(env, {
       "x-api-key": env.ANTHROPIC_API_KEY,
       "anthropic-version": "2023-06-01",
       "content-type": "application/json",
+      ...proxyHeaders(env),
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(90000),

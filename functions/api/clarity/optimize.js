@@ -1,3 +1,4 @@
+import { anthropicBase, proxyHeaders } from "../../lib/ai-endpoint.js";
 // POST /api/clarity/optimize
 // Nhận số liệu Clarity (metrics[] từ /api/clarity/insights) → Claude đề xuất TỐI ƯU landing.
 // Tái dùng pattern gọi Claude Haiku qua Cloudflare AI Gateway 'doscom-erp' (giống weekly-ai.js).
@@ -48,7 +49,9 @@ Mỗi mục: **VẤN ĐỀ** (dẫn số liệu/anchor) · **ĐỀ XUẤT** sử
 🚨 CHỈ dùng số có trong data. Thiếu chỗ nào ghi rõ "thiếu dữ liệu …". KHÔNG bịa. Ngắn gọn, đi thẳng vào việc.`;
 
 async function callClaude(env, userPrompt) {
-  const url = `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/doscom-erp/anthropic/v1/messages`;
+  // Đường ra do lib/ai-endpoint.js chọn: proxy ghim vùng Bắc Mỹ nếu có (Anthropic chặn
+  // colo Hong Kong — xem file đó), không thì AI Gateway như cũ.
+  const url = `${anthropicBase(env)}/v1/messages`;
   const body = {
     model: CLAUDE_MODEL,
     max_tokens: 3000,
@@ -61,6 +64,7 @@ async function callClaude(env, userPrompt) {
       "x-api-key": env.ANTHROPIC_API_KEY,
       "anthropic-version": "2023-06-01",
       "content-type": "application/json",
+      ...proxyHeaders(env),
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(90000),

@@ -1,3 +1,5 @@
+import { googleAiBase, proxyHeaders } from "../../../../lib/ai-endpoint.js";
+
 // Gemini với Google Search grounding.
 // Trả về citations URL từ groundingMetadata.groundingChunks.
 //
@@ -25,10 +27,9 @@ function getModel(env) {
 }
 
 function getBaseUrl(env) {
-  if (env.CF_ACCOUNT_ID) {
-    return `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/${GATEWAY_ID}/google-ai-studio/v1beta`;
-  }
-  return "https://generativelanguage.googleapis.com/v1beta";
+  // Google chặn Gemini theo vị trí: gọi từ colo Hong Kong trả 400 "User location is not
+  // supported". lib/ai-endpoint.js chọn proxy ghim vùng Bắc Mỹ nếu có.
+  return `${googleAiBase(env)}/v1beta`;
 }
 
 export async function queryGemini(query, env) {
@@ -39,7 +40,7 @@ export async function queryGemini(query, env) {
     const url = `${getBaseUrl(env)}/models/${MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...proxyHeaders(env) },
       body: JSON.stringify({
         contents: [{ parts: [{ text: query }] }],
         tools: [{ google_search: {} }],
