@@ -14,6 +14,21 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# Snapshot KHÔNG được mang theo trường rác. `orders_minimal` là dump đơn thô ~1,5MB chỉ dùng
+# lúc dựng dashboard-data.json; write_dashboard_data() trong build_dashboard_data.py vốn đã bóc
+# nó ra. Nhưng 19/08/2026 có lần ghép file bằng script tay, bỏ qua hàm đó → snapshot phình từ
+# 1,6MB lên 3,3MB, trang Tổng quan tải lâu gấp đôi mà nhìn bên ngoài không có dấu hiệu gì.
+# Kiểm ở đây vì mọi đường deploy đều đi qua bước build này.
+node -e '
+  const d = JSON.parse(require("fs").readFileSync("data/dashboard-data.json", "utf8"));
+  const junk = ["orders_minimal", "web_items_flat"].filter((f) => (d.revenue || {})[f]);
+  if (junk.length) {
+    console.error("[build-dist] data/dashboard-data.json còn trường rác: " + junk.join(", ") +
+      " — bóc ra trước khi deploy (xem write_dashboard_data trong scripts/build_dashboard_data.py)");
+    process.exit(1);
+  }
+'
+
 rm -rf dist && mkdir dist
 cp index.html dist/
 [ -f _headers ] && cp _headers dist/
