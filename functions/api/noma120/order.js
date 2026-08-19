@@ -73,14 +73,20 @@ export async function onRequestPost({ request, env }) {
   const createdDate = new Date((now + 7 * 3600) * 1000).toISOString().slice(0, 10);
   const phone = clip(b.phone, 20).replace(/\s/g, "");
 
+  // IP + trình duyệt của KHÁCH, do landing gửi kèm trong payload. KHÔNG đọc
+  // CF-Connecting-IP ở đây được: lời gọi này là landing worker -> CRM, nên IP
+  // nhìn thấy là của Cloudflare chứ không phải của khách.
+  const clientIp = clip(b.ip, 45) || null;
+  const clientUa = clip(b.user_agent, 300) || null;
+
   try {
     // INSERT OR IGNORE + unique(created_date, phone, combo): khách bấm gửi 2 lần chỉ
     // thành 1 đơn, doanh thu không bị cộng đôi.
     const res = await env.DB.prepare(
       `INSERT OR IGNORE INTO noma120_orders
          (staff, combo, combo_label, gift, name, note, source, province, phone, amount,
-          url, referrer, created_at, created_date)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+          url, referrer, created_at, created_date, ip, user_agent)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).bind(
       staff,
       b.combo,
@@ -95,7 +101,9 @@ export async function onRequestPost({ request, env }) {
       clip(b.url, 500),
       clip(b.referrer, 500),
       now,
-      createdDate
+      createdDate,
+      clientIp,
+      clientUa
     ).run();
 
     const written = (res && res.meta && res.meta.changes) || 0;
