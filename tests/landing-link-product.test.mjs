@@ -65,15 +65,20 @@ test("mọi landing đang chạy đều suy ra đúng sản phẩm từ link", {
   cases.forEach(([url, want], i) => assert.equal(got[i], want, url));
 });
 
-test("noma120.asia: chỉ path /d (bản Việt) là Noma 120, phần Thái không ghi nhận", { skip }, () => {
-  // Domain này đổi sản phẩm 18/08/2026: "/" nay là landing NOMA 911 tiếng Thái, còn ad
-  // NOMA 120 bản Việt vẫn trỏ /d. Khai cả domain là gán nhầm doanh số Thái sang SP Việt.
+test("noma120.asia: MỌI đường dẫn đều là Noma 911, không còn ghi nhận Noma 120", { skip }, () => {
+  /* Domain đổi chủ 21/08/2026: trước bán NOMA 120 (Việt), nay phục vụ landing NOMA 911
+     tiếng Thái ở "/". Chủ dự án chốt ngừng ghi nhận 120 từ đây, kể cả path /d cũ — ad
+     cũ còn trỏ /d thì số đó vẫn thuộc về trang đang thực sự hiển thị, không phải sản
+     phẩm đã ngừng bán. */
   assert.deepEqual(
     call("_product_from_link", ["https://noma120.asia/d", "https://noma120.asia/", "https://noma120.asia/911th"]),
-    ["Noma 120", null, null],
+    ["Noma 911", "Noma 911", "Noma 911"],
   );
-  assert.match(readFileSync(SCRIPT, "utf8"), /phần Thái[\s\S]{0,20}KHÔNG ghi nhận/,
-    "mất lý do vì sao chỉ khai path /d — người sau sẽ 'sửa' bằng cách khai cả domain");
+  const src = readFileSync(SCRIPT, "utf8");
+  assert.doesNotMatch(src, /"noma120\.asia\/d"\s*:/,
+    "luật cũ quay lại: noma120.asia/d không được map về Noma 120 nữa");
+  assert.match(src, /THỊ TRƯỜNG vẫn do TÊN CAMPAIGN quyết định/,
+    "mất cảnh báo: link chỉ quyết định SẢN PHẨM, campaign phải có 'Thái Lan' mới vào rổ Thái");
 });
 
 test("tên campaign nhận đủ model NOMA, không dồn hết về 911", { skip }, () => {

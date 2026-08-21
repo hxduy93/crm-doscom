@@ -25,6 +25,9 @@ test("resolveMarket chỉ nhận vn/th, còn lại là all", () => {
 // ---- Phân loại theo DANH SÁCH TƯỜNG MINH, không suy đoán theo hậu tố ----
 test("isThaiProduct chỉ đúng với mã đã khai, không bắt theo đuôi 'TH'", () => {
   assert.equal(isThaiProduct("D1TH"), true);
+  // 21/08/2026: landing NOMA 911 tiếng Thái (noma120.asia) ghi product=N911TH.
+  assert.equal(isThaiProduct("N911TH"), true);
+  assert.equal(isThaiProduct("NOMA911"), false);   // mã bản Việt, phải ở rổ VN
   assert.equal(isThaiProduct("D1"), false);
   assert.equal(isThaiProduct("DR1"), false);
   // Mã Việt lỡ kết thúc bằng TH thì KHÔNG được xếp nhầm sang thị trường Thái.

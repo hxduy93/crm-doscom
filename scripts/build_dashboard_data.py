@@ -301,10 +301,10 @@ LANDING_TO_PRODUCT = {
     "senso.io.vn/dr1tpn":    "DR1",
     # Camera DA8.1
     "doscom.store/da8.1tpn": "DA8.1",
-    # NOMA 120 — chủ dự án chốt 19/08/2026: CHỈ path /d (bản Việt) mới tính là Noma 120.
-    # Domain noma120.asia nay phục vụ landing NOMA 911 tiếng Thái ở "/" — phần Thái
-    # KHÔNG ghi nhận, nên cố ý chỉ khai đúng path này chứ không khai cả domain.
-    "noma120.asia/d":        "Noma 120",
+    # NOMA 120: chủ dự án chốt 21/08/2026 NGỪNG ghi nhận sản phẩm này từ noma120.asia.
+    # Luật cũ ("noma120.asia/d" -> Noma 120) đã gỡ vì cả domain chuyển sang landing
+    # NOMA 911 tiếng Thái — xem LANDING_HOST_TO_PRODUCT bên dưới. Bán 120 trở lại thì
+    # khai landing MỚI, đừng khôi phục dòng này: domain đó không còn phục vụ 120 nữa.
 }
 
 # Domain chỉ bán MỘT sản phẩm → mọi path trên domain đó (kể cả biến thể theo nhân
@@ -330,11 +330,14 @@ LANDING_HOST_TO_PRODUCT = {
     "noma955.click":                 "D1",
     "doscom-d1-th.pages.dev":        "D1",
     "noma911-th.pages.dev":          "Noma 911",
-    # ⛔ noma120.asia CỐ Ý KHÔNG map: domain này ĐỔI SẢN PHẨM ngày 18/08/2026 —
-    # trước phục vụ landing NOMA 120 (Việt), nay trỏ landing NOMA 911 tiếng Thái.
-    # Ad cũ của campaign "NOMA 120 · …" vẫn đang trỏ vào đây, nên đọc link sẽ ra
-    # "Noma 911" — SAI với thứ campaign đó thực sự quảng cáo. Để trống cho tên
-    # campaign quyết định. (Bài học: domain tái sử dụng thì link hết là bằng chứng.)
+    # noma120.asia: ĐỔI CHỦ 21/08/2026 — trước là landing NOMA 120 (Việt), nay là
+    # landing NOMA 911 TIẾNG THÁI ở "/". Chủ dự án chốt: ngừng ghi nhận Noma 120 từ
+    # domain này, mọi số ra tính về NOMA 911.
+    # ⚠ THỊ TRƯỜNG vẫn do TÊN CAMPAIGN quyết định (detect_market), KHÔNG do link. Nên
+    # campaign chạy vào domain này PHẢI có cụm "Thái Lan"/"Thailand" trong tên; thiếu
+    # là tiền rơi vào rổ Việt Nam và đội chi phí của Noma 911 bản Việt — đúng loại lỗi
+    # mà bảng map này sinh ra để chặn.
+    "noma120.asia":                  "Noma 911",
 }
 
 _AD_CREATIVE_FIELDS = (

@@ -25,7 +25,7 @@ const STAFF_LABEL = { duy: "Duy", pn: "Phương Nam", th: "Thái Lan" };
    Liệt kê TƯỜNG MINH, cố ý không suy đoán theo hậu tố kiểu /TH$/: mã sản phẩm Việt
    hoàn toàn có thể kết thúc bằng "TH" và sẽ bị xếp nhầm thị trường mà không ai hay.
    Mở thêm landing Thái (vd DR1 bản Thái) thì thêm mã vào đúng đây, không rải chỗ khác. */
-export const TH_PRODUCTS = ["D1TH"];
+export const TH_PRODUCTS = ["D1TH", "N911TH"];
 
 export function isThaiProduct(product) {
   return TH_PRODUCTS.indexOf(String(product == null ? "" : product)) !== -1;
