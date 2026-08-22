@@ -42,7 +42,7 @@ test("thời gian hiệu lực lấy đúng tài liệu, không hứa vĩnh vi�
 
 test("giá khớp bảng giá landing", () => {
   assert.match(PRODUCTS["Noma 680"].priceRange, /99\.000đ \/ chai 650ml/);
-  assert.match(PRODUCTS["Noma 350"].priceRange, /159\.000đ/);
+  assert.match(PRODUCTS["Noma 350"].priceRange, /119\.000đ/);
   assert.match(PRODUCTS["Noma 230"].priceRange, /99\.000đ \/ chai 450ml/);
 });
 
