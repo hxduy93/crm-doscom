@@ -5,8 +5,12 @@
   "main": "src/index.js",
   "compatibility_date": "2026-07-01",
   "triggers": {
-    // Giờ UTC (VN = UTC+7): 02:00=9h · 06:00=13h · 10:00=17h
-    "crons": ["0 2 * * *", "0 6 * * *", "0 10 * * *"]
+    // Giờ UTC (VN = UTC+7). Chủ dự án chốt 22/08/2026: dashboard cập nhật
+    // 2 lần/ngày — 09:00 và 15:00 giờ VN — T2 đến T7, CHỦ NHẬT NGHỈ (`1-6`).
+    //   02:00 UTC = 09:00 VN   ·   08:00 UTC = 15:00 VN
+    // Mốc này chạy SAU các workflow kéo dữ liệu (07:00–08:00 và 13:00–14:00 VN)
+    // nên dashboard luôn dựng từ dữ liệu vừa kéo về.
+    "crons": ["0 2 * * 1-6", "0 8 * * 1-6"]
   },
   // Bù đơn Thái chưa lên Sheet (mốc 9h) cần đọc/ghi bảng landing_leads.
   "d1_databases": [

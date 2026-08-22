@@ -39,7 +39,10 @@ async function runPlan(env, cron) {
   /* Chỉ mốc 9h SÁNG (02:00 UTC) mới dò và bù đơn Thái chưa lên Google Sheet —
      một lần/ngày là đủ, và trước giờ sale bắt đầu gọi đơn đêm qua.
      Chạy tay thì luôn chạy, để còn test được. */
-  if (cron === "0 2 * * *" || cron === "manual") {
+  /* So theo TIỀN TỐ giờ chứ không so cả chuỗi: chuỗi cron còn đính day-of-week
+     (`0 2 * * 1-6`) và sẽ đổi tiếp mỗi lần sửa lịch — so cả chuỗi là job này
+     âm thầm ngừng chạy mà không báo gì. */
+  if (cron.startsWith("0 2 ") || cron === "manual") {
     out.donThai = await buDonThai(env).catch((e) => ({ loi: String(e).slice(0, 200) }));
   }
 

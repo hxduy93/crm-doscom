@@ -6,7 +6,11 @@ name: Fetch Google Ads Placement
 # 2026-08-17 — GIẢM TỪ 24 → 3 lượt/ngày (xem ghi chú ở fetch-pancake.yml).
 on:
   schedule:
-    - cron: "30 0,4,8 * * *"
+    # Giờ UTC (VN = UTC+7). Chủ dự án chốt 22/08/2026: mọi công cụ cập nhật
+    # **2 lần/ngày** — sáng và chiều — **T2–T7, chủ nhật nghỉ** (`1-6`).
+    # Bước này chạy 07:30 + 13:30 giờ VN, trước lúc Worker doscom-cron dựng lại
+    # dashboard (09:00 và 15:00) — ĐỪNG dời muộn hơn, dashboard sẽ đọc dữ liệu cũ.
+    - cron: "30 0,6 * * 1-6"
   workflow_dispatch:
 
 permissions:

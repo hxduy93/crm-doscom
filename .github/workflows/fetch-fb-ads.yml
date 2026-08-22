@@ -11,7 +11,11 @@ name: Fetch FB Ads Insights
 #                      Lấy từ: developers.facebook.com/tools/explorer → Generate → Extend
 on:
   schedule:
-    - cron: "0 1,5,9 * * *"
+    # Giờ UTC (VN = UTC+7). Chủ dự án chốt 22/08/2026: mọi công cụ cập nhật
+    # **2 lần/ngày** — sáng và chiều — **T2–T7, chủ nhật nghỉ** (`1-6`).
+    # Bước này chạy 08:00 + 14:00 giờ VN, trước lúc Worker doscom-cron dựng lại
+    # dashboard (09:00 và 15:00) — ĐỪNG dời muộn hơn, dashboard sẽ đọc dữ liệu cũ.
+    - cron: "0 1,7 * * 1-6"
   workflow_dispatch:            # cho phép chạy thủ công từ tab Actions
 
 permissions:
