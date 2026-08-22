@@ -13,6 +13,12 @@
 //       Khác "audit": audit chỉ tìm chữ SAI để thay; gap tìm chữ THIẾU để bổ sung.
 //     Trả: { ok, results:[{id,name,permalink,diem,thieu[],khong_chac[],co[]}] }
 //
+//   { site, mode: "gap-draft", ids: [123,...] }
+//     → AI SOẠN nội dung cho những mục còn thiếu (dựa NGUYÊN VĂN hồ sơ sản phẩm),
+//       trả về description mới đã ghép sẵn để xem trước. KHÔNG ghi lên web —
+//       ghi là việc của /api/products/brandcore-apply (đã có backup + hoàn tác).
+//     Trả: { ok, cost_usd, results:[{id,name,permalink,added_html,new_description,thieu[]}] }
+//
 //   { site, mode: "audit", ids: [123,...] }   // các SP người dùng chọn để rà kỹ
 //     → với mỗi SP: AI đối chiếu brand core, đề xuất bản sửa CHỈ ở chỗ vi phạm.
 //     Trả: { ok, cost_usd, results:[{id,name,permalink,has_violations,violations:[{type,original,fixed,reason}],
@@ -47,6 +53,50 @@ TRẢ VỀ DUY NHẤT JSON hợp lệ (không markdown, không chữ ngoài JSON
   "has_violations": true/false,
   "violations": [ { "type": "loại vi phạm ngắn gọn", "original": "cụm gốc COPY NGUYÊN VĂN", "fixed": "cụm thay thế", "reason": "vì sao trái brand core" } ]
 }`;
+
+const DRAFT_SYSTEM = `Bạn là biên tập viên nội dung sản phẩm NOMA. Nhiệm vụ: viết BỔ SUNG những mục còn THIẾU trên trang bán hàng, dựa trên HỒ SƠ SẢN PHẨM được cung cấp.
+
+QUY TẮC BẤT DI BẤT DỊCH:
+1. CHỈ dùng thông tin có trong hồ sơ. TUYỆT ĐỐI KHÔNG thêm số liệu, công dụng, chứng nhận hay cam kết không có trong hồ sơ. Thiếu dữ liệu thì viết ngắn lại, KHÔNG bịa cho đủ ý.
+2. Giữ nguyên mọi CON SỐ trong hồ sơ (dung tích, thời gian, hạn dùng, tỷ lệ thành phần) — không làm tròn, không đổi đơn vị, không diễn giải lại.
+3. Tuân thủ Brand Core: không dùng claim tuyệt đối ("100%", "vĩnh viễn", "tuyệt đối an toàn", "xóa hoàn toàn"), không "số 1/tốt nhất/vượt trội/đột phá", không nói "Made in USA / sản xuất tại Mỹ". Nếu hồ sơ có mục CLAIM CẤM DÙNG thì tránh đúng những cụm đó.
+4. Viết tiếng Việt có dấu, giọng chuyên nghiệp, gọn. Mỗi mục 1 đoạn ngắn hoặc danh sách gạch đầu dòng.
+5. Trả HTML ĐƠN GIẢN: chỉ dùng <h3>, <p>, <ul>, <li>, <strong>. KHÔNG dùng class, style, script, thẻ bảng.
+6. Mục CẢNH BÁO AN TOÀN / SƠ CỨU / PPE: chép SÁT hồ sơ, không rút gọn, không diễn giải mềm đi.
+
+TRẢ VỀ DUY NHẤT JSON hợp lệ (không markdown, không chữ ngoài JSON):
+{
+  "sections": [ { "truong": "mã trường được giao", "tieu_de": "Tiêu đề mục", "html": "<p>…</p>" } ]
+}`;
+
+
+/* ── Khối nội dung bổ sung ────────────────────────────────────────────────────
+   Đánh dấu bằng cặp chú thích HTML để lần soạn sau THAY khối cũ thay vì nối thêm —
+   không có mốc này thì chạy hai lần là bài có hai đoạn "Thành phần" giống nhau. */
+const MARK_OPEN = "<!-- noma:bo-sung:start -->";
+const MARK_CLOSE = "<!-- noma:bo-sung:end -->";
+
+function escapeHtml(t) {
+  return String(t).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+}
+
+/* Chỉ giữ vài thẻ trình bày. AI được dặn dùng HTML đơn giản, nhưng nội dung nó trả về
+   sẽ ĐI THẲNG vào trang bán hàng nên không tin lời dặn — lọc ở tay mình. */
+function sanitizeHtml(html) {
+  return String(html)
+    .replace(/<(script|style|iframe|object|embed)[\s\S]*?<\/\1>/gi, "")
+    .replace(/ on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/<(?!\/?(h3|h4|p|ul|ol|li|strong|em|br)\b)[^>]*>/gi, "");
+}
+
+// Ghép khối bổ sung vào cuối mô tả; đã có khối cũ thì thay đúng chỗ đó.
+function ghepBoSung(desc, block) {
+  const d = String(desc || "");
+  const i = d.indexOf(MARK_OPEN);
+  const j = d.indexOf(MARK_CLOSE);
+  if (i >= 0 && j > i) return d.slice(0, i) + block + d.slice(j + MARK_CLOSE.length);
+  return d.trimEnd() + "\n" + block;
+}
 
 // nomaauto.us = bản tiếng Anh → dùng bộ từ cấm EN; doscom.vn/noma.vn = tiếng Việt.
 const forbiddenFor = (site) => (site === "nomaauto" ? NOMA_FORBIDDEN_EN : undefined);
@@ -131,6 +181,70 @@ export async function onRequestPost({ request, env }) {
         chua_co_ho_so: chuaCoHoSo,   // SP không dò được mã SKU hoặc hồ sơ còn ở dạng cũ
         results,
       });
+    }
+
+    /* ── SOẠN nội dung bổ sung cho các mục còn thiếu ────────────────────────────
+       Chỉ SOẠN và trả về để xem trước. Việc ghi lên web giao cho brandcore-apply —
+       chỗ đó đã có sao lưu + hoàn tác, không dựng thêm đường ghi thứ hai. */
+    if (mode === "gap-draft") {
+      const ids = (Array.isArray(body.ids) ? body.ids.map(Number).filter(Boolean) : []).slice(0, 10);
+      if (!ids.length) return json({ ok: false, error: "chưa chọn sản phẩm nào" }, 400);
+
+      let cost = 0;
+      const results = [];
+      for (const id of ids) {
+        const p = await getProduct(c, id);
+        const code = findSkuCode(p.name, skuSpecs);
+        const spec = code ? skuSpecs[code] : null;
+        const kq = doiChieuSanPham(p, spec);
+
+        if (!kq.co_ho_so || !kq.thieu.length) {
+          results.push({ id, name: p.name, permalink: p.permalink, bo_qua: kq.co_ho_so ? "khong_thieu_gi" : "chua_co_ho_so" });
+          continue;
+        }
+
+        const lieuKe = kq.thieu
+          .map((x) => `### ${x.nhan} (mã trường: ${x.truong})\n${x.trich_ho_so}`)
+          .join("\n\n");
+        const userPrompt =
+          `SẢN PHẨM: ${p.name}\n\n` +
+          `CÁC MỤC CÒN THIẾU TRÊN WEB — viết bổ sung đúng ${kq.thieu.length} mục này, giữ nguyên số liệu:\n\n${lieuKe}\n\n` +
+          `Trả JSON đúng schema, mỗi mục một phần tử trong "sections".`;
+
+        try {
+          const res = await callClaude(env, {
+            model: "haiku",
+            systemPrompt: `${DRAFT_SYSTEM}\n\n${brandGuide}`,
+            userPrompt,
+            maxTokens: 4000,
+            jsonOutput: true,
+          });
+          cost += res.cost_usd || 0;
+          const sections = Array.isArray(res.parsed?.sections) ? res.parsed.sections : [];
+          if (!sections.length) {
+            results.push({ id, name: p.name, permalink: p.permalink, error: "AI không trả được nội dung" });
+            continue;
+          }
+
+          const added = sections
+            .map((sec) => `<h3>${escapeHtml(sec.tieu_de || "")}</h3>\n${sanitizeHtml(sec.html || "")}`)
+            .join("\n");
+          const block = `${MARK_OPEN}\n${added}\n${MARK_CLOSE}`;
+
+          results.push({
+            id, name: p.name, permalink: p.permalink,
+            sku: code,
+            thieu: kq.thieu.map((x) => x.nhan),
+            added_html: block,
+            new_description: ghepBoSung(p.description || "", block),
+            description_cu: p.description || "",
+          });
+        } catch (e) {
+          results.push({ id, name: p.name, permalink: p.permalink, error: String(e.message || e).slice(0, 200) });
+        }
+      }
+
+      return json({ ok: true, site, mode: "gap-draft", cost_usd: Number(cost.toFixed(6)), results });
     }
 
     if (mode === "audit") {

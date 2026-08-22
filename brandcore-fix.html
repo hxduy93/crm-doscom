@@ -95,9 +95,27 @@
   <div id="gapCard" class="card hide">
     <div class="row" style="justify-content:space-between">
       <b id="gapTitle"></b>
-      <span class="muted">Chạy bằng luật, không tốn AI · không sửa gì trên web</span>
+      <div class="row">
+        <span class="muted">Dò bằng luật, không tốn AI</span>
+        <button id="btnGapPickAll" class="sec">Chọn tất cả SP thiếu</button>
+        <button id="btnGapDraft">Soạn nội dung bổ sung (AI)</button>
+      </div>
     </div>
     <div id="gapBody"></div>
+  </div>
+
+  <!-- XEM TRƯỚC NỘI DUNG BỔ SUNG → ÁP LÊN WEB -->
+  <div id="draftCard" class="card hide">
+    <div class="row" style="justify-content:space-between">
+      <b id="draftTitle"></b>
+      <button id="btnDraftApply" class="warn">Áp bản bổ sung lên web</button>
+    </div>
+    <div class="note">
+      Nội dung bổ sung được ghép vào <b>cuối phần mô tả</b>, giữa cặp mốc
+      <code>noma:bo-sung</code>. Soạn lại lần sau sẽ THAY khối này chứ không nối thêm.
+      Bản gốc được sao lưu trước khi ghi — hoàn tác trong báo cáo bên dưới.
+    </div>
+    <div id="draftBody"></div>
   </div>
 
   <!-- KẾT QUẢ QUÉT + RÀ AI -->
@@ -429,7 +447,8 @@ function renderGap(j) {
         ${x.bang_chung?.length ? `<div class="muted">đã khớp được: ${x.bang_chung.join(" · ")}</div>` : ""}
       </div>`;
     return `<div class="prod">
-      <h3><a href="${r.permalink}" target="_blank" rel="noopener">${r.name}</a>
+      <h3><input type="checkbox" class="gappick" data-id="${r.id}" ${r.thieu.length ? "" : "disabled"} />
+        <a href="${r.permalink}" target="_blank" rel="noopener">${r.name}</a>
         <span class="muted">· độ phủ ${r.diem ?? "—"}%</span></h3>
       <div class="flags">
         ${gapPill(r.thieu.length, "thieu")} thiếu ·
@@ -443,6 +462,106 @@ function renderGap(j) {
 
   gapBody.innerHTML = canhBao + (rows || '<p class="muted">Không có sản phẩm nào.</p>');
 }
+
+
+/* ── Soạn nội dung bổ sung rồi áp lên web ───────────────────────────────────
+   Ba nấc, cố ý tách rời: dò (miễn phí) → soạn (tốn AI, chỉ xem trước) → áp (ghi
+   thật, có sao lưu). Gộp lại thành một nút thì người bấm không kịp đọc nội dung
+   AI viết trước khi nó lên trang bán hàng. */
+let gapLast = [];          // kết quả dò gần nhất
+let draftLast = [];        // bản soạn đang chờ áp
+
+document.getElementById("btnGapPickAll").onclick = () => {
+  document.querySelectorAll(".gappick").forEach((c) => { c.checked = !c.disabled; });
+};
+
+document.getElementById("btnGapDraft").onclick = async () => {
+  const ids = [...document.querySelectorAll(".gappick:checked")].map((c) => Number(c.dataset.id));
+  if (!ids.length) { alert("Chưa chọn sản phẩm nào."); return; }
+  if (ids.length > 10) { alert("Mỗi lượt tối đa 10 sản phẩm."); return; }
+
+  const btn = document.getElementById("btnGapDraft");
+  btn.disabled = true;
+  const card = document.getElementById("draftCard");
+  card.classList.remove("hide");
+  document.getElementById("draftTitle").textContent = "Đang soạn…";
+  document.getElementById("draftBody").innerHTML = '<p class="muted">AI đang viết phần còn thiếu dựa trên hồ sơ sản phẩm…</p>';
+  try {
+    const r = await fetch("/api/products/brandcore-scan", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...dossierHeaders() },
+      credentials: "same-origin",
+      body: JSON.stringify({ site: document.getElementById("site").value, mode: "gap-draft", ids }),
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "lỗi");
+    draftLast = (j.results || []).filter((x) => x.new_description);
+    renderDraft(j);
+  } catch (e) {
+    document.getElementById("draftTitle").textContent = "Lỗi";
+    document.getElementById("draftBody").innerHTML = '<p class="err">' + e.message + "</p>";
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+function renderDraft(j) {
+  const rs = j.results || [];
+  document.getElementById("draftTitle").textContent =
+    `Xem trước ${draftLast.length}/${rs.length} sản phẩm · chi phí AI $${(j.cost_usd || 0).toFixed(4)}`;
+
+  document.getElementById("draftBody").innerHTML = rs.map((r) => {
+    if (r.error) return `<div class="prod"><h3>${r.name}</h3><div class="err">${r.error}</div></div>`;
+    if (r.bo_qua) {
+      const ly = r.bo_qua === "khong_thieu_gi" ? "không thiếu mục nào" : "chưa có hồ sơ cho SKU này";
+      return `<div class="prod"><h3>${r.name}</h3><div class="muted">Bỏ qua — ${ly}.</div></div>`;
+    }
+    return `<div class="prod">
+      <h3><label><input type="checkbox" class="draftpick" data-id="${r.id}" checked /> ${r.name}</label></h3>
+      <div class="muted">bổ sung: ${(r.thieu || []).join(" · ")}</div>
+      <div class="cmp">
+        <div><div class="lab">Mô tả hiện tại (cuối bài)</div>
+          <div class="box old">${escapeForBox(r.description_cu).slice(-1200) || "(trống)"}</div></div>
+        <div><div class="lab">Phần sẽ thêm vào</div>
+          <div class="box new">${escapeForBox(r.added_html)}</div></div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function escapeForBox(t) {
+  return String(t || "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+}
+
+document.getElementById("btnDraftApply").onclick = async () => {
+  const pick = new Set([...document.querySelectorAll(".draftpick:checked")].map((c) => Number(c.dataset.id)));
+  const fixes = draftLast
+    .filter((r) => pick.has(r.id))
+    .map((r) => ({ id: r.id, description: r.new_description }));
+  if (!fixes.length) { alert("Chưa chọn sản phẩm nào để áp."); return; }
+  if (!confirm(`Ghi bổ sung lên ${fixes.length} sản phẩm? Bản gốc được sao lưu, có thể hoàn tác.`)) return;
+
+  const btn = document.getElementById("btnDraftApply");
+  btn.disabled = true;
+  try {
+    const r = await fetch("/api/products/brandcore-apply", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...dossierHeaders() },
+      credentials: "same-origin",
+      body: JSON.stringify({ site: document.getElementById("site").value, fixes }),
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "lỗi");
+    // Dùng lại đúng khối báo cáo + nút Hoàn tác của luồng sửa từ cấm.
+    if (typeof renderReport === "function") renderReport(j);
+    else alert(`Đã áp ${j.applied}/${fixes.length} sản phẩm.`);
+    document.getElementById("draftTitle").textContent += ` — đã áp ${j.applied}`;
+  } catch (e) {
+    alert("Lỗi khi áp: " + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+};
 
 </script>
 </body>
