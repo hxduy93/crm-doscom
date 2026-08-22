@@ -46,6 +46,10 @@
   /* Cửa sổ nổi duyệt nội dung bổ sung — duyệt lần lượt từng SP, khỏi cuộn trang. */
   .modal-bg { position:fixed; inset:0; background:rgba(15,23,42,.55); display:flex;
               align-items:center; justify-content:center; z-index:999; padding:20px; }
+  /* PHẢI có luật này. `.hide{display:none}` khai ở TRÊN, mà hai luật cùng độ ưu tiên
+     thì luật đứng SAU thắng — thiếu dòng dưới đây là cửa sổ luôn hiện, bật lên lúc
+     chưa soạn gì và bấm × cũng không tắt (đã dính đúng lỗi này 22/08/2026). */
+  .modal-bg.hide { display:none; }
   .modal { background:#fff; border-radius:14px; width:min(1100px,96vw); max-height:92vh;
            display:flex; flex-direction:column; box-shadow:0 24px 70px rgba(0,0,0,.35); }
   .modal-head, .modal-foot { padding:14px 18px; display:flex; align-items:center;
@@ -557,6 +561,8 @@ function moDuyet(ds, cost) {
 function veDuyet(cost) {
   if (duyetI >= duyetDS.length) return dongDuyet();
   const r = duyetDS[duyetI];
+  // Không có dữ liệu thì ĐÓNG hẳn, đừng để cửa sổ rỗng chắn màn hình.
+  if (!r || !r.added_html) return dongDuyet();
   $duyet("duyetTen").textContent = r.name;
   $duyet("duyetDem").textContent =
     `${duyetI + 1}/${duyetDS.length}` + (cost != null ? ` · chi phí AI $${Number(cost).toFixed(4)}` : "");
