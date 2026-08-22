@@ -178,9 +178,9 @@ export const PRODUCTS = {
     name: "Noma 350",
     brand: "NOMA",
     fullName: "Dung dịch vệ sinh phanh đĩa Noma 350 — dạng xịt áp suất cao, non-chlorinated",
-    priceRange: "159.000đ / chai (2 chai 318.000đ có quà)",
+    priceRange: "119.000đ / chai (2 chai 238.000đ có quà)",
     category: "Chăm sóc ô tô — vệ sinh hệ thống phanh",
-    source: "noma-sku-specs.js mã 350 + PRICING landing noma350 (đối chiếu 2026-08-06)",
+    source: "noma-sku-specs.js mã 350 + PRICING landing noma350 (đối chiếu 2026-08-22)",
     guarantee: null,
     usps: [
       "Xịt thẳng qua khe vành, không phải kích xe hay tháo bánh",

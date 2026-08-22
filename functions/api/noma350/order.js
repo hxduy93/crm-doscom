@@ -9,10 +9,10 @@
 // thứ hai (lớp đầu ở Function của landing); cố ý, để kênh khác gọi thẳng vẫn đúng tiền.
 
 const COMBO_META = {
-  "le-350":        { label: "1 chai NOMA 350 vệ sinh phanh đĩa", amount: 159000 },
-  "combo-2x350":   { label: "2 chai NOMA 350 vệ sinh phanh đĩa", amount: 318000 },
-  "combo-350-911": { label: "NOMA 350 + NOMA 911 tẩy ố kính",    amount: 378000 },
-  "combo-350-922": { label: "NOMA 350 + NOMA 922 phủ nano kính", amount: 378000 },
+  "le-350":        { label: "1 chai NOMA 350 vệ sinh phanh đĩa", amount: 119000 },
+  "combo-2x350":   { label: "2 chai NOMA 350 vệ sinh phanh đĩa", amount: 238000 },
+  "combo-350-911": { label: "NOMA 350 + NOMA 911 tẩy ố kính",    amount: 338000 },
+  "combo-350-922": { label: "NOMA 350 + NOMA 922 phủ nano kính", amount: 338000 },
 };
 
 function json(obj, status = 200) {
