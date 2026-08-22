@@ -7,6 +7,12 @@
 //     → liệt kê SP NOMA + cờ vi phạm (regex, không tốn AI).
 //     Trả: { ok, site, scanned, noma_count, flagged_count, products:[{id,name,permalink,flags:[{type,quote}]}] }
 //
+//   { site, mode: "gap", ids?: [123,...] }
+//     → ĐỐI CHIẾU bài đã đăng với HỒ SƠ SẢN PHẨM: chỉ ra phần nội dung CÒN THIẾU
+//       trên web (thành phần, hạn dùng, đối tượng dùng…). KHÔNG tốn AI, KHÔNG ghi gì.
+//       Khác "audit": audit chỉ tìm chữ SAI để thay; gap tìm chữ THIẾU để bổ sung.
+//     Trả: { ok, results:[{id,name,permalink,diem,thieu[],khong_chac[],co[]}] }
+//
 //   { site, mode: "audit", ids: [123,...] }   // các SP người dùng chọn để rà kỹ
 //     → với mỗi SP: AI đối chiếu brand core, đề xuất bản sửa CHỈ ở chỗ vi phạm.
 //     Trả: { ok, cost_usd, results:[{id,name,permalink,has_violations,violations:[{type,original,fixed,reason}],
@@ -16,6 +22,7 @@
 import { callClaude } from "../geo/_utils/claude.js";
 import { NOMA_BRAND_GUIDE, NOMA_BRAND_GUIDE_EN, NOMA_FORBIDDEN_EN, scanForbidden, applyFixes, deterministicFixes } from "../geo/_utils/noma-brandcore.js";
 import { findSkuCode, skuSpecText, loadSkuSpecs } from "../geo/_utils/noma-sku-specs.js";
+import { doiChieuSanPham } from "./_gap.js";
 import { siteCreds, isConfigured, listProducts, getProduct, isNomaProduct } from "./_wc.js";
 
 function json(o, s = 200) {
@@ -85,6 +92,44 @@ export async function onRequestPost({ request, env }) {
         ok: true, site,
         scanned, noma_count: products.length, flagged_count: flagged.length,
         products,
+      });
+    }
+
+    /* ── ĐỐI CHIẾU HỒ SƠ: tìm nội dung CÒN THIẾU trên web ──────────────────────
+       Chạy bằng luật, KHÔNG gọi AI: chạy được cho cả trăm SP mà không tốn tiền, và
+       cùng đầu vào luôn cho cùng kết luận (AI thì mỗi lần một khác, không đối chiếu
+       lịch sử được). Kết quả chia ba mức có/không chắc/thiếu kèm bằng chứng. */
+    if (mode === "gap") {
+      const ids = Array.isArray(body.ids) ? body.ids.map(Number).filter(Boolean) : null;
+      const all = await listNomaProducts(c, site);
+      const chon = ids ? all.products.filter((p) => ids.includes(p.id)) : all.products;
+
+      const results = [];
+      let chuaCoHoSo = 0;
+      for (const item of chon) {
+        const p = await getProduct(c, item.id);
+        const code = findSkuCode(p.name, skuSpecs);
+        const spec = code ? skuSpecs[code] : null;
+        const kq = doiChieuSanPham(p, spec);
+        if (!kq.co_ho_so) chuaCoHoSo++;
+        results.push({
+          id: p.id, name: p.name, permalink: p.permalink, sku: code,
+          co_ho_so: kq.co_ho_so, diem: kq.diem,
+          thieu: kq.thieu, khong_chac: kq.khong_chac,
+          so_co: kq.co.length,
+        });
+      }
+      // Thiếu phần TRỌNG YẾU xếp lên trước — đó là thứ phải sửa ngay.
+      results.sort((a, b) => {
+        const w = (r) => (r.thieu || []).filter((x) => x.trong_yeu).length;
+        return w(b) - w(a) || (a.diem ?? 101) - (b.diem ?? 101);
+      });
+
+      return json({
+        ok: true, site, mode: "gap",
+        scanned: chon.length,
+        chua_co_ho_so: chuaCoHoSo,   // SP không dò được mã SKU hoặc hồ sơ còn ở dạng cũ
+        results,
       });
     }
 

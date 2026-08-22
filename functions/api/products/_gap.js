@@ -1,0 +1,160 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+   ĐỐI CHIẾU BÀI ĐÃ ĐĂNG ↔ HỒ SƠ SẢN PHẨM — tìm phần nội dung CÒN THIẾU trên web.
+
+   Khác với brandcore-scan: chỗ đó chỉ tìm chữ SAI (từ cấm, claim quá đà, HDSD lệch)
+   rồi thay chuỗi. Nó KHÔNG bao giờ phát hiện được chữ THIẾU — prompt còn ghi rõ
+   "không chèn mục/bước mới". Nên một sản phẩm có thể sạch vi phạm hoàn toàn mà vẫn
+   thiếu hẳn thành phần, hạn dùng, đối tượng sử dụng… trên trang.
+
+   Cách dò: KHÔNG dùng AI ở bước này (rẻ, chạy được cho cả trăm SP, và quan trọng hơn
+   là kết quả lặp lại được — cùng đầu vào cho cùng kết luận). Mỗi trường trong hồ sơ
+   được rút ra vài "mốc neo" rồi tìm trong text của bài:
+     · mốc SỐ + ĐƠN VỊ  ("100g", "3 năm", "30-45 ngày") — chắc chắn nhất, số hiếm khi trùng ngẫu nhiên
+     · mốc TỪ KHOÁ dài  (bỏ dấu, ≥5 ký tự, bỏ từ chung chung)
+
+   Kết luận chia BA mức chứ không phải hai — "không chắc" là mức quan trọng nhất:
+   ép mọi thứ về có/không sẽ tạo ra danh sách thiếu giả, người dùng vài lần là mất
+   niềm tin vào cả công cụ.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+// Trường nào cần có mặt trên trang bán hàng. Cố ý KHÔNG kiểm mấy trường nội bộ
+// (insight, pain, concept, keyword, đối thủ…) — đó là tài liệu cho marketing, không
+// phải nội dung phải hiển thị cho khách.
+export const GAP_FIELDS = [
+  { key: "mo_ta",              nhan: "Mô tả ngắn",                 trong_yeu: true },
+  { key: "tinh_nang",          nhan: "Tính năng nổi bật",          trong_yeu: true },
+  { key: "co_che",             nhan: "Cơ chế hoạt động",           trong_yeu: false },
+  { key: "cong_nghe",          nhan: "Công nghệ",                  trong_yeu: false },
+  { key: "thanh_phan",         nhan: "Thành phần",                 trong_yeu: true },
+  { key: "dung_tich",          nhan: "Dung tích",                  trong_yeu: true },
+  { key: "the_sp",             nhan: "Thể sản phẩm",               trong_yeu: false },
+  { key: "hdsd",               nhan: "Hướng dẫn sử dụng",          trong_yeu: true },
+  { key: "doi_tuong",          nhan: "Đối tượng sử dụng",          trong_yeu: false },
+  { key: "luu_y",              nhan: "Lưu ý & bảo quản",           trong_yeu: true },
+  { key: "hsd",                nhan: "Hạn sử dụng",                trong_yeu: true },
+  { key: "bao_hanh",           nhan: "Bảo hành",                   trong_yeu: false },
+  { key: "thoi_gian",          nhan: "Thời gian duy trì",          trong_yeu: true },
+  { key: "thoi_gian_hieu_qua", nhan: "Thời gian thấy hiệu quả",    trong_yeu: false },
+  { key: "so_lan_dung",        nhan: "Số lần dùng được",           trong_yeu: false },
+  { key: "usp",                nhan: "USP",                        trong_yeu: false },
+  { key: "ppe",                nhan: "Trang bị bảo hộ (PPE)",      trong_yeu: false },
+  { key: "so_cuu",             nhan: "Sơ cứu y tế",                trong_yeu: false },
+];
+
+// Từ quá phổ thông → xuất hiện ở mọi bài, dùng làm mốc sẽ cho kết quả "có" giả.
+const STOP = new Set(`
+ duoc khong nhung cung voi cho tren duoi trong ngoai theo hoac
+ giup lam cho san pham noma dung su dung nguoi khach hang xe oto
+ cach buoc phut gio ngay thang nam lan viec khi neu con nhu the
+ luon tot hon nhat rat kha day dan mot hai ba bon nam sau bay
+ tren mat be be_mat truoc cung_mot
+`.trim().split(/\s+/));
+
+export const boDau = (s) =>
+  String(s || "").toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9%]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+/* Rút "mốc neo" từ giá trị hồ sơ.
+   Ưu tiên số+đơn vị vì đó là thứ chắc chắn: bài có "100g" thì gần như chắc đang nói
+   về dung tích, còn trùng từ "bảo vệ" thì chẳng chứng minh được gì. */
+export function mocNeo(giaTri) {
+  const raw = String(giaTri || "");
+  const t = boDau(raw);
+  if (!t) return { so: [], tu: [] };
+
+  /* boDau() đã biến "2-4 tuần" thành "2 4 tuan" (gạch nối bị bỏ) nên mẫu phải chấp
+     nhận dạng có khoảng trắng. Mốc được giữ ở DẠNG BỎ HẾT TRẮNG ("24tuan") và bên dò
+     cũng so với bản bỏ trắng của trang — nếu không, "100g" trong hồ sơ sẽ trượt khi
+     trang viết "100 g", và ngược lại. */
+  const so = [...new Set(
+    (t.match(/\d+(?:\s?[-–]?\s?\d+)?\s?(?:g|kg|ml|l|cm|mm|nam|thang|tuan|ngay|gio|phut|giay|%)/g) || [])
+      .map((x) => x.replace(/\s+/g, ""))
+  )];
+
+  /* Tiếng Việt âm tiết ngắn ("kính", "nhựa", "phủ") nên lọc theo độ dài đơn lẻ sẽ
+     vứt gần hết mốc, mà giữ lại thì trùng ngẫu nhiên rất cao. Dùng CỤM 2 ÂM TIẾT
+     liền nhau ("phu ceramic", "be mat kinh") — đặc trưng hơn hẳn từ đơn, và vẫn
+     chịu được việc web viết lại câu miễn còn giữ cụm đó.
+     Giữ thêm vài từ đơn DÀI (≥6) vì đó thường là tên chất/kỹ thuật: ceramic,
+     alumina, microfiber… — mấy chữ này một mình đã đủ chứng minh. */
+  const tokens = t.split(" ").filter((w) => w.length >= 3);
+  const cum = [];
+  for (let i = 0; i < tokens.length - 1; i++) {
+    const a = tokens[i], b = tokens[i + 1];
+    if (STOP.has(a) && STOP.has(b)) continue;      // "duoc su", "cho nguoi"… vô nghĩa
+    cum.push(`${a} ${b}`);
+  }
+  const tuDai = tokens.filter((w) => w.length >= 6 && !STOP.has(w));
+  const tu = [...new Set([...tuDai, ...cum])].slice(0, 16);
+
+  return { so, tu };
+}
+
+/* Một trường có mặt trên bài chưa?
+     co         — tìm thấy mốc số, hoặc ≥50% mốc từ
+     khong_chac — có dấu vết nhưng thưa (≥20%)
+     thieu      — không thấy gì
+   Trả kèm `bang_chung` để người dùng tự kiểm chứng, không phải tin suông. */
+export function doTruong(pageText, giaTri) {
+  const page = boDau(pageText);
+  const pageChat = page.replace(/\s+/g, "");     // bản bỏ hết trắng, để so mốc số
+  const { so, tu } = mocNeo(giaTri);
+  if (!so.length && !tu.length) return { muc: "khong_co_du_lieu", bang_chung: [], ty_le: 0 };
+
+  const hitSo = so.filter((x) => pageChat.includes(x));
+  const hitTu = tu.filter((w) => page.includes(w));
+  const tyLe = tu.length ? hitTu.length / tu.length : 0;
+
+  if (hitSo.length || tyLe >= 0.5) {
+    return { muc: "co", bang_chung: [...hitSo, ...hitTu].slice(0, 6), ty_le: tyLe };
+  }
+  if (tyLe >= 0.2) return { muc: "khong_chac", bang_chung: hitTu.slice(0, 6), ty_le: tyLe };
+  return { muc: "thieu", bang_chung: [], ty_le: tyLe };
+}
+
+/** Bỏ thẻ HTML để so bằng chữ thuần (mô tả sản phẩm WooCommerce là HTML). */
+export const boHtml = (html) =>
+  String(html || "")
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&");
+
+/* Đối chiếu 1 sản phẩm.
+   `spec` là hồ sơ dạng mới (nhiều trường chữ). Hồ sơ dạng cũ (mảng) không có đủ
+   trường nên trả về rỗng — nói rõ bằng `co_ho_so:false` thay vì báo "thiếu hết". */
+export function doiChieuSanPham({ name, description, short_description }, spec) {
+  if (!spec || Array.isArray(spec.cong_dung) || Array.isArray(spec.hdsd)) {
+    return { co_ho_so: false, thieu: [], khong_chac: [], co: [], diem: null };
+  }
+  const pageText = `${name || ""} ${boHtml(short_description)} ${boHtml(description)}`;
+
+  const thieu = [], khongChac = [], co = [];
+  for (const f of GAP_FIELDS) {
+    const giaTri = spec[f.key];
+    if (!giaTri) continue;                       // hồ sơ không có thì không đòi web phải có
+    const kq = doTruong(pageText, giaTri);
+    const item = {
+      truong: f.key,
+      nhan: f.nhan,
+      trong_yeu: f.trong_yeu,
+      bang_chung: kq.bang_chung,
+      trich_ho_so: String(giaTri).replace(/\s*\n\s*/g, " / ").slice(0, 400),
+    };
+    if (kq.muc === "thieu") thieu.push(item);
+    else if (kq.muc === "khong_chac") khongChac.push(item);
+    else if (kq.muc === "co") co.push(item);
+  }
+
+  const tong = thieu.length + khongChac.length + co.length;
+  return {
+    co_ho_so: true,
+    thieu, khong_chac: khongChac, co,
+    // Điểm phủ: đếm "không chắc" bằng nửa điểm — nó chưa phải thiếu, cũng chưa phải đủ.
+    diem: tong ? Math.round(((co.length + khongChac.length * 0.5) / tong) * 100) : null,
+  };
+}

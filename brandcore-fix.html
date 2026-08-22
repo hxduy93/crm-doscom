@@ -85,9 +85,19 @@
         </select>
       </label>
       <button id="btnScan">Quét sản phẩm NOMA</button>
+      <button id="btnGap" class="sec" title="Đối chiếu bài đã đăng với hồ sơ sản phẩm — tìm phần nội dung chưa được cập nhật lên web">Soát nội dung thiếu</button>
       <input id="token" type="text" placeholder="X-Products-Token (nếu Access tắt)" style="flex:1;min-width:180px" />
       <span id="scanInfo" class="muted"></span>
     </div>
+  </div>
+
+  <!-- KẾT QUẢ ĐỐI CHIẾU HỒ SƠ (nội dung còn thiếu trên web) -->
+  <div id="gapCard" class="card hide">
+    <div class="row" style="justify-content:space-between">
+      <b id="gapTitle"></b>
+      <span class="muted">Chạy bằng luật, không tốn AI · không sửa gì trên web</span>
+    </div>
+    <div id="gapBody"></div>
   </div>
 
   <!-- KẾT QUẢ QUÉT + RÀ AI -->
@@ -360,6 +370,79 @@ document.getElementById("btnDossierApply").onclick = () => {
 };
 dUndo.onclick = () => dossierSend(false, true);
 dossierStatus();
+
+
+/* ── Soát nội dung THIẾU (đối chiếu bài đã đăng ↔ hồ sơ sản phẩm) ────────────
+   Khác nút "Quét": quét tìm chữ SAI để thay; nút này tìm chữ THIẾU để bổ sung.
+   Cố ý CHỈ BÁO, không tự sửa — chèn thêm mục vào giữa HTML bài đã đăng là việc
+   dễ làm hỏng bố cục, và nội dung bổ sung cần người đọc lại trước khi đăng. */
+const gapCard = document.getElementById("gapCard");
+const gapBody = document.getElementById("gapBody");
+const gapTitle = document.getElementById("gapTitle");
+
+document.getElementById("btnGap").onclick = async () => {
+  const site = document.getElementById("site").value;
+  const btn = document.getElementById("btnGap");
+  btn.disabled = true;
+  gapCard.classList.remove("hide");
+  gapTitle.textContent = "Đang đối chiếu…";
+  gapBody.innerHTML = '<p class="muted">Đang tải bài đã đăng và so với hồ sơ sản phẩm…</p>';
+  try {
+    const r = await fetch("/api/products/brandcore-scan", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...dossierHeaders() },
+      credentials: "same-origin",
+      body: JSON.stringify({ site, mode: "gap" }),
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "lỗi");
+    renderGap(j);
+  } catch (e) {
+    gapTitle.textContent = "Lỗi";
+    gapBody.innerHTML = '<p class="err">' + e.message + "</p>";
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+function gapPill(n, loai) {
+  if (!n) return '<span class="pill green">đủ</span>';
+  return '<span class="pill ' + (loai === "thieu" ? "red" : "grey") + '">' + n + "</span>";
+}
+
+function renderGap(j) {
+  const rs = j.results || [];
+  const tongThieu = rs.reduce((a, r) => a + (r.thieu?.length || 0), 0);
+  gapTitle.textContent = `${j.site} — soát ${j.scanned} sản phẩm · ${tongThieu} mục nội dung còn thiếu`;
+
+  const canhBao = j.chua_co_ho_so
+    ? `<div class="note">${j.chua_co_ho_so} sản phẩm chưa đối chiếu được — không dò ra mã SKU trong tên, hoặc mã đó không có trong hồ sơ đang dùng. Kiểm tra lại tên sản phẩm hoặc tải hồ sơ đầy đủ hơn lên.</div>`
+    : "";
+
+  const rows = rs.map((r) => {
+    if (!r.co_ho_so) {
+      return `<div class="prod"><h3>${r.name}</h3><div class="muted">Chưa có hồ sơ cho sản phẩm này — bỏ qua.</div></div>`;
+    }
+    const muc = (x, mau) =>
+      `<div style="margin:6px 0"><b>${x.nhan}</b> ${x.trong_yeu ? '<span class="pill red">trọng yếu</span>' : ""}
+        <div class="box ${mau}" style="margin-top:4px">${x.trich_ho_so.replace(/</g, "&lt;")}</div>
+        ${x.bang_chung?.length ? `<div class="muted">đã khớp được: ${x.bang_chung.join(" · ")}</div>` : ""}
+      </div>`;
+    return `<div class="prod">
+      <h3><a href="${r.permalink}" target="_blank" rel="noopener">${r.name}</a>
+        <span class="muted">· độ phủ ${r.diem ?? "—"}%</span></h3>
+      <div class="flags">
+        ${gapPill(r.thieu.length, "thieu")} thiếu ·
+        ${gapPill(r.khong_chac.length, "cc")} chưa chắc ·
+        <span class="pill green">${r.so_co}</span> đã có
+      </div>
+      ${r.thieu.length ? "<div><b>Chưa có trên web — cần bổ sung:</b>" + r.thieu.map((x) => muc(x, "old")).join("") + "</div>" : ""}
+      ${r.khong_chac.length ? '<details><summary class="muted">Mới nói được một phần (' + r.khong_chac.length + ") — bấm xem</summary>" + r.khong_chac.map((x) => muc(x, "new")).join("") + "</details>" : ""}
+    </div>`;
+  }).join("");
+
+  gapBody.innerHTML = canhBao + (rows || '<p class="muted">Không có sản phẩm nào.</p>');
+}
 
 </script>
 </body>
