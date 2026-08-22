@@ -14,6 +14,16 @@ Cron: mỗi 3 giờ qua GitHub Actions (.github/workflows/fetch-fb-ads.yml).
 import os
 import json
 import sys
+
+# Console Windows mac dinh cp1252 -> print chuoi co "→", "↪", dau tieng Viet la
+# UnicodeEncodeError, script chet giua chung. Ep stdout/stderr ve UTF-8 ngay tu dau.
+# (22/08/2026: dung dung loi nay, ca duong ong du lieu dung o buoc 1/13.)
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 import time
 import urllib.request
 import urllib.error
