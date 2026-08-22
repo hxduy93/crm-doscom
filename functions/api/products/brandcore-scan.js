@@ -189,6 +189,9 @@ export async function onRequestPost({ request, env }) {
     if (mode === "gap-draft") {
       const ids = (Array.isArray(body.ids) ? body.ids.map(Number).filter(Boolean) : []).slice(0, 10);
       if (!ids.length) return json({ ok: false, error: "chưa chọn sản phẩm nào" }, 400);
+      // Brand core phải khai TẠI ĐÂY: bản trong nhánh "audit" nằm phía dưới nên nhánh
+      // này không thấy (lỗi "brandGuide is not defined" — chủ dự án gặp 22/08/2026).
+      const brandGuide = site === "nomaauto" ? NOMA_BRAND_GUIDE_EN : NOMA_BRAND_GUIDE;
 
       let cost = 0;
       const results = [];
