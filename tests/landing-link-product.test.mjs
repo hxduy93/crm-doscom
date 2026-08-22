@@ -65,22 +65,47 @@ test("mọi landing đang chạy đều suy ra đúng sản phẩm từ link", {
   cases.forEach(([url, want], i) => assert.equal(got[i], want, url));
 });
 
-test("noma120.asia: MỌI đường dẫn đều là Noma 911, không còn ghi nhận Noma 120", { skip }, () => {
-  /* Domain đổi chủ 21/08/2026: trước bán NOMA 120 (Việt), nay phục vụ landing NOMA 911
-     tiếng Thái ở "/". Chủ dự án chốt ngừng ghi nhận 120 từ đây, kể cả path /d cũ — ad
-     cũ còn trỏ /d thì số đó vẫn thuộc về trang đang thực sự hiển thị, không phải sản
-     phẩm đã ngừng bán. */
+test("noma120.asia: path /d và /tpn là NOMA 120, phần gốc là Noma 911 Thái", { skip }, () => {
+  /* Chủ dự án chốt 22/08/2026: vẫn ghi nhận NOMA 120 qua hai đường dẫn của nhân sự,
+     dù gốc tên miền đã giao cho landing NOMA 911 tiếng Thái. Path phải THẮNG domain —
+     nếu domain thắng thì toàn bộ chi phí NOMA 120 bị đọc thành Noma 911. */
   assert.deepEqual(
-    call("_product_from_link", ["https://noma120.asia/d", "https://noma120.asia/", "https://noma120.asia/911th"]),
-    ["Noma 911", "Noma 911", "Noma 911"],
+    call("_product_from_link", [
+      "https://noma120.asia/d", "https://noma120.asia/tpn",
+      "https://noma120.asia/", "https://noma120.asia/911th",
+    ]),
+    ["Noma 120", "Noma 120", "Noma 911", "Noma 911"],
   );
-  const src = readFileSync(SCRIPT, "utf8");
-  assert.doesNotMatch(src, /"noma120\.asia\/d"\s*:/,
-    "luật cũ quay lại: noma120.asia/d không được map về Noma 120 nữa");
-  assert.match(src, /THỊ TRƯỜNG vẫn do TÊN CAMPAIGN quyết định/,
-    "mất cảnh báo: link chỉ quyết định SẢN PHẨM, campaign phải có 'Thái Lan' mới vào rổ Thái");
 });
 
+test("landing theo nhân sự của 230/350/680 khai TƯỜNG MINH theo path", { skip }, () => {
+  /* Trước đây ba sản phẩm này chỉ khai theo TÊN MIỀN. Vẫn ra đúng SP, nhưng luật đó
+     sập ngay khi domain đổi chủ — đúng chuyện đã xảy ra với noma120.asia. */
+  assert.deepEqual(
+    call("_product_from_link", [
+      "https://noma620.click/nm230d", "https://noma620.click/nm230tpn",
+      "https://noma890.click/nm350d", "https://noma890.click/nm350tpn",
+      "https://nomaautocares.cloud/nm680d", "https://nomaautocares.cloud/nm680tpn",
+    ]),
+    ["Noma 230", "Noma 230", "Noma 350", "Noma 350", "Noma 680", "Noma 680"],
+  );
+  const src = readFileSync(SCRIPT, "utf8");
+  for (const p of ["noma620.click/nm230d", "noma890.click/nm350d", "nomaautocares.cloud/nm680d",
+                   "noma120.asia/d"]) {
+    assert.ok(src.includes(`"${p}"`), `phải khai tường minh path ${p}, đừng chỉ dựa vào luật tên miền`);
+  }
+});
+
+test("chi tiêu KHÔNG đọc được link thì KHÔNG vào bảng chi phí sản phẩm", { skip }, () => {
+  /* Chủ dự án chốt 22/08/2026. Trước đây gom vào rổ "(không đọc được link)" và vẫn
+     tính — mà giao diện xếp mọi thứ không bắt đầu bằng "Noma" vào Doscom, nên 44,8tr
+     của Phương Nam (30% cột chi phí Doscom kỳ 01→21/08) rơi nhầm chỗ. */
+  const src = readFileSync(SCRIPT, "utf8");
+  assert.ok(!/prod\s*=\s*NO_LINK_BUCKET/.test(src),
+    "luật cũ quay lại: campaign không link lại được gán thành một 'sản phẩm'");
+  assert.match(src, /ad_spend_excluded/,
+    "tiền không quy được vẫn phải giữ ở ad_spend_excluded để đối chiếu Ads Manager");
+});
 test("tên campaign nhận đủ model NOMA, không dồn hết về 911", { skip }, () => {
   const names = [
     "NOMA 230 · Chai Xit Duong & Danh Bon… - TEST",
@@ -105,12 +130,19 @@ test("CHỈ link gán sản phẩm — tên campaign không còn quyền đó", 
   assert.match(src, /conflicts\.append/, "mất phần in cảnh báo vênh tên↔link");
 });
 
-test("chi phí không đọc được link KHÔNG bị bốc hơi — có rổ riêng", { skip }, () => {
-  // 01→19/08/2026 có 25,5tr ad Messenger/inbox không đọc được link. Nếu để rơi vào rổ
-  // "chạy hộ team content" (không tính chi phí) thì lợi nhuận bị thổi lên đúng số đó.
+test("chi phí không đọc được link vẫn phải ĐẾM ĐƯỢC ở nơi khác, không bốc hơi", { skip }, () => {
+  /* Luật ĐỔI 22/08/2026: chi tiêu không đọc được link KHÔNG còn vào bảng chi phí sản
+     phẩm (trước đây gom vào rổ "(không đọc được link)" rồi bị giao diện xếp nhầm hết
+     sang Doscom — 44,8tr của Phương Nam kỳ 01→21/08).
+
+     NHƯNG tiền đó vẫn tiêu thật. Nó phải nằm ở `ad_spend_excluded` để còn đối chiếu
+     với Trình quản lý quảng cáo — bỏ hẳn thì tổng chi trên dashboard thấp hơn thực tế
+     mà không ai giải thích được vì sao. Test này canh đúng chỗ đó. */
   const src = readFileSync(SCRIPT, "utf8");
-  assert.match(src, /NO_LINK_BUCKET = "\(không đọc được link\)"/, "mất rổ chi phí chưa gán được SP");
-  assert.match(src, /prod = NO_LINK_BUCKET/, "chi phí không có link không còn được giữ lại");
+  assert.match(src, /data\["ad_spend_excluded"\] = excluded/, "mất rổ chi phí bị loại");
+  assert.match(src, /bucket = excluded\[staff\]/, "chi phí không gán được SP phải chảy vào rổ excluded");
+  assert.ok(!/prod = NO_LINK_BUCKET/.test(src),
+    "luật cũ quay lại: campaign không link lại được tính như một sản phẩm");
 });
 
 test("đọc link hỏng giữa chừng thì GIỮ phần đã đọc, không trả rỗng", { skip }, () => {

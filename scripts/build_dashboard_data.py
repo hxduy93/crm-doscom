@@ -291,10 +291,10 @@ def fb_get(url, params=None):
 # bị tính thành Noma 911 trong 01→19/08).
 #
 # Key = host + path, đã bỏ "www." và bỏ query/fragment.
-# Nhãn cho chi tiêu KHÔNG đọc được link landing (ad Messenger/inbox, ad đã xoá creative).
-# Cố ý là một "sản phẩm" hiện trong bảng thay vì bị loại: tiền vẫn phải nằm trong chi phí
-# của nhân sự, chỉ là chưa biết của SP nào.
-NO_LINK_BUCKET = "(không đọc được link)"
+# GỠ 22/08/2026: trước đây chi tiêu không đọc được link được gom vào một "sản phẩm"
+# giả tên "(không đọc được link)" và VẪN tính vào chi phí. Giao diện phân thương hiệu
+# bằng luật "tên không bắt đầu bằng Noma thì là Doscom" nên cả rổ rơi vào Doscom.
+# Nay chi tiêu đó KHÔNG được ghi nhận nữa (chủ dự án chốt) — nó nằm ở ad_spend_excluded.
 
 LANDING_TO_PRODUCT = {
     # NOMA 911 — noma.io.vn (project noma-landings)
@@ -311,10 +311,23 @@ LANDING_TO_PRODUCT = {
     "senso.io.vn/dr1tpn":    "DR1",
     # Camera DA8.1
     "doscom.store/da8.1tpn": "DA8.1",
-    # NOMA 120: chủ dự án chốt 21/08/2026 NGỪNG ghi nhận sản phẩm này từ noma120.asia.
-    # Luật cũ ("noma120.asia/d" -> Noma 120) đã gỡ vì cả domain chuyển sang landing
-    # NOMA 911 tiếng Thái — xem LANDING_HOST_TO_PRODUCT bên dưới. Bán 120 trở lại thì
-    # khai landing MỚI, đừng khôi phục dòng này: domain đó không còn phục vụ 120 nữa.
+    # ── Landing theo NHÂN SỰ, khai TƯỜNG MINH từng đường dẫn (chủ dự án chốt 22/08/2026) ──
+    # Nguồn: DK_LIST trong index.html — danh sách landing đã đăng ký của công ty.
+    # Vì sao khai theo PATH dù mỗi tên miền chỉ bán một sản phẩm: luật theo TÊN MIỀN sập
+    # ngay khi domain đổi chủ. Đúng chuyện đã xảy ra với noma120.asia (21/08 giao cho
+    # landing NOMA 911 tiếng Thái → mọi chi phí NOMA 120 bị đọc thành Noma 911).
+    "noma620.click/nm230d":         "Noma 230",
+    "noma620.click/nm230tpn":       "Noma 230",
+    "noma890.click/nm350d":         "Noma 350",
+    "noma890.click/nm350tpn":       "Noma 350",
+    "nomaautocares.cloud/nm680d":   "Noma 680",
+    "nomaautocares.cloud/nm680tpn": "Noma 680",
+    # NOMA 120 VẪN được ghi nhận qua hai đường dẫn này (chủ dự án chốt 22/08/2026),
+    # dù phần gốc của noma120.asia đang phục vụ landing NOMA 911 tiếng Thái. Path thắng
+    # domain nên hai thứ sống chung. Khi 911 Thái dời sang tên miền khác thì gỡ dòng
+    # "noma120.asia" ở LANDING_HOST_TO_PRODUCT, KHÔNG gỡ hai dòng dưới đây.
+    "noma120.asia/d":               "Noma 120",
+    "noma120.asia/tpn":             "Noma 120",
 }
 
 # Domain chỉ bán MỘT sản phẩm → mọi path trên domain đó (kể cả biến thể theo nhân
@@ -745,8 +758,15 @@ def build_data():
                 #   có tên SP  → vẫn là tiền bán hàng, giữ lại dưới nhãn rõ ràng để
                 #                KHÔNG mất tiền khỏi bảng (26tr/8,3% của 01→19/08).
                 #   không có   → bài tương tác → loại như QUYẾT 31/07/2026.
+                # CHỈ LINK mới được ghi nhận chi phí (chủ dự án chốt 22/08/2026).
+                # Không đọc được link (ad Messenger/inbox, ad đã xoá creative) thì KHÔNG
+                # tính vào chi phí sản phẩm nữa. Trước đây gom vào rổ "(không đọc được
+                # link)", mà giao diện phân thương hiệu bằng luật "tên không bắt đầu bằng
+                # Noma thì là Doscom" nên CẢ RỔ rơi vào Doscom — riêng Phương Nam kỳ
+                # 01→21/08 là 44,8tr = 30% cột chi phí Doscom, đủ để lật CIR và lợi nhuận.
+                # Tiền vẫn giữ trong `ad_spend_excluded` để còn đối chiếu với Trình quản
+                # lý quảng cáo, chỉ không vào bảng sản phẩm/thương hiệu.
                 if by_name:
-                    prod = NO_LINK_BUCKET
                     no_link.append((c.get("name", "")[:46], by_name))
             elif by_name and by_name != by_link:
                 conflicts.append((c.get("name", "")[:46], by_name, by_link))
@@ -787,8 +807,8 @@ def build_data():
     if from_link:
         print(f"   ↪ {len(from_link)} campaign gán SP nhờ LINK landing (tên campaign chịu): {', '.join(from_link[:6])}")
     if no_link:
-        print(f"   ↪ {len(no_link)} campaign KHÔNG đọc được link → gom vào '{NO_LINK_BUCKET}' "
-              f"(vẫn tính là chi phí, chỉ không biết của SP nào):")
+        print(f"   ↪ {len(no_link)} campaign KHÔNG đọc được link → KHÔNG tính vào chi phí SP "
+              f"(vẫn nằm trong ad_spend_excluded để đối chiếu Ads Manager):")
         for nm, bn in no_link[:8]:
             print(f"       tên gợi ý '{bn}' ←  {nm}")
     if conflicts:
