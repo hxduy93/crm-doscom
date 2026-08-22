@@ -26,6 +26,7 @@ try:
 except Exception:
     pass
 
+import re
 import json
 import io
 import zipfile
@@ -366,7 +367,7 @@ LANDING_HOST_TO_PRODUCT = {
 _AD_CREATIVE_FIELDS = (
     "id,campaign_id,"
     "creative{object_story_spec{link_data{link},video_data{call_to_action{value{link}}}},"
-    "asset_feed_spec{link_urls{website_url}},template_url,object_url}"
+    "asset_feed_spec{link_urls{website_url}},template_url,object_url,url_tags}"
 )
 
 
@@ -391,7 +392,19 @@ def _product_from_link(url):
 
 
 def _links_of_creative(cr):
-    """Gom mọi chỗ Facebook có thể giấu link đích, tuỳ loại quảng cáo."""
+    """Gom mọi chỗ Facebook có thể giấu link đích, tuỳ loại quảng cáo.
+
+    THỨ TỰ ƯU TIÊN quan trọng — `url_tags` chỉ là phương án DỰ PHÒNG:
+      1. Link ở nút bấm (link_data / video CTA / asset_feed / template / object_url)
+         — đây là nơi khách thật sự bấm vào.
+      2. Chỉ khi KHÔNG có cái nào ở trên mới đọc `url_tags`.
+
+    Vì sao không để ngang hàng (bài học 22/08/2026): `url_tags` vốn để gắn thêm tham
+    số UTM, nhưng team hay dán CẢ URL vào đó — và có ad dán nhầm URL của sản phẩm
+    khác. Campaign "1/8 - Doscom - D1 - Nam - 3vid" có nút bấm trỏ doscom.click/d1tpn
+    (D1) còn url_tags ghi senso.io.vn/dr1tpn (DR1). Đọc ngang hàng thì thành "link mâu
+    thuẫn" → cả campaign bị loại oan, dù đích thật rất rõ ràng.
+    """
     out = []
     if not cr:
         return out
@@ -407,6 +420,20 @@ def _links_of_creative(cr):
     for k in ("template_url", "object_url"):
         if cr.get(k):
             out.append(cr[k])
+    if out:
+        return out
+
+    # QUẢNG CÁO TỪ BÀI ĐĂNG CÓ SẴN trên Page (effective_object_story_id) không có bất kỳ
+    # trường link nào ở trên — team đặt link đích trong `url_tags`. Không đọc chỗ này thì
+    # cả campaign bị coi là "không có link": 22/08/2026 phát hiện 8 campaign (26,5tr kỳ
+    # 01→21/08) bị loại oan, riêng 3 campaign Noma 911 của Phương Nam là 23,3tr.
+    # url_tags cũng có thể chỉ là chuỗi UTM thuần ("utm_source=abc&...") — không có
+    # "http" thì bỏ qua, KHÔNG đoán bừa.
+    tags = cr.get("url_tags")
+    if tags:
+        m = re.search(r'https?://[^\s"\'&]+', str(tags))
+        if m:
+            out.append(m.group(0))
     return out
 
 

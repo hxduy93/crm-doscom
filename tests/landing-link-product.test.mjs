@@ -96,6 +96,36 @@ test("landing theo nhân sự của 230/350/680 khai TƯỜNG MINH theo path", {
   }
 });
 
+test("đọc được link của QUẢNG CÁO TỪ BÀI ĐĂNG — link nằm ở url_tags", { skip }, () => {
+  /* Ad chạy từ bài đăng có sẵn trên Page (effective_object_story_id) KHÔNG có
+     object_story_spec.link_data.link. Team đặt link đích ở `url_tags`.
+     22/08/2026: bỏ sót chỗ này làm 8 campaign (26,5tr kỳ 01→21/08) bị coi là "không có
+     link" rồi loại khỏi chi phí — riêng 3 campaign Noma 911 của Phương Nam là 23,3tr. */
+  const [postAd] = call("_links_of_creative", [{
+    url_tags: "https://www.noma.io.vn/911tpn?utm_source=14%2F8-Noma911&utm_medium=x",
+    asset_feed_spec: { call_ads_configuration: {} },
+  }]);
+  assert.deepEqual(postAd, ["https://www.noma.io.vn/911tpn?utm_source=14%2F8-Noma911"]);
+  assert.deepEqual(call("_product_from_link", postAd), ["Noma 911"]);
+});
+
+test("url_tags CHỈ là dự phòng — nút bấm luôn thắng khi hai bên lệch nhau", { skip }, () => {
+  /* Campaign "1/8 - Doscom - D1 - Nam - 3vid": nút bấm trỏ doscom.click/d1tpn (D1)
+     nhưng url_tags ghi senso.io.vn/dr1tpn (DR1) — dán nhầm khi sao chép ad.
+     Đọc ngang hàng thì thành "link mâu thuẫn" và CẢ campaign bị loại oan. Khách bấm
+     vào nút, nên nút là đích thật. */
+  const [links] = call("_links_of_creative", [{
+    object_story_spec: { link_data: { link: "https://www.doscom.click/d1tpn" } },
+    url_tags: "https://www.senso.io.vn/dr1tpn?utm_source=1%2F8-D1-AI",
+  }]);
+  assert.deepEqual(links, ["https://www.doscom.click/d1tpn"], "chỉ được lấy link ở nút bấm");
+});
+
+test("url_tags chỉ có chuỗi UTM thuần thì bỏ qua, KHÔNG đoán bừa", { skip }, () => {
+  const [links] = call("_links_of_creative", [{ url_tags: "utm_source=abc&utm_medium=def" }]);
+  assert.deepEqual(links, []);
+});
+
 test("chi tiêu KHÔNG đọc được link thì KHÔNG vào bảng chi phí sản phẩm", { skip }, () => {
   /* Chủ dự án chốt 22/08/2026. Trước đây gom vào rổ "(không đọc được link)" và vẫn
      tính — mà giao diện xếp mọi thứ không bắt đầu bằng "Noma" vào Doscom, nên 44,8tr
