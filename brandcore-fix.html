@@ -108,6 +108,15 @@
     </div>
   </div>
 
+  <!-- ĐÃ SỬA TRONG PHIÊN NÀY (hiện ngay, không cần tải lại trang) -->
+  <div id="daSuaCard" class="card hide">
+    <div class="row" style="justify-content:space-between">
+      <b id="daSuaTitle"></b>
+      <span class="muted">bấm tên bài để mở trang đã sửa</span>
+    </div>
+    <div id="daSuaBody"></div>
+  </div>
+
   <!-- KẾT QUẢ ĐỐI CHIẾU HỒ SƠ (nội dung còn thiếu trên web) -->
   <div id="gapCard" class="card hide">
     <div class="row" style="justify-content:space-between">
@@ -143,8 +152,11 @@
         <span class="muted">Ghép vào <b>cuối mô tả</b> giữa cặp mốc <code>noma:bo-sung</code> ·
           soạn lại lần sau THAY khối này · bản gốc được sao lưu trước khi ghi</span>
         <div class="row">
+          <a id="duyetXemBai" class="hide" target="_blank" rel="noopener"
+             style="font-weight:700">Xem bài trên web ↗</a>
           <button id="duyetBoQua" class="sec">Bỏ qua</button>
           <button id="duyetAp" class="warn">Áp lên web</button>
+          <button id="duyetTiep" class="hide">Sản phẩm tiếp theo →</button>
         </div>
       </div>
     </div>
@@ -548,6 +560,7 @@ document.getElementById("btnGapDraft").onclick = async () => {
 let duyetDS = [];      // danh sách chờ duyệt
 let duyetI = 0;        // đang ở sản phẩm nào
 let duyetKetQua = [];  // gom lại để dựng báo cáo cuối
+let daSuaPhien = [];   // bài ĐÃ ghi thành công trong phiên này
 
 const $duyet = (id) => document.getElementById(id);
 
@@ -561,24 +574,26 @@ function moDuyet(ds, cost) {
 function veDuyet(cost) {
   if (duyetI >= duyetDS.length) return dongDuyet();
   const r = duyetDS[duyetI];
-  // Không có dữ liệu thì ĐÓNG hẳn, đừng để cửa sổ rỗng chắn màn hình.
   if (!r || !r.added_html) return dongDuyet();
   $duyet("duyetTen").textContent = r.name;
   $duyet("duyetDem").textContent =
     `${duyetI + 1}/${duyetDS.length}` + (cost != null ? ` · chi phí AI $${Number(cost).toFixed(4)}` : "");
   $duyet("duyetThieu").innerHTML = "Bổ sung: " + (r.thieu || []).map((t) => `<span class="flag">${esc(t)}</span>`).join(" ");
-  // Chỉ cần thấy phần cuối bài — đó là chỗ khối mới sẽ nối vào.
   $duyet("duyetCu").textContent = (r.description_cu || "(trống)").slice(-1500);
   $duyet("duyetMoi").textContent = r.added_html || "";
   $duyet("duyetKq").innerHTML = "";
+  // Về trạng thái "chưa ghi": nút Áp bật lại, nút đi tiếp và link bài ẩn đi.
   $duyet("duyetAp").disabled = false;
+  $duyet("duyetAp").classList.remove("hide");
   $duyet("duyetBoQua").disabled = false;
+  $duyet("duyetBoQua").classList.remove("hide");
+  $duyet("duyetTiep").classList.add("hide");
+  $duyet("duyetXemBai").classList.add("hide");
 }
 
 function dongDuyet() {
   $duyet("duyetModal").classList.add("hide");
   if (!duyetKetQua.length) return;
-  // Gộp kết quả từng lần ghi thành MỘT báo cáo, dùng lại khối báo cáo + nút Hoàn tác sẵn có.
   const items = duyetKetQua.flatMap((x) => x.items || []);
   renderReport({
     ok: true,
@@ -593,8 +608,49 @@ function dongDuyet() {
   });
 }
 
+/* Bài vừa ghi xong thì BỎ NGAY khỏi danh sách chờ sửa và đưa sang khối "Đã sửa".
+   Trước đây phải tải lại trang mới thấy thay đổi, nên không biết đã sửa hay chưa —
+   và rất dễ sửa lại lần hai cùng một bài. */
+function chuyenSangDaSua(r) {
+  const cb = document.querySelector(`.gappick[data-id="${r.id}"]`);
+  const khoi = cb ? cb.closest(".prod") : null;
+  if (khoi) khoi.remove();
+
+  if (!daSuaPhien.some((x) => x.id === r.id)) {
+    daSuaPhien.push({ id: r.id, name: r.name, permalink: r.permalink, thieu: r.thieu || [] });
+  }
+  veDaSua();
+  capNhatTieuDeGap();
+}
+
+function veDaSua() {
+  const card = document.getElementById("daSuaCard");
+  if (!daSuaPhien.length) { card.classList.add("hide"); return; }
+  card.classList.remove("hide");
+  document.getElementById("daSuaTitle").textContent = `Đã sửa trong phiên này — ${daSuaPhien.length} sản phẩm`;
+  document.getElementById("daSuaBody").innerHTML =
+    `<table><thead><tr><th>Sản phẩm</th><th>Đã bổ sung</th><th>Trạng thái</th></tr></thead><tbody>` +
+    daSuaPhien.map((x) => `<tr>
+      <td><a href="${esc(x.permalink)}" target="_blank" rel="noopener">${esc(x.name)}</a>
+          <span class="muted">#${x.id}</span></td>
+      <td>${(x.thieu || []).map((t) => `<span class="flag">${esc(t)}</span>`).join(" ") || "—"}</td>
+      <td><span class="pill green">Đã ghi lên web</span></td>
+    </tr>`).join("") + `</tbody></table>`;
+}
+
+// Số còn lại trong danh sách chờ sửa — đếm lại từ DOM để luôn khớp với cái đang thấy.
+function capNhatTieuDeGap() {
+  const con = document.querySelectorAll("#gapBody .gappick").length;
+  const t = document.getElementById("gapTitle");
+  if (!t) return;
+  const goc = t.dataset.goc || t.textContent;
+  t.dataset.goc = goc;
+  t.textContent = daSuaPhien.length ? `${goc} · còn ${con} sản phẩm chờ sửa` : goc;
+}
+
 $duyet("duyetDong").onclick = dongDuyet;
 $duyet("duyetBoQua").onclick = () => { duyetI++; veDuyet(); };
+$duyet("duyetTiep").onclick = () => { duyetI++; veDuyet(); };
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !$duyet("duyetModal").classList.contains("hide")) dongDuyet();
 });
@@ -615,11 +671,37 @@ $duyet("duyetAp").onclick = async () => {
     });
     const j = await res.json();
     if (!j.ok) throw new Error(j.error || "lỗi");
+
+    /* Không tin mỗi `ok` của phản hồi: brandcore-apply trả ok=true cả khi từng sản
+       phẩm ghi hỏng (lỗi nằm trong items[].error). Phải soi đúng dòng của SP này. */
+    const it = (j.items || []).find((x) => String(x.id) === String(r.id)) || {};
+    if (!it.applied) {
+      throw new Error(it.error || "web không xác nhận đã ghi");
+    }
+
     duyetKetQua.push(j);
-    $duyet("duyetKq").innerHTML = '<span class="pill green">Đã ghi</span> — sang sản phẩm tiếp theo…';
-    setTimeout(() => { duyetI++; veDuyet(); }, 550);
+    chuyenSangDaSua(r);
+
+    const link = it.permalink || r.permalink;
+    $duyet("duyetKq").innerHTML =
+      '<span class="pill green">✓ Đã ghi lên web</span> ' +
+      `<span class="muted">— đã bổ sung ${(r.thieu || []).length} mục vào cuối bài. ` +
+      'Bài này đã được bỏ khỏi danh sách chờ sửa.</span>';
+    if (link) {
+      const a = $duyet("duyetXemBai");
+      a.href = link;
+      a.classList.remove("hide");
+    }
+    // ĐỨNG LẠI để người dùng đọc kết quả + mở bài kiểm tra, thay vì tự nhảy sau 0,5s
+    // (trước đây nhảy quá nhanh nên không kịp thấy đã ghi được hay chưa).
+    $duyet("duyetAp").classList.add("hide");
+    $duyet("duyetBoQua").classList.add("hide");
+    $duyet("duyetTiep").classList.remove("hide");
+    $duyet("duyetTiep").textContent =
+      duyetI + 1 < duyetDS.length ? "Sản phẩm tiếp theo →" : "Xong — đóng lại";
   } catch (e) {
-    $duyet("duyetKq").innerHTML = '<span class="err">Lỗi ghi: ' + e.message + "</span>";
+    $duyet("duyetKq").innerHTML = '<span class="err">✕ Ghi KHÔNG thành công: ' + esc(e.message) +
+      '</span> <span class="muted">— bài giữ nguyên, vẫn nằm trong danh sách chờ sửa.</span>';
     $duyet("duyetAp").disabled = false;
     $duyet("duyetBoQua").disabled = false;
   }

@@ -3,8 +3,9 @@
 //
 // Bảo vệ (red line: endpoint ghi phải có token): Access role != "open" → cho qua; "open" → cần X-Products-Token.
 //
-// Body (áp bản sửa):
-//   { site, fixes: [ { id, description, short_description } ] }
+// Body (áp bản sửa) — HAI kiểu, mỗi phần tử fixes dùng MỘT trong hai:
+//   a) { id, violations: [{original, fixed}] }  → thay chuỗi nguyên văn (sửa từ cấm)
+//   b) { id, description, short_description? }  → ghi thẳng nội dung mới (bổ sung mục thiếu)
 //   → mỗi SP: backup nội dung gốc vào KV → PUT cập nhật (GIỮ status publish) → đo vi phạm trước/sau.
 //   Trả REPORT: { ok, site, applied, skipped, failed, fixed_total, summary_by_type, items[], generated_at }
 //     items[i] = { id, name, permalink, applied, violations_fixed[], residual_flags[], backup_key, error? }
@@ -81,17 +82,37 @@ export async function onRequestPost(context) {
     const id = fx.id;
     if (!id) { skipped++; items.push({ id: null, applied: false, error: "thiếu id" }); continue; }
     const violations = Array.isArray(fx.violations) ? fx.violations : [];
-    if (!violations.length) { skipped++; items.push({ id, applied: false, skipped: "không có cặp sửa" }); continue; }
+    /* HAI KIỂU GHI, cố ý tách bạch:
+         a) cặp sửa (violations)  — sửa từ cấm/claim sai: thay chuỗi nguyên văn trên
+            bản gốc mới nhất, giữ 100% layout.
+         b) ghi thẳng (description) — bổ sung mục còn thiếu vào cuối bài: nội dung đã
+            được dựng sẵn và người dùng đã xem trước từng chữ.
+       Trước 22/08/2026 chỉ có (a): gửi `description` thì endpoint ÂM THẦM bỏ qua và
+       trả applied:false — nút "Áp lên web" của phần soát nội dung thiếu chưa bao giờ
+       ghi được gì, mà giao diện vẫn báo xong vì chỉ nhìn `ok` của phản hồi.
+       Chú thích đầu file vốn đã mô tả kiểu (b), chỉ là code chưa làm. */
+    const ghiThang = typeof fx.description === "string" && fx.description.trim() !== "";
+    if (!violations.length && !ghiThang) {
+      skipped++; items.push({ id, applied: false, skipped: "không có cặp sửa" }); continue;
+    }
 
     let orig;
     try { orig = await getProduct(c, id); }
     catch (e) { failed++; items.push({ id, applied: false, error: `đọc SP lỗi: ${String(e.message || e)}` }); continue; }
 
     // Áp cặp sửa bằng THAY CHUỖI NGUYÊN VĂN trên bản gốc mới nhất → giữ nguyên 100% layout.
-    const rd = applyFixes(orig.description || "", violations);
-    const rs = applyFixes(orig.short_description || "", violations);
-    const newDesc = rd.fixed, newShort = rs.fixed;
-    const fixedTypes = [...new Set([...rd.applied, ...rs.applied])];
+    let newDesc, newShort, fixedTypes;
+    if (ghiThang) {
+      newDesc = fx.description;
+      // KHÔNG đụng mô tả ngắn nếu người gọi không gửi — phần bổ sung chỉ nối vào mô tả dài.
+      newShort = typeof fx.short_description === "string" ? fx.short_description : (orig.short_description || "");
+      fixedTypes = ["Bổ sung nội dung thiếu"];
+    } else {
+      const rd = applyFixes(orig.description || "", violations);
+      const rs = applyFixes(orig.short_description || "", violations);
+      newDesc = rd.fixed; newShort = rs.fixed;
+      fixedTypes = [...new Set([...rd.applied, ...rs.applied])];
+    }
 
     // Không đổi gì (không cặp nào khớp) → bỏ qua, không ghi.
     if (newDesc === (orig.description || "") && newShort === (orig.short_description || "")) {
