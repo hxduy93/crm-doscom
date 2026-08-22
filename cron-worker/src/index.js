@@ -6,6 +6,8 @@
 //   GH_PAT       — fine-grained PAT, quyền Actions: Read+Write trên repo hxduy93/crm-doscom.
 //   TRIGGER_KEY  — chuỗi ngẫu nhiên để test tay qua URL (?key=...).
 
+import { buDonThai } from "./don-thai.js";
+
 const CRM = { repo: "hxduy93/crm-doscom", ref: "master", workflow: "refresh-data.yml" };
 
 async function dispatch(env, job) {
@@ -32,8 +34,17 @@ async function dispatch(env, job) {
 async function runPlan(env, cron) {
   // Mọi mốc giờ (9h/13h/17h VN) đều: kéo dữ liệu mới + deploy dashboard.
   const r = await dispatch(env, CRM);
-  console.log("doscom-cron", cron, JSON.stringify(r));
-  return { cron, results: [r] };
+  const out = { cron, results: [r] };
+
+  /* Chỉ mốc 9h SÁNG (02:00 UTC) mới dò và bù đơn Thái chưa lên Google Sheet —
+     một lần/ngày là đủ, và trước giờ sale bắt đầu gọi đơn đêm qua.
+     Chạy tay thì luôn chạy, để còn test được. */
+  if (cron === "0 2 * * *" || cron === "manual") {
+    out.donThai = await buDonThai(env).catch((e) => ({ loi: String(e).slice(0, 200) }));
+  }
+
+  console.log("doscom-cron", cron, JSON.stringify(out));
+  return out;
 }
 
 export default {

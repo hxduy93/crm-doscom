@@ -15,6 +15,9 @@
 
 const CACHE_KEY = "token_alert:fb";
 const HEALTH_CACHE_KEY = "health_keys:v1";   // do /api/health/keys ghi
+// Đơn Thái chưa lên Google Sheet — do Worker doscom-cron ghi mỗi sáng 9h
+// (cron-worker/src/don-thai.js). Nó đã TỰ BÙ trước, key này chỉ còn phần bù không được.
+const TH_SHEET_KEY = "th_sheet_alert:v1";
 const CACHE_TTL = 3 * 3600;   // 3h
 const WARN_DAYS = 2;          // báo trước 2 ngày
 
@@ -40,6 +43,19 @@ async function healthProblemLines(kv) {
       else if (it.status === "link_down") lines.push(`• ${it.label}: LINK chết — không phản hồi.`);
     }
     return lines;
+  } catch { return []; }
+}
+
+/* Đơn Thái đã bù mà VẪN không lên được Google Sheet. Đây là mất đơn thật: khách để
+   lại số nhưng không ai thấy trong Sheet để gọi. Ưu tiên ngang với token chết.
+   Chỉ ĐỌC KV, không tự đi bù (việc đó của cron 9h — cron-worker/src/don-thai.js). */
+async function thaiSheetLines(kv) {
+  if (!kv) return [];
+  try {
+    const raw = await kv.get(TH_SHEET_KEY);
+    if (!raw) return [];
+    const d = JSON.parse(raw);
+    return Array.isArray(d.lines) ? d.lines : [];
   } catch { return []; }
 }
 
@@ -94,9 +110,9 @@ export async function onRequestGet(context) {
   }
 
   // Gộp thêm các key/link khác đã chết (đọc cache health, không tốn ping).
-  const extra = await healthProblemLines(kv);
+  const extra = [...(await thaiSheetLines(kv)), ...(await healthProblemLines(kv))];
   if (extra.length) {
-    const base = payload.alert.active ? payload.alert.msg + "\n" : "⚠️ Có API/token khác gặp sự cố:\n";
+    const base = payload.alert.active ? payload.alert.msg + "\n" : "⚠️ Có sự cố cần xử lý:\n";
     payload = {
       ...payload,
       alert: {

@@ -8,5 +8,18 @@
     // Giờ UTC (VN = UTC+7): 02:00=9h · 06:00=13h · 10:00=17h
     "crons": ["0 2 * * *", "0 6 * * *", "0 10 * * *"]
   },
+  // Bù đơn Thái chưa lên Sheet (mốc 9h) cần đọc/ghi bảng landing_leads.
+  "d1_databases": [
+    { "binding": "DB", "database_name": "crm-doscom-db",
+      "database_id": "73cfb6ca-b9b4-4a9b-b74f-1a030f8db1d0" }
+  ],
+  // Dùng CHUNG namespace với Pages crm-doscom để banner cảnh báo đọc được cùng một key.
+  "kv_namespaces": [
+    { "binding": "INVENTORY", "id": "3efb5b02ea844d67ade8d070547ae707" }
+  ],
+  // Secret (wrangler secret put --name doscom-cron):
+  //   TH_SHEET_URL — URL /exec của Apps Script "Webhook D1 Thái Lan".
+  //   ⚠ Chủ dự án hay bấm "New deployment" thay vì "New version" -> URL ĐỔI.
+  //      Đổi URL thì phải set lại secret này, KHÔNG thì mỗi sáng bù đơn đều thất bại.
   "observability": { "enabled": true }
 }
