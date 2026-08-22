@@ -370,6 +370,16 @@ export async function onRequestPost(context) {
     // tài khoản tích thành ~19 ad set cùng tệp, không cái nào đủ 50 chuyển đổi/tuần
     // để thoát learning. Ngân sách giữ nguyên của ad set cũ — KHÔNG đụng vào, vì sửa
     // ngân sách là reset giai đoạn máy học, đúng thứ đang cố tránh.
+    /* HAI BIẾN NÀY PHẢI KHAI Ở ĐÂY — trước mọi nhánh có thể gọi createAdForAdset().
+       Chúng được gán bên trong hàm đó; `let` nằm sau chỗ gọi thì rơi vào "vùng chết"
+       và ném "Cannot access 'currentAdSubStep' before initialization".
+       Đã dính đúng lỗi này: nhánh `cfg.existing_adset_id` (thêm creative vào ad set
+       đang chạy, làm 05/08/2026) gọi hàm rồi THOÁT SỚM, không bao giờ chạy tới chỗ
+       khai báo cũ ở dưới → tính năng đó hỏng 100% từ lúc ra đời, tới 22/08/2026 mới
+       phát hiện. Đừng dời hai dòng này xuống dưới. */
+    let currentAdSubStep = "";  // để báo lỗi chính xác sub-step nào fail
+    let currentAdIndex = -1;
+
     if (cfg.existing_adset_id) {
       const adsetId = String(cfg.existing_adset_id);
       partial.campaign_id = cfg.existing_campaign_id || null;
@@ -424,8 +434,6 @@ export async function onRequestPost(context) {
     const adsetPerAd = cfg.adset_per_ad === true && !isCBO;
     partial.ads = [];
     partial.adsets = [];
-    let currentAdSubStep = "";  // để báo lỗi chính xác sub-step nào fail
-    let currentAdIndex = -1;
 
     // Tạo Creative + Ad cho ad thứ i, gắn vào adsetId cho sẵn.
     async function createAdForAdset(i, adsetId) {
