@@ -43,6 +43,19 @@
   a { color:var(--blue); }
   .err { color:var(--red); font-weight:700; }
   .hide { display:none; }
+  /* Cửa sổ nổi duyệt nội dung bổ sung — duyệt lần lượt từng SP, khỏi cuộn trang. */
+  .modal-bg { position:fixed; inset:0; background:rgba(15,23,42,.55); display:flex;
+              align-items:center; justify-content:center; z-index:999; padding:20px; }
+  .modal { background:#fff; border-radius:14px; width:min(1100px,96vw); max-height:92vh;
+           display:flex; flex-direction:column; box-shadow:0 24px 70px rgba(0,0,0,.35); }
+  .modal-head, .modal-foot { padding:14px 18px; display:flex; align-items:center;
+                             justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .modal-head { border-bottom:1px solid var(--line); }
+  .modal-foot { border-top:1px solid var(--line); background:#fafbfe; border-radius:0 0 14px 14px; }
+  .modal-body { padding:14px 18px; overflow:auto; }
+  .modal .cmp .box { max-height:46vh; }
+  .modal h2 { margin:0; font-size:17px; }
+  .xbtn { background:transparent; color:var(--mut); font-size:22px; padding:0 8px; }
   .note { background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:10px 12px; font-size:13px; color:#92400e; margin-bottom:12px; }
 </style>
 </head>
@@ -104,18 +117,33 @@
     <div id="gapBody"></div>
   </div>
 
-  <!-- XEM TRƯỚC NỘI DUNG BỔ SUNG → ÁP LÊN WEB -->
-  <div id="draftCard" class="card hide">
-    <div class="row" style="justify-content:space-between">
-      <b id="draftTitle"></b>
-      <button id="btnDraftApply" class="warn">Áp bản bổ sung lên web</button>
+  <!-- CỬA SỔ DUYỆT NỘI DUNG BỔ SUNG (nổi giữa màn hình, duyệt lần lượt từng SP) -->
+  <div id="duyetModal" class="modal-bg hide">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="duyetTen"></h2>
+        <div class="row">
+          <span id="duyetDem" class="muted"></span>
+          <button class="xbtn" id="duyetDong" title="Đóng (Esc)">×</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div id="duyetThieu" class="muted" style="margin-bottom:8px"></div>
+        <div class="cmp">
+          <div><div class="lab">Mô tả hiện tại (phần cuối)</div><div id="duyetCu" class="box old"></div></div>
+          <div><div class="lab">Sẽ thêm vào cuối bài</div><div id="duyetMoi" class="box new"></div></div>
+        </div>
+        <div id="duyetKq" style="margin-top:10px"></div>
+      </div>
+      <div class="modal-foot">
+        <span class="muted">Ghép vào <b>cuối mô tả</b> giữa cặp mốc <code>noma:bo-sung</code> ·
+          soạn lại lần sau THAY khối này · bản gốc được sao lưu trước khi ghi</span>
+        <div class="row">
+          <button id="duyetBoQua" class="sec">Bỏ qua</button>
+          <button id="duyetAp" class="warn">Áp lên web</button>
+        </div>
+      </div>
     </div>
-    <div class="note">
-      Nội dung bổ sung được ghép vào <b>cuối phần mô tả</b>, giữa cặp mốc
-      <code>noma:bo-sung</code>. Soạn lại lần sau sẽ THAY khối này chứ không nối thêm.
-      Bản gốc được sao lưu trước khi ghi — hoàn tác trong báo cáo bên dưới.
-    </div>
-    <div id="draftBody"></div>
   </div>
 
   <!-- KẾT QUẢ QUÉT + RÀ AI -->
@@ -468,8 +496,6 @@ function renderGap(j) {
    Ba nấc, cố ý tách rời: dò (miễn phí) → soạn (tốn AI, chỉ xem trước) → áp (ghi
    thật, có sao lưu). Gộp lại thành một nút thì người bấm không kịp đọc nội dung
    AI viết trước khi nó lên trang bán hàng. */
-let gapLast = [];          // kết quả dò gần nhất
-let draftLast = [];        // bản soạn đang chờ áp
 
 document.getElementById("btnGapPickAll").onclick = () => {
   document.querySelectorAll(".gappick").forEach((c) => { c.checked = !c.disabled; });
@@ -482,10 +508,7 @@ document.getElementById("btnGapDraft").onclick = async () => {
 
   const btn = document.getElementById("btnGapDraft");
   btn.disabled = true;
-  const card = document.getElementById("draftCard");
-  card.classList.remove("hide");
-  document.getElementById("draftTitle").textContent = "Đang soạn…";
-  document.getElementById("draftBody").innerHTML = '<p class="muted">AI đang viết phần còn thiếu dựa trên hồ sơ sản phẩm…</p>';
+  btn.textContent = "Đang soạn…";
   try {
     const r = await fetch("/api/products/brandcore-scan", {
       method: "POST",
@@ -495,73 +518,107 @@ document.getElementById("btnGapDraft").onclick = async () => {
     });
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || "lỗi");
-    draftLast = (j.results || []).filter((x) => x.new_description);
-    renderDraft(j);
+    const canDuyet = (j.results || []).filter((x) => x.new_description);
+    const boQua = (j.results || []).filter((x) => !x.new_description);
+    if (boQua.length) {
+      console.info("Bỏ qua:", boQua.map((x) => `${x.name}: ${x.error || x.bo_qua}`));
+    }
+    if (!canDuyet.length) {
+      alert("Không soạn được nội dung nào.\n" +
+            boQua.map((x) => `• ${x.name}: ${x.error || x.bo_qua}`).join("\n"));
+    } else {
+      moDuyet(canDuyet, j.cost_usd);
+    }
   } catch (e) {
-    document.getElementById("draftTitle").textContent = "Lỗi";
-    document.getElementById("draftBody").innerHTML = '<p class="err">' + e.message + "</p>";
+    alert("Lỗi khi soạn: " + e.message);
   } finally {
     btn.disabled = false;
+    btn.textContent = "Soạn nội dung bổ sung (AI)";
   }
 };
 
-function renderDraft(j) {
-  const rs = j.results || [];
-  document.getElementById("draftTitle").textContent =
-    `Xem trước ${draftLast.length}/${rs.length} sản phẩm · chi phí AI $${(j.cost_usd || 0).toFixed(4)}`;
+/* ── Duyệt lần lượt trong cửa sổ nổi ─────────────────────────────────────────
+   Vì sao không đổ hết ra trang: bảng xem trước dài, phải cuộn xa mới tới nút áp,
+   và duyệt hàng loạt thì rất dễ bấm áp mà chưa đọc kỹ. Mỗi lần một sản phẩm,
+   quyết xong tự sang cái tiếp theo. */
+let duyetDS = [];      // danh sách chờ duyệt
+let duyetI = 0;        // đang ở sản phẩm nào
+let duyetKetQua = [];  // gom lại để dựng báo cáo cuối
 
-  document.getElementById("draftBody").innerHTML = rs.map((r) => {
-    if (r.error) return `<div class="prod"><h3>${r.name}</h3><div class="err">${r.error}</div></div>`;
-    if (r.bo_qua) {
-      const ly = r.bo_qua === "khong_thieu_gi" ? "không thiếu mục nào" : "chưa có hồ sơ cho SKU này";
-      return `<div class="prod"><h3>${r.name}</h3><div class="muted">Bỏ qua — ${ly}.</div></div>`;
-    }
-    return `<div class="prod">
-      <h3><label><input type="checkbox" class="draftpick" data-id="${r.id}" checked /> ${r.name}</label></h3>
-      <div class="muted">bổ sung: ${(r.thieu || []).join(" · ")}</div>
-      <div class="cmp">
-        <div><div class="lab">Mô tả hiện tại (cuối bài)</div>
-          <div class="box old">${escapeForBox(r.description_cu).slice(-1200) || "(trống)"}</div></div>
-        <div><div class="lab">Phần sẽ thêm vào</div>
-          <div class="box new">${escapeForBox(r.added_html)}</div></div>
-      </div>
-    </div>`;
-  }).join("");
+const $duyet = (id) => document.getElementById(id);
+
+function moDuyet(ds, cost) {
+  duyetDS = ds; duyetI = 0; duyetKetQua = [];
+  if (!ds.length) { alert("Không có sản phẩm nào cần bổ sung."); return; }
+  $duyet("duyetModal").classList.remove("hide");
+  veDuyet(cost);
 }
 
-function escapeForBox(t) {
-  return String(t || "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+function veDuyet(cost) {
+  if (duyetI >= duyetDS.length) return dongDuyet();
+  const r = duyetDS[duyetI];
+  $duyet("duyetTen").textContent = r.name;
+  $duyet("duyetDem").textContent =
+    `${duyetI + 1}/${duyetDS.length}` + (cost != null ? ` · chi phí AI $${Number(cost).toFixed(4)}` : "");
+  $duyet("duyetThieu").innerHTML = "Bổ sung: " + (r.thieu || []).map((t) => `<span class="flag">${esc(t)}</span>`).join(" ");
+  // Chỉ cần thấy phần cuối bài — đó là chỗ khối mới sẽ nối vào.
+  $duyet("duyetCu").textContent = (r.description_cu || "(trống)").slice(-1500);
+  $duyet("duyetMoi").textContent = r.added_html || "";
+  $duyet("duyetKq").innerHTML = "";
+  $duyet("duyetAp").disabled = false;
+  $duyet("duyetBoQua").disabled = false;
 }
 
-document.getElementById("btnDraftApply").onclick = async () => {
-  const pick = new Set([...document.querySelectorAll(".draftpick:checked")].map((c) => Number(c.dataset.id)));
-  const fixes = draftLast
-    .filter((r) => pick.has(r.id))
-    .map((r) => ({ id: r.id, description: r.new_description }));
-  if (!fixes.length) { alert("Chưa chọn sản phẩm nào để áp."); return; }
-  if (!confirm(`Ghi bổ sung lên ${fixes.length} sản phẩm? Bản gốc được sao lưu, có thể hoàn tác.`)) return;
+function dongDuyet() {
+  $duyet("duyetModal").classList.add("hide");
+  if (!duyetKetQua.length) return;
+  // Gộp kết quả từng lần ghi thành MỘT báo cáo, dùng lại khối báo cáo + nút Hoàn tác sẵn có.
+  const items = duyetKetQua.flatMap((x) => x.items || []);
+  renderReport({
+    ok: true,
+    site: document.getElementById("site").value,
+    applied: items.filter((x) => x.applied).length,
+    skipped: 0,
+    failed: items.filter((x) => x.error).length,
+    fixed_total: items.filter((x) => x.applied).length,
+    summary_by_type: { "Bổ sung nội dung thiếu": items.filter((x) => x.applied).length },
+    items,
+    generated_at: new Date().toISOString(),
+  });
+}
 
-  const btn = document.getElementById("btnDraftApply");
-  btn.disabled = true;
+$duyet("duyetDong").onclick = dongDuyet;
+$duyet("duyetBoQua").onclick = () => { duyetI++; veDuyet(); };
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$duyet("duyetModal").classList.contains("hide")) dongDuyet();
+});
+
+$duyet("duyetAp").onclick = async () => {
+  const r = duyetDS[duyetI];
+  $duyet("duyetAp").disabled = true;
+  $duyet("duyetBoQua").disabled = true;
+  $duyet("duyetKq").innerHTML = '<span class="muted">Đang ghi lên web…</span>';
   try {
-    const r = await fetch("/api/products/brandcore-apply", {
+    // Ghi TỪNG SẢN PHẨM một: mỗi cái có bản sao lưu riêng, hỏng cái nào chỉ hỏng cái đó.
+    const res = await fetch("/api/products/brandcore-apply", {
       method: "POST",
       headers: { "content-type": "application/json", ...dossierHeaders() },
       credentials: "same-origin",
-      body: JSON.stringify({ site: document.getElementById("site").value, fixes }),
+      body: JSON.stringify({ site: document.getElementById("site").value,
+                             fixes: [{ id: r.id, description: r.new_description }] }),
     });
-    const j = await r.json();
+    const j = await res.json();
     if (!j.ok) throw new Error(j.error || "lỗi");
-    // Dùng lại đúng khối báo cáo + nút Hoàn tác của luồng sửa từ cấm.
-    if (typeof renderReport === "function") renderReport(j);
-    else alert(`Đã áp ${j.applied}/${fixes.length} sản phẩm.`);
-    document.getElementById("draftTitle").textContent += ` — đã áp ${j.applied}`;
+    duyetKetQua.push(j);
+    $duyet("duyetKq").innerHTML = '<span class="pill green">Đã ghi</span> — sang sản phẩm tiếp theo…';
+    setTimeout(() => { duyetI++; veDuyet(); }, 550);
   } catch (e) {
-    alert("Lỗi khi áp: " + e.message);
-  } finally {
-    btn.disabled = false;
+    $duyet("duyetKq").innerHTML = '<span class="err">Lỗi ghi: ' + e.message + "</span>";
+    $duyet("duyetAp").disabled = false;
+    $duyet("duyetBoQua").disabled = false;
   }
 };
+
 
 </script>
 </body>
