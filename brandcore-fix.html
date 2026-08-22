@@ -55,6 +55,26 @@
     Quy trình an toàn: <b>Quét</b> (không tốn AI) → <b>Rà bằng AI</b> để xem bản sửa trước → <b>Áp bản sửa</b> (backup gốc, giữ trạng thái đăng). Có nút Hoàn tác trong báo cáo.
   </div>
 
+  <!-- HỒ SƠ SẢN PHẨM (nguồn thông số cho AI khi soát/viết bài) -->
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <b>Hồ sơ sản phẩm</b>
+      <span id="dossierNow" class="muted">đang kiểm tra…</span>
+    </div>
+    <p class="muted" style="margin:6px 0 10px">
+      Thông số chuẩn từng SKU (công dụng, HDSD, thời gian hiệu lực, claim được/cấm dùng).
+      AI dùng bảng này làm mốc khi soát bài đã đăng và khi viết bài mới — tải hồ sơ mới lên
+      là áp dụng ngay, không phải deploy lại.
+    </p>
+    <div class="row">
+      <input id="dossierFile" type="file" style="flex:1;min-width:220px" />
+      <button id="btnDossierPreview" class="sec">Xem trước</button>
+      <button id="btnDossierApply">Nhập hồ sơ này</button>
+      <button id="btnDossierUndo" class="warn hide">Hoàn tác</button>
+    </div>
+    <div id="dossierMsg" class="muted" style="margin-top:8px"></div>
+  </div>
+
   <div class="card">
     <div class="row">
       <label>Website:
@@ -268,6 +288,79 @@ async function revert(id, key, btn) {
   } catch (e) { alert(e.message); btn.disabled = false; btn.textContent = "Hoàn tác"; }
 }
 window.revert = revert;
+
+/* ── Hồ sơ sản phẩm ─────────────────────────────────────────────────────────
+   Xem trước (dryrun) trước khi ghi đè: hồ sơ là nguồn thông số cho MỌI bài AI viết,
+   nhập nhầm file là bài mới sai HDSD hàng loạt mà không ai để ý ngay. */
+const dFile = document.getElementById("dossierFile");
+const dMsg = document.getElementById("dossierMsg");
+const dNow = document.getElementById("dossierNow");
+const dUndo = document.getElementById("btnDossierUndo");
+
+function dossierHeaders() {
+  const t = (document.getElementById("token").value || "").trim();
+  return t ? { "X-Products-Token": t } : {};
+}
+
+async function dossierStatus() {
+  try {
+    const r = await fetch("/api/products/brandcore-import", { credentials: "same-origin" });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "lỗi");
+    const d = j.data;
+    dNow.textContent = d.nguon === "kv"
+      ? `Đang dùng: ${d.ten_file || "hồ sơ đã tải"} · ${d.so_san_pham} sản phẩm · cập nhật ${new Date(d.cap_nhat).toLocaleString("vi-VN")}`
+      : `Đang dùng bản dự phòng trong code · ${d.so_san_pham} sản phẩm — nên tải hồ sơ mới nhất lên`;
+    dUndo.classList.toggle("hide", !d.co_ban_hoan_tac);
+  } catch (e) {
+    dNow.textContent = "không đọc được trạng thái: " + e.message;
+  }
+}
+
+async function dossierSend(dryrun, undo) {
+  if (!undo && !dFile.files[0]) { dMsg.innerHTML = '<span class="err">Chưa chọn file.</span>'; return; }
+  const fd = new FormData();
+  if (undo) fd.append("undo", "1");
+  else { fd.append("file", dFile.files[0]); if (dryrun) fd.append("dryrun", "1"); }
+
+  dMsg.textContent = undo ? "Đang hoàn tác…" : (dryrun ? "Đang đọc file…" : "Đang nhập…");
+  try {
+    const r = await fetch("/api/products/brandcore-import", {
+      method: "POST", body: fd, headers: dossierHeaders(), credentials: "same-origin",
+    });
+    const j = await r.json();
+    if (!j.ok) { dMsg.innerHTML = '<span class="err">' + (j.error || "lỗi") + "</span>"; return; }
+    const d = j.data;
+    if (d.hoan_tac) {
+      dMsg.innerHTML = '<span class="pill green">Đã hoàn tác</span> về ' + (d.ten_file || "bản trước") + " · " + d.so_san_pham + " sản phẩm.";
+    } else {
+      const t = d.thay_doi || {};
+      const parts = [
+        `<span class="pill ${d.dryrun ? "grey" : "green"}">${d.dryrun ? "Xem trước — CHƯA ghi" : "Đã nhập"}</span>`,
+        `<b>${d.so_san_pham}</b> sản phẩm · ${d.so_cot} cột`,
+        `mã: ${d.ma_san_pham.join(", ")}`,
+      ];
+      if (t.them?.length) parts.push(`thêm mới: <b>${t.them.join(", ")}</b>`);
+      // "Mất" = có trong bản đang dùng nhưng KHÔNG có trong file mới. Phải nói rõ vì
+      // hệ thống ghi đè toàn bộ: sản phẩm thiếu trong file sẽ mất thông số chuẩn.
+      if (t.mat?.length) parts.push(`<span class="err">file thiếu (sẽ mất thông số): ${t.mat.join(", ")}</span>`);
+      if (d.cot_bo_qua?.length) parts.push(`cột chưa dùng tới: ${d.cot_bo_qua.join(", ")}`);
+      dMsg.innerHTML = parts.join(" · ");
+    }
+    dossierStatus();
+  } catch (e) {
+    dMsg.innerHTML = '<span class="err">' + e.message + "</span>";
+  }
+}
+
+document.getElementById("btnDossierPreview").onclick = () => dossierSend(true, false);
+document.getElementById("btnDossierApply").onclick = () => {
+  if (!confirm("Nhập hồ sơ này? Bản đang dùng sẽ bị thay hoàn toàn (có nút Hoàn tác).")) return;
+  dossierSend(false, false);
+};
+dUndo.onclick = () => dossierSend(false, true);
+dossierStatus();
+
 </script>
 </body>
 </html>

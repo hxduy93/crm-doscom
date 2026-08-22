@@ -15,7 +15,7 @@
 // Chống hại: chỉ đụng SP NOMA (isNomaProduct); AI được lệnh GIỮ NGUYÊN mọi phần khác, chỉ sửa cụm vi phạm.
 import { callClaude } from "../geo/_utils/claude.js";
 import { NOMA_BRAND_GUIDE, NOMA_BRAND_GUIDE_EN, NOMA_FORBIDDEN_EN, scanForbidden, applyFixes, deterministicFixes } from "../geo/_utils/noma-brandcore.js";
-import { findSkuCode, skuSpecText } from "../geo/_utils/noma-sku-specs.js";
+import { findSkuCode, skuSpecText, loadSkuSpecs } from "../geo/_utils/noma-sku-specs.js";
 import { siteCreds, isConfigured, listProducts, getProduct, isNomaProduct } from "./_wc.js";
 
 function json(o, s = 200) {
@@ -68,6 +68,10 @@ export async function onRequestPost({ request, env }) {
   let body;
   try { body = await request.json(); } catch { return json({ ok: false, error: "Body không phải JSON" }, 400); }
 
+  // Hồ sơ sản phẩm người dùng tải lên (KV `noma_sku_specs:v2`); chưa tải thì rơi về
+  // bảng dự phòng trong noma-sku-specs.js. Đọc MỘT LẦN cho cả lượt quét.
+  const { specs: skuSpecs } = await loadSkuSpecs(env);
+
   const site = String(body.site || "").toLowerCase();
   const mode = String(body.mode || "list");
   const c = siteCreds(site, env);
@@ -113,8 +117,8 @@ export async function onRequestPost({ request, env }) {
           ? `\nCÁC CỤM VI PHẠM ĐÃ DÒ ĐƯỢC trong mô tả (BẮT BUỘC tạo 1 cặp sửa cho MỖI cụm, "original" copy đúng cụm này): ${editFlags.map(f => `"${f.quote}"`).join(", ")}.\n`
           : "";
         // Thông số chuẩn HDSD đang là tiếng Việt → chỉ nhét cho site tiếng Việt (bỏ với nomaauto EN).
-        const specCode = isEN ? null : findSkuCode(p.name);
-        const specBlock = specCode ? `\n${skuSpecText(specCode)}\n\n` : "";
+        const specCode = isEN ? null : findSkuCode(p.name, skuSpecs);
+        const specBlock = specCode ? `\n${skuSpecText(specCode, skuSpecs)}\n\n` : "";
         const userPrompt =
           `TÊN SẢN PHẨM: ${p.name}\n\n` +
           specBlock +

@@ -7,7 +7,12 @@
 //
 // Dùng ở: products/generate.js (viết bài mới) + products/brandcore-scan.js (đối chiếu bài đã đăng).
 // Cảnh báo an toàn theo GHS nằm ở noma-brandcore.js (NOMA_BRAND_GUIDE) — không lặp lại ở đây.
-// Cập nhật tài liệu SKU → sửa Ở ĐÂY.
+// Cập nhật tài liệu SKU: từ 22/08/2026 KHÔNG sửa tay ở đây nữa — tải file "Hồ sơ sản
+// phẩm" lên trong trang "Sửa brandcore" (nút Nhập hồ sơ sản phẩm). File được đọc, tách
+// cột rồi lưu vào KV `noma_sku_specs:v2`; agent đọc qua loadSkuSpecs(env) nên dùng được
+// bản mới mà KHÔNG cần deploy lại.
+// Bảng dưới đây giữ làm BẢN DỰ PHÒNG: KV trống/hỏng thì rơi về đây, thay vì chạy
+// không có thông số (agent tự bịa HDSD là hỏng thật, đã từng xảy ra).
 
 export const NOMA_SKU_SPECS = {
   "250": {
@@ -114,24 +119,79 @@ export const NOMA_SKU_SPECS = {
   },
 };
 
+export const SKU_KV_KEY = "noma_sku_specs:v2";
+
+/* Đọc hồ sơ sản phẩm đang dùng. Ưu tiên bản người dùng tải lên (KV), không có thì rơi
+   về bảng dự phòng ngay trong file này.
+   Trả kèm `nguon` + `cap_nhat` để giao diện nói rõ đang chạy bản nào — im lặng dùng
+   bản dự phòng là kiểu hỏng tệ nhất: agent vẫn chạy, chỉ là bằng dữ liệu cũ. */
+export async function loadSkuSpecs(env) {
+  try {
+    const raw = env && env.INVENTORY ? await env.INVENTORY.get(SKU_KV_KEY) : null;
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (d && d.specs && Object.keys(d.specs).length) {
+        return { specs: d.specs, nguon: "kv", cap_nhat: d.cap_nhat || null, ten_file: d.ten_file || null,
+                 so_san_pham: Object.keys(d.specs).length };
+      }
+    }
+  } catch (e) { /* KV hỏng → dùng bản dự phòng, không làm gãy agent */ }
+  return { specs: NOMA_SKU_SPECS, nguon: "mac_dinh", cap_nhat: null, ten_file: null,
+           so_san_pham: Object.keys(NOMA_SKU_SPECS).length };
+}
+
 // Tìm mã SKU NOMA xuất hiện trong text (tên/mô tả sản phẩm). Trả mã đầu tiên khớp (vd "922").
-export function findSkuCode(text) {
+export function findSkuCode(text, specs) {
   const t = String(text || "");
-  for (const code of Object.keys(NOMA_SKU_SPECS)) {
+  for (const code of Object.keys(specs || NOMA_SKU_SPECS)) {
     if (new RegExp(`NOMA\\s?${code}\\b`, "i").test(t)) return code;
   }
   return null;
 }
 
-// Dựng đoạn "thông số chuẩn" của 1 SKU để nhét vào prompt agent. Trả "" nếu không có.
-export function skuSpecText(code) {
-  const s = NOMA_SKU_SPECS[code];
+/* Dựng đoạn "thông số chuẩn" của 1 SKU để nhét vào prompt agent. Trả "" nếu không có.
+
+   Chịu được HAI dạng dữ liệu:
+     - Bản dự phòng trong file này: cong_dung/hdsd là MẢNG.
+     - Hồ sơ tải lên: hơn 40 trường dạng CHỮ (mô tả, USP, claim được/cấm…).
+   Cố ý CHỌN LỌC trường đưa vào prompt chứ không đổ hết 50 cột: prompt phình ra vừa
+   tốn tiền vừa làm model loãng trọng tâm. Hai trường claim là quan trọng nhất với
+   việc soát brandcore nên luôn đặt cuối, sát chỗ model ra quyết định. */
+const F = (label, v) => (v ? `- ${label}: ${String(v).replace(/\s*\n\s*/g, " / ").trim()}` : null);
+
+export function skuSpecText(code, specs) {
+  const s = (specs || NOMA_SKU_SPECS)[code];
   if (!s) return "";
+
+  // Dạng cũ (mảng) — giữ nguyên khuôn để không đổi hành vi agent đang chạy.
+  if (Array.isArray(s.cong_dung) || Array.isArray(s.hdsd)) {
+    return [
+      `THÔNG SỐ CHUẨN ${s.name} (nguồn: tài liệu 17 SKU — DÙNG ĐÚNG, không tự rút gọn/sửa):`,
+      `- Công dụng: ${(s.cong_dung || []).join("; ")}.`,
+      `- Hướng dẫn sử dụng (đúng thứ tự, đủ bước):`,
+      ...(s.hdsd || []).map((b, i) => `  ${i + 1}. ${b}`),
+      `- Thời gian/hiệu lực: ${s.thoi_gian}`,
+    ].join("\n");
+  }
+
+  // Dạng hồ sơ sản phẩm tải lên.
   return [
-    `THÔNG SỐ CHUẨN ${s.name} (nguồn: tài liệu 17 SKU — DÙNG ĐÚNG, không tự rút gọn/sửa):`,
-    `- Công dụng: ${s.cong_dung.join("; ")}.`,
-    `- Hướng dẫn sử dụng (đúng thứ tự, đủ bước):`,
-    ...s.hdsd.map((b, i) => `  ${i + 1}. ${b}`),
-    `- Thời gian/hiệu lực: ${s.thoi_gian}`,
-  ].join("\n");
+    `THÔNG SỐ CHUẨN ${s.ten || s.ma || "NOMA " + code} (nguồn: hồ sơ sản phẩm — DÙNG ĐÚNG, không tự rút gọn/sửa):`,
+    F("Dung tích", s.dung_tich),
+    F("Thể sản phẩm", s.the_sp),
+    F("Thành phần", s.thanh_phan),
+    F("Công dụng / tính năng", s.tinh_nang || s.mo_ta),
+    F("Cơ chế hoạt động", s.co_che),
+    F("Hướng dẫn sử dụng (đủ bước, đúng thứ tự)", s.hdsd),
+    F("Đối tượng phù hợp", s.doi_tuong),
+    F("Thời gian duy trì", s.thoi_gian),
+    F("Thời gian thấy hiệu quả", s.thoi_gian_hieu_qua),
+    F("Số lần dùng được", s.so_lan_dung),
+    F("Lưu ý khi dùng & bảo quản", s.luu_y),
+    F("Hạn sử dụng", s.hsd),
+    F("Bảo hành", s.bao_hanh),
+    F("USP", s.usp),
+    F("CLAIM ĐƯỢC PHÉP DÙNG", s.claim_duoc),
+    F("CLAIM CẤM DÙNG (vi phạm nếu xuất hiện)", s.claim_cam),
+  ].filter(Boolean).join("\n");
 }

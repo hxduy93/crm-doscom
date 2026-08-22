@@ -22,7 +22,7 @@
 // An toàn: mặc định tạo DRAFT để người dùng duyệt trên WP trước khi publish. Không đụng bản nguồn.
 import { getIdentity } from "../../lib/access.js";
 import { translateToEN } from "./_translate.js";
-import { findSkuCode } from "../geo/_utils/noma-sku-specs.js";
+import { findSkuCode, loadSkuSpecs } from "../geo/_utils/noma-sku-specs.js";
 import { applyFixes, deterministicFixes, NOMA_FORBIDDEN_EN } from "../geo/_utils/noma-brandcore.js";
 import {
   siteCreds, isConfigured, listProducts, getProductFull, createProduct,
@@ -41,14 +41,16 @@ function json(o, s = 200) {
 }
 
 // Liệt kê SP NOMA của 1 site kèm mã SKU dò từ tên.
-async function listNoma(c, site) {
+// `skuSpecs` truyền vào để dò được cả những mã chỉ có trong hồ sơ mới tải lên
+// (bảng dự phòng trong code chỉ có một phần mã).
+async function listNoma(c, site, skuSpecs) {
   const out = [];
   const isMixed = site === "doscom"; // doscom.vn trộn cả SP an ninh
   for (let page = 1; page <= 6; page++) {
     const { items, totalPages } = await listProducts(c, { search: isMixed ? "NOMA" : "", perPage: 50, page });
     for (const p of items) {
       if (isMixed && !isNomaProduct(p)) continue;
-      out.push({ id: p.id, name: p.name, permalink: p.permalink, sku: findSkuCode(p.name) });
+      out.push({ id: p.id, name: p.name, permalink: p.permalink, sku: findSkuCode(p.name, skuSpecs) });
     }
     if (page >= totalPages || !items.length) break;
   }
@@ -91,6 +93,7 @@ async function syncedSourceIds(env, source) {
 
 // Đồng bộ 1 BÀI VIẾT: gốc → brandcore VN → tách ảnh → dịch → brandcore EN → copy ảnh → tạo post.
 async function syncOnePost(env, { src, us, source, id, catId, status }) {
+  const { specs: skuSpecs } = await loadSkuSpecs(env);
   const p = await getPostFull(src, id);
 
   const vnTitle = cleanBrandcore(p.title || "", undefined);
@@ -172,6 +175,9 @@ async function syncOnePost(env, { src, us, source, id, catId, status }) {
 }
 
 export async function onRequestPost(context) {
+  // Hồ sơ sản phẩm tải lên (KV) — dùng để dò mã SKU trong tên sản phẩm.
+  // Đọc một lần ở đầu handler thay vì trong vòng lặp: mỗi lượt list gọi tới 6 trang.
+  const { specs: skuSpecs } = await loadSkuSpecs(context.env);
   const { request, env } = context;
   let body;
   try { body = await request.json(); } catch { return json({ ok: false, error: "Body không phải JSON" }, 400); }
@@ -249,8 +255,8 @@ export async function onRequestPost(context) {
     // ── SO SÁNH: SẢN PHẨM ──
     if (mode === "list") {
       const [srcList, usList, cats] = await Promise.all([
-        listNoma(src, source),
-        listNoma(us, "nomaauto"),
+        listNoma(src, source, skuSpecs),
+        listNoma(us, "nomaauto", skuSpecs),
         fetchCategories(us).catch(() => []),
       ]);
       const usSkus = new Set(usList.map((p) => p.sku).filter(Boolean));
@@ -286,7 +292,7 @@ export async function onRequestPost(context) {
       for (const id of ids) {
         try {
           const p = await getProductFull(src, id);
-          const sku = findSkuCode(p.name);
+          const sku = findSkuCode(p.name, skuSpecs);
 
           // 1) Sửa brandcore trên bản VN trước khi dịch (để bản EN sạch từ gốc).
           const vnDesc = cleanBrandcore(p.description || "", undefined);

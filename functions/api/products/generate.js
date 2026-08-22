@@ -15,7 +15,7 @@
 import { callClaude } from "../geo/_utils/claude.js";
 import { slugify, SITE_URL, deriveKeyword } from "./_wc.js";
 import { NOMA_BRAND, NOMA_BRAND_GUIDE } from "../geo/_utils/noma-brandcore.js";
-import { findSkuCode, skuSpecText } from "../geo/_utils/noma-sku-specs.js";
+import { findSkuCode, skuSpecText, loadSkuSpecs } from "../geo/_utils/noma-sku-specs.js";
 
 function json(o, s = 200) {
   return new Response(JSON.stringify(o), {
@@ -111,8 +111,10 @@ export async function onRequestPost({ request, env }) {
   // ---- dựng content vision (mảng block: text + image) ----
   // Tên SP có mã SKU (vd NOMA 922) → nhét THÔNG SỐ CHUẨN (công dụng + HDSD + thời gian)
   // từ tài liệu 17 SKU để agent viết đúng, không rút gọn/sai HDSD (vd 922 phải "đợi 4 tiếng").
-  const skuCode = findSkuCode(name);
-  const skuBlock = skuCode ? `\n${skuSpecText(skuCode)}\n` : "";
+  // Hồ sơ sản phẩm người dùng tải lên (KV) — không có thì rơi về bảng dự phòng.
+  const { specs: skuSpecs } = await loadSkuSpecs(env);
+  const skuCode = findSkuCode(name, skuSpecs);
+  const skuBlock = skuCode ? `\n${skuSpecText(skuCode, skuSpecs)}\n` : "";
 
   const intro =
     `Thương hiệu: ${brand.name} — ${brand.voice}\n` +
