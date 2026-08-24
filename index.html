@@ -2625,18 +2625,25 @@
     document.getElementById('dt-end').min=MIN; document.getElementById('dt-end').max=DMAX;
     var gen=(D.generated_at)||((D.revenue||{}).generated_at)||'';
     document.getElementById('foot-fresh').textContent=gen?('cập nhật '+gen):'';
-    paintFreshness(gen);
+    // Soi CẢ HAI mốc: file dashboard bọc ngoài và snapshot doanh số Pancake bên trong.
+    // Xem chú thích stalestSnapshot — hai mốc này lệch nhau được, và đã lệch 5 ngày.
+    paintFreshness([
+      { label:'', at:gen },
+      { label:'doanh số Pancake', at:((D.revenue||{}).generated_at)||'' }
+    ]);
     setPreset('all');
   }).catch(function(){ document.getElementById('footer').innerHTML='⚠️ Không tải được dashboard-data.json — mở qua server/Cloudflare.'; });
 
   // ===== Tuổi của snapshot =====
   // Sự cố 15/08/2026: GitHub khoá Actions, dữ liệu đứng 3 ngày mà KHÔNG ai phát hiện —
   // web vẫn đẹp, số vẫn hiện, chỉ là số cũ. Hàm này là chỗ rẻ nhất để chặn lặp lại.
-  // generatedAt dạng "YYYY-MM-DD HH:MM" theo giờ VN (+07).
+  // generatedAt dạng "YYYY-MM-DD HH:MM" theo giờ VN (+07), hoặc kèm hậu tố "UTC"
+  // (product-revenue.json ghi mốc theo UTC) — không nhận ra hậu tố thì lệch 7 giờ.
   function freshnessLevel(generatedAt, nowMs){
-    var m=/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(String(generatedAt||'').trim());
+    var raw=String(generatedAt||'').trim();
+    var m=/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(raw);
     if(!m) return { level:'unknown', hours:null, text:'chưa rõ thời điểm cập nhật' };
-    var genMs=Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5])-7*3600*1000;
+    var genMs=Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5])-(/(UTC|Z)$/i.test(raw)?0:7*3600*1000);
     var hours=Math.floor((nowMs-genMs)/3600000);
     if(hours<0) hours=0;
     if(hours<24)  return { level:'ok',   hours:hours, text:'cập nhật '+generatedAt };
@@ -2644,9 +2651,28 @@
     return { level:'bad', hours:hours, text:'dữ liệu cũ '+Math.floor(hours/24)+' ngày — số trên trang không phản ánh hiện tại' };
   }
 
-  function paintFreshness(gen){
+  // Badge cũ chỉ soi D.generated_at. Mà file dashboard-data.json được bước refresh
+  // dựng lại mỗi ngày KỂ CẢ khi snapshot doanh số Pancake bên dưới đứng im — nên
+  // 19→24/08/2026, lúc job fetch Pancake kẹt push, badge vẫn xanh suốt 5 ngày trong
+  // khi bảng doanh số đọc số của ngày 22. Từ nay lấy mốc CŨ NHẤT trong các nguồn và
+  // gọi tên nguồn đang cũ, để lần sau nhìn badge là biết chỗ nào chết.
+  // Viết phẳng (mỗi nhánh 1 dòng, không có dòng nào chỉ có dấu '}') vì
+  // tests/refresh-jobs.test.mjs trích hàm này ra khỏi index.html bằng regex,
+  // dừng ở dòng '}' đầu tiên — y như cách freshnessLevel ở trên được viết.
+  function stalestSnapshot(parts, nowMs){
+    var list=(parts||[]).filter(function(p){ return p && p.at; });
+    if(!list.length) return freshnessLevel('', nowMs);
+    var scored=list.map(function(p){ return { label:p.label, f:freshnessLevel(p.at, nowMs) }; });
+    var known=scored.filter(function(x){ return x.f.hours!==null; });
+    if(!known.length) return scored[0].f;
+    var worst=known.reduce(function(a,b){ return b.f.hours>a.f.hours ? b : a; });
+    if(worst.f.level==='ok' || !worst.label) return worst.f;
+    return { level:worst.f.level, hours:worst.f.hours, text:worst.f.text+' — cũ nhất: '+worst.label };
+  }
+
+  function paintFreshness(parts){
     var el=document.getElementById('fresh'); if(!el) return;
-    var f=freshnessLevel(gen, Date.now());
+    var f=stalestSnapshot(Array.isArray(parts)?parts:[{label:'',at:parts}], Date.now());
     el.className='fresh'+(f.level==='warn'?' stale-warn':(f.level==='bad'?' stale-bad':''));
     el.innerHTML='<span class="pulse"></span>'+f.text;
     el.title=f.level==='ok'?'':'Bấm "Cập nhật dữ liệu" để chạy lại pipeline lấy số mới.';

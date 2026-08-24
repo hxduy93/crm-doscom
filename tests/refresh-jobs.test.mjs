@@ -337,3 +337,38 @@ test("thiếu generated_at thì nói KHÔNG RÕ, không bịa là mới", () => 
   assert.equal(f.level, "unknown");
   assert.equal(f.hours, null);
 });
+
+// ── 7. Badge phải soi CẢ snapshot doanh số, không chỉ file dashboard bọc ngoài ──
+// Sự cố 19→24/08/2026: job fetch Pancake kẹt push (chỉ `git add` 1 trong 2 file nó
+// ghi ra → rebase từ chối chạy → snapshot bị vứt). refresh-data vẫn dựng lại
+// dashboard-data.json mỗi ngày nên D.generated_at luôn mới, badge xanh suốt 5 ngày,
+// còn bảng doanh số thì đứng ở ngày 22 — chênh Pancake POS ~38 triệu.
+const srcStalest = html.match(/^[ \t]*function stalestSnapshot\(parts, nowMs\)\{[\s\S]*?\n[ \t]*\}/m);
+assert.ok(srcStalest, "không trích được stalestSnapshot từ index.html");
+const stalestSnapshot = new Function(
+  src[0] + "\n" + srcStalest[0] + "\nreturn stalestSnapshot;"
+)();
+
+test("dashboard mới nhưng snapshot doanh số cũ → vẫn phải báo động", () => {
+  const f = stalestSnapshot([
+    { label: "", at: "2026-08-24 09:01" },
+    { label: "doanh số Pancake", at: "2026-08-22 05:37 UTC" },
+  ], msVN(2026, 8, 24, 16, 0));
+  assert.equal(f.level, "warn", "lấy mốc CŨ NHẤT, không lấy mốc mới nhất");
+  assert.match(f.text, /doanh số Pancake/, "phải gọi tên nguồn đang cũ");
+});
+
+test("mốc có hậu tố UTC không bị lệch 7 giờ", () => {
+  // 2026-08-22 05:37 UTC = 12:37 giờ VN. Sau đó đúng 2 giờ → 2 giờ tuổi, không phải 9.
+  const f = freshnessLevel("2026-08-22 05:37 UTC", Date.UTC(2026, 7, 22, 7, 37));
+  assert.equal(f.hours, 2);
+});
+
+test("mọi nguồn đều mới → badge xanh, không thêm chữ thừa", () => {
+  const f = stalestSnapshot([
+    { label: "", at: "2026-08-24 09:01" },
+    { label: "doanh số Pancake", at: "2026-08-24 07:10 UTC" },
+  ], msVN(2026, 8, 24, 16, 0));
+  assert.equal(f.level, "ok");
+  assert.doesNotMatch(f.text, /cũ nhất/);
+});
