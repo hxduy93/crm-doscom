@@ -272,3 +272,48 @@ test("thiết bị lấy được khối thông số, kèm luật Facebook", asy
   assert.equal(la.known, false, "mã lạ phải trả known=false để endpoint chặn trước khi gọi AI");
 });
 
+/* ── 10. Ảnh thư viện KHÔNG được đưa URL cho Facebook tự lấy ────────────────
+   crm-doscom.pages.dev nằm sau Cloudflare Access: đo thật 24/08/2026, mọi file
+   /sku-images/* trả 302 về trang đăng nhập khi gọi từ ngoài. Facebook đi lấy ảnh
+   qua URL sẽ nhận HTML đăng nhập, bài lên mà mất ảnh — mà vẫn báo thành công. */
+
+test("publish đọc ảnh thư viện bằng ASSETS, không truyền imageUrl cho Graph", () => {
+  const src = read("../functions/api/thai-social/publish.js");
+  assert.match(src, /loadLibraryImage\(env, request, row\.image_url\)/,
+    "phải tự đọc bytes ảnh thư viện");
+  assert.doesNotMatch(src, /imageUrl:\s*row\.image_url/,
+    "KHÔNG được đưa URL nội bộ cho Facebook tự tải — nó bị Access chặn");
+});
+
+test("đọc ảnh hỏng thì KHÔNG đăng, báo lỗi rõ", () => {
+  const src = read("../functions/api/thai-social/publish.js");
+  assert.match(src, /image_unreadable/,
+    "thà không đăng còn hơn đăng bài mất ảnh mà vẫn báo thành công");
+  const idxCheck = src.indexOf("image_unreadable");
+  const idxPost = src.indexOf("postToPage({");
+  assert.ok(idxCheck > -1 && idxPost > idxCheck, "chặn phải nằm TRƯỚC lúc gọi Graph");
+});
+
+test("loadLibraryImage từ chối đường dẫn lạ và nội dung quá ngắn", async () => {
+  const { loadLibraryImage } = await import("../functions/api/thai-social/_image.js");
+  const req = { url: "https://crm-doscom.pages.dev/api/x" };
+
+  assert.equal(await loadLibraryImage({}, req, "https://ngoai.com/a.png"), null,
+    "chỉ nhận đường dẫn cùng origin");
+  assert.equal(await loadLibraryImage({}, req, "/sku-images/911.png"), null,
+    "không có binding ASSETS thì trả null, không đoán bừa");
+
+  // Trang chuyển hướng của Access là HTML, không có chữ ký ảnh → phải bị loại.
+  const html = new TextEncoder().encode("<html><head><title>Redirecting</title></head><body>" + "x".repeat(200));
+  const envHtml = { ASSETS: { fetch: async () => ({ ok: true, arrayBuffer: async () => html.buffer }) } };
+  assert.equal(await loadLibraryImage(envHtml, req, "/sku-images/911.png"), null,
+    "HTML không phải ảnh, dù đủ dài");
+
+  // JPEG thật: FF D8 FF ở đầu.
+  const jpg = new Uint8Array(5000); jpg[0] = 0xff; jpg[1] = 0xd8; jpg[2] = 0xff;
+  const envOk = { ASSETS: { fetch: async () => ({ ok: true, arrayBuffer: async () => jpg.buffer }) } };
+  const got = await loadLibraryImage(envOk, req, "/sku-images/250.jpg");
+  assert.equal(got.type, "image/jpeg", "phải suy ra đúng kiểu ảnh từ đuôi file");
+  assert.equal(got.bytes.length, 5000);
+});
+

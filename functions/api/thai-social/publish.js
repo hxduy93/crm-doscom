@@ -9,6 +9,7 @@
 
 import { ok, fail, requireToken, requireDB, nowSec, publicPost, STATUS, PUBLISHABLE, tokenStatus } from "./_lib.js";
 import { postToPage, base64ToBytes } from "./_graph.js";
+import { loadLibraryImage } from "./_image.js";
 
 function fullMessage(row) {
   let tags = [];
@@ -46,14 +47,29 @@ export async function onRequestPost({ request, env }) {
     return fail("page_token_" + ts, 409, { detail: msg });
   }
 
+  // Ảnh thư viện: đọc bytes qua ASSETS. KHÔNG đưa URL cho Facebook tự lấy — nó nằm sau
+  // Cloudflare Access, Facebook sẽ nhận trang đăng nhập thay vì ảnh.
+  let img = null;
+  if (row.image_url) {
+    img = await loadLibraryImage(env, request, row.image_url);
+    if (!img) {
+      const msg = `Không đọc được ảnh ${row.image_url} từ thư viện — chưa đăng để tránh bài lên mà mất ảnh.`;
+      await env.DB.prepare(`UPDATE thai_post_queue SET last_error = ?, updated_at = ? WHERE id = ?`)
+        .bind(msg, nowSec(), id).run();
+      return fail("image_unreadable", 502, { detail: msg });
+    }
+  } else if (row.image_base64) {
+    img = { bytes: base64ToBytes(row.image_base64), type: "image/png" };
+  }
+
   let result;
   try {
     result = await postToPage({
       pageId: page.page_id,
       pageToken: page.page_token,
       message: fullMessage(row),
-      imageUrl: row.image_url || null,
-      imageBytes: row.image_url ? null : (row.image_base64 ? base64ToBytes(row.image_base64) : null),
+      imageBytes: img ? img.bytes : null,
+      imageType: img ? img.type : null,
     });
   } catch (e) {
     // KHÔNG tự retry vòng lặp: rate limit thì retry ngay chỉ làm Facebook siết thêm,

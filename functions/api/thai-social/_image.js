@@ -68,3 +68,46 @@ export async function pickImage(env, { skuMain, images, scene }) {
     };
   }
 }
+
+const MIME = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp" };
+
+/* Đọc ảnh thư viện thành bytes để gửi thẳng cho Graph API.
+
+   BẮT BUỘC đi qua binding ASSETS chứ không fetch bằng URL công khai: crm-doscom.pages.dev
+   nằm sau Cloudflare Access, mọi file /sku-images/* trả 302 về trang đăng nhập khi gọi từ
+   ngoài (đo thật 24/08/2026). Facebook đi lấy ảnh qua URL sẽ nhận trang HTML đăng nhập,
+   không phải ảnh. ASSETS đọc trực tiếp từ bản deploy nên không đụng Access.
+
+   Trả null nếu không đọc được — chỗ gọi phải coi như bài thiếu ảnh, đừng đăng bừa. */
+export async function loadLibraryImage(env, request, path) {
+  if (!path || !path.startsWith("/")) return null;
+  const ext = (path.split(".").pop() || "").toLowerCase();
+  const type = MIME[ext] || "image/png";
+  try {
+    let res = null;
+    if (env && env.ASSETS && typeof env.ASSETS.fetch === "function") {
+      res = await env.ASSETS.fetch(new URL(path, request.url).toString());
+    }
+    if (!res || !res.ok) return null;
+    const buf = await res.arrayBuffer();
+    if (!buf || buf.byteLength < 100) return null;
+    const bytes = new Uint8Array(buf);
+    // Kiểm CHỮ KÝ file chứ không kiểm kích thước: trang chuyển hướng của Access chỉ 143 byte
+    // nhưng một ngưỡng byte là thứ dễ sai. Không đúng magic number thì không phải ảnh, chấm hết.
+    if (!isImageBytes(bytes)) return null;
+    return { bytes, type };
+  } catch {
+    return null;
+  }
+}
+
+/* PNG: 89 50 4E 47 · JPEG: FF D8 FF · WEBP: "RIFF"…"WEBP" · GIF: "GIF8" */
+function isImageBytes(b) {
+  if (!b || b.length < 12) return false;
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return true;
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return true;
+  if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return true;
+  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+      b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return true;
+  return false;
+}

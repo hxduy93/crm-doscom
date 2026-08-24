@@ -49,25 +49,25 @@ async function graphPost(path, payload) {
 
 /* Đăng một bài. Trả { fb_post_id }.
 
-   imageUrl  — ảnh sản phẩm trong thư viện (URL công khai cùng origin). Ưu tiên dùng.
-   imageData — ảnh Flux dạng base64, chỉ dùng khi SKU chưa có ảnh thật. Graph nhận
-               tham số `source` là bytes, nhưng dạng URL đơn giản hơn nhiều nên với ảnh
-               base64 ta gửi kèm data URL không được — phải multipart. Xem ghi chú dưới. */
-export async function postToPage({ pageId, pageToken, message, imageUrl, imageBytes }) {
+   imageBytes — bytes ảnh, gửi multipart qua tham số `source`. ĐÂY LÀ ĐƯỜNG CHÍNH.
+   imageUrl   — chỉ dùng khi ảnh nằm ở một host CÔNG KHAI ngoài CRM.
+
+   Vì sao không truyền `url` trỏ về chính CRM: crm-doscom.pages.dev nằm sau Cloudflare
+   Access, nên Facebook đi lấy ảnh sẽ nhận 302 về trang đăng nhập chứ không phải ảnh —
+   đo thật 24/08/2026, mọi file trong /sku-images/ đều trả 302. Bài sẽ lên mà không có
+   ảnh, hoặc hỏng hẳn. Nên ảnh thư viện được Function tự đọc bằng binding ASSETS rồi
+   gửi bytes; đường đó không đi qua Access. */
+export async function postToPage({ pageId, pageToken, message, imageUrl, imageBytes, imageType }) {
   if (!pageId) throw Object.assign(new Error("thiếu page_id"), { kind: "config" });
   if (!pageToken) throw Object.assign(new Error("fanpage chưa có Page Access Token"), { kind: "token" });
 
-  if (imageUrl) {
-    const r = await graphPost(`${pageId}/photos`, { caption: message, url: imageUrl, access_token: pageToken });
-    return { fb_post_id: r.post_id || r.id || null };
-  }
-
   if (imageBytes) {
-    // Ảnh nằm trong D1 dạng base64 → Graph không nhận data URL, phải gửi multipart bytes.
     const form = new FormData();
     form.set("caption", message);
     form.set("access_token", pageToken);
-    form.set("source", new Blob([imageBytes], { type: "image/png" }), "post.png");
+    const type = imageType || "image/png";
+    const ext = type.includes("jpeg") ? "jpg" : type.includes("webp") ? "webp" : "png";
+    form.set("source", new Blob([imageBytes], { type }), `post.${ext}`);
     const res = await fetch(`https://graph.facebook.com/${API}/${pageId}/photos`, { method: "POST", body: form });
     let data = null;
     try { data = await res.json(); } catch { data = null; }
@@ -79,6 +79,11 @@ export async function postToPage({ pageId, pageToken, message, imageUrl, imageBy
       throw err;
     }
     return { fb_post_id: data.post_id || data.id || null };
+  }
+
+  if (imageUrl) {
+    const r = await graphPost(`${pageId}/photos`, { caption: message, url: imageUrl, access_token: pageToken });
+    return { fb_post_id: r.post_id || r.id || null };
   }
 
   const r = await graphPost(`${pageId}/feed`, { message, access_token: pageToken });
