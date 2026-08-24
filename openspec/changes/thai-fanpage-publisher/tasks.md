@@ -2,7 +2,7 @@
 
 - [x] 1.1 Viết `migrations/0020_thai_social.sql`: bảng `thai_pages` và `thai_post_queue` theo đúng cột ở design D1, kèm UNIQUE `(page_id, vn_date, source)` chống sinh trùng
 - [ ] 1.2 Áp migration bằng `wrangler d1 migrations apply crm-doscom-db` (KHÔNG dùng `d1 execute --file`)
-- [ ] 1.3 (đã ghi tên biến vào wrangler.toml — còn bước đặt secret thật) Thêm secret `THAI_SOCIAL_TOKEN` bằng `wrangler pages secret put`, ghi tên biến vào phần chú thích secret trong `wrangler.toml`
+- [x] 1.3 Thêm secret `THAI_SOCIAL_TOKEN` bằng `wrangler pages secret put`, ghi tên biến vào phần chú thích secret trong `wrangler.toml`
 
 ## 2. Cấu hình fanpage
 
@@ -54,6 +54,9 @@
 ## 8. Chốt
 
 - [x] 8.1 Chạy `node --test tests/*.mjs` — phải xanh toàn bộ trước khi giao
-- [ ] 8.2 Nhập 2 fanpage (chưa cần token), chạy thử sinh bài cho từng page, đọc lại caption tiếng Thái
-- [ ] 8.3 Khi có Page Access Token: thử đăng 1 bài thật, xác nhận `fb_post_id` lưu đúng và bài xuất hiện trên fanpage
+- [~] 8.2 (chờ nạp ảnh sản phẩm) Nhập 2 fanpage (chưa cần token), chạy thử sinh bài cho từng page, đọc lại caption tiếng Thái
+- [x] 8.3 **ĐÃ KIỂM 24/08/2026 — THÔNG.** System user token (app "Đăng bài tự động", ID
+      28516518767940939) có `pages_manage_posts`, không hết hạn. Page token của CẢ HAI page
+      cũng không hết hạn. Kiểm bằng bài ẨN (`published=false`) trên từng page: Facebook trả
+      id thật rồi xoá ngay, soát lại feed không còn bài kiểm thử. Hai page đã nhập vào D1.
 - [ ] 8.4 Chạy `/opsx:sync` để đưa spec `thai-social-publisher` vào `openspec/specs/`, rồi `/opsx:archive`
