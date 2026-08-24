@@ -8,6 +8,7 @@
 // hồ sơ 17 SKU). Giá chỉ được nhắc khi truyền vào — thiếu thì bỏ hẳn phần giá.
 
 import { NOMA_BRAND_GUIDE } from "../geo/_utils/noma-brandcore.js";
+import { POSTER_LIMITS as LIMITS } from "./_poster.js";
 
 // Deterministic theo red line dự án: model KHÔNG được tự nghĩ emoji.
 const EMOJI_ALLOWED = "🧼 💧 ✨ 🚗 🔍 ☔ 📦 ⚡ ✅";
@@ -39,11 +40,22 @@ export function buildSystemPrompt() {
     "",
     NOMA_BRAND_GUIDE,
     "",
+    "CHỮ TRÊN ẢNH — ngắn hơn caption rất nhiều, đọc lướt trên điện thoại là hiểu:",
+    `  - poster_title_th: tiêu đề, TỐI ĐA ${LIMITS.title} ký tự. Một ý duy nhất, đúng góc bán hàng.`,
+    `  - poster_sub_th: một dòng nội dung đỡ cho tiêu đề, TỐI ĐA ${LIMITS.sub} ký tự.`,
+    "  - KHÔNG viết giá, KHÔNG viết lời kêu gọi kiểu 'สั่งเลย'/'ทักแชท' — chỗ đó dành cho caption.",
+    "  - KHÔNG nhắc lại tên thương hiệu; nhãn chai trong ảnh đã có sẵn.",
+    "",
     "TRẢ VỀ: đúng MỘT object JSON hợp lệ, không markdown, không giải thích, gồm các khoá:",
-    '  "caption_th"   — caption tiếng Thái, giữ nguyên ký tự xuống dòng',
-    '  "caption_vi"   — dịch NGƯỢC caption đó sang tiếng Việt, sát nghĩa, để người Việt duyệt',
-    '  "hashtags"     — mảng 3–6 hashtag tiếng Thái/Anh, không có dấu #',
-    '  "image_prompt" — mô tả cảnh nền cho ảnh, bằng TIẾNG ANH, KHÔNG mô tả chữ trên nhãn chai',
+    '  "caption_th"      — caption tiếng Thái, giữ nguyên ký tự xuống dòng',
+    '  "caption_vi"      — dịch NGƯỢC caption đó sang tiếng Việt, sát nghĩa, để người Việt duyệt',
+    '  "hashtags"        — mảng 3–6 hashtag tiếng Thái/Anh, không có dấu #',
+    '  "poster_title_th" — tiêu đề in TRÊN ẢNH, tiếng Thái',
+    '  "poster_sub_th"   — dòng nội dung in TRÊN ẢNH, tiếng Thái',
+    '  "poster_title_vi" — dịch tiêu đề trên ảnh sang tiếng Việt',
+    '  "poster_sub_vi"   — dịch dòng nội dung trên ảnh sang tiếng Việt',
+    '  "scene_prompt"    — cảnh NỀN cho ảnh, bằng TIẾNG ANH, nền SÁNG, chừa chỗ trống bên trái.',
+    "                     Chỉ tả bối cảnh: KHÔNG chai, KHÔNG chữ, KHÔNG người.",
   ].join("\n");
 }
 

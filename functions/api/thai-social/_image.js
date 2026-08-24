@@ -11,6 +11,7 @@
 
 import { estimateNeurons, logAIUsage } from "../geo/_utils/ai-usage.js";
 import { buildImagePrompt } from "./_prompt.js";
+import { buildScenePrompt } from "./_poster.js";
 
 const MODEL = "@cf/black-forest-labs/flux-1-schnell";
 const GATEWAY_ID = "doscom-erp";
@@ -18,13 +19,13 @@ const GATEWAY_ID = "doscom-erp";
 /* 2026-08-16: Cloudflare bỏ width/height khỏi input schema của flux-1-schnell — gửi kèm
    là mọi lượt gen fail với 5006. Model tự trả 1024x1024. Giữ width/height ở đây CHỈ để
    ước lượng neuron, KHÔNG gửi lên Workers AI. Xem thêm generate-image.js. */
-export async function generateFlux(env, { scene, steps = 4 }) {
+export async function generateFlux(env, { scene, steps = 4, raw = false }) {
   if (!env.AI) {
     const e = new Error("Thiếu binding Workers AI 'AI' — Pages → Settings → Functions → Bindings → Workers AI");
     e.kind = "no_binding";
     throw e;
   }
-  const prompt = buildImagePrompt(scene).slice(0, 2000);
+  const prompt = (raw ? String(scene || "") : buildImagePrompt(scene)).slice(0, 2000);
   let res;
   try {
     res = await env.AI.run(MODEL, { prompt, steps }, { gateway: { id: GATEWAY_ID } });
@@ -44,29 +45,51 @@ export async function generateFlux(env, { scene, steps = 4 }) {
   return { b64: res.image, neurons, cost_usd: Number((neurons / 1000 * 0.011).toFixed(6)) };
 }
 
-/* Trả { image_url, image_base64, image_note, cost_usd }.
-   image_note khác null nghĩa là bài THIẾU ảnh — UI phải hiện, đừng nuốt. */
-export async function pickImage(env, { skuMain, images, scene }) {
-  const fromLib = images && images[skuMain];
-  if (fromLib) return { image_url: fromLib, image_base64: null, image_note: null, cost_usd: 0 };
+/* Chuẩn bị NGUYÊN LIỆU ảnh cho một bài. Trả:
+     { image_url, bg_base64, image_base64, image_note, cost_usd }
+
+   Hai đường, tuỳ SKU đã có ảnh thật hay chưa:
+
+   A. CÓ ảnh sản phẩm trong thư viện (đường chính) — Flux chỉ sinh NỀN, sản phẩm lấy ảnh
+      thật, chữ do trình duyệt vẽ. `image_base64` để trống: ảnh ghép hoàn chỉnh do trình
+      duyệt dựng lúc người dùng xem duyệt rồi lưu ngược lại.
+
+   B. CHƯA có ảnh sản phẩm — rơi về cách cũ: Flux vẽ cả sản phẩm, ra thẳng `image_base64`.
+      Nhãn chai sẽ sai, nên đây chỉ là đường lui và luôn kèm ghi chú.
+
+   Thiếu ảnh thì PHẢI nói rõ trong image_note. Im lặng trả bài thiếu ảnh là kiểu hỏng tệ nhất. */
+export async function buildArtwork(env, { skuMain, images, angle, scene }) {
+  const product = images && images[skuMain];
+
+  if (product) {
+    try {
+      const f = await generateFlux(env, { scene: buildScenePrompt(angle, scene), raw: true });
+      return { image_url: product, bg_base64: f.b64, image_base64: null,
+               image_note: null, cost_usd: f.cost_usd };
+    } catch (e) {
+      // Không có nền thì vẫn còn ảnh sản phẩm để đăng — kém hơn nhưng không mất bài.
+      return { image_url: product, bg_base64: null, image_base64: null, cost_usd: 0,
+               image_note: `Chưa sinh được nền cho ảnh (${whyFlux(e)}). Bài đang dùng ảnh sản phẩm trơn. `
+                         + `Bấm "Sinh lại" để thử lại nền.` };
+    }
+  }
 
   try {
     const f = await generateFlux(env, { scene });
-    return { image_url: null, image_base64: f.b64, image_note: null, cost_usd: f.cost_usd };
+    return { image_url: null, bg_base64: null, image_base64: f.b64, cost_usd: f.cost_usd,
+             image_note: `SKU ${skuMain} chưa có ảnh thật trong thư viện nên ảnh này do AI vẽ cả sản phẩm — `
+                       + `nhãn có thể SAI. Soát kỹ trước khi đăng, hoặc nạp ảnh nền trắng cho SKU này.` };
   } catch (e) {
-    const why = e.kind === "no_binding"
-      ? "chưa bật binding Workers AI"
-      : e.kind === "quota"
-        ? "Workers AI báo hết lượt"
-        : "Flux sinh ảnh lỗi";
-    return {
-      image_url: null,
-      image_base64: null,
-      cost_usd: 0,
-      image_note: `Bài chưa có ảnh: SKU ${skuMain} chưa có ảnh trong thư viện và ${why}. `
-                + `Nạp ảnh nền trắng cho SKU này rồi bấm Sinh lại.`,
-    };
+    return { image_url: null, bg_base64: null, image_base64: null, cost_usd: 0,
+             image_note: `Bài chưa có ảnh: SKU ${skuMain} chưa có ảnh trong thư viện và ${whyFlux(e)}. `
+                       + `Nạp ảnh nền trắng cho SKU này rồi bấm Sinh lại.` };
   }
+}
+
+function whyFlux(e) {
+  return e && e.kind === "no_binding" ? "chưa bật binding Workers AI"
+       : e && e.kind === "quota" ? "Workers AI báo hết lượt"
+       : "Flux sinh ảnh lỗi";
 }
 
 const MIME = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp" };

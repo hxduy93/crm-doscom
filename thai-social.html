@@ -81,6 +81,13 @@
   .shot{position:relative;background:var(--surface-2);border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center;min-height:170px;padding:10px}
   @media(max-width:680px){.shot{border-right:0;border-bottom:1px solid var(--border)}}
   .shot img{max-width:100%;max-height:210px;border-radius:9px;display:block}
+  .shot canvas{max-width:100%;max-height:210px;border-radius:9px;display:block}
+  .poster-txt{border:1px dashed var(--border);border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:6px}
+  .poster-txt .lb{font-size:10.6px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
+  .poster-txt .th-t{font-family:var(--font-th);font-size:15px;font-weight:700;line-height:1.5}
+  .poster-txt .th-s{font-family:var(--font-th);font-size:13px;line-height:1.6;color:var(--text-2)}
+  .poster-txt .vi-t{font-size:12.6px;color:var(--text-2);line-height:1.55}
+  .poster-txt input{font-family:var(--font-th);font-size:13.5px}
   .shot .noimg{font-size:12px;font-weight:700;color:var(--text-3);text-align:center;padding:14px}
 
   .post-b{padding:13px 15px;display:flex;flex-direction:column;gap:10px;min-width:0}
@@ -250,6 +257,171 @@ async function api(path, opts = {}) {
 }
 
 let PAGES = [], SKUS = [], SKU_BY = {};
+const POSTS = {};   // id -> bài, để bộ ghép ảnh tra lại nền + ảnh sản phẩm
+
+/* ══════════ GHÉP ẢNH BÀI ĐĂNG ══════════════════════════════════════════════
+   Ba lớp: nền Flux (bg_base64) → sản phẩm thật đã tách nền (image_url) → chữ Thái.
+
+   Ghép ở TRÌNH DUYỆT vì tài khoản chưa bật Cloudflare Images nên Function không ghép
+   được. Đổi lại có cái lợi thật: người duyệt thấy ĐÚNG tấm sẽ đăng, sửa chữ là vẽ lại ngay.
+   Ghép xong lưu ngược về server qua PATCH image_base64 — publish lấy chính tấm đó.
+
+   Không in giá, không nút CTA: chủ dự án chốt 24/08/2026, chỗ đó để dành cho caption. */
+
+const P = {
+  size: 1080,
+  scrimTo: 0.62, scrimAlpha: 0.82,
+  titleX: 72, titleY: 150, titleW: 560, titleSize: 76, titleLH: 92, titleMax: 3,
+  subGap: 26, subW: 540, subSize: 38, subLH: 52, subMax: 3,
+  prodRight: 56, prodBottom: 56, prodMaxH: 0.74, prodMaxW: 0.46,
+};
+
+const loadImg = (src) => new Promise((res, rej) => {
+  const i = new Image();
+  i.onload = () => res(i);
+  i.onerror = () => rej(new Error("không tải được ảnh " + String(src).slice(0, 60)));
+  i.src = src;
+});
+
+/* Tiếng Thái KHÔNG có dấu cách giữa từ — ngắt dòng theo dấu cách sẽ ra một dòng dài tràn
+   khung. Nên xuống dòng theo TỪNG KÝ TỰ, đo bề rộng thật bằng measureText. */
+function wrapThai(ctx, text, maxW, maxLines) {
+  const t = String(text || "").trim();
+  if (!t) return [];
+  const lines = [];
+  let cur = "";
+  for (const ch of t) {
+    const test = cur + ch;
+    if (ctx.measureText(test).width > maxW && cur) {
+      lines.push(cur);
+      cur = ch;
+      if (lines.length === maxLines) return lines;
+    } else {
+      cur = test;
+    }
+  }
+  if (cur && lines.length < maxLines) lines.push(cur);
+  return lines;
+}
+
+let fontsReady = null;
+function ensureFonts() {
+  if (!fontsReady) {
+    fontsReady = (document.fonts
+      ? Promise.all([
+          document.fonts.load(`700 ${P.titleSize}px "Noto Sans Thai"`),
+          document.fonts.load(`400 ${P.subSize}px "Noto Sans Thai"`),
+        ]).then(() => document.fonts.ready)
+      : Promise.resolve()
+    ).catch(() => {});   // font hỏng thì vẫn vẽ, chỉ là fallback xấu hơn
+  }
+  return fontsReady;
+}
+
+/* Vẽ một tấm ảnh bài hoàn chỉnh vào canvas. Trả base64 (không kèm data URL). */
+async function composePoster(canvas, post) {
+  await ensureFonts();
+  const ctx = canvas.getContext("2d");
+  const S = P.size;
+  canvas.width = canvas.height = S;
+
+  // ── Lớp 1: nền ──────────────────────────────────────────────
+  if (post.bg_base64) {
+    try {
+      const bg = await loadImg("data:image/png;base64," + post.bg_base64);
+      // cover: phủ kín khung, cắt phần thừa, không bóp méo
+      const r = Math.max(S / bg.width, S / bg.height);
+      const w = bg.width * r, h = bg.height * r;
+      ctx.drawImage(bg, (S - w) / 2, (S - h) / 2, w, h);
+    } catch { paintFallbackBg(ctx, S); }
+  } else {
+    paintFallbackBg(ctx, S);
+  }
+
+  // Dải sáng bên trái để chữ luôn đọc được dù nền Flux ra kiểu gì.
+  const g = ctx.createLinearGradient(0, 0, S * P.scrimTo, 0);
+  g.addColorStop(0, `rgba(255,255,255,${P.scrimAlpha})`);
+  g.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, S, S);
+
+  // ── Lớp 2: sản phẩm thật ────────────────────────────────────
+  if (post.image_url) {
+    try {
+      const pr = await loadImg(post.image_url);
+      const maxH = S * P.prodMaxH, maxW = S * P.prodMaxW;
+      const r = Math.min(maxH / pr.height, maxW / pr.width);
+      const w = pr.width * r, h = pr.height * r;
+      const x = S - P.prodRight - w, y = S - P.prodBottom - h;
+      ctx.save();
+      ctx.shadowColor = "rgba(15,25,45,.28)";
+      ctx.shadowBlur = 46;
+      ctx.shadowOffsetY = 16;
+      ctx.drawImage(pr, x, y, w, h);
+      ctx.restore();
+    } catch { /* mất ảnh sản phẩm thì vẫn còn nền + chữ, không làm hỏng cả tấm */ }
+  }
+
+  // ── Lớp 3: chữ ──────────────────────────────────────────────
+  ctx.textBaseline = "top";
+  ctx.fillStyle = "#0E1A2E";
+  ctx.font = `700 ${P.titleSize}px "Noto Sans Thai", sans-serif`;
+  const tLines = wrapThai(ctx, post.poster_title_th, P.titleW, P.titleMax);
+  let y = P.titleY;
+  for (const ln of tLines) { ctx.fillText(ln, P.titleX, y); y += P.titleLH; }
+
+  if (post.poster_sub_th) {
+    y += P.subGap;
+    // Gạch nhấn ngắn giữa tiêu đề và dòng nội dung — mốc thị giác, không phải trang trí thừa.
+    ctx.fillStyle = "#3257E6";
+    ctx.fillRect(P.titleX, y, 84, 6);
+    y += 30;
+    ctx.fillStyle = "#3A465C";
+    ctx.font = `400 ${P.subSize}px "Noto Sans Thai", sans-serif`;
+    for (const ln of wrapThai(ctx, post.poster_sub_th, P.subW, P.subMax)) {
+      ctx.fillText(ln, P.titleX, y); y += P.subLH;
+    }
+  }
+
+  return canvas.toDataURL("image/png").split(",")[1];
+}
+
+// Nền dự phòng khi Flux chưa sinh được: vẫn ra ảnh dùng được, không để trống trơn.
+function paintFallbackBg(ctx, S) {
+  const g = ctx.createLinearGradient(0, 0, S, S);
+  g.addColorStop(0, "#FFFFFF");
+  g.addColorStop(1, "#DCE6F7");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, S, S);
+}
+
+/* Dựng ảnh cho mọi thẻ đang hiện rồi lưu về server.
+   Chỉ lưu khi chưa có ảnh ghép — tránh mỗi lần mở trang lại ghi đè D1 một lần. */
+async function renderPosters(root) {
+  const cs = (root || document).querySelectorAll("canvas[data-poster]");
+  for (const cv of cs) {
+    const art = cv.closest(".post");
+    const id = Number(art.dataset.id);
+    let post = POSTS[id];
+    if (!post) continue;
+    // Danh sách hàng chờ không trả kèm nền (nặng) — bài do lịch sinh cần lấy chi tiết trước.
+    if (!post.bg_base64 && !post.image_base64) {
+      try {
+        post = await api(`/api/thai-social/queue/${id}`);
+        POSTS[id] = post;
+      } catch { /* không lấy được thì vẽ bằng nền dự phòng */ }
+    }
+    try {
+      const b64 = await composePoster(cv, post);
+      post.image_base64 = b64;
+      await api(`/api/thai-social/queue/${id}`, {
+        method: "PATCH", body: JSON.stringify({ image_base64: b64 }),
+      });
+    } catch (e) {
+      banner("Không ghép được ảnh bài: " + e.message, "warn");
+    }
+  }
+}
 
 /* ── Tabs ─────────────────────────────────────────────────────── */
 const PANES = { tao: "tab-tao", cho: "tab-cho", lich: "tab-lich", page: "tab-page" };
@@ -317,7 +489,9 @@ async function gen(force) {
         force: !!force,
       }),
     });
+    POSTS[d.post.id] = d.post;
     $("#genResult").innerHTML = postCard(d.post);
+    await renderPosters($("#genResult"));
     if (d.image_note) banner(d.image_note, "warn");
     else if (d.cached) banner("Dùng lại bản đã sinh trong ngày — không tốn thêm tiền AI. Bấm “Ép làm mới” nếu muốn bài khác.", "");
   } catch (e) {
@@ -349,10 +523,12 @@ const STATE_PILL = {
 
 function postCard(p) {
   const page = PAGES.find((x) => x.page_id === p.page_id) || { name: p.page_id, token_status: "missing" };
-  const img = p.image_url
-    ? `<img src="${esc(p.image_url)}" alt="Ảnh sản phẩm ${esc(p.sku_main)}"/>`
-    : p.image_base64
-      ? `<img src="data:image/png;base64,${esc(p.image_base64)}" alt="Ảnh sinh cho ${esc(p.sku_main)}"/>`
+  // Ảnh ghép được dựng bằng canvas ngay khi thẻ hiện ra (xem composePoster).
+  // Có sẵn ảnh ghép rồi thì hiện luôn, khỏi vẽ lại.
+  const img = p.image_base64
+    ? `<img src="data:image/png;base64,${esc(p.image_base64)}" alt="Ảnh bài ${esc(p.sku_main)}"/>`
+    : p.image_url
+      ? `<canvas data-poster width="1080" height="1080" aria-label="Ảnh bài ${esc(p.sku_main)}"></canvas>`
       : `<div class="noimg">Chưa có ảnh<br/>SKU ${esc(p.sku_main)}</div>`;
 
   const done = p.status === "published";
@@ -369,6 +545,14 @@ function postCard(p) {
       </div>
       <p class="th" data-th>${esc(p.caption_th)}</p>
       ${p.caption_vi ? `<p class="vi"><b>Dịch ngược để duyệt</b>${esc(p.caption_vi)}</p>` : ""}
+      ${(p.poster_title_th || p.poster_sub_th) && p.status !== "published" ? `
+      <div class="poster-txt">
+        <span class="lb">Chữ in trên ảnh</span>
+        <div class="th-t" data-pt>${esc(p.poster_title_th)}</div>
+        ${p.poster_sub_th ? `<div class="th-s" data-ps>${esc(p.poster_sub_th)}</div>` : ""}
+        <div class="vi-t">🇻🇳 ${esc(p.poster_title_vi || "—")}${p.poster_sub_vi ? " · " + esc(p.poster_sub_vi) : ""}</div>
+        <button class="btn btn-g btn-sm" data-act="edit-poster" style="align-self:flex-start">✎ Sửa chữ trên ảnh</button>
+      </div>` : ""}
       ${p.hashtags && p.hashtags.length ? `<div class="tagrow">${p.hashtags.map((t) => `<span>#${esc(t)}</span>`).join("")}</div>` : ""}
       ${p.last_error ? `<div class="note note-warn">${esc(p.last_error)}</div>` : ""}
       ${(p.image_url && (SKU_BY[p.sku_main] || {}).image_warning)
@@ -408,7 +592,8 @@ document.body.addEventListener("click", async (ev) => {
     if (act === "save") {
       const ta = art.querySelector("textarea");
       const d = await api(`/api/thai-social/queue/${id}`, { method: "PATCH", body: JSON.stringify({ caption_th: ta.value }) });
-      art.outerHTML = postCard(d);
+      POSTS[id] = { ...(POSTS[id] || {}), ...d };
+      art.outerHTML = postCard(POSTS[id]);
       banner("Đã lưu, bài chuyển sang “Đã sửa”.", "");
       return;
     }
@@ -418,23 +603,43 @@ document.body.addEventListener("click", async (ev) => {
       art.remove();
       return;
     }
+    if (act === "edit-poster") {
+      const cur = POSTS[id] || {};
+      const t = prompt("Tiêu đề trên ảnh (tiếng Thái):", cur.poster_title_th || "");
+      if (t === null) return;
+      const sub = prompt("Dòng nội dung trên ảnh (tiếng Thái):", cur.poster_sub_th || "");
+      if (sub === null) return;
+      const d = await api(`/api/thai-social/queue/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ poster_title_th: t, poster_sub_th: sub }),
+      });
+      // Chữ đổi thì ảnh phải vẽ lại — giữ nền cũ, chỉ thay lớp chữ.
+      POSTS[id] = { ...cur, ...d, image_base64: null };
+      art.outerHTML = postCard(POSTS[id]);
+      await renderPosters(document.querySelector(`.post[data-id="${id}"]`).parentNode);
+      banner("Đã đổi chữ trên ảnh và vẽ lại. Bản dịch tiếng Việt là của bản máy viết trước đó.", "warn");
+      return;
+    }
     if (act === "regen") {
       btn.disabled = true;
-      const p = JSON.parse(art.dataset.meta || "null") || {};
+      const p = POSTS[id] || {};
       const d = await api("/api/thai-social/generate", {
         method: "POST",
-        body: JSON.stringify({ page_id: art.querySelector(".page-name") && p.page_id || PAGES[0] && PAGES[0].page_id,
-                               post_id: id, sku_main: p.sku_main || $("#selMain").value,
-                               sku_addon: p.sku_addon || null, force: true }),
+        body: JSON.stringify({ page_id: p.page_id, post_id: id,
+                               sku_main: p.sku_main, sku_addon: p.sku_addon || null,
+                               angle: p.angle || undefined, force: true }),
       });
+      POSTS[id] = d.post;
       art.outerHTML = postCard(d.post);
+      await renderPosters(document.querySelector(`.post[data-id="${id}"]`).parentNode);
       return;
     }
     if (act === "publish") {
       if (!confirm("Đăng bài này lên fanpage thật?")) return;
       btn.disabled = true; btn.textContent = "Đang đăng…";
       const d = await api("/api/thai-social/publish", { method: "POST", body: JSON.stringify({ post_id: id }) });
-      art.outerHTML = postCard(d);
+      POSTS[id] = { ...(POSTS[id] || {}), ...d };
+      art.outerHTML = postCard(POSTS[id]);
       banner("Đã đăng lên fanpage.", "");
     }
   } catch (e) {
@@ -454,9 +659,11 @@ async function loadQueue() {
       ["Đã sửa, chờ đăng", c.edited],
       ["Đã đăng (14 ngày)", c.published],
     ].map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v tnum">${v}</div></div>`).join("");
+    d.posts.forEach((p) => { POSTS[p.id] = { ...(POSTS[p.id] || {}), ...p }; });
     $("#queueList").innerHTML = d.posts.length
-      ? d.posts.map((p) => { const h = postCard(p); return h.replace('<article class="post"', `<article class="post" data-meta='${esc(JSON.stringify({ page_id: p.page_id, sku_main: p.sku_main, sku_addon: p.sku_addon }))}'`); }).join("")
+      ? d.posts.map(postCard).join("")
       : `<div class="empty">Chưa có bài nào trong 14 ngày qua.</div>`;
+    await renderPosters($("#queueList"));
   } catch (e) {
     $("#queueList").innerHTML = `<div class="empty">Không tải được hàng chờ: ${esc(e.message)}</div>`;
   }

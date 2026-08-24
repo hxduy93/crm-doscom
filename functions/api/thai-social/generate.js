@@ -10,10 +10,11 @@
 import { ok, fail, requireToken, requireDB, nowSec, vnDate, clip, publicPost, STATUS } from "./_lib.js";
 import { callClaude, extractJson } from "../geo/_utils/claude.js";
 import { buildSystemPrompt, buildUserPrompt, ANGLES } from "./_prompt.js";
+import { clipPosterText, POSTER_LIMITS } from "./_poster.js";
 import { skuBlock, loadSkuImages, THB_PRICES } from "./_skus.js";
-import { pickImage } from "./_image.js";
+import { buildArtwork } from "./_image.js";
 
-const CACHE_VER = "v1";
+const CACHE_VER = "v2";   // v2: thêm chữ trên ảnh + cảnh nền
 const CACHE_TTL = 60 * 60 * 20; // 20 giờ — đủ trong ngày, không giữ qua đêm
 
 const cacheKey = (pageId, main, addon, angle, day) =>
@@ -98,7 +99,12 @@ export async function onRequestPost({ request, env }) {
       caption_th: String(parsed.caption_th),
       caption_vi: String(parsed.caption_vi || ""),
       hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags.slice(0, 8).map(String) : [],
-      image_prompt: String(parsed.image_prompt || ""),
+      // Cắt ở server chứ không tin model tự giữ giới hạn: chữ quá dài làm vỡ bố cục ảnh.
+      poster_title_th: clipPosterText(parsed.poster_title_th, POSTER_LIMITS.title),
+      poster_sub_th:   clipPosterText(parsed.poster_sub_th,   POSTER_LIMITS.sub),
+      poster_title_vi: clipPosterText(parsed.poster_title_vi, POSTER_LIMITS.title * 2),
+      poster_sub_vi:   clipPosterText(parsed.poster_sub_vi,   POSTER_LIMITS.sub * 2),
+      scene_prompt: String(parsed.scene_prompt || parsed.image_prompt || ""),
       cost_usd: Number(res.cost_usd || 0),
     };
     costText = gen.cost_usd;
@@ -106,7 +112,7 @@ export async function onRequestPost({ request, env }) {
   }
 
   const { images } = await loadSkuImages(env);
-  const img = await pickImage(env, { skuMain, images, scene: gen.image_prompt });
+  const img = await buildArtwork(env, { skuMain, images, angle, scene: gen.scene_prompt });
 
   const now = nowSec();
   const source = b.source === "schedule" ? "schedule" : "manual";
@@ -118,24 +124,30 @@ export async function onRequestPost({ request, env }) {
     if (existing.status === STATUS.PUBLISHED) return fail("already_published", 409);
     await env.DB.prepare(
       `UPDATE thai_post_queue SET sku_main=?, sku_addon=?, angle=?, caption_th=?, caption_vi=?,
-              hashtags=?, image_prompt=?, image_url=?, image_base64=?, status=?, last_error=?,
-              cost_usd = cost_usd + ?, updated_at=? WHERE id=?`
+              hashtags=?, image_prompt=?, image_url=?, image_base64=?, bg_base64=?, scene_prompt=?,
+              poster_title_th=?, poster_sub_th=?, poster_title_vi=?, poster_sub_vi=?,
+              status=?, last_error=?, cost_usd = cost_usd + ?, updated_at=? WHERE id=?`
     ).bind(
       skuMain, skuAddon, angle, gen.caption_th, gen.caption_vi,
-      JSON.stringify(gen.hashtags), gen.image_prompt, img.image_url, img.image_base64,
+      JSON.stringify(gen.hashtags), gen.scene_prompt, img.image_url, img.image_base64,
+      img.bg_base64, gen.scene_prompt,
+      gen.poster_title_th, gen.poster_sub_th, gen.poster_title_vi, gen.poster_sub_vi,
       STATUS.REVIEW, img.image_note || null, costText + img.cost_usd, now, postId
     ).run();
   } else {
     const r = await env.DB.prepare(
       `INSERT INTO thai_post_queue (page_id, vn_date, source, sku_main, sku_addon, angle,
               caption_th, caption_vi, hashtags, image_prompt, image_url, image_base64,
+              bg_base64, scene_prompt, poster_title_th, poster_sub_th, poster_title_vi, poster_sub_vi,
               status, last_error, cost_usd, created_at, updated_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).bind(
       pageId, day, source, skuMain, skuAddon, angle,
-      gen.caption_th, gen.caption_vi, JSON.stringify(gen.hashtags), gen.image_prompt,
-      img.image_url, img.image_base64, STATUS.REVIEW, img.image_note || null,
-      costText + img.cost_usd, now, now
+      gen.caption_th, gen.caption_vi, JSON.stringify(gen.hashtags), gen.scene_prompt,
+      img.image_url, img.image_base64,
+      img.bg_base64, gen.scene_prompt,
+      gen.poster_title_th, gen.poster_sub_th, gen.poster_title_vi, gen.poster_sub_vi,
+      STATUS.REVIEW, img.image_note || null, costText + img.cost_usd, now, now
     ).run();
     postId = r.meta && r.meta.last_row_id;
   }

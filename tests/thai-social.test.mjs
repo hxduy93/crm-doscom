@@ -177,24 +177,41 @@ test("prompt ảnh cấm vẽ chữ — Flux viết nhãn luôn sai", () => {
 
 /* ── 6. Ảnh: thư viện trước, Flux sau, thiếu thì phải nói ───────────────── */
 
-test("pickImage ưu tiên ảnh thật trong thư viện, không gọi Flux", async () => {
-  const { pickImage } = await import("../functions/api/thai-social/_image.js");
-  let fluxCalled = false;
-  const env = { AI: { run: async () => { fluxCalled = true; return { image: "zz" }; } } };
-  const r = await pickImage(env, { skuMain: "350", images: { 350: "/sku-images/350.webp" }, scene: "s" });
-  assert.equal(r.image_url, "/sku-images/350.webp");
-  assert.equal(r.image_base64, null);
-  assert.equal(r.cost_usd, 0);
-  assert.equal(fluxCalled, false, "có ảnh thật thì không được đốt tiền gọi Flux");
+test("có ảnh thật thì Flux chỉ sinh NỀN, không vẽ lại sản phẩm", async () => {
+  const { buildArtwork } = await import("../functions/api/thai-social/_image.js");
+  let prompt = null;
+  const env = { AI: { run: async (_m, inp) => { prompt = inp.prompt; return { image: "BG" }; } } };
+  const r = await buildArtwork(env, { skuMain: "911", images: { 911: "/sku-images/911.png" }, angle: "combo" });
+
+  assert.equal(r.image_url, "/sku-images/911.png", "sản phẩm vẫn lấy ảnh thật");
+  assert.equal(r.bg_base64, "BG", "Flux sinh nền");
+  assert.equal(r.image_base64, null, "ảnh ghép do trình duyệt dựng, server chưa có");
+  assert.ok(prompt.includes("NO bottle"), "prompt phải cấm Flux vẽ chai — nhãn nó vẽ luôn sai");
 });
 
-test("không có ảnh và Flux hỏng → bài vẫn giữ, nhưng PHẢI báo thiếu ảnh", async () => {
-  const { pickImage } = await import("../functions/api/thai-social/_image.js");
-  const r = await pickImage({}, { skuMain: "999", images: {}, scene: "s" }); // env không có AI
+test("Flux hỏng nhưng có ảnh sản phẩm → vẫn giữ bài, chỉ báo thiếu nền", async () => {
+  const { buildArtwork } = await import("../functions/api/thai-social/_image.js");
+  const r = await buildArtwork({}, { skuMain: "911", images: { 911: "/sku-images/911.png" }, angle: "combo" });
+  assert.equal(r.image_url, "/sku-images/911.png");
+  assert.equal(r.bg_base64, null);
+  assert.match(r.image_note, /nền/i, "phải nói rõ là thiếu nền, không im lặng");
+});
+
+test("không ảnh thật và Flux hỏng → bài vẫn giữ, PHẢI báo thiếu ảnh", async () => {
+  const { buildArtwork } = await import("../functions/api/thai-social/_image.js");
+  const r = await buildArtwork({}, { skuMain: "999", images: {}, angle: "combo" });
   assert.equal(r.image_url, null);
   assert.equal(r.image_base64, null);
   assert.match(r.image_note, /chưa có ảnh/i, "im lặng trả bài thiếu ảnh là kiểu hỏng tệ nhất");
   assert.match(r.image_note, /999/);
+});
+
+test("SKU chưa có ảnh thật → Flux vẽ cả sản phẩm nhưng PHẢI cảnh báo nhãn có thể sai", async () => {
+  const { buildArtwork } = await import("../functions/api/thai-social/_image.js");
+  const env = { AI: { run: async () => ({ image: "XX" }) } };
+  const r = await buildArtwork(env, { skuMain: "999", images: {}, angle: "combo" });
+  assert.equal(r.image_base64, "XX");
+  assert.match(r.image_note, /nhãn có thể SAI/i);
 });
 
 /* ── 7. Trang phải lên được web ─────────────────────────────────────────── */
@@ -326,5 +343,86 @@ test("loadLibraryImage từ chối đường dẫn lạ và nội dung quá ng�
   const got = await loadLibraryImage(envOk, req, "/sku-images/250.jpg");
   assert.equal(got.type, "image/jpeg", "phải suy ra đúng kiểu ảnh từ đuôi file");
   assert.equal(got.bytes.length, 5000);
+});
+
+/* ── 11. Ảnh bài đăng là ẢNH GHÉP, không phải ảnh sản phẩm trơn ─────────────
+   Chủ dự án chốt 24/08/2026: nền AI theo góc bán hàng + sản phẩm thật + chữ Thái.
+   KHÔNG in giá, KHÔNG nút CTA. Kèm bản dịch tiếng Việt của chữ trên ảnh. */
+
+test("prompt nền cấm vẽ chữ, chai và người", async () => {
+  const { buildScenePrompt, SCENE_BY_ANGLE } = await import("../functions/api/thai-social/_poster.js");
+  const p = buildScenePrompt("combo", "");
+  for (const cam of ["NO text", "NO bottle", "NO product", "NO people"]) {
+    assert.ok(p.includes(cam), `prompt nền phải cấm: ${cam}`);
+  }
+  // Nền phải SÁNG: ảnh sản phẩm giữ bóng đổ gốc chụp trên nền trắng, đặt lên nền tối
+  // thì bóng đó thành vệt xám bẩn.
+  assert.match(p, /bright/i, "nền phải sáng");
+  assert.ok(Object.keys(SCENE_BY_ANGLE).length >= 4, "mỗi góc bán hàng một cảnh riêng");
+});
+
+test("mỗi góc bán hàng cho ra cảnh nền KHÁC nhau", async () => {
+  const { buildScenePrompt } = await import("../functions/api/thai-social/_poster.js");
+  const angles = ["combo", "howto", "ba", "vs_shop"];
+  const seen = new Set(angles.map((a) => buildScenePrompt(a, "")));
+  assert.equal(seen.size, angles.length,
+    "cảnh nền phải bám góc bán hàng — giống hệt nhau thì ảnh không nói lên điều gì");
+});
+
+test("prompt xin chữ trên ảnh kèm bản dịch, KHÔNG giá KHÔNG CTA", async () => {
+  const { buildSystemPrompt } = await import("../functions/api/thai-social/_prompt.js");
+  const sys = buildSystemPrompt();
+  for (const k of ["poster_title_th", "poster_sub_th", "poster_title_vi", "poster_sub_vi", "scene_prompt"]) {
+    assert.ok(sys.includes(k), `thiếu khoá ${k}`);
+  }
+  assert.match(sys, /KHÔNG viết giá/, "chủ dự án chốt: không in giá lên ảnh");
+  assert.match(sys, /KHÔNG viết lời kêu gọi/, "chủ dự án chốt: không có nút CTA trên ảnh");
+});
+
+test("chữ trên ảnh bị cắt ở server, không tin model tự giữ giới hạn", async () => {
+  const { clipPosterText, POSTER_LIMITS } = await import("../functions/api/thai-social/_poster.js");
+  const dai = "ก".repeat(200);
+  assert.equal(clipPosterText(dai, POSTER_LIMITS.title).length, POSTER_LIMITS.title);
+  assert.equal(clipPosterText("  a   b  ", 50), "a b", "gộp khoảng trắng thừa");
+  assert.equal(clipPosterText(null, 10), "");
+});
+
+test("publish ưu tiên ảnh ghép hoàn chỉnh hơn ảnh sản phẩm trơn", () => {
+  const src = read("../functions/api/thai-social/publish.js");
+  const iPoster = src.indexOf("if (row.image_base64)");
+  const iUrl = src.indexOf("else if (row.image_url)");
+  assert.ok(iPoster > -1 && iUrl > iPoster,
+    "ảnh ghép phải được xét TRƯỚC ảnh sản phẩm trơn");
+});
+
+test("lưu ảnh ghép KHÔNG tự đánh dấu bài là đã duyệt", () => {
+  const src = read("../functions/api/thai-social/queue/[id].js");
+  assert.match(src, /onlyPoster/,
+    "trình duyệt tự ghép ảnh khi mở thẻ — nếu đổi status thì bài chưa ai đọc đã thành đã duyệt");
+});
+
+test("trang có bộ ghép ảnh 3 lớp và ngắt dòng tiếng Thái theo ký tự", () => {
+  const html = read("../thai-social.html");
+  assert.match(html, /function composePoster/, "thiếu bộ ghép ảnh");
+  assert.match(html, /function wrapThai/,
+    "tiếng Thái không có dấu cách giữa từ — ngắt theo dấu cách sẽ tràn khung");
+  assert.match(html, /Noto Sans Thai/, "phải nạp font Thái cho canvas");
+  assert.doesNotMatch(html, /บาท|CTA button/, "không in giá / nút CTA lên ảnh");
+});
+
+test("migration ảnh ghép có đủ cột nền và chữ hai thứ tiếng", () => {
+  const sql = read("../migrations/0021_thai_poster.sql");
+  for (const c of ["bg_base64", "scene_prompt", "poster_title_th", "poster_sub_th",
+                   "poster_title_vi", "poster_sub_vi"]) {
+    assert.ok(sql.includes(c), `migration thiếu cột ${c}`);
+  }
+});
+
+test("mọi ảnh sản phẩm trong thư viện đều đã tách nền (PNG)", async () => {
+  const { SKU_IMAGES } = await import("../functions/api/thai-social/_skus.js");
+  for (const [code, url] of Object.entries(SKU_IMAGES)) {
+    assert.match(url, /\.png$/i,
+      `${code}: ảnh ghép cần nền trong suốt — JPG không có kênh alpha, sẽ thành ô vuông trắng`);
+  }
 });
 

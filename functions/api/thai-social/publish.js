@@ -50,7 +50,11 @@ export async function onRequestPost({ request, env }) {
   // Ảnh thư viện: đọc bytes qua ASSETS. KHÔNG đưa URL cho Facebook tự lấy — nó nằm sau
   // Cloudflare Access, Facebook sẽ nhận trang đăng nhập thay vì ảnh.
   let img = null;
-  if (row.image_url) {
+  if (row.image_base64) {
+    // Ảnh GHÉP hoàn chỉnh (nền + sản phẩm + chữ Thái) do trình duyệt dựng — ưu tiên tuyệt đối.
+    img = { bytes: base64ToBytes(row.image_base64), type: "image/png" };
+  } else if (row.image_url) {
+    // Chưa ghép được → đăng ảnh sản phẩm trơn còn hơn không có ảnh.
     img = await loadLibraryImage(env, request, row.image_url);
     if (!img) {
       const msg = `Không đọc được ảnh ${row.image_url} từ thư viện — chưa đăng để tránh bài lên mà mất ảnh.`;
@@ -58,8 +62,6 @@ export async function onRequestPost({ request, env }) {
         .bind(msg, nowSec(), id).run();
       return fail("image_unreadable", 502, { detail: msg });
     }
-  } else if (row.image_base64) {
-    img = { bytes: base64ToBytes(row.image_base64), type: "image/png" };
   }
 
   let result;

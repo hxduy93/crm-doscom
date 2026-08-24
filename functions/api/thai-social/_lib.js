@@ -110,14 +110,23 @@ export function publicPost(row, { withImage = false } = {}) {
     caption_th: row.caption_th || "",
     caption_vi: row.caption_vi || "",
     hashtags: tags,
-    image_url: row.image_url || null,
+    image_url: row.image_url || null,          // ảnh sản phẩm đã tách nền, để trình duyệt ghép
     has_image: !!(row.image_base64 || row.image_url),
+    has_poster: !!row.image_base64,             // đã có ảnh ghép hoàn chỉnh chưa
+    poster_title_th: row.poster_title_th || "",
+    poster_sub_th: row.poster_sub_th || "",
+    poster_title_vi: row.poster_title_vi || "",
+    poster_sub_vi: row.poster_sub_vi || "",
+    scene_prompt: row.scene_prompt || "",
     status: row.status,
     fb_post_id: row.fb_post_id || null,
     last_error: row.last_error || null,
     cost_usd: row.cost_usd || 0,
     updated_at: row.updated_at,
   };
-  if (withImage && row.image_base64) out.image_base64 = row.image_base64;
+  if (withImage) {
+    if (row.image_base64) out.image_base64 = row.image_base64;
+    if (row.bg_base64) out.bg_base64 = row.bg_base64;
+  }
   return out;
 }

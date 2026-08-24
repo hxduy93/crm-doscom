@@ -24,12 +24,17 @@ export const SKU_IMAGES_KV_KEY = "thai_sku_images:v1";
 
 /* Ảnh mặc định đi kèm repo. Thêm SKU mới: bỏ file vào sku-images/ rồi thêm một dòng ở đây.
    scripts/build-dist.sh copy cả thư mục sang dist/, thiếu bước đó là ảnh 404. */
+/* TẤT CẢ đều là PNG ĐÃ TÁCH NỀN (nền trong suốt) — bắt buộc, vì ảnh bài đăng là ảnh ghép:
+   nền do AI sinh + sản phẩm đè lên. Ảnh nền trắng sẽ thành một ô vuông trắng giữa ảnh.
+   Tách ngày 24/08/2026 bằng flood fill từ 4 góc (giữ được vùng trắng NẰM TRONG nhãn chai,
+   thứ mà ngưỡng màu toàn cục sẽ ăn mất). Bóng đổ gốc của ảnh chụp được giữ lại — xem
+   ghi chú "nền sáng" ở _poster.js. */
 export const SKU_IMAGES = {
-  "250": "/sku-images/250.jpg",
+  "250": "/sku-images/250.png",
   "310": "/sku-images/310.png",
   "911": "/sku-images/911.png",
   "922": "/sku-images/922.png",
-  "D1":  "/sku-images/D1.png",   // đã tách nền, bỏ chữ tiếng Việt (24/08/2026)
+  "D1":  "/sku-images/D1.png",
 };
 
 /* Ảnh có chữ IN SẴN không phải tiếng Thái/tiếng Anh. Vẫn dùng được, nhưng UI phải cảnh báo
