@@ -1,0 +1,55 @@
+## 1. Nền dữ liệu
+
+- [ ] 1.1 Viết `migrations/0020_thai_social.sql`: bảng `thai_pages` và `thai_post_queue` theo đúng cột ở design D1, kèm UNIQUE `(page_id, vn_date, source)` chống sinh trùng
+- [ ] 1.2 Áp migration bằng `wrangler d1 migrations apply crm-doscom-db` (KHÔNG dùng `d1 execute --file`)
+- [ ] 1.3 Thêm secret `THAI_SOCIAL_TOKEN` bằng `wrangler pages secret put`, ghi tên biến vào phần chú thích secret trong `wrangler.toml`
+
+## 2. Cấu hình fanpage
+
+- [ ] 2.1 Viết `functions/api/thai-social/pages.js`: `onRequestGet` trả danh sách page kèm `token_status`, tuyệt đối không trả `page_token`
+- [ ] 2.2 Thêm `onRequestPost` cho `pages.js`: thêm/sửa page, bắt buộc header `X-Thai-Token`, trả 401 khi sai
+- [ ] 2.3 Viết test `tests/thai-social-pages.test.mjs`: khoá lại việc `page_token` không rò ra response và endpoint ghi từ chối khi thiếu token
+
+## 3. Sinh nội dung và ảnh
+
+- [ ] 3.1 Viết `functions/api/thai-social/_prompt.js`: dựng system prompt tiếng Thái từ `noma-sku-specs.js` + `noma-brandcore.js`, nhận `sku_main` + `sku_addon`, yêu cầu trả JSON `{ caption_th, image_prompt, hashtags }`
+- [ ] 3.2 Viết `functions/api/thai-social/generate.js`: gọi AI qua `_utils/claude.js` (giữ kill switch `USE_CLAUDE`), trả 400 `unknown_sku` khi SKU không có trong hồ sơ
+- [ ] 3.3 Thêm cache KV theo khoá `(page_id, sku_main, sku_addon, vn_date)` + cờ `force=true` để ép làm mới
+- [ ] 3.4 Nối phần sinh ảnh: tái dùng đường Flux của `functions/api/geo/generate-image.js`, ghi cost vào `thai_post_queue`
+- [ ] 3.5 Xử lý nhánh thiếu binding `AI` / hết free tier: vẫn lưu caption, đánh dấu bài thiếu ảnh, trả lỗi nói rõ nguyên nhân
+- [ ] 3.6 Viết test `tests/thai-social-generate.test.mjs`: khoá `unknown_sku`, khoá cache không gọi AI lần hai, khoá việc thiếu ảnh không bị báo là thành công
+
+## 4. Hàng đợi và duyệt bài
+
+- [ ] 4.1 Viết `functions/api/thai-social/queue.js`: `onRequestGet` liệt kê bài theo `page_id` + khoảng ngày
+- [ ] 4.2 Viết `functions/api/thai-social/queue/[id].js`: `PATCH` sửa caption/đổi ảnh/đổi cặp SKU (chuyển status `edited`), `DELETE` chuyển status `discarded`
+- [ ] 4.3 Viết test `tests/thai-social-queue.test.mjs`: khoá chuyển trạng thái đúng vòng đời, không cho sửa bài đã `published`
+
+## 5. Đăng lên Facebook Page
+
+- [ ] 5.1 Viết `functions/api/thai-social/_graph.js`: hàm đăng Page qua `/{page_id}/photos` (có ảnh) và `/{page_id}/feed` (chỉ chữ), tham chiếu `post_to_page()` của repo `fb-group-seeding-agent`
+- [ ] 5.2 Viết `functions/api/thai-social/publish.js`: bắt buộc `X-Thai-Token`, chỉ nhận bài `pending_review`/`edited`, lưu `fb_post_id`, chuyển `published`, xoá `image_base64`
+- [ ] 5.3 Xử lý lỗi: 409 `already_published`; token thiếu/hết hạn thì giữ nguyên status và ghi `last_error`; lỗi Graph khác thì cũng giữ status, KHÔNG tự retry vòng lặp
+- [ ] 5.4 Viết test `tests/thai-social-publish.test.mjs`: khoá việc chỉ `published` khi có `fb_post_id` thật, khoá 409, khoá không có đường đăng nào ngoài endpoint này
+
+## 6. Lịch hằng ngày
+
+- [ ] 6.1 Viết `functions/api/thai-social/schedule/run.js`: duyệt page `active`, so giờ + thứ theo giờ VN, tạo bài rồi gọi phần sinh; trả `{ created: [...], skipped: [...] }`
+- [ ] 6.2 Khoá cứng: endpoint lịch KHÔNG được gọi tới `_graph.js`; thêm test khẳng định điều đó
+- [ ] 6.3 Thêm nhịp gọi trong `cron-worker/src`, kèm header `CF-Access-Client-Id` / `CF-Access-Client-Secret` + `X-Thai-Token`
+- [ ] 6.4 Gọi thử thật một lượt sau khi deploy để xác nhận không bị Cloudflare Access chặn
+
+## 7. Giao diện
+
+- [ ] 7.1 Viết `thai-social.html`: ô chọn fanpage, ô chọn sản phẩm chính, ô chọn sản phẩm bán kèm, nút "Sinh bài", nút "Ép làm mới"
+- [ ] 7.2 Thêm màn duyệt: xem ảnh, sửa caption, nút "Đăng", hiện `token_status` của page và `last_error` của bài
+- [ ] 7.3 Thêm màn cài lịch: giờ đăng trong ngày, các thứ chạy, cặp SKU mặc định cho từng page
+- [ ] 7.4 Thêm nút menu + `lazyFrame('thai-social',...)` vào `index.html`, thêm tiêu đề vào bảng `TITLES`
+- [ ] 7.5 Thêm `thai-social.html` vào `scripts/build-dist.sh` (dùng chung cho `deploy.yml` và `refresh-data.yml`)
+
+## 8. Chốt
+
+- [ ] 8.1 Chạy `node --test tests/*.mjs` — phải xanh toàn bộ trước khi giao
+- [ ] 8.2 Nhập 2 fanpage (chưa cần token), chạy thử sinh bài cho từng page, đọc lại caption tiếng Thái
+- [ ] 8.3 Khi có Page Access Token: thử đăng 1 bài thật, xác nhận `fb_post_id` lưu đúng và bài xuất hiện trên fanpage
+- [ ] 8.4 Chạy `/opsx:sync` để đưa spec `thai-social-publisher` vào `openspec/specs/`, rồi `/opsx:archive`
