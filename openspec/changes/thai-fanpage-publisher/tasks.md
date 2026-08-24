@@ -54,7 +54,11 @@
 ## 8. Chốt
 
 - [x] 8.1 Chạy `node --test tests/*.mjs` — phải xanh toàn bộ trước khi giao
-- [~] 8.2 (chờ nạp ảnh sản phẩm) Nhập 2 fanpage (chưa cần token), chạy thử sinh bài cho từng page, đọc lại caption tiếng Thái
+- [x] 8.2 **ĐÃ NẠP 5 ẢNH 24/08/2026.** 911, 922, 310, 250 (dung dịch NOMA) + D1 (máy dò).
+      Ảnh D1 có chữ TIẾNG VIỆT in sẵn → có cảnh báo trên UI, nên thay bản không chữ.
+      Chưa nạp DR4 Pro: không có hồ sơ trong noma-sku-specs.js lẫn product-catalog.js.
+- [x] 8.5 **Kiểm ảnh lên Facebook 24/08/2026:** gửi 911.png dạng multipart, bài ẩn →
+      Facebook nhận, sinh 6 bản resize (561×560), xoá xong, feed sạch.
 - [x] 8.3 **ĐÃ KIỂM 24/08/2026 — THÔNG.** System user token (app "Đăng bài tự động", ID
       28516518767940939) có `pages_manage_posts`, không hết hạn. Page token của CẢ HAI page
       cũng không hết hạn. Kiểm bằng bài ẨN (`published=false`) trên từng page: Facebook trả
