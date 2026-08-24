@@ -283,24 +283,41 @@ const loadImg = (src) => new Promise((res, rej) => {
   i.src = src;
 });
 
-/* Tiếng Thái KHÔNG có dấu cách giữa từ — ngắt dòng theo dấu cách sẽ ra một dòng dài tràn
-   khung. Nên xuống dòng theo TỪNG KÝ TỰ, đo bề rộng thật bằng measureText. */
-function wrapThai(ctx, text, maxW, maxLines) {
+/* Ngắt dòng tiếng Thái.
+
+   Tiếng Thái không có dấu cách giữa từ, nên ngắt theo dấu cách là ra một dòng dài tràn
+   khung. Nhưng ngắt theo TỪNG KÝ TỰ cũng sai: đo thật 24/08/2026, "ฝนตก" (mưa rơi) bị cắt
+   thành "ฝ" / "นตก" — người Thái đọc thấy ngay là máy làm.
+
+   Intl.Segmenter là bộ tách từ ICU có sẵn trong trình duyệt, biết ranh giới từ tiếng Thái.
+   Không có nó thì mới rơi về ngắt theo ký tự — xấu nhưng còn hơn tràn khung. */
+const SEG = (() => {
+  try { return new Intl.Segmenter("th", { granularity: "word" }); } catch { return null; }
+})();
+
+function thaiWords(text) {
   const t = String(text || "").trim();
   if (!t) return [];
+  if (!SEG) return Array.from(t);            // đường lui: từng ký tự
+  return [...SEG.segment(t)].map((x) => x.segment);
+}
+
+function wrapThai(ctx, text, maxW, maxLines) {
+  const words = thaiWords(text);
+  if (!words.length) return [];
   const lines = [];
   let cur = "";
-  for (const ch of t) {
-    const test = cur + ch;
-    if (ctx.measureText(test).width > maxW && cur) {
-      lines.push(cur);
-      cur = ch;
+  for (const w of words) {
+    const test = cur + w;
+    if (ctx.measureText(test).width > maxW && cur.trim()) {
+      lines.push(cur.trim());
       if (lines.length === maxLines) return lines;
+      cur = w.trim() ? w : "";
     } else {
       cur = test;
     }
   }
-  if (cur && lines.length < maxLines) lines.push(cur);
+  if (cur.trim() && lines.length < maxLines) lines.push(cur.trim());
   return lines;
 }
 

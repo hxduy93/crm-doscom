@@ -401,13 +401,23 @@ test("lưu ảnh ghép KHÔNG tự đánh dấu bài là đã duyệt", () => {
     "trình duyệt tự ghép ảnh khi mở thẻ — nếu đổi status thì bài chưa ai đọc đã thành đã duyệt");
 });
 
-test("trang có bộ ghép ảnh 3 lớp và ngắt dòng tiếng Thái theo ký tự", () => {
+test("trang có bộ ghép ảnh 3 lớp và tách từ tiếng Thái bằng ICU", () => {
   const html = read("../thai-social.html");
   assert.match(html, /function composePoster/, "thiếu bộ ghép ảnh");
-  assert.match(html, /function wrapThai/,
-    "tiếng Thái không có dấu cách giữa từ — ngắt theo dấu cách sẽ tràn khung");
+  assert.match(html, /Intl\.Segmenter\("th"/,
+    "phải tách từ bằng ICU: ngắt theo dấu cách thì tràn khung, ngắt theo ký tự thì cắt giữa từ");
+  assert.match(html, /function thaiWords/);
   assert.match(html, /Noto Sans Thai/, "phải nạp font Thái cho canvas");
   assert.doesNotMatch(html, /บาท|CTA button/, "không in giá / nút CTA lên ảnh");
+});
+
+test("ICU tách đúng từ tiếng Thái — đo lại chính ca đã sai", () => {
+  // 24/08/2026: ngắt theo ký tự cắt "ฝนตก" (mưa rơi) thành "ฝ" + "นตก". Test giữ ca đó.
+  const seg = new Intl.Segmenter("th", { granularity: "word" });
+  const words = [...seg.segment("มองไม่ชัดตอนฝนตก")].map((x) => x.segment);
+  assert.ok(words.includes("ฝน"), "phải tách được từ ฝน");
+  assert.ok(words.includes("ตก"), "phải tách được từ ตก");
+  assert.ok(!words.some((w) => w === "ฝ"), "không được để lẻ một ký tự giữa từ");
 });
 
 test("migration ảnh ghép có đủ cột nền và chữ hai thứ tiếng", () => {
