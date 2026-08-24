@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-24 09:13",
+  "generated_at": "2026-08-24 10:17",
   "source_data_date_range": {
     "start_7d": "2026-08-17",
     "end": "2026-08-23",
@@ -49,19 +49,19 @@
   },
   "roas_proxy": {
     "google_ads_spend_30d": 62911153.0,
-    "website_revenue_30d_vnd": 229420800.0,
-    "roas_overall": 3.65,
+    "website_revenue_30d_vnd": 240410800.0,
+    "roas_overall": 3.82,
     "target_roas": 3.0,
     "status": "healthy",
     "note": "ROAS = Pancake Website revenue (30d) / Google Ads spend (30d). Proxy — mua qua Zalo/Hotline sau khi thay Google Ads khong count vao day."
   },
   "website_revenue_pancake": {
-    "total_30d": 229420800.0,
-    "orders_30d": 105,
+    "total_30d": 240410800.0,
+    "orders_30d": 110,
     "by_status": {
       "delivered": {
-        "revenue": 178718800.0,
-        "orders": 75
+        "revenue": 179651800.0,
+        "orders": 78
       },
       "returning": {
         "revenue": 12837000.0,
@@ -76,22 +76,22 @@
         "orders": 3
       },
       "other": {
-        "revenue": 22929000.0,
-        "orders": 13
+        "revenue": 32986000.0,
+        "orders": 15
       }
     },
     "by_source": {
       "WEBSITE": {
-        "revenue": 63645000.0,
-        "orders": 40
+        "revenue": 67145000.0,
+        "orders": 41
       },
       "ZALO_OA": {
-        "revenue": 38040800.0,
-        "orders": 24
+        "revenue": 38930800.0,
+        "orders": 25
       },
       "HOTLINE": {
-        "revenue": 127735000.0,
-        "orders": 41
+        "revenue": 134335000.0,
+        "orders": 44
       }
     },
     "note": "Gộp 3 nguồn POS: WEBSITE + ZALO_OA + HOTLINE (filter 'Website' trên POS). Loại DUY + PHUONG_NAM (team FB Ads). Match: delivered + other. Excluded returning/returned/canceled/refunded."
