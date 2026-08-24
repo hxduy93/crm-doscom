@@ -71,3 +71,38 @@ print(json.dumps([total_src, total_ord]))`);
   assert.equal(bySource, byOrder, "doanh thu theo nguồn lệch doanh thu theo đơn");
   assert.equal(bySource, 99000 + 99000 + 1300000 + 50000);
 });
+
+/* ── "Cứu đơn hoàn" bị loại thẳng ────────────────────────────────────────────
+   Chủ dự án chốt 24/08/2026: đơn cứu hoàn KHÔNG phải doanh số của team.
+   Trước đó nó nằm ngoài dashboard chỉ vì tên nguồn tình cờ không khớp rule nào —
+   ai đổi tên thành "DUY - Cứu đơn hoàn" là 527 đơn lập tức chảy vào doanh số Duy.
+   Test khoá lại: loại theo TÊN, không phụ thuộc dấu/hoa thường/tiền tố nhân sự. */
+function groupOf(names) {
+  const code = [
+    "import importlib.util, json, sys",
+    `spec = importlib.util.spec_from_file_location("f", ${JSON.stringify(SCRIPT)})`,
+    "m = importlib.util.module_from_spec(spec)",
+    "spec.loader.exec_module(m)",
+    "names = json.loads(sys.stdin.read())",
+    'print(json.dumps([m.group_of_order({"order_sources_name": n}) for n in names]))',
+  ].join("\n");
+  const out = execFileSync(PY, ["-c", code], {
+    input: JSON.stringify(names),
+    env: { ...process.env, PANCAKE_API_KEY: "dummy", PANCAKE_SHOP_ID: "0", PYTHONIOENCODING: "utf-8" },
+    encoding: "utf-8",
+  });
+  return JSON.parse(out.trim().split("\n").pop());
+}
+
+test("đơn cứu hoàn bị loại, kể cả khi mang tiền tố nhân sự", { skip }, () => {
+  const got = groupOf([
+    "Cứu đơn hoàn",
+    "CUU DON HOAN",
+    "DUY - Cứu đơn hoàn tháng 8",
+    "PHƯƠNG NAM - CỨU ĐƠN HOÀN",
+    "DUY - NOMA 911",
+    "PHƯƠNG NAM - DR1",
+  ]);
+  assert.deepEqual(got.slice(0, 4), [null, null, null, null], "đơn cứu hoàn không được vào nhóm nào");
+  assert.deepEqual(got.slice(4), ["DUY", "PHUONG_NAM"], "nguồn bán thật vẫn phải vào đúng nhóm");
+});

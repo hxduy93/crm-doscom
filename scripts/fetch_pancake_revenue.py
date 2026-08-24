@@ -33,6 +33,7 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 import urllib.request
 import urllib.error
+import unicodedata
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 
@@ -216,6 +217,32 @@ LOOKBACK_DAYS = 90
 # Đơn không khớp rule nào (Shopee, Tiktok, Woocommerce, RESELL, bán tại quầy...)
 # nằm ngoài phạm vi dashboard — bỏ qua, y như trước. Log cuối bước fetch liệt kê
 # các nguồn bị bỏ kèm số đơn, để soát khi nghi thiếu doanh số.
+
+# Nguồn bị LOẠI THẲNG, xét TRƯỚC mọi rule nhóm bên dưới.
+#
+# "Cứu đơn hoàn" = đơn hoàn được gọi lại để bán lại. Chủ dự án chốt 24/08/2026:
+# **không phải doanh số của team**, không tính cho Duy/Phương Nam cũng không tính cho
+# Website. Trước đây nó nằm ngoài dashboard chỉ vì tên nguồn tình cờ không khớp rule
+# nào — đổi tên thành "DUY - Cứu đơn hoàn" là lập tức bị cộng nhầm. Chặn ở đây thì
+# quyết định đó không phụ thuộc vào cách ai đó đặt tên nguồn nữa.
+#
+# So khớp: bỏ dấu + thường hoá + khớp CHUỖI CON, nên "Cứu đơn hoàn", "CUU DON HOAN",
+# "DUY - Cứu đơn hoàn tháng 8" đều bị loại như nhau.
+EXCLUDE_SOURCE_PATTERNS = ["cuu don hoan"]
+
+
+def _norm_source(name: str) -> str:
+    """Bỏ dấu tiếng Việt + thường hoá + gom khoảng trắng, để so khớp không phụ thuộc dấu."""
+    s = unicodedata.normalize("NFD", str(name or ""))
+    s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
+    return " ".join(s.replace("đ", "d").replace("Đ", "D").lower().split())
+
+
+def is_excluded_source(name: str) -> bool:
+    """True nếu tên nguồn thuộc danh sách loại thẳng (xem EXCLUDE_SOURCE_PATTERNS)."""
+    n = _norm_source(name)
+    return any(p in n for p in EXCLUDE_SOURCE_PATTERNS)
+
 
 SOURCE_GROUPS = [
     {
@@ -485,6 +512,8 @@ def group_of_order(order):
     Ưu tiên theo thứ tự SOURCE_GROUPS: tên nguồn khớp prefix trước, rồi ID nguồn.
     """
     name = (order.get("order_sources_name") or "").strip()
+    if is_excluded_source(name):
+        return None
     sid = str(order.get("order_sources") if order.get("order_sources") is not None else "").strip()
     for group in SOURCE_GROUPS:
         for p in group.get("name_prefix", []):
