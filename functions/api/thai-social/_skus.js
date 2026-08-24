@@ -29,16 +29,16 @@ export const SKU_IMAGES = {
   "310": "/sku-images/310.png",
   "911": "/sku-images/911.png",
   "922": "/sku-images/922.png",
-  "D1":  "/sku-images/D1.jpg",
+  "D1":  "/sku-images/D1.png",   // đã tách nền, bỏ chữ tiếng Việt (24/08/2026)
 };
 
 /* Ảnh có chữ IN SẴN không phải tiếng Thái/tiếng Anh. Vẫn dùng được, nhưng UI phải cảnh báo
    để người duyệt biết mà cân nhắc — đăng ảnh tiếng Việt lên fanpage Thái thì khách không
-   đọc được và trông như lấy nhầm thị trường. */
-export const IMAGE_WARNINGS = {
-  "D1": "Ảnh có chữ TIẾNG VIỆT in sẵn (\"Máy dò mini D1 Doscom\", \"Phát hiện thiết bị ẩn\"…). "
-      + "Khách Thái không đọc được. Nên thay bằng bản không chữ hoặc bản tiếng Thái.",
-};
+   đọc được và trông như lấy nhầm thị trường.
+
+   Hiện RỖNG: ảnh D1 bản đầu có chữ tiếng Việt in sẵn, đã tách nền lấy riêng phần máy
+   (24/08/2026) nên không còn chữ. Giữ cơ chế lại cho ảnh nạp sau. */
+export const IMAGE_WARNINGS = {};
 
 /* Giá bán tại Thái Lan (baht). Chỉ điền mã đã thực sự bán ở Thái — thiếu giá thì prompt
    KHÔNG được bịa, phải bỏ hẳn phần giá khỏi bài. */

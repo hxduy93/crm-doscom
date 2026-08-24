@@ -241,12 +241,23 @@ test("mọi ảnh khai trong SKU_IMAGES đều có file thật trong sku-images/
   }
 });
 
-test("ảnh có chữ sai thị trường phải kèm cảnh báo, không im lặng dùng", async () => {
+test("cơ chế cảnh báo ảnh: mọi mã cảnh báo phải là mã có ảnh thật", async () => {
   const { IMAGE_WARNINGS, SKU_IMAGES } = await import("../functions/api/thai-social/_skus.js");
-  // D1 dùng ảnh có chữ tiếng Việt in sẵn — khách Thái không đọc được.
-  assert.ok(SKU_IMAGES.D1, "D1 phải có ảnh");
-  assert.match(IMAGE_WARNINGS.D1 || "", /TIẾNG VIỆT/i,
-    "ảnh D1 có chữ tiếng Việt thì phải cảnh báo cho người duyệt");
+  // Ảnh D1 bản đầu có chữ tiếng Việt in sẵn; đã tách nền lấy riêng phần máy nên hết cảnh báo.
+  // Giữ test cho cơ chế: cảnh báo treo vào mã không có ảnh thì không bao giờ hiện ra được.
+  for (const code of Object.keys(IMAGE_WARNINGS)) {
+    assert.ok(SKU_IMAGES[code], `${code}: có cảnh báo nhưng không có ảnh — cảnh báo sẽ không bao giờ hiện`);
+    assert.ok(String(IMAGE_WARNINGS[code]).length > 20, `${code}: cảnh báo phải nói rõ vấn đề`);
+  }
+});
+
+test("ảnh D1 đã tách nền, không còn dùng bản có chữ tiếng Việt", async () => {
+  const { SKU_IMAGES, IMAGE_WARNINGS } = await import("../functions/api/thai-social/_skus.js");
+  const { existsSync } = await import("node:fs");
+  assert.equal(SKU_IMAGES.D1, "/sku-images/D1.png");
+  assert.ok(!existsSync(new URL("../sku-images/D1.jpg", import.meta.url)),
+    "bản .jpg cũ (có chữ tiếng Việt) phải bị gỡ, tránh dùng nhầm");
+  assert.equal(IMAGE_WARNINGS.D1, undefined, "hết chữ tiếng Việt thì không còn cảnh báo");
 });
 
 test("danh mục gộp cả thiết bị Doscom, không chỉ dung dịch NOMA", async () => {
