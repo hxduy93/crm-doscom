@@ -9,7 +9,10 @@ import { listSkus, SKU_IMAGES_KV_KEY } from "./_skus.js";
 export async function onRequestGet({ env }) {
   const data = await listSkus(env);
   const thieu_anh = data.items.filter((x) => !x.image_url).map((x) => x.code);
-  return ok({ ...data, thieu_anh });
+  const canh_bao_anh = data.items
+    .filter((x) => x.image_url && x.image_warning)
+    .map((x) => ({ code: x.code, warning: x.image_warning }));
+  return ok({ ...data, thieu_anh, canh_bao_anh });
 }
 
 export async function onRequestPost({ request, env }) {

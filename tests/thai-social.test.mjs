@@ -223,3 +223,52 @@ test("migration có khoá chống sinh trùng bài theo lịch", () => {
   assert.match(sql, /UNIQUE INDEX[\s\S]*?page_id, vn_date[\s\S]*?source = 'schedule'/,
     "thiếu UNIQUE này thì cron chạy lại là sinh trùng và đốt credit AI");
 });
+
+/* ── 9. Thư viện ảnh + danh mục sản phẩm ────────────────────────────────────
+   Ảnh đi thẳng lên fanpage thật nên phải khoá: đúng file, đúng mã, và ảnh có
+   chữ sai thị trường thì phải cảnh báo chứ không im lặng dùng. */
+
+test("mọi ảnh khai trong SKU_IMAGES đều có file thật trong sku-images/", async () => {
+  const { SKU_IMAGES } = await import("../functions/api/thai-social/_skus.js");
+  const { existsSync } = await import("node:fs");
+  const codes = Object.keys(SKU_IMAGES);
+  assert.ok(codes.length > 0, "thư viện ảnh không được rỗng sau khi đã nạp");
+  for (const code of codes) {
+    const url = SKU_IMAGES[code];
+    assert.match(url, /^\/sku-images\//, `${code}: ảnh phải là đường dẫn cùng origin`);
+    const f = new URL(".." + url, import.meta.url);
+    assert.ok(existsSync(f), `${code}: khai ${url} nhưng không có file`);
+  }
+});
+
+test("ảnh có chữ sai thị trường phải kèm cảnh báo, không im lặng dùng", async () => {
+  const { IMAGE_WARNINGS, SKU_IMAGES } = await import("../functions/api/thai-social/_skus.js");
+  // D1 dùng ảnh có chữ tiếng Việt in sẵn — khách Thái không đọc được.
+  assert.ok(SKU_IMAGES.D1, "D1 phải có ảnh");
+  assert.match(IMAGE_WARNINGS.D1 || "", /TIẾNG VIỆT/i,
+    "ảnh D1 có chữ tiếng Việt thì phải cảnh báo cho người duyệt");
+});
+
+test("danh mục gộp cả thiết bị Doscom, không chỉ dung dịch NOMA", async () => {
+  const { listSkus } = await import("../functions/api/thai-social/_skus.js");
+  const d = await listSkus({});
+  const codes = d.items.map((x) => x.code);
+  // D1 là sản phẩm chủ lực của thị trường Thái (landing noma955.click) nhưng KHÔNG nằm
+  // trong noma-sku-specs.js — thiếu bước gộp là ô chọn không có gì để chọn.
+  assert.ok(codes.includes("D1"), "thiếu D1 trong danh mục");
+  assert.ok(codes.includes("911"), "thiếu dung dịch NOMA trong danh mục");
+  assert.ok(d.items.every((x) => x.nhom), "mỗi mục phải có nhóm để UI xếp optgroup");
+});
+
+test("thiết bị lấy được khối thông số, kèm luật Facebook", async () => {
+  const { skuBlock } = await import("../functions/api/thai-social/_skus.js");
+  const d1 = await skuBlock({}, "D1");
+  assert.equal(d1.known, true);
+  assert.match(d1.text, /1500 lần\/phút/, "phải lấy đúng thông số từ trang bán");
+  assert.match(d1.text, /LUẬT FACEBOOK/, "D1 là máy dò — phải mang theo ghi chú chính sách Meta");
+  assert.match(d1.text, /CẤM dùng ý\/từ/, "phải mang theo danh sách từ cấm");
+
+  const la = await skuBlock({}, "KHONG-CO-THAT");
+  assert.equal(la.known, false, "mã lạ phải trả known=false để endpoint chặn trước khi gọi AI");
+});
+

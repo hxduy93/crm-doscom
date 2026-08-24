@@ -249,7 +249,7 @@ async function api(path, opts = {}) {
   return body.data;
 }
 
-let PAGES = [], SKUS = [];
+let PAGES = [], SKUS = [], SKU_BY = {};
 
 /* ── Tabs ─────────────────────────────────────────────────────── */
 const PANES = { tao: "tab-tao", cho: "tab-cho", lich: "tab-lich", page: "tab-page" };
@@ -274,11 +274,17 @@ async function boot() {
   try {
     const [pages, skus] = await Promise.all([api("/api/thai-social/pages"), api("/api/thai-social/skus")]);
     PAGES = pages; SKUS = skus.items;
+    SKU_BY = {}; SKUS.forEach((x) => { SKU_BY[x.code] = x; });
 
     $("#selPage").innerHTML = PAGES.map((p) => `<option value="${esc(p.page_id)}">${esc(p.name)}</option>`).join("")
       || `<option value="">— chưa có fanpage nào —</option>`;
 
-    const opts = SKUS.map((s) => `<option value="${esc(s.code)}">${esc(s.name)}${s.image_url ? "" : "  ⚠ chưa có ảnh"}</option>`).join("");
+    const opt1 = (s) => `<option value="${esc(s.code)}">${esc(s.name)}${s.image_url ? "" : "  ⚠ chưa có ảnh"}</option>`;
+    const grp = (ten) => {
+      const items = SKUS.filter((s) => s.nhom === ten);
+      return items.length ? `<optgroup label="${esc(ten)}">${items.map(opt1).join("")}</optgroup>` : "";
+    };
+    const opts = grp("Thiết bị Doscom") + grp("Dung dịch NOMA");
     $("#selMain").innerHTML = opts;
     $("#selAddon").innerHTML = `<option value="">— Không có —</option>` + opts;
 
@@ -365,6 +371,8 @@ function postCard(p) {
       ${p.caption_vi ? `<p class="vi"><b>Dịch ngược để duyệt</b>${esc(p.caption_vi)}</p>` : ""}
       ${p.hashtags && p.hashtags.length ? `<div class="tagrow">${p.hashtags.map((t) => `<span>#${esc(t)}</span>`).join("")}</div>` : ""}
       ${p.last_error ? `<div class="note note-warn">${esc(p.last_error)}</div>` : ""}
+      ${(p.image_url && (SKU_BY[p.sku_main] || {}).image_warning)
+        ? `<div class="note note-warn">🖼 ${esc(SKU_BY[p.sku_main].image_warning)}</div>` : ""}
       <div class="acts">
         ${done
           ? `<span class="hint tnum">fb_post_id · ${esc(p.fb_post_id || "")}</span>`
