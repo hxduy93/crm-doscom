@@ -436,3 +436,34 @@ test("mọi ảnh sản phẩm trong thư viện đều đã tách nền (PNG)",
   }
 });
 
+/* ── 12. Không ghép ảnh cho bài đã đăng ─────────────────────────────────────
+   Sự cố 24/08/2026 trên màn hình: "Không ghép được ảnh bài: already_published".
+   publish.js xoá image_base64 sau khi đăng (cho D1 khỏi phình) nhưng image_url vẫn còn,
+   nên thẻ bài đã đăng cũng ra canvas → bộ ghép ảnh PATCH ngược lên và ăn 409.
+   Lỗi do chính giao diện tự gây ra, Facebook không liên quan. */
+
+test("bài đã đăng KHÔNG được dựng canvas ghép ảnh", () => {
+  const html = read("../thai-social.html");
+  assert.match(html, /const editable = p\.status === "pending_review" \|\| p\.status === "edited"/,
+    "postCard phải biết bài nào còn sửa được");
+  assert.match(html, /editable && p\.image_url/,
+    "canvas chỉ dựng cho bài còn sửa được");
+});
+
+test("bộ ghép ảnh bỏ qua bài đã đăng / đã bỏ — chốt thứ hai", () => {
+  const html = read("../thai-social.html");
+  const i = html.indexOf("async function renderPosters");
+  const body = html.slice(i, i + 1400);
+  assert.match(body, /post\.status !== "pending_review" && post\.status !== "edited"/,
+    "renderPosters phải tự chặn, không dựa hết vào postCard");
+  const iSkip = body.indexOf('post.status !== "pending_review"');
+  const iPatch = body.indexOf("method: \"PATCH\"");
+  assert.ok(iSkip > -1 && iPatch > iSkip, "chặn phải nằm TRƯỚC lúc gọi PATCH");
+});
+
+test("PATCH vẫn từ chối sửa bài đã đăng — hàng rào cuối ở server", () => {
+  const src = read("../functions/api/thai-social/queue/[id].js");
+  assert.match(src, /if \(row\.status === STATUS\.PUBLISHED\) return fail\("already_published", 409\)/,
+    "server không được nới lỏng chỉ vì giao diện đã chặn");
+});
+

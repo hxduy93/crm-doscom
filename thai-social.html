@@ -421,6 +421,8 @@ async function renderPosters(root) {
     const id = Number(art.dataset.id);
     let post = POSTS[id];
     if (!post) continue;
+    // Chốt thứ hai: bài đã đăng / đã bỏ thì không ghép và KHÔNG ghi ngược lên server.
+    if (post.status !== "pending_review" && post.status !== "edited") continue;
     // Danh sách hàng chờ không trả kèm nền (nặng) — bài do lịch sinh cần lấy chi tiết trước.
     if (!post.bg_base64 && !post.image_base64) {
       try {
@@ -435,7 +437,7 @@ async function renderPosters(root) {
         method: "PATCH", body: JSON.stringify({ image_base64: b64 }),
       });
     } catch (e) {
-      banner("Không ghép được ảnh bài: " + e.message, "warn");
+      banner(`Không ghép được ảnh cho bài #${id}: ${e.message}`, "warn");
     }
   }
 }
@@ -540,13 +542,20 @@ const STATE_PILL = {
 
 function postCard(p) {
   const page = PAGES.find((x) => x.page_id === p.page_id) || { name: p.page_id, token_status: "missing" };
-  // Ảnh ghép được dựng bằng canvas ngay khi thẻ hiện ra (xem composePoster).
-  // Có sẵn ảnh ghép rồi thì hiện luôn, khỏi vẽ lại.
+  /* Ảnh ghép được dựng bằng canvas ngay khi thẻ hiện ra (xem composePoster).
+
+     CHỈ dựng cho bài còn sửa được. Bài đã đăng bị publish.js xoá image_base64 (cho D1 khỏi
+     phình) nhưng vẫn còn image_url — trước đây thẻ đó cũng ra canvas, bộ ghép ảnh liền
+     PATCH ngược lên và ăn 409 "already_published". Đó là lỗi báo trên màn hình 24/08/2026:
+     lỗi do chính giao diện tự gây ra, Facebook không liên quan. */
+  const editable = p.status === "pending_review" || p.status === "edited";
   const img = p.image_base64
     ? `<img src="data:image/png;base64,${esc(p.image_base64)}" alt="Ảnh bài ${esc(p.sku_main)}"/>`
-    : p.image_url
+    : (editable && p.image_url)
       ? `<canvas data-poster width="1080" height="1080" aria-label="Ảnh bài ${esc(p.sku_main)}"></canvas>`
-      : `<div class="noimg">Chưa có ảnh<br/>SKU ${esc(p.sku_main)}</div>`;
+      : p.image_url
+        ? `<img src="${esc(p.image_url)}" alt="Sản phẩm ${esc(p.sku_main)}"/>`
+        : `<div class="noimg">Chưa có ảnh<br/>SKU ${esc(p.sku_main)}</div>`;
 
   const done = p.status === "published";
   const canPublish = !done && p.status !== "discarded" && page.token_status === "ok";
