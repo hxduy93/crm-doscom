@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Đăng fanpage Thái — CRM Doscom</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+  /* Token bám theo index.html của CRM. Trang này nhúng iframe nên tự lo theme,
+     dùng prefers-color-scheme giống product-publisher.html. */
+  :root{
+    --primary:#3257E6;--primary-700:#2440C4;--accent:#F59E0B;--violet:#8B5CF6;
+    --bg:#F5F7FB;--surface:#FFFFFF;--surface-2:#FBFCFE;--muted:#EEF2FA;
+    --text:#111A2E;--text-2:#5A6478;--text-3:#8A93A6;--border:#E6ECF6;
+    --success:#16A34A;--success-bg:#E8F6EC;--success-bd:#B9E3C6;
+    --warn:#E08600;--warn-bg:#FFF5E3;--warn-bd:#F3D9A6;
+    --danger:#E5484D;--danger-bg:#FDECEC;--danger-bd:#F5C2C4;
+    --info-bg:#EEF4FF;--info-bd:#C7D8FF;--info-tx:#1F3D8F;
+    --radius:16px;--t:.2s cubic-bezier(.4,0,.2,1);
+    --shadow-sm:0 1px 2px rgba(16,26,46,.06);
+    --font:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;
+    --font-th:'Noto Sans Thai','Nunito',system-ui,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --primary:#5B8DEF;--primary-700:#3257E6;
+    --bg:#0A1020;--surface:#121A2E;--surface-2:#0F1626;--muted:#1A2440;
+    --text:#EAF0FB;--text-2:#94A2BF;--text-3:#6F7C99;--border:#243049;
+    --success:#4ADE80;--success-bg:#12281B;--success-bd:#1F4A2E;
+    --warn:#FBBF24;--warn-bg:#2C2008;--warn-bd:#5A4310;
+    --danger:#F87171;--danger-bg:#2E1416;--danger-bd:#5C2529;
+    --info-bg:#141F3A;--info-bd:#27385F;--info-tx:#B9CDF7;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+  }}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .tnum{font-variant-numeric:tabular-nums lining-nums}
+  .wrap{padding:20px;max-width:1200px;margin:0 auto}
+  .hide{display:none!important}
+
+  .phead{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+  .phead h1{margin:0;font-size:21px;font-weight:900;letter-spacing:-.02em}
+  .phead p{margin:4px 0 0;color:var(--text-2);font-size:13px;max-width:60ch}
+
+  .tabs{display:flex;gap:4px;background:var(--muted);padding:4px;border-radius:12px;margin:16px 0;width:fit-content;max-width:100%;overflow-x:auto}
+  .tabs button{border:0;background:none;font-family:var(--font);font-weight:800;font-size:13px;color:var(--text-2);padding:8px 15px;border-radius:9px;cursor:pointer;white-space:nowrap;transition:var(--t)}
+  .tabs button[aria-selected="true"]{background:var(--surface);color:var(--primary);box-shadow:var(--shadow-sm)}
+  button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
+  .cols{display:grid;grid-template-columns:330px minmax(0,1fr);gap:16px;align-items:start}
+  @media(max-width:900px){.cols{grid-template-columns:1fr}}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm)}
+  .card-b{padding:15px 16px;display:flex;flex-direction:column;gap:12px}
+  .card-t{font-size:14px;font-weight:900;margin:0}
+  .card-d{font-size:12.4px;color:var(--text-2);margin:3px 0 0}
+
+  label.f{display:flex;flex-direction:column;gap:5px;font-size:11.6px;font-weight:800;color:var(--text-2);letter-spacing:.03em;text-transform:uppercase}
+  select,input,textarea{font-family:var(--font);font-size:13.6px;font-weight:600;color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:9px 11px;width:100%}
+  textarea{resize:vertical;line-height:1.7;font-family:var(--font-th);font-size:14.2px}
+  .hint{font-size:11.6px;color:var(--text-3);font-weight:600;text-transform:none;letter-spacing:0}
+
+  .btn{font-family:var(--font);font-weight:800;font-size:13.2px;border-radius:11px;cursor:pointer;padding:10px 15px;border:1px solid transparent;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:var(--t)}
+  .btn:active{transform:translateY(1px)}
+  .btn-p{background:var(--primary);color:#fff}
+  .btn-g{background:var(--surface);color:var(--text);border-color:var(--border)}
+  .btn-g:hover{background:var(--muted)}
+  .btn-ok{background:var(--success);color:#fff}
+  .btn-dg{background:var(--surface);color:var(--danger);border-color:var(--border)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed;transform:none}
+  .btn-sm{padding:7px 12px;font-size:12.4px;border-radius:9px}
+
+  .queue{display:flex;flex-direction:column;gap:13px}
+  .post{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden;display:grid;grid-template-columns:180px minmax(0,1fr);border-left:4px solid var(--stripe,var(--border))}
+  @media(max-width:680px){.post{grid-template-columns:1fr}}
+  .post[data-state="pending_review"]{--stripe:var(--warn)}
+  .post[data-state="edited"]{--stripe:var(--primary)}
+  .post[data-state="published"]{--stripe:var(--success)}
+  .post[data-state="discarded"]{--stripe:var(--text-3);opacity:.6}
+
+  .shot{position:relative;background:var(--surface-2);border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center;min-height:170px;padding:10px}
+  @media(max-width:680px){.shot{border-right:0;border-bottom:1px solid var(--border)}}
+  .shot img{max-width:100%;max-height:210px;border-radius:9px;display:block}
+  .shot .noimg{font-size:12px;font-weight:700;color:var(--text-3);text-align:center;padding:14px}
+
+  .post-b{padding:13px 15px;display:flex;flex-direction:column;gap:10px;min-width:0}
+  .post-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+  .page-name{font-size:13.2px;font-weight:900}
+  .page-name em{font-style:normal;color:var(--text-3);font-weight:700}
+
+  .pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3.5px 10px;font-size:11.2px;font-weight:800;border:1px solid}
+  .pill-warn{background:var(--warn-bg);border-color:var(--warn-bd);color:var(--warn)}
+  .pill-info{background:var(--info-bg);border-color:var(--info-bd);color:var(--info-tx)}
+  .pill-ok{background:var(--success-bg);border-color:var(--success-bd);color:var(--success)}
+  .pill-bad{background:var(--danger-bg);border-color:var(--danger-bd);color:var(--danger)}
+
+  .th{font-family:var(--font-th);font-size:14.2px;line-height:1.85;white-space:pre-wrap;margin:0}
+  .vi{border-left:2px solid var(--border);padding-left:11px;margin:0;font-size:12.5px;line-height:1.65;color:var(--text-2);white-space:pre-wrap}
+  .vi b{color:var(--text-3);font-size:10.8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:3px}
+  .tagrow{display:flex;flex-wrap:wrap;gap:5px}
+  .tagrow span{font-family:var(--font-th);font-size:11.8px;font-weight:600;color:var(--primary);background:var(--info-bg);border-radius:6px;padding:2px 7px}
+
+  .acts{display:flex;flex-wrap:wrap;gap:7px;align-items:center;padding-top:2px}
+  .acts .spacer{flex:1}
+  .why{font-size:11.8px;font-weight:700;color:var(--danger)}
+
+  .note{background:var(--info-bg);border:1px solid var(--info-bd);color:var(--info-tx);border-radius:12px;padding:10px 13px;font-size:12.4px;line-height:1.65}
+  .note-warn{background:var(--warn-bg);border-color:var(--warn-bd);color:var(--text)}
+  .note-bad{background:var(--danger-bg);border-color:var(--danger-bd);color:var(--text)}
+
+  .tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)}
+  table{border-collapse:collapse;width:100%;min-width:640px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+  th{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-2);background:var(--surface-2)}
+  tr:last-child td{border-bottom:0}
+  .days{display:flex;gap:3px}
+  .days button{width:26px;height:26px;border-radius:7px;border:0;font-family:var(--font);font-size:10.6px;font-weight:800;background:var(--muted);color:var(--text-3);cursor:pointer}
+  .days button.on{background:var(--primary);color:#fff}
+
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:14px}
+  .stat{background:var(--surface-2);border:1px solid var(--border);border-radius:13px;padding:12px 14px}
+  .stat .k{font-size:11.2px;font-weight:800;color:var(--text-2);letter-spacing:.04em;text-transform:uppercase}
+  .stat .v{font-size:21px;font-weight:900;letter-spacing:-.02em;margin-top:2px}
+
+  .skel{background:var(--muted);border-radius:7px;height:12px;animation:pulse 1.2s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.5}}
+  .empty{color:var(--text-2);font-size:13px;padding:26px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="phead">
+    <div>
+      <h1>🇹🇭 Đăng fanpage Thái</h1>
+      <p>Chọn sản phẩm, máy viết caption tiếng Thái và lấy ảnh sản phẩm ra. Anh duyệt rồi bấm đăng — hệ thống không tự đăng bao giờ.</p>
+    </div>
+    <button class="btn btn-g btn-sm" id="btnToken">🔑 Mã ghi dữ liệu</button>
+  </div>
+
+  <div id="banner"></div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="tao">Tạo bài</button>
+    <button role="tab" aria-selected="false" data-tab="cho">Chờ duyệt <span id="cntReview" class="tnum"></span></button>
+    <button role="tab" aria-selected="false" data-tab="lich">Cài lịch</button>
+    <button role="tab" aria-selected="false" data-tab="page">Fanpage</button>
+  </div>
+
+  <!-- ══════════ TẠO BÀI ══════════ -->
+  <section id="tab-tao">
+    <div class="cols">
+      <div class="card">
+        <div class="card-b">
+          <div>
+            <p class="card-t">Chọn sản phẩm cho bài</p>
+            <p class="card-d">Máy viết theo đúng cặp sản phẩm anh chọn, không tự chọn hộ.</p>
+          </div>
+          <label class="f">Fanpage<select id="selPage"></select></label>
+          <label class="f">Sản phẩm chính<select id="selMain"></select></label>
+          <label class="f">Sản phẩm bán kèm <span class="hint">Để trống nếu chỉ đăng một sản phẩm</span>
+            <select id="selAddon"><option value="">— Không có —</option></select>
+          </label>
+          <label class="f">Góc bán hàng
+            <select id="selAngle">
+              <option value="combo">Combo tiết kiệm — mua cặp lợi hơn</option>
+              <option value="howto">Hướng dẫn dùng tại nhà</option>
+              <option value="ba">Trước / sau khi dùng</option>
+              <option value="vs_shop">So sánh với mang ra tiệm</option>
+            </select>
+          </label>
+          <button class="btn btn-p" id="btnGen">✨ Sinh bài</button>
+          <button class="btn btn-g btn-sm" id="btnForce">↻ Ép làm mới <span class="hint">bỏ qua bản đã lưu trong ngày</span></button>
+          <div class="note">Cùng cặp sản phẩm trong cùng ngày sẽ trả lại bản đã lưu, không tốn thêm tiền AI. Muốn bài khác thì bấm <b>Ép làm mới</b>.</div>
+        </div>
+      </div>
+      <div>
+        <div class="card hide" id="loading"><div class="card-b">
+          <div class="skel" style="width:38%"></div><div class="skel" style="width:92%"></div>
+          <div class="skel" style="width:84%"></div><div class="skel" style="width:60%"></div>
+          <p class="card-d">Đang viết caption tiếng Thái rồi lấy ảnh… khoảng 15–30 giây.</p>
+        </div></div>
+        <div class="queue" id="genResult"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ CHỜ DUYỆT ══════════ -->
+  <section id="tab-cho" class="hide">
+    <div class="grid2" id="stats"></div>
+    <div class="queue" id="queueList"><div class="empty">Đang tải…</div></div>
+  </section>
+
+  <!-- ══════════ CÀI LỊCH ══════════ -->
+  <section id="tab-lich" class="hide">
+    <div class="note" style="margin-bottom:14px">Tới giờ đã cài, hệ thống <b>chỉ sinh sẵn bài + ảnh</b> rồi xếp vào tab “Chờ duyệt”. Không có đường nào tự đăng thẳng lên fanpage.</div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Fanpage</th><th>Giờ sinh bài</th><th>Ngày chạy</th><th>Sản phẩm mặc định</th><th>Bán kèm</th><th>Chạy</th><th></th></tr></thead>
+      <tbody id="schedBody"></tbody>
+    </table></div>
+  </section>
+
+  <!-- ══════════ FANPAGE ══════════ -->
+  <section id="tab-page" class="hide">
+    <div class="tablewrap"><table>
+      <thead><tr><th>Fanpage</th><th>Page ID</th><th>Page Access Token</th><th></th></tr></thead>
+      <tbody id="pageBody"></tbody>
+    </table></div>
+    <div class="card" style="margin-top:14px"><div class="card-b">
+      <p class="card-t">Thêm fanpage</p>
+      <label class="f">Page ID<input id="npId" placeholder="vd 1024587xxxxxxx"/></label>
+      <label class="f">Tên hiển thị<input id="npName" placeholder="Noma Thailand"/></label>
+      <label class="f">Page Access Token <span class="hint">Có thể để trống, nhập sau</span><input id="npToken" placeholder="EAAB…"/></label>
+      <button class="btn btn-p btn-sm" id="btnAddPage">Thêm fanpage</button>
+    </div></div>
+    <div class="note" style="margin-top:14px">
+      Token đăng bài <b>khác</b> token quảng cáo đang dùng trong CRM. Cần Page Access Token dài hạn có quyền <b>pages_manage_posts</b> và <b>pages_read_engagement</b>. Chưa có token thì phần sinh bài vẫn chạy đủ, chỉ nút Đăng là khoá.
+    </div>
+  </section>
+</div>
+
+<script type="module">
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+/* Mã ghi dữ liệu để trong localStorage, đúng khuôn doscom_opt_token của trang Tổng quan.
+   Cloudflare Access là cổng ngoài; đây là cổng trong cho mọi endpoint GHI. */
+const TKEY = "doscom_thai_token";
+const getTok = () => { try { return localStorage.getItem(TKEY) || ""; } catch { return ""; } };
+const setTok = (t) => { try { localStorage.setItem(TKEY, t); } catch {} };
+
+function banner(msg, kind) {
+  $("#banner").innerHTML = msg
+    ? `<div class="note ${kind === "bad" ? "note-bad" : kind === "warn" ? "note-warn" : ""}" style="margin-bottom:14px">${esc(msg)}</div>`
+    : "";
+}
+
+async function api(path, opts = {}) {
+  const o = { headers: { "Content-Type": "application/json" }, ...opts };
+  if (opts.method && opts.method !== "GET") o.headers["X-Thai-Token"] = getTok();
+  const res = await fetch(path, o);
+  let body = null;
+  try { body = await res.json(); } catch {}
+  if (!res.ok || !body || body.ok !== true) {
+    const err = new Error((body && body.error) || `HTTP ${res.status}`);
+    err.detail = body && body.detail;
+    throw err;
+  }
+  return body.data;
+}
+
+let PAGES = [], SKUS = [];
+
+/* ── Tabs ─────────────────────────────────────────────────────── */
+const PANES = { tao: "tab-tao", cho: "tab-cho", lich: "tab-lich", page: "tab-page" };
+document.querySelectorAll(".tabs button").forEach((b) => {
+  b.addEventListener("click", () => {
+    document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", "false"));
+    b.setAttribute("aria-selected", "true");
+    Object.entries(PANES).forEach(([k, id]) => $("#" + id).classList.toggle("hide", k !== b.dataset.tab));
+    if (b.dataset.tab === "cho") loadQueue();
+    if (b.dataset.tab === "lich") renderSchedule();
+    if (b.dataset.tab === "page") renderPages();
+  });
+});
+
+$("#btnToken").addEventListener("click", () => {
+  const t = prompt("Mã ghi dữ liệu (THAI_SOCIAL_TOKEN):", getTok());
+  if (t !== null) { setTok(t.trim()); banner("Đã lưu mã trên máy này.", ""); }
+});
+
+/* ── Nạp danh mục ─────────────────────────────────────────────── */
+async function boot() {
+  try {
+    const [pages, skus] = await Promise.all([api("/api/thai-social/pages"), api("/api/thai-social/skus")]);
+    PAGES = pages; SKUS = skus.items;
+
+    $("#selPage").innerHTML = PAGES.map((p) => `<option value="${esc(p.page_id)}">${esc(p.name)}</option>`).join("")
+      || `<option value="">— chưa có fanpage nào —</option>`;
+
+    const opts = SKUS.map((s) => `<option value="${esc(s.code)}">${esc(s.name)}${s.image_url ? "" : "  ⚠ chưa có ảnh"}</option>`).join("");
+    $("#selMain").innerHTML = opts;
+    $("#selAddon").innerHTML = `<option value="">— Không có —</option>` + opts;
+
+    if (skus.thieu_anh && skus.thieu_anh.length === SKUS.length) {
+      banner("Thư viện ảnh sản phẩm còn trống — mọi bài sẽ phải nhờ Flux sinh ảnh. Nạp ảnh nền trắng vào thư mục sku-images/ để bài dùng ảnh chai thật.", "warn");
+    } else if (!PAGES.length) {
+      banner("Chưa có fanpage nào. Sang tab Fanpage để thêm Noma Thailand và Doscom Thailand.", "warn");
+    }
+    loadQueue();
+  } catch (e) {
+    banner("Không nạp được danh mục: " + e.message, "bad");
+  }
+}
+
+/* ── Sinh bài ─────────────────────────────────────────────────── */
+async function gen(force) {
+  const pageId = $("#selPage").value;
+  if (!pageId) return banner("Chưa chọn fanpage.", "warn");
+  $("#loading").classList.remove("hide");
+  $("#genResult").innerHTML = "";
+  banner("");
+  try {
+    const d = await api("/api/thai-social/generate", {
+      method: "POST",
+      body: JSON.stringify({
+        page_id: pageId,
+        sku_main: $("#selMain").value,
+        sku_addon: $("#selAddon").value || null,
+        angle: $("#selAngle").value,
+        force: !!force,
+      }),
+    });
+    $("#genResult").innerHTML = postCard(d.post);
+    if (d.image_note) banner(d.image_note, "warn");
+    else if (d.cached) banner("Dùng lại bản đã sinh trong ngày — không tốn thêm tiền AI. Bấm “Ép làm mới” nếu muốn bài khác.", "");
+  } catch (e) {
+    banner(errText(e), "bad");
+  } finally {
+    $("#loading").classList.add("hide");
+  }
+}
+function errText(e) {
+  const m = {
+    unauthorized: "Sai mã ghi dữ liệu. Bấm “Mã ghi dữ liệu” để nhập lại.",
+    unknown_sku: "Mã sản phẩm không có trong hồ sơ 17 SKU.",
+    ai_failed: "Không gọi được AI viết bài.",
+    ai_bad_output: "AI trả về không đúng khuôn, thử lại.",
+    already_published: "Bài này đã đăng rồi.",
+  }[e.message];
+  return (m || e.message) + (e.detail ? ` (${e.detail})` : "");
+}
+$("#btnGen").addEventListener("click", () => gen(false));
+$("#btnForce").addEventListener("click", () => gen(true));
+
+/* ── Thẻ bài ──────────────────────────────────────────────────── */
+const STATE_PILL = {
+  pending_review: '<span class="pill pill-warn">● Chờ duyệt</span>',
+  edited: '<span class="pill pill-info">✎ Đã sửa, sẵn sàng đăng</span>',
+  published: '<span class="pill pill-ok">✓ Đã đăng</span>',
+  discarded: '<span class="pill pill-bad">Đã bỏ</span>',
+};
+
+function postCard(p) {
+  const page = PAGES.find((x) => x.page_id === p.page_id) || { name: p.page_id, token_status: "missing" };
+  const img = p.image_url
+    ? `<img src="${esc(p.image_url)}" alt="Ảnh sản phẩm ${esc(p.sku_main)}"/>`
+    : p.image_base64
+      ? `<img src="data:image/png;base64,${esc(p.image_base64)}" alt="Ảnh sinh cho ${esc(p.sku_main)}"/>`
+      : `<div class="noimg">Chưa có ảnh<br/>SKU ${esc(p.sku_main)}</div>`;
+
+  const done = p.status === "published";
+  const canPublish = !done && p.status !== "discarded" && page.token_status === "ok";
+  const why = !done && page.token_status !== "ok"
+    ? `<span class="why">⚠ ${page.token_status === "missing" ? "Fanpage chưa có Page Access Token" : "Token đã hết hạn"}</span>` : "";
+
+  return `<article class="post" data-state="${esc(p.status)}" data-id="${p.id}">
+    <div class="shot">${img}</div>
+    <div class="post-b">
+      <div class="post-top">
+        <span class="page-name">${esc(page.name)} <em>· ${esc(p.vn_date)} · ${esc(p.sku_main)}${p.sku_addon ? " + " + esc(p.sku_addon) : ""}</em></span>
+        ${STATE_PILL[p.status] || ""}
+      </div>
+      <p class="th" data-th>${esc(p.caption_th)}</p>
+      ${p.caption_vi ? `<p class="vi"><b>Dịch ngược để duyệt</b>${esc(p.caption_vi)}</p>` : ""}
+      ${p.hashtags && p.hashtags.length ? `<div class="tagrow">${p.hashtags.map((t) => `<span>#${esc(t)}</span>`).join("")}</div>` : ""}
+      ${p.last_error ? `<div class="note note-warn">${esc(p.last_error)}</div>` : ""}
+      <div class="acts">
+        ${done
+          ? `<span class="hint tnum">fb_post_id · ${esc(p.fb_post_id || "")}</span>`
+          : `<button class="btn btn-g btn-sm" data-act="edit">✎ Sửa chữ</button>
+             <button class="btn btn-g btn-sm" data-act="regen">↻ Sinh lại</button>
+             <button class="btn btn-dg btn-sm" data-act="drop">Bỏ bài</button>`}
+        <span class="spacer"></span>
+        ${why}
+        ${done ? "" : `<button class="btn btn-ok btn-sm" data-act="publish" ${canPublish ? "" : "disabled"}>Đăng lên ${esc(page.name)}</button>`}
+      </div>
+    </div>
+  </article>`;
+}
+
+/* Uỷ quyền sự kiện ở body: thẻ bài được vẽ lại liên tục, gắn listener từng nút sẽ rò. */
+document.body.addEventListener("click", async (ev) => {
+  const btn = ev.target.closest("[data-act]");
+  if (!btn) return;
+  const art = btn.closest(".post");
+  const id = Number(art.dataset.id);
+  const act = btn.dataset.act;
+  try {
+    if (act === "edit") {
+      const el = art.querySelector("[data-th]");
+      const cur = el.textContent;
+      const ta = document.createElement("textarea");
+      ta.value = cur; ta.rows = 8;
+      el.replaceWith(ta);
+      btn.textContent = "💾 Lưu";
+      btn.dataset.act = "save";
+      return;
+    }
+    if (act === "save") {
+      const ta = art.querySelector("textarea");
+      const d = await api(`/api/thai-social/queue/${id}`, { method: "PATCH", body: JSON.stringify({ caption_th: ta.value }) });
+      art.outerHTML = postCard(d);
+      banner("Đã lưu, bài chuyển sang “Đã sửa”.", "");
+      return;
+    }
+    if (act === "drop") {
+      if (!confirm("Bỏ bài này?")) return;
+      await api(`/api/thai-social/queue/${id}`, { method: "DELETE" });
+      art.remove();
+      return;
+    }
+    if (act === "regen") {
+      btn.disabled = true;
+      const p = JSON.parse(art.dataset.meta || "null") || {};
+      const d = await api("/api/thai-social/generate", {
+        method: "POST",
+        body: JSON.stringify({ page_id: art.querySelector(".page-name") && p.page_id || PAGES[0] && PAGES[0].page_id,
+                               post_id: id, sku_main: p.sku_main || $("#selMain").value,
+                               sku_addon: p.sku_addon || null, force: true }),
+      });
+      art.outerHTML = postCard(d.post);
+      return;
+    }
+    if (act === "publish") {
+      if (!confirm("Đăng bài này lên fanpage thật?")) return;
+      btn.disabled = true; btn.textContent = "Đang đăng…";
+      const d = await api("/api/thai-social/publish", { method: "POST", body: JSON.stringify({ post_id: id }) });
+      art.outerHTML = postCard(d);
+      banner("Đã đăng lên fanpage.", "");
+    }
+  } catch (e) {
+    banner(errText(e), "bad");
+    btn.disabled = false;
+  }
+});
+
+/* ── Hàng chờ ─────────────────────────────────────────────────── */
+async function loadQueue() {
+  try {
+    const d = await api("/api/thai-social/queue?days=14");
+    const c = d.counts;
+    $("#cntReview").textContent = c.pending_review + c.edited ? `(${c.pending_review + c.edited})` : "";
+    $("#stats").innerHTML = [
+      ["Chờ duyệt", c.pending_review],
+      ["Đã sửa, chờ đăng", c.edited],
+      ["Đã đăng (14 ngày)", c.published],
+    ].map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v tnum">${v}</div></div>`).join("");
+    $("#queueList").innerHTML = d.posts.length
+      ? d.posts.map((p) => { const h = postCard(p); return h.replace('<article class="post"', `<article class="post" data-meta='${esc(JSON.stringify({ page_id: p.page_id, sku_main: p.sku_main, sku_addon: p.sku_addon }))}'`); }).join("")
+      : `<div class="empty">Chưa có bài nào trong 14 ngày qua.</div>`;
+  } catch (e) {
+    $("#queueList").innerHTML = `<div class="empty">Không tải được hàng chờ: ${esc(e.message)}</div>`;
+  }
+}
+
+/* ── Cài lịch ─────────────────────────────────────────────────── */
+const DAY_LABEL = ["2", "3", "4", "5", "6", "7", "CN"];
+function renderSchedule() {
+  $("#schedBody").innerHTML = PAGES.map((p) => {
+    const opts = (sel) => SKUS.map((s) => `<option value="${esc(s.code)}"${s.code === sel ? " selected" : ""}>${esc(s.code)}</option>`).join("");
+    return `<tr data-page="${esc(p.page_id)}">
+      <td><b>${esc(p.name)}</b></td>
+      <td><input type="number" min="0" max="23" value="${p.post_hour_vn}" style="width:74px" data-hour/></td>
+      <td><div class="days">${DAY_LABEL.map((lb, i) =>
+          `<button type="button" data-day="${i + 1}" class="${p.weekdays.includes(i + 1) ? "on" : ""}">${lb}</button>`).join("")}</div></td>
+      <td><select data-main>${opts(p.default_sku_main)}</select></td>
+      <td><select data-addon><option value="">—</option>${opts(p.default_sku_addon)}</select></td>
+      <td><input type="checkbox" ${p.active ? "checked" : ""} data-active style="width:auto"/></td>
+      <td><button class="btn btn-p btn-sm" data-save-sched>Lưu</button></td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="7" class="empty">Chưa có fanpage nào.</td></tr>`;
+
+  $("#schedBody").querySelectorAll("[data-day]").forEach((b) =>
+    b.addEventListener("click", () => b.classList.toggle("on")));
+
+  $("#schedBody").querySelectorAll("[data-save-sched]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      const tr = b.closest("tr");
+      const page = PAGES.find((x) => x.page_id === tr.dataset.page);
+      try {
+        const d = await api("/api/thai-social/pages", {
+          method: "POST",
+          body: JSON.stringify({
+            page_id: page.page_id,
+            name: page.name,
+            post_hour_vn: Number(tr.querySelector("[data-hour]").value),
+            weekdays: [...tr.querySelectorAll("[data-day].on")].map((x) => Number(x.dataset.day)),
+            default_sku_main: tr.querySelector("[data-main]").value,
+            default_sku_addon: tr.querySelector("[data-addon]").value || null,
+            active: tr.querySelector("[data-active]").checked,
+          }),
+        });
+        Object.assign(page, d);
+        banner(`Đã lưu lịch cho ${page.name}.`, "");
+      } catch (e) { banner(errText(e), "bad"); }
+    }));
+}
+
+/* ── Fanpage ──────────────────────────────────────────────────── */
+const TOK_PILL = {
+  ok: '<span class="pill pill-ok">✓ Còn hạn</span>',
+  missing: '<span class="pill pill-bad">✕ Chưa có token</span>',
+  expired: '<span class="pill pill-bad">✕ Hết hạn</span>',
+};
+function renderPages() {
+  $("#pageBody").innerHTML = PAGES.map((p) => `<tr data-page="${esc(p.page_id)}">
+      <td><b>${esc(p.name)}</b></td>
+      <td class="tnum">${esc(p.page_id)}</td>
+      <td>${TOK_PILL[p.token_status]}</td>
+      <td><button class="btn btn-g btn-sm" data-set-token>${p.token_status === "ok" ? "Đổi token" : "Nhập token"}</button></td>
+    </tr>`).join("") || `<tr><td colspan="4" class="empty">Chưa có fanpage nào.</td></tr>`;
+
+  $("#pageBody").querySelectorAll("[data-set-token]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      const pid = b.closest("tr").dataset.page;
+      const page = PAGES.find((x) => x.page_id === pid);
+      const tok = prompt(`Page Access Token cho "${page.name}" (quyền pages_manage_posts):`);
+      if (!tok) return;
+      try {
+        const d = await api("/api/thai-social/pages", { method: "POST", body: JSON.stringify({ page_id: pid, name: page.name, page_token: tok.trim() }) });
+        Object.assign(page, d);
+        renderPages();
+        banner("Token hợp lệ, đã lưu.", "");
+      } catch (e) {
+        banner(e.message === "page_token_invalid"
+          ? `Facebook từ chối token này: ${e.detail || ""}. Kiểm lại quyền pages_manage_posts và đúng fanpage.`
+          : errText(e), "bad");
+      }
+    }));
+}
+
+$("#btnAddPage").addEventListener("click", async () => {
+  const body = { page_id: $("#npId").value.trim(), name: $("#npName").value.trim() };
+  const tok = $("#npToken").value.trim();
+  if (tok) body.page_token = tok;
+  if (!body.page_id || !body.name) return banner("Cần cả Page ID và tên hiển thị.", "warn");
+  try {
+    const d = await api("/api/thai-social/pages", { method: "POST", body: JSON.stringify(body) });
+    PAGES = PAGES.filter((x) => x.page_id !== d.page_id).concat(d);
+    $("#npId").value = $("#npName").value = $("#npToken").value = "";
+    renderPages();
+    banner(`Đã thêm ${d.name}.`, "");
+  } catch (e) { banner(errText(e), "bad"); }
+});
+
+boot();
+</script>
+</body>
+</html>

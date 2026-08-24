@@ -47,9 +47,13 @@ rm -f dist/data/pancake-crm-contacts.json
 rm -rf dist/data/cost-source
 
 # Trang standalone (nhúng iframe trong CRM) — phải copy thủ công.
-PAGES="agent-geo-doscom.html ads-creator.html product-publisher.html brandcore-fix.html fix-images.html sync-us.html"
+PAGES="agent-geo-doscom.html ads-creator.html product-publisher.html brandcore-fix.html fix-images.html sync-us.html thai-social.html"
 for page in $PAGES; do
   [ -f "$page" ] && cp "$page" dist/
 done
+
+# Ảnh sản phẩm nền trắng cho bài fanpage Thái. Graph API nhận tham số `url` nên ảnh
+# phải công khai cùng origin — thiếu bước copy này là ảnh 404 và bài đăng lên không có ảnh.
+[ -d sku-images ] && cp -r sku-images dist/sku-images
 
 echo "[build-dist] dist/ sẵn sàng: $(find dist -type f | wc -l) file"

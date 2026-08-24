@@ -129,3 +129,51 @@ KHÔNG được đăng.
 - **WHEN** Graph API trả lỗi khác token (rate limit, ảnh hỏng, page bị hạn chế)
 - **THEN** hệ thống giữ bài ở status cũ, lưu thông báo lỗi vào bản ghi để user thấy trên UI,
   và KHÔNG tự thử lại vòng lặp
+
+### Requirement: Thư viện ảnh sản phẩm nền trắng
+
+Hệ thống SHALL giữ một thư viện ảnh sản phẩm nền trắng theo mã SKU và SHALL dùng ảnh đó
+làm ảnh bài đăng khi SKU có ảnh. Flux Schnell SHALL chỉ được gọi khi SKU chưa có ảnh trong
+thư viện. Thư viện SHALL đọc được từ KV (`thai_sku_images:v1`) để đổi mà không cần deploy,
+và rơi về bảng mặc định trong repo khi KV rỗng.
+
+Endpoint `POST /api/thai-social/skus` SHALL chỉ chấp nhận đường dẫn ảnh CÙNG ORIGIN —
+ảnh sẽ đi thẳng vào bài đăng trên fanpage thật, không để một URL lạ trở thành ảnh của
+thương hiệu.
+
+#### Scenario: SKU đã có ảnh thật
+
+- **WHEN** sinh bài cho một SKU có ảnh trong thư viện
+- **THEN** bài dùng ảnh đó, `cost_usd` của phần ảnh bằng 0, và hệ thống KHÔNG gọi Workers AI
+
+#### Scenario: SKU chưa có ảnh và Flux cũng hỏng
+
+- **WHEN** SKU không có ảnh trong thư viện và lời gọi Flux thất bại (thiếu binding, hết lượt)
+- **THEN** hệ thống vẫn giữ caption đã sinh nhưng ĐÁNH DẤU bài thiếu ảnh kèm lý do,
+  và KHÔNG trả bài như thể đã đủ ảnh
+
+#### Scenario: Đường dẫn ảnh trỏ ra ngoài
+
+- **WHEN** client gửi `POST /api/thai-social/skus` với ảnh có URL tuyệt đối ra miền khác
+- **THEN** hệ thống trả HTTP 400 `image_url_must_be_same_origin` và KHÔNG ghi vào KV
+
+### Requirement: Bản dịch ngược Thái → Việt kèm mỗi bài
+
+Mỗi bài SHALL có `caption_vi` — bản dịch ngược sang tiếng Việt của chính caption tiếng Thái,
+xin trong CÙNG một lượt gọi AI với caption. Giao diện duyệt SHALL hiển thị bản dịch này
+cạnh caption gốc.
+
+Lý do: người duyệt không đọc được tiếng Thái; thiếu bản dịch thì bước "duyệt" chỉ là bấm
+nút cho có, và AI bịa thông số sẽ lọt thẳng lên fanpage.
+
+#### Scenario: Duyệt bài tiếng Thái
+
+- **WHEN** người dùng mở một bài ở status `pending_review`
+- **THEN** giao diện hiển thị cả `caption_th` và `caption_vi`
+
+#### Scenario: Sinh lại sau khi sửa
+
+- **WHEN** người dùng sửa `caption_th` bằng tay qua `PATCH /api/thai-social/queue/:id`
+- **THEN** hệ thống lưu caption mới và KHÔNG tự dịch lại — bản dịch cũ giữ nguyên để
+  người sửa biết mình vừa đổi gì so với bản máy viết
+
