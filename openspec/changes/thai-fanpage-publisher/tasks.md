@@ -37,7 +37,11 @@
 - [x] 6.1 Viết `functions/api/thai-social/schedule/run.js`: duyệt page `active`, so giờ + thứ theo giờ VN, tạo bài rồi gọi phần sinh; trả `{ created: [...], skipped: [...] }`
 - [x] 6.2 Khoá cứng: endpoint lịch KHÔNG được gọi tới `_graph.js`; thêm test khẳng định điều đó
 - [ ] 6.3 Thêm nhịp gọi trong `cron-worker/src`, kèm header `CF-Access-Client-Id` / `CF-Access-Client-Secret` + `X-Thai-Token`
-- [ ] 6.4 Gọi thử thật một lượt sau khi deploy để xác nhận không bị Cloudflare Access chặn
+- [ ] 6.4 **ĐÃ THỬ 24/08/2026 — BỊ CHẶN THẬT.** Service token đi lọt `/api/refresh/next` (200)
+      nhưng `/api/thai-social/skus` trả 302 kèm `service_token_status:false`. Chính sách
+      Cloudflare Access đang giới hạn theo ĐƯỜNG DẪN → phải thêm `/api/thai-social/*` vào
+      policy service token thì cron mới gọi được. Giao diện trên trình duyệt KHÔNG ảnh hưởng
+      (người dùng vẫn đăng nhập Access như thường).
 
 ## 7. Giao diện
 
