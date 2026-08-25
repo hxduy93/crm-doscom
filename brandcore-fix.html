@@ -872,7 +872,8 @@ function renderTitle() {
     const draft = r.draft || {};
     const canhBao = draft.vi_pham && draft.vi_pham.length
       ? `<div class="err" style="font-size:12px">⛔ Tiêu đề AI đề xuất TRÁI brand core (${draft.vi_pham.map((x) => esc(x.type)).join(", ")}) — sửa tay trước khi vá.</div>`
-      : (draft.trung_voi ? `<div class="err" style="font-size:12px">⛔ Trùng tiêu đề bài #${draft.trung_voi}</div>` : "");
+      : (draft.trung_voi ? `<div class="err" style="font-size:12px">⛔ Trùng tiêu đề bài #${draft.trung_voi}</div>`
+      : (draft.trung_khuon ? `<div class="err" style="font-size:12px">⛔ Cướp khuôn của bài hướng dẫn sử dụng chính thức #${draft.trung_khuon.id} (“${esc(draft.trung_khuon.tieu_de)}”) — đặt lại theo góc riêng của bài này.</div>` : ""));
     const oNhap = draft.tieu_de_moi || draft.loi
       ? (draft.loi
           ? `<div class="err" style="font-size:12px">${esc(draft.loi)}</div>`
@@ -948,7 +949,7 @@ document.getElementById("btnTitleApply").onclick = async () => {
     if (!moi) continue;
     const d = row.draft || {};
     const chuaSuaTay = moi === d.tieu_de_moi;
-    if (chuaSuaTay && ((d.vi_pham && d.vi_pham.length) || d.trung_voi)) continue;
+    if (chuaSuaTay && ((d.vi_pham && d.vi_pham.length) || d.trung_voi || d.trung_khuon)) continue;
     fixes.push({ id: row.id, title: moi });
   }
   if (!fixes.length) return alert("Không có tiêu đề nào hợp lệ để vá.\nDòng bị chặn là dòng AI đề xuất trái brand core hoặc trùng tên — sửa tay rồi thử lại.");

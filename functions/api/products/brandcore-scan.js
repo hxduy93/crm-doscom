@@ -101,7 +101,7 @@ QUY TẮC BẤT DI BẤT DỊCH:
 1. Tiêu đề phải phản ánh ĐÚNG nội dung bài. TUYỆT ĐỐI KHÔNG bịa công dụng, số liệu, chứng nhận, cam kết không có trong bài.
 2. Tiếng Việt có dấu. Dài 45–65 ký tự, KHÔNG quá 70. Không kết thúc bằng dấu chấm. Không dùng dấu ngoặc kép bao quanh.
 3. Tuân thủ brand core ở dưới: không claim tuyệt đối ("100%", "tuyệt đối", "vĩnh viễn"), không từ thổi phồng ("số 1", "tốt nhất", "vượt trội", "đột phá", "tiên tiến"), không nói "Made in USA / sản xuất tại Mỹ / công nghệ Mỹ".
-4. Nếu bài là HƯỚNG DẪN SỬ DỤNG một sản phẩm NOMA có mã → dùng ĐÚNG khuôn: "Hướng dẫn sử dụng NOMA <mã>: <công dụng chính>".
+4. Khuôn "Hướng dẫn sử dụng NOMA <mã>: <công dụng chính>" CHỈ dành cho bài hướng dẫn sử dụng CHÍNH THỨC của sản phẩm đó. Mỗi sản phẩm chỉ có MỘT bài như vậy: nếu user prompt báo khuôn này đã có bài giữ rồi thì TUYỆT ĐỐI KHÔNG dùng lại — bài đang đặt là bài kiến thức/mẹo, hãy đặt tiêu đề theo góc riêng của nó (vấn đề gặp phải, tình huống, cách làm cụ thể).
 5. Nếu là bài kiến thức/so sánh/mẹo → tiêu đề mô tả đúng nội dung, đặt từ khoá chính lên đầu, KHÔNG gắn khuôn "Hướng dẫn sử dụng".
 6. KHÔNG đặt trùng hoặc na ná các tiêu đề đã dùng được liệt kê trong user prompt.
 
@@ -780,6 +780,14 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
       const cungSku = tatCa
         .filter((x) => x.tieu_de && code && new RegExp(`noma\\s?${code}\\b`, "i").test(x.tieu_de))
         .map((x) => `- ${x.tieu_de}`).slice(0, 12).join("\n");
+      /* Bài HDSD chính thức của SKU này đã có chủ chưa. Nếu rồi thì bài đang đặt KHÔNG
+         được mang khuôn đó: hai bài cùng khuôn cho một sản phẩm là tự cắn từ khoá của
+         nhau (đã suýt xảy ra khi AI đặt "Hướng dẫn sử dụng NOMA 620: Xóa ố vàng đèn pha"
+         cho một bài mẹo, trong khi bài HDSD 620 chính thức đang chạy). */
+      const chuKhuon = code
+        ? tatCa.find((x) => x.id !== id && laBaiHdsdChinhThuc(x.tieu_de) &&
+            new RegExp(`noma\\s?${code}\\b`, "i").test(x.tieu_de))
+        : null;
 
       const userPrompt =
         `TIÊU ĐỀ HIỆN TẠI: ${p.tieu_de || "(TRỐNG — bài chưa có tiêu đề)"}\n` +
@@ -787,6 +795,7 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
         (code ? `SẢN PHẨM ĐƯỢC NHẮC: NOMA ${code}\n${spec}\n` : "") +
         `\nNỘI DUNG BÀI (đã bỏ thẻ HTML, cắt bớt):\n${than}\n` +
         (cungSku ? `\nTIÊU ĐỀ ĐÃ DÙNG CHO SẢN PHẨM NÀY (KHÔNG được đặt trùng hoặc na ná):\n${cungSku}\n` : "") +
+        (chuKhuon ? `\n⛔ Bài HƯỚNG DẪN SỬ DỤNG CHÍNH THỨC của NOMA ${code} ĐÃ CÓ: "${chuKhuon.tieu_de}". Bài bạn đang đặt KHÔNG phải bài đó — TUYỆT ĐỐI không dùng khuôn "Hướng dẫn sử dụng NOMA ${code}".\n` : "") +
         `\nĐặt 1 tiêu đề mới. Trả JSON đúng schema.`;
 
       try {
@@ -814,6 +823,8 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
           ly_do: String(res.parsed?.ly_do || "").slice(0, 300),
           vi_pham: viPham,                                    // có phần tử → KHÔNG cho ghi
           trung_voi: idTrung && idTrung !== id ? idTrung : null,
+          // AI vẫn cướp khuôn HDSD của bài khác → chặn ở đây, không tin mỗi lời dặn.
+          trung_khuon: chuKhuon && laBaiHdsdChinhThuc(moi) ? { id: chuKhuon.id, tieu_de: chuKhuon.tieu_de } : null,
           qua_dai: moi.length > 70 ? moi.length : null,
         });
       } catch (e) {

@@ -443,7 +443,7 @@ test("tiêu đề AI đặt ra vẫn bị soát lại trước khi cho vá", () 
   // Đây là chữ sẽ thành <title> + <h1> của bài — tin prompt là có ngày "NOMA 911 tốt nhất" lên web.
   assert.match(SCAN, /const viPham = scanForbidden\(moi, forbidden\);/);
   assert.match(SCAN, /trung_voi: idTrung && idTrung !== id \? idTrung : null/);
-  assert.match(UI, /if \(chuaSuaTay && \(\(d\.vi_pham && d\.vi_pham\.length\) \|\| d\.trung_voi\)\) continue;/,
+  assert.match(UI, /if \(chuaSuaTay && \(\(d\.vi_pham && d\.vi_pham\.length\) \|\| d\.trung_voi/,
     "giao diện phải chặn vá tiêu đề vi phạm mà người dùng chưa sửa tay");
 });
 
@@ -453,4 +453,15 @@ test("giao diện có đủ ba nấc của phần tiêu đề", () => {
   }
   // Vá tiêu đề gửi trường `title`, không phải content.
   assert.match(UI, /fixes\.push\(\{ id: row\.id, title: moi \}\)/);
+});
+
+test("không cho AI cướp khuôn tiêu đề của bài hướng dẫn chính thức", () => {
+  /* Suýt xảy ra thật khi chạy thử 25/08/2026: một bài mẹo về đèn pha được AI đặt thành
+     "Hướng dẫn sử dụng NOMA 620: Xóa ố vàng đèn pha tại nhà", trong khi bài HDSD 620
+     chính thức đang chạy — hai bài cùng khuôn cho một sản phẩm là tự cắn từ khoá nhau. */
+  assert.match(SCAN, /const chuKhuon = code/, "mất bước dò xem khuôn HDSD của SKU đã có chủ chưa");
+  assert.match(SCAN, /trung_khuon: chuKhuon && laBaiHdsdChinhThuc\(moi\) \? \{ id: chuKhuon\.id/,
+    "phải tự kiểm lại kết quả AI, không tin mỗi lời dặn trong prompt");
+  assert.match(UI, /d\.trung_voi \|\| d\.trung_khuon\)\) continue;/,
+    "giao diện phải chặn vá tiêu đề cướp khuôn khi người dùng chưa sửa tay");
 });
