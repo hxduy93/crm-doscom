@@ -355,6 +355,10 @@ test("prompt nền cấm vẽ chữ, chai và người", async () => {
   for (const cam of ["NO text", "NO bottle", "NO product", "NO people"]) {
     assert.ok(p.includes(cam), `prompt nền phải cấm: ${cam}`);
   }
+  // Chữ Thái do canvas vẽ, KHÔNG để model vẽ: model sinh ảnh giỏi chữ Latin, tiếng Thái
+  // xếp chồng 2–3 tầng dấu thanh, sai một dấu là đổi nghĩa trên fanpage thật.
+  assert.ok(p.includes("NO letters") && p.includes("NO numbers"),
+    "phải cấm cả chữ cái lẫn chữ số — không đánh đổi cái chắc lấy cái may rủi");
   // Nền phải SÁNG: ảnh sản phẩm giữ bóng đổ gốc chụp trên nền trắng, đặt lên nền tối
   // thì bóng đó thành vệt xám bẩn.
   assert.match(p, /bright/i, "nền phải sáng");
@@ -520,3 +524,32 @@ test("PATCH vẫn từ chối sửa bài đã đăng — hàng rào cuối ở s
     "server không được nới lỏng chỉ vì giao diện đã chặn");
 });
 
+/* ── 14. Nền là ĐỒ HOẠ, không phải ảnh chụp trơn ────────────────────────────
+   25/08/2026 lần 2: ảnh vẫn phẳng vì prompt bảo model vẽ "advertising background plate"
+   — một tấm ảnh chụp cố ý để trống. Nó làm đúng thứ được yêu cầu, chỉ là thứ đó nhạt. */
+
+test("prompt nền yêu cầu dựng thiết kế, không phải chụp ảnh", async () => {
+  const { buildScenePrompt } = await import("../functions/api/thai-social/_poster.js");
+  const p = buildScenePrompt("combo", "", 3);
+  assert.match(p, /graphic design poster background/,
+    "phải yêu cầu nền đồ hoạ");
+  assert.doesNotMatch(p, /photographic|background plate/,
+    "bỏ hẳn cách gọi cũ — chính nó làm ảnh phẳng");
+});
+
+test("lớp phủ trắng phải mỏng để không rửa mất thiết kế", async () => {
+  const { POSTER } = await import("../functions/api/thai-social/_poster.js");
+  assert.ok(POSTER.scrim.alpha <= 0.6,
+    `phủ ${POSTER.scrim.alpha} là quá dày — thiết kế bên dưới bị rửa trắng`);
+  assert.ok(POSTER.textHalo && POSTER.textHalo.blur > 0,
+    "phủ mỏng thì chữ phải có quầng sáng riêng, nếu không mất đọc được");
+});
+
+test("canvas vẽ quầng sáng quanh chữ rồi TẮT đi trước khi xuất ảnh", () => {
+  const html = read("../thai-social.html");
+  assert.match(html, /ctx\.shadowColor = P\.haloColor/, "phải bật quầng sáng cho chữ");
+  const iOff = html.indexOf('ctx.shadowColor = "transparent"');
+  const iOut = html.indexOf("canvas.toDataURL");
+  assert.ok(iOff > -1 && iOut > iOff,
+    "quên tắt shadow thì lần vẽ sau kế thừa, ảnh mờ dần qua mỗi lần ghép");
+});

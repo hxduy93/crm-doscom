@@ -270,7 +270,8 @@ const POSTS = {};   // id -> bài, để bộ ghép ảnh tra lại nền + ản
 
 const P = {
   size: 1080,
-  scrimTo: 0.62, scrimAlpha: 0.82,
+  scrimTo: 0.58, scrimAlpha: 0.55,
+  haloColor: "rgba(255,255,255,.92)", haloBlur: 20,
   titleX: 72, titleY: 150, titleW: 560, titleSize: 76, titleLH: 92, titleMax: 3,
   subGap: 26, subW: 540, subSize: 38, subLH: 52, subMax: 3,
   prodRight: 56, prodBottom: 56, prodMaxH: 0.74, prodMaxW: 0.46,
@@ -355,7 +356,8 @@ async function composePoster(canvas, post) {
     paintFallbackBg(ctx, S);
   }
 
-  // Dải sáng bên trái để chữ luôn đọc được dù nền Flux ra kiểu gì.
+  /* Dải sáng bên trái. Mỏng thôi — nền giờ là thiết kế đồ hoạ, phủ dày là rửa trắng
+     mất công thiết kế. Chữ đọc được nhờ quầng sáng quanh chữ ở lớp 3. */
   const g = ctx.createLinearGradient(0, 0, S * P.scrimTo, 0);
   g.addColorStop(0, `rgba(255,255,255,${P.scrimAlpha})`);
   g.addColorStop(1, "rgba(255,255,255,0)");
@@ -381,6 +383,10 @@ async function composePoster(canvas, post) {
 
   // ── Lớp 3: chữ ──────────────────────────────────────────────
   ctx.textBaseline = "top";
+  /* Quầng sáng quanh chữ: giữ chữ đọc được trên nền đồ hoạ nhiều màu mà không phải phủ
+     một lớp trắng dày lên toàn bộ thiết kế. Đây là cách poster thật vẫn làm. */
+  ctx.shadowColor = P.haloColor;
+  ctx.shadowBlur = P.haloBlur;
   ctx.fillStyle = "#0E1A2E";
   ctx.font = `700 ${P.titleSize}px "Noto Sans Thai", sans-serif`;
   const tLines = wrapThai(ctx, post.poster_title_th, P.titleW, P.titleMax);
@@ -400,6 +406,8 @@ async function composePoster(canvas, post) {
     }
   }
 
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur = 0;
   return canvas.toDataURL("image/png").split(",")[1];
 }
 

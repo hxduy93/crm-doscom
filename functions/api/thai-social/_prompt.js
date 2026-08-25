@@ -54,8 +54,10 @@ export function buildSystemPrompt() {
     '  "poster_sub_th"   — dòng nội dung in TRÊN ẢNH, tiếng Thái',
     '  "poster_title_vi" — dịch tiêu đề trên ảnh sang tiếng Việt',
     '  "poster_sub_vi"   — dịch dòng nội dung trên ảnh sang tiếng Việt',
-    '  "scene_prompt"    — cảnh NỀN cho ảnh, bằng TIẾNG ANH, nền SÁNG, chừa chỗ trống bên trái.',
-    "                     Chỉ tả bối cảnh: KHÔNG chai, KHÔNG chữ, KHÔNG người.",
+    '  "scene_prompt"    — NỀN ĐỒ HOẠ cho ảnh, bằng TIẾNG ANH. Tả như designer dựng poster:',
+    "                     khối màu, panel, dải màu, hoạ tiết hình học — KHÔNG phải ảnh chụp.",
+    "                     Nền SÁNG, chừa nửa trái trống để đặt chữ.",
+    "                     KHÔNG chai, KHÔNG chữ, KHÔNG người, KHÔNG xe.",
   ].join("\n");
 }
 

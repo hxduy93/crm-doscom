@@ -1,60 +1,93 @@
 // Ảnh bài đăng = ảnh GHÉP 3 lớp, không phải một tấm Flux vẽ thẳng ra.
 //
-//   1. NỀN   — Flux sinh cảnh theo góc bán hàng. KHÔNG vẽ chai, KHÔNG vẽ chữ.
+//   1. NỀN   — model sinh nền ĐỒ HOẠ theo góc bán hàng. KHÔNG vẽ chai, KHÔNG vẽ chữ.
 //   2. SẢN PHẨM — ảnh thật đã tách nền trong sku-images/, đè lên nền.
 //   3. CHỮ   — vẽ bằng canvas trên trình duyệt, font Noto Sans Thai.
 //
-// Vì sao chia lớp thay vì bảo Flux vẽ hết:
-//   - Flux vẽ chai NOMA thì nhãn sai, tỉ lệ sai — đúng lý do ban đầu ta dựng thư viện ảnh.
-//   - Flux viết chữ Thái thì méo và sai dấu. Chữ vẽ bằng canvas mới chuẩn.
+// Vì sao chia lớp thay vì bảo model vẽ hết:
+//   - Model vẽ chai NOMA thì nhãn sai, tỉ lệ sai — đúng lý do ban đầu ta dựng thư viện ảnh.
+//   - Model vẽ chữ THÁI thì hay sai dấu thanh. Tiếng Thái xếp chồng 2–3 tầng dấu, nhiều
+//     chữ chỉ khác nhau một cái móc; sai một dấu là đổi nghĩa. Model sinh ảnh giỏi chữ
+//     Latin, không giỏi chữ Thái. Canvas + font thật thì đúng 100%, không có xác suất sai.
+//     Chủ dự án chốt 25/08/2026: không đánh đổi cái chắc chắn lấy cái may rủi.
 //
 // Vì sao ghép ở TRÌNH DUYỆT chứ không ở server: tài khoản chưa bật Cloudflare Images nên
 // Function không ghép được ảnh; đổi lại, ghép lúc người dùng xem duyệt có cái lợi thật là
 // họ thấy ĐÚNG tấm ảnh sẽ được đăng, sửa chữ là ảnh vẽ lại ngay.
 
-/* Cảnh nền theo góc bán hàng — NHIỀU biến thể cho mỗi góc.
+/* Nền theo góc bán hàng — NHIỀU biến thể cho mỗi góc.
 
-   Trước 25/08/2026 mỗi góc chỉ có ĐÚNG MỘT chuỗi cố định, nên mọi bài cùng góc ra ảnh
-   gần như y hệt nhau. Người dùng phản ánh "ảnh hơi đơn điệu" — và đó là lỗi prompt chứ
-   không phải lỗi model.
+   Hai lần sửa, cùng một triệu chứng "ảnh nhìn đơn điệu":
 
-   Mọi cảnh vẫn BẮT BUỘC sáng màu: ảnh sản phẩm trong thư viện giữ nguyên bóng đổ gốc của
+   25/08/2026 (lần 1) — mỗi góc chỉ có ĐÚNG MỘT chuỗi cố định và không có seed, nên mọi
+   bài cùng góc ra ảnh gần y hệt. Thêm biến thể + seed.
+
+   25/08/2026 (lần 2) — vẫn phẳng, vì tôi bảo model vẽ "advertising background plate",
+   tức một TẤM ẢNH CHỤP trơn cố ý để trống. Nó làm đúng thứ được yêu cầu, chỉ là thứ đó
+   nhạt. Nay yêu cầu model dựng NỀN ĐỒ HOẠ thật: khối màu chéo, panel, tia sáng, hoạ tiết
+   — như designer dựng poster. Chữ Thái vẫn do canvas vẽ bằng font thật, nên không đánh
+   đổi rủi ro sai dấu để lấy cái đẹp.
+
+   Mọi nền vẫn BẮT BUỘC sáng màu: ảnh sản phẩm trong thư viện giữ nguyên bóng đổ gốc của
    ảnh chụp nền trắng, đặt lên nền tối thì bóng đó thành vệt xám bẩn. */
 export const SCENE_BY_ANGLE = {
   combo: [
-    "clean studio backdrop with a soft blue-to-white gradient and gentle light rays",
-    "pale mint studio sweep with soft circular light falloff and a subtle floor reflection",
-    "warm sand-toned studio wall with soft afternoon window light and long gentle shadows",
-    "cool grey concrete wall with a bright diagonal shaft of sunlight",
+    "bold diagonal colour-block poster background, deep blue and warm orange panels "
+    + "meeting on a clean white field, crisp geometric edges",
+    "soft 3D gradient blobs in sky blue and coral floating over an off-white canvas, "
+    + "subtle grain, generous open area",
+    "wide concentric arcs radiating from the lower right in blue and orange tints "
+    + "on a bright cream background",
+    "modern promo layout with a large rounded rectangle panel in gradient blue, "
+    + "thin accent stripes, airy white margin",
   ],
   howto: [
-    "modern car interior seen from the passenger seat, morning light through the windshield",
-    "close view of a clean dashboard and steering wheel, sunlight falling across the trim",
-    "open car door with the side mirror in frame, bright driveway visible beyond",
-    "tidy car cabin with a microfibre cloth resting on the seat, soft daylight",
+    "step-by-step poster background, three soft rounded panels stacked diagonally "
+    + "in pale blue tints on white, clean and instructional",
+    "light grid pattern fading out, one highlighted rounded card area in mint, "
+    + "minimal editorial layout",
+    "numbered-flow poster backdrop with soft dotted connector lines and pale blue "
+    + "circles on a bright canvas",
+    "clean infographic background, gentle isometric planes in white and light blue, "
+    + "soft ambient shadows",
   ],
   ba: [
-    "extreme close up of a windshield with water beading into round droplets, backlit",
-    "rain-streaked side window with sharp city bokeh behind it, bright overcast light",
-    "half-cleaned car glass showing a crisp line between hazy and clear, daylight",
-    "wet glass surface catching morning sun, sharp highlights on the droplets",
+    "split-screen poster background, left half hazy frosted texture, right half "
+    + "crystal clear glossy blue, sharp vertical divider",
+    "before-and-after layout with a bold diagonal split between dull grey and "
+    + "vivid glossy cyan, high contrast graphic style",
+    "abstract water-droplet graphic pattern in cyan on a bright white field, "
+    + "large clear area on the left",
+    "glossy blue ribbon sweeping across a white background with sparkling highlight "
+    + "accents, transformation feel",
   ],
   vs_shop: [
-    "sunny home driveway with clean concrete and a blurred house behind",
-    "quiet residential carport in bright late morning light, soft shadows on the ground",
-    "front yard parking spot with green hedges out of focus, clear blue sky",
-    "tidy garage entrance opening onto a bright sunlit yard",
+    "comparison poster background split by a bold vertical band, muted grey side "
+    + "versus bright optimistic yellow-orange side",
+    "two rounded panels side by side, one dull slate and one warm sunny gradient, "
+    + "clean modern layout",
+    "graphic price-tag and clock icons rendered as flat abstract shapes in soft "
+    + "orange on a bright neutral background",
+    "bright sunburst rays in warm amber spreading from the right edge over a clean "
+    + "off-white canvas",
   ],
 };
 
-/* Biến điệu — xoay vòng để hai bài cùng cảnh vẫn ra hai tấm khác nhau. */
+/* Biến điệu — xoay vòng để hai bài cùng nền vẫn ra hai tấm khác nhau. */
 const MOODS = [
-  "golden hour warmth", "cool morning blue tones", "soft overcast diffusion",
-  "crisp midday clarity", "gentle pastel palette", "clean high-key whites",
+  "warm amber and cream palette", "cool blue and white palette",
+  "fresh mint and teal palette", "soft coral and ivory palette",
+  "clean high-key whites with one bold accent", "muted pastel palette with crisp edges",
 ];
-const LENSES = [
-  "35mm wide angle", "50mm natural perspective", "85mm compressed background",
-  "low angle hero shot", "slight top-down three-quarter view",
+
+/* Kiểu đồ hoạ — thay cho danh sách ống kính của bản cũ. Nền giờ là thiết kế, không phải
+   ảnh chụp, nên nói về phong cách dựng hình mới đúng việc. */
+const STYLES = [
+  "flat vector shapes with crisp edges",
+  "soft 3D gradient forms with gentle shadows",
+  "glassmorphism panels with subtle blur",
+  "clean editorial layout with generous white space",
+  "bold geometric blocking with thin accent lines",
 ];
 
 // Băm chuỗi → số. Cùng một bài luôn ra cùng ảnh; đổi seed là đổi tấm.
@@ -75,13 +108,13 @@ export function buildScenePrompt(angle, scene, seed = 0) {
   const bank = SCENE_BY_ANGLE[angle] || SCENE_BY_ANGLE.combo;
   const base = String(scene || "").trim() || bank[seed % bank.length];
   const mood = MOODS[(seed >> 3) % MOODS.length];
-  const lens = LENSES[(seed >> 7) % LENSES.length];
+  const style = STYLES[(seed >> 7) % STYLES.length];
   return [
     base + ",",
-    mood + ",", lens + ",",
-    "advertising background plate, photographic, bright and light, shallow depth of field,",
-    "clean empty space on the left half for headline text,",
-    "NO text, NO letters, NO words, NO logo, NO watermark,",
+    mood + ",", style + ",",
+    "graphic design poster background, advertising key visual, bright and light,",
+    "left half kept clean and uncluttered for headline text,",
+    "NO text, NO letters, NO words, NO numbers, NO logo, NO watermark,",
     "NO bottle, NO product, NO packaging, NO people, NO hands",
   ].join(" ");
 }
@@ -94,14 +127,18 @@ export function buildScenePrompt(angle, scene, seed = 0) {
 export const NEGATIVE_PROMPT =
   "text, letters, words, typography, logo, watermark, signature, "
   + "bottle, spray can, product packaging, label, people, hands, faces, "
-  + "cluttered, busy background, dark, low quality, blurry, distorted";
+  + "cluttered, busy background, dark, low quality, blurry, distorted, "
+  + "car, vehicle, gibberish letters, fake writing, garbled script";
 
 /* Khuôn ảnh. Trình duyệt vẽ theo đúng những con số này (xem thai-social.html).
    Để ở server để một chỗ đổi là cả hai bên đổi theo, và test khoá được. */
 export const POSTER = {
   size: 1080,
-  // Dải sáng phủ bên trái để chữ luôn đọc được dù nền sinh ra thế nào.
-  scrim: { from: 0.0, to: 0.62, alpha: 0.82 },
+  /* Dải sáng phủ bên trái. HẠ từ 0,82 xuống 0,55 khi chuyển sang nền đồ hoạ: phủ dày như
+     cũ thì thiết kế bên dưới bị rửa trắng, quay lại đúng cái phẳng mà ta vừa sửa. Chữ giữ
+     đọc được bằng quầng sáng quanh chữ (textHalo) thay vì bằng lớp phủ dày. */
+  scrim: { from: 0.0, to: 0.58, alpha: 0.55 },
+  textHalo: { color: "rgba(255,255,255,.92)", blur: 20 },
   title: { x: 72, y: 150, maxWidth: 560, fontSize: 76, lineHeight: 92, maxLines: 3 },
   sub:   { x: 72, gap: 26, maxWidth: 540, fontSize: 38, lineHeight: 52, maxLines: 3 },
   // Sản phẩm nằm bên phải, đáy cách mép dưới một chút.
