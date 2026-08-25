@@ -4,9 +4,10 @@
 // Bảo vệ (red line: endpoint ghi phải có token): Access role != "open" → cho qua; "open" → cần X-Products-Token.
 //
 // Body: `target` chọn loại nội dung — "product" (mặc định, sản phẩm WooCommerce) hoặc
-//   "guide" (BÀI HƯỚNG DẪN SỬ DỤNG — bài viết WordPress). Với target "guide", kiểu ghi
-//   thẳng dùng trường `content` thay cho `description`, và endpoint TỪ CHỐI ghi nếu
-//   không đọc được `content.raw` của bài (xem khối cuối file).
+//   "guide" (BÀI VIẾT WordPress). Với target "guide", mỗi phần tử fixes dùng MỘT trong:
+//     { id, violations } | { id, content } | { id, title }   <- vá tiêu đề
+//   Ghi `content` bị TỪ CHỐI nếu không đọc được `content.raw` của bài; vá `title` thì
+//   không cần raw vì không đụng nội dung (xem khối cuối file).
 //
 // Body (áp bản sửa) — HAI kiểu, mỗi phần tử fixes dùng MỘT trong hai:
 //   a) { id, violations: [{original, fixed}] }  → thay chuỗi nguyên văn (sửa từ cấm)
@@ -220,10 +221,17 @@ async function apDungBaiHuongDan({ env, c, site, body }) {
     if (!raw) return json({ ok: false, error: "Backup đã hết hạn/không tồn tại" }, 404);
     let bak;
     try { bak = JSON.parse(raw); } catch { return json({ ok: false, error: "Backup hỏng" }, 500); }
-    if (typeof bak.content !== "string") return json({ ok: false, error: "Backup không có nội dung bài" }, 500);
+    /* Khôi phục ĐÚNG trường đã sửa. Bản vá tiêu đề không đọc content.raw (không cần),
+       nên backup của nó không có nội dung tin cậy — ghi bừa content lúc hoàn tác là tự
+       tay phá bài bằng chính nút cứu hộ. */
+    const daSua = Array.isArray(bak.da_sua) ? bak.da_sua : ["content"];
+    const khoiPhuc = {};
+    if (daSua.includes("content") && typeof bak.content === "string") khoiPhuc.content = bak.content;
+    if (daSua.includes("title") && typeof bak.title === "string") khoiPhuc.title = bak.title;
+    if (!Object.keys(khoiPhuc).length) return json({ ok: false, error: "Backup không có trường nào khôi phục được" }, 500);
     try {
-      await updatePost(c, id, bak.content);
-      return json({ ok: true, reverted: true, id, restored_from: key });
+      await updatePost(c, id, khoiPhuc);
+      return json({ ok: true, reverted: true, id, restored_from: key, restored_fields: Object.keys(khoiPhuc) });
     } catch (e) {
       return json({ ok: false, error: String(e.message || e) }, 502);
     }
@@ -242,9 +250,13 @@ async function apDungBaiHuongDan({ env, c, site, body }) {
     const id = fx.id;
     if (!id) { skipped++; items.push({ id: null, applied: false, error: "thiếu id" }); continue; }
     const violations = Array.isArray(fx.violations) ? fx.violations : [];
-    // Hai kiểu ghi giống nhánh sản phẩm: cặp sửa (thay chuỗi) hoặc ghi thẳng nội dung mới.
+    /* BA kiểu ghi: cặp sửa (thay chuỗi trong nội dung), ghi thẳng nội dung mới, và
+       VÁ TIÊU ĐỀ. Vá tiêu đề đi riêng vì nó KHÔNG đụng nội dung — không cần content.raw,
+       nên không được để rào chắn raw chặn nhầm (46 bài mất tiêu đề của noma.vn phải vá
+       được kể cả khi tài khoản không đọc nổi nội dung gốc). */
     const ghiThang = typeof fx.content === "string" && fx.content.trim() !== "";
-    if (!violations.length && !ghiThang) {
+    const vaTieuDe = typeof fx.title === "string" && fx.title.trim() !== "";
+    if (!violations.length && !ghiThang && !vaTieuDe) {
       skipped++; items.push({ id, applied: false, skipped: "không có cặp sửa" }); continue;
     }
 
@@ -252,7 +264,8 @@ async function apDungBaiHuongDan({ env, c, site, body }) {
     try { orig = await getPost(c, id); }
     catch (e) { failed++; items.push({ id, applied: false, error: `đọc bài lỗi: ${String(e.message || e)}` }); continue; }
 
-    if (!orig.raw) {
+    const doiNoiDung = violations.length > 0 || ghiThang;
+    if (doiNoiDung && !orig.raw) {
       failed++;
       items.push({
         id, name: orig.name, permalink: orig.permalink, applied: false,
@@ -262,39 +275,57 @@ async function apDungBaiHuongDan({ env, c, site, body }) {
       continue;
     }
 
-    let newContent, fixedTypes;
-    if (ghiThang) {
-      newContent = fx.content;
-      fixedTypes = ["Bổ sung nội dung thiếu"];
-    } else {
-      const r = applyFixes(orig.content || "", violations);
-      newContent = r.fixed;
-      fixedTypes = [...new Set(r.applied)];
+    const ghi = {};
+    const fixedTypes = [];
+    if (doiNoiDung) {
+      if (ghiThang) {
+        ghi.content = fx.content;
+        fixedTypes.push("Bổ sung nội dung thiếu");
+      } else {
+        const r = applyFixes(orig.content || "", violations);
+        ghi.content = r.fixed;
+        fixedTypes.push(...new Set(r.applied));
+      }
+      // Không cặp nào khớp text gốc → bỏ hẳn trường này ra, không ghi lại y nguyên.
+      if (ghi.content === (orig.content || "")) delete ghi.content;
+    }
+    if (vaTieuDe) {
+      const tieuDeMoi = fx.title.trim();
+      if (tieuDeMoi !== (orig.tieu_de || "")) {
+        ghi.title = tieuDeMoi;
+        fixedTypes.push(orig.tieu_de_rong ? "Vá tiêu đề còn trống" : "Đặt lại tiêu đề");
+      }
     }
 
-    if (newContent === (orig.content || "")) {
+    if (!Object.keys(ghi).length) {
       skipped++;
-      items.push({ id, name: orig.name, permalink: orig.permalink, applied: false, skipped: "không cặp sửa nào khớp text gốc" });
+      items.push({ id, name: orig.name, permalink: orig.permalink, applied: false, skipped: "không có gì thay đổi" });
       continue;
     }
 
+    // Sao lưu ĐÚNG những trường sắp ghi đè — để nút hoàn tác biết phải trả lại cái gì.
     let backupKey = null;
     if (env.INVENTORY) {
       backupKey = KV_BACKUP_POST(site, id, ts);
-      const payload = JSON.stringify({ id, name: orig.name, content: orig.content || "", savedAt: ts });
+      const payload = JSON.stringify({
+        id, name: orig.name,
+        content: orig.content || "", title: orig.tieu_de || "",
+        da_sua: Object.keys(ghi), savedAt: ts,
+      });
       await env.INVENTORY.put(backupKey, payload, { expirationTtl: 90 * 86400 }).catch(() => {});
       await env.INVENTORY.put(KV_LATEST_POST(site, id), backupKey, { expirationTtl: 90 * 86400 }).catch(() => {});
     }
 
     try {
-      // CHỈ gửi content → không đụng tiêu đề, danh mục, ảnh đại diện, trạng thái đăng.
-      await updatePost(c, id, newContent);
+      // CHỈ gửi trường đang sửa → không đụng danh mục, ảnh đại diện, trạng thái đăng.
+      await updatePost(c, id, ghi);
       applied++;
       fixedTotal += fixedTypes.length;
       for (const t of fixedTypes) summary[t] = (summary[t] || 0) + 1;
-      const residual = scanForbidden(newContent, luatDoConSot(site, orig));
+      const dungDo = `${ghi.title ?? orig.tieu_de ?? ""} ${ghi.content ?? orig.content ?? ""}`;
+      const residual = scanForbidden(dungDo, luatDoConSot(site, orig));
       items.push({
-        id, name: orig.name, permalink: orig.permalink, applied: true,
+        id, name: ghi.title || orig.name, permalink: orig.permalink, applied: true,
         violations_fixed: fixedTypes, residual_flags: residual, backup_key: backupKey,
       });
     } catch (e) {

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { laDanhMucHuongDan, laBaiNoma } from "../functions/api/products/_wp-posts.js";
+import { laDanhMucHuongDan, laBaiNoma, laBaiHdsdChinhThuc } from "../functions/api/products/_wp-posts.js";
 import { GAP_FIELDS_HDSD, doiChieuBaiHdsd } from "../functions/api/products/_gap.js";
 import {
   CLAIM_QUANG_CAO_CHUNG, QUY_TAC_QUANG_CAO_CHUNG, NOMA_FORBIDDEN, scanForbidden,
@@ -24,27 +24,47 @@ import { onRequestPost as scan } from "../functions/api/products/brandcore-scan.
    ══════════════════════════════════════════════════════════════════════════════ */
 
 // ── Nhận diện danh mục hướng dẫn ────────────────────────────────────────────
-test("bắt đúng các danh mục hướng dẫn CÓ THẬT trên hai web", () => {
-  // Lấy nguyên tên/slug đang có trên doscom.vn và noma.vn (WP REST, 25/08/2026).
+test("bám ĐÚNG mục Hướng dẫn sử dụng của menu Kiến thức", () => {
+  // Đúng mục menu: noma.vn /danh-muc/huong-dan-su-dung, doscom.vn /category/huong-dan-su-dung.
   const that = [
     { name: "Hướng Dẫn Sử Dụng", slug: "huong-dan-su-dung" },
+    { name: "Hướng dẫn sử dụng NOMA", slug: "huong-dan-su-dung-noma" },
+    { name: "Hướng dẫn sử dụng sản phẩm", slug: "huong-dan-su-dung-san-pham" },
+    { name: "Hướng dẫn sử dụng Doscom", slug: "huong-dan-su-dung-doscom" },
+  ];
+  for (const c of that) assert.ok(laDanhMucHuongDan(c), `phải nhận là mục hướng dẫn sử dụng: ${c.name}`);
+});
+
+test("KHÔNG quét lan sang danh mục SEO — đây là chỗ đã sai một lần", () => {
+  /* Bản đầu nhận mọi danh mục có chữ "hướng dẫn/guide" nên kéo cả "Hướng dẫn chăm sóc
+     xe", "Hướng dẫn DIY", "NOMA Product Guide" — toàn bài SEO/so sánh. Đo thật trên
+     noma.vn 25/08/2026: 89 bài quét được thì 71 bài SEO, gánh 204/250 mục "còn thiếu"
+     vô lý. Nới lại luật này là dựng lại đúng đống nhiễu đó. */
+  const khong = [
     { name: "Hướng dẫn chăm sóc xe", slug: "huong-dan-cham-soc-xe" },
     { name: "Hướng dẫn DIY", slug: "huong-dan-diy" },
     { name: "NOMA Product Guide", slug: "noma-product-guide" },
-    { name: "Hướng dẫn sử dụng sản phẩm", slug: "huong-dan-su-dung-san-pham" },
+    { name: "Hướng dẫn vệ sinh xe", slug: "huong-dan-ve-sinh-xe" },
+    { name: "Tin Tức", slug: "tin-tuc" },
+    { name: "Chăm Sóc Ô Tô", slug: "cham-soc-o-to" },
   ];
-  for (const c of that) assert.ok(laDanhMucHuongDan(c), `phải nhận là danh mục hướng dẫn: ${c.name}`);
+  for (const c of khong) assert.ok(!laDanhMucHuongDan(c), `không được kéo về: ${c.name}`);
 });
 
-test("KHÔNG quét lan sang danh mục không phải hướng dẫn", () => {
-  // Quét lan = kéo cả trăm bài tin tức về rồi sửa chữ trong đó — tốn tiền AI và sửa nhầm chỗ.
-  const khong = [
-    { name: "Tin Tức", slug: "tin-tuc" },
-    { name: "An ninh gia đình", slug: "an-ninh-gia-dinh" },
-    { name: "Chăm Sóc Ô Tô", slug: "cham-soc-o-to" },
-    { name: "NOMA sản phẩm", slug: "noma-san-pham" },
-  ];
-  for (const c of khong) assert.ok(!laDanhMucHuongDan(c), `không được coi là hướng dẫn: ${c.name}`);
+test("phân biệt bài HDSD chính thức với bài SEO lọt vào danh mục", () => {
+  // Chỉ bài HDSD chính thức mới bị đối chiếu đủ hồ sơ sản phẩm.
+  for (const t of [
+    "HƯỚNG DẪN SỬ DỤNG NOMA 350: DUNG DỊCH VỆ SINH PHANH ĐĨA",
+    "Hướng dẫn sử dụng bộ vệ sinh và dưỡng ghế da Noma 692",
+    "HƯỚNG DẪN SỬ DỤNG NOMA NOMA 110 – DẦU CHỐNG RỈ",
+  ]) assert.ok(laBaiHdsdChinhThuc(t), `phải là bài HDSD chính thức: ${t}`);
+
+  for (const t of [
+    "Hướng dẫn phủ kính chống nước ô tô hiệu quả với NOMA 922",   // bài chủ dự án chụp màn hình
+    "Phủ kính chống nước ô tô top 3 năm 2026: NOMA 922, 3M, Soft9",
+    "NOMA 230 vs Liqui Moly: Chọn giải pháp dưỡng taplo",
+    "Hướng dẫn sử dụng máy dò Doscom D1",                          // có khuôn nhưng không phải SKU NOMA
+  ]) assert.ok(!laBaiHdsdChinhThuc(t), `KHÔNG được coi là bài HDSD chính thức: ${t}`);
 });
 
 test("bài camera Doscom KHÔNG bị nhận nhầm là bài NOMA", () => {
@@ -150,8 +170,8 @@ function gaWordPress() {
       ]);
     }
     if (u.pathname.endsWith("/wp-json/wp/v2/posts")) {
-      assert.equal(u.searchParams.get("categories"), "1035", "chỉ được kéo bài trong danh mục hướng dẫn");
       assert.equal(u.searchParams.get("context"), "edit", "phải đọc context=edit để có content.raw");
+      assert.equal(u.searchParams.get("categories"), "1035", "chỉ được kéo bài trong danh mục hướng dẫn");
       return gia([
         {
           id: 32387, link: "https://doscom.vn/hdsd-noma-350/", status: "publish", categories: [1035],
@@ -224,19 +244,34 @@ const SCAN = readFileSync(new URL("../functions/api/products/brandcore-scan.js",
 const WP = readFileSync(new URL("../functions/api/products/_wp-posts.js", import.meta.url), "utf8").split("\r\n").join("\n");
 const UI = readFileSync(new URL("../brandcore-fix.html", import.meta.url), "utf8");
 
-test("không đọc được content.raw → TỪ CHỐI ghi, không ghi bản rendered", () => {
-  assert.match(APPLY, /if \(!orig\.raw\)/, "mất rào chắn raw — ghi bản rendered là xoá khối Gutenberg của bài");
-  const iCheck = APPLY.indexOf("if (!orig.raw)");
-  const iGhi = APPLY.indexOf("await updatePost(c, id, newContent)");
+test("GHI NỘI DUNG mà không đọc được content.raw → TỪ CHỐI", () => {
+  assert.match(APPLY, /if \(doiNoiDung && !orig\.raw\)/,
+    "mất rào chắn raw — ghi bản rendered là xoá khối Gutenberg của bài");
+  const iCheck = APPLY.indexOf("if (doiNoiDung && !orig.raw)");
+  const iGhi = APPLY.indexOf("await updatePost(c, id, ghi)");
   assert.ok(iCheck > 0 && iGhi > iCheck, "phải kiểm raw TRƯỚC khi ghi");
+});
+
+test("VÁ TIÊU ĐỀ không bị rào chắn raw chặn nhầm", () => {
+  /* Vá tiêu đề không đụng nội dung nên không cần content.raw. Bắt nó qua cửa raw là
+     46 bài mất tiêu đề của noma.vn không vá được nếu tài khoản thiếu quyền đọc bản gốc. */
+  assert.match(APPLY, /const doiNoiDung = violations\.length > 0 \|\| ghiThang;/);
+  assert.ok(!/if \(!orig\.raw\)/.test(APPLY), "rào chắn raw phải gắn với việc GHI NỘI DUNG, không gắn với mọi lần ghi");
 });
 
 test("bài hướng dẫn có sao lưu riêng, không đè lên backup của sản phẩm", () => {
   // Trùng khoá là hoàn tác sản phẩm #350 lại lôi về nội dung bài viết #350.
   assert.match(APPLY, /bcbackup:\$\{site\}:post:\$\{id\}/);
   const iBackup = APPLY.indexOf("KV_BACKUP_POST(site, id, ts)");
-  const iUpdate = APPLY.indexOf("await updatePost(c, id, newContent)");
+  const iUpdate = APPLY.indexOf("await updatePost(c, id, ghi)");
   assert.ok(iBackup > 0 && iUpdate > iBackup, "phải sao lưu TRƯỚC khi ghi đè");
+});
+
+test("hoàn tác chỉ trả lại ĐÚNG trường đã sửa", () => {
+  /* Bản vá tiêu đề không đọc content.raw nên backup của nó không có nội dung tin cậy.
+     Hoàn tác mà ghi luôn `content` là dùng chính nút cứu hộ để phá bài. */
+  assert.match(APPLY, /const daSua = Array\.isArray\(bak\.da_sua\) \? bak\.da_sua : \["content"\]/);
+  assert.match(APPLY, /da_sua: Object\.keys\(ghi\)/, "backup phải ghi lại đã sửa trường nào");
 });
 
 test("đường ghi sản phẩm KHÔNG bị đụng tới", () => {
@@ -244,9 +279,12 @@ test("đường ghi sản phẩm KHÔNG bị đụng tới", () => {
   assert.match(SCAN, /listNomaProducts\(c, site\)/);
 });
 
-test("ghi bài chỉ gửi content — không đụng tiêu đề, danh mục, trạng thái đăng", () => {
-  assert.match(WP, /body: JSON\.stringify\(\{ content \}\)/,
-    "gửi kèm trường khác là có ngày tự đổi trạng thái/tiêu đề bài đang chạy");
+test("ghi bài chỉ gửi ĐÚNG trường được giao", () => {
+  // Gửi kèm trường khác là có ngày tự đổi trạng thái đăng / danh mục của bài đang chạy.
+  assert.match(WP, /if \(typeof truong\?\.content === "string"\) payload\.content = truong\.content;/);
+  assert.match(WP, /if \(typeof truong\?\.title === "string"\) payload\.title = truong\.title;/);
+  assert.match(WP, /if \(!Object\.keys\(payload\)\.length\) throw new Error/,
+    "không có trường nào để ghi thì phải báo lỗi, không gửi POST rỗng");
 });
 
 test("đọc bài ưu tiên context=edit, thiếu quyền thì hạ xuống view và báo raw:false", () => {
@@ -279,4 +317,140 @@ test("đổi loại nội dung thì dọn kết quả cũ", () => {
 
 test("nội dung bổ sung cho bài ghi vào trường content, không phải description", () => {
   assert.match(UI, /laBai\(\) \? \{ content: r\.new_content \} : \{ description: r\.new_description \}/);
+});
+
+
+/* ══ Phạm vi đối chiếu hồ sơ + soát tiêu đề ═══════════════════════════════════
+   Hai thứ này sinh ra từ một lượt quét thật 25/08/2026 trên noma.vn:
+     · 71/89 bài là SEO nhưng vẫn bị đòi chép đủ hồ sơ → 204/250 mục "thiếu" vô lý.
+     · 46/111 bài có post_title RỖNG → trang mất <title> và <h1>.
+   ═════════════════════════════════════════════════════════════════════════════ */
+
+// WP giả cho mục "Hướng dẫn sử dụng" của noma.vn: 1 bài HDSD chính thức + 1 bài SEO.
+function gaNoma() {
+  const BAI = [
+    {
+      id: 32387, link: "https://noma.vn/hdsd-noma-350/", status: "publish", categories: [37],
+      title: { raw: "HƯỚNG DẪN SỬ DỤNG NOMA 350: DUNG DỊCH VỆ SINH PHANH ĐĨA" },
+      content: { raw: "<p>Lắc đều chai rồi xịt trực tiếp lên đĩa phanh, chờ 5 phút cho khô.</p>" },
+    },
+    {
+      id: 33355, link: "https://noma.vn/phu-kinh-noma-922/", status: "publish", categories: [37],
+      title: { raw: "Hướng dẫn phủ kính chống nước ô tô hiệu quả với NOMA 922" },
+      content: { raw: "<p>Phủ kính chống nước là giải pháp tốt nhất cho mùa mưa.</p>" },
+    },
+    {
+      id: 32801, link: "https://noma.vn/5-loi-ve-sinh-ghe-da-o-to-noma-692/", status: "publish", categories: [100],
+      title: { raw: "" },                                   // bài mất tiêu đề (có thật)
+      content: { raw: "<p>Ghế da bẩn thì dùng NOMA 692.</p>" },
+    },
+    {
+      id: 32802, link: "https://noma.vn/trung-ten/", status: "publish", categories: [100],
+      title: { raw: "Hướng dẫn phủ kính chống nước ô tô hiệu quả với NOMA 922" },  // trùng 33355
+      content: { raw: "<p>Bài trùng tên.</p>" },
+    },
+  ];
+  return async (url) => {
+    const u = new URL(String(url));
+    if (u.pathname.endsWith("/wp-json/wp/v2/categories")) {
+      return gia([
+        { id: 37, name: "Hướng Dẫn Sử Dụng", slug: "huong-dan-su-dung", count: 2 },
+        { id: 100, name: "Hướng dẫn chăm sóc xe", slug: "huong-dan-cham-soc-xe", count: 21 },
+      ]);
+    }
+    if (u.pathname.endsWith("/wp-json/wp/v2/posts")) {
+      const cats = u.searchParams.get("categories");
+      const ds = cats ? BAI.filter((b) => b.categories.includes(Number(cats))) : BAI;
+      return gia(ds, { "X-WP-TotalPages": "1", "X-WP-Total": String(ds.length) });
+    }
+    throw new Error("gọi nhầm endpoint: " + u.pathname);
+  };
+}
+
+const ENV_NOMA = { WC_NOMA_USER: "u", WC_NOMA_APP_PWD: "p", WC_NOMA_CK: "ck", WC_NOMA_CS: "cs" };
+
+async function goiNoma(body) {
+  const goc = globalThis.fetch;
+  globalThis.fetch = gaNoma();
+  try {
+    const res = await scan({
+      request: new Request("https://crm.test/api/products/brandcore-scan", {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+      }),
+      env: ENV_NOMA,
+    });
+    return await res.json();
+  } finally { globalThis.fetch = goc; }
+}
+
+test("chỉ quét mục Hướng dẫn sử dụng — danh mục SEO không bị kéo về", async () => {
+  const d = await goiNoma({ site: "noma", target: "guide", mode: "list" });
+  assert.ok(d.ok, d.error);
+  assert.deepEqual(d.guide_categories.map((c) => c.id), [37],
+    'danh mục "Hướng dẫn chăm sóc xe" phải bị loại — đó là nơi chứa bài SEO');
+  assert.equal(d.scanned, 2);
+  assert.equal(d.hdsd_count, 1, "chỉ 1 trong 2 bài là hướng dẫn sử dụng chính thức");
+});
+
+test("đối chiếu hồ sơ BỎ QUA bài không phải hướng dẫn sử dụng chính thức", async () => {
+  const d = await goiNoma({ site: "noma", target: "guide", mode: "gap" });
+  assert.ok(d.ok, d.error);
+  assert.equal(d.bo_qua_khong_phai_hdsd, 1);
+  assert.equal(d.hdsd_count, 1);
+
+  const seo = d.results.find((r) => r.id === 33355);
+  assert.equal(seo.bo_qua, "khong_phai_bai_hdsd",
+    "bài SEO phải được ghi rõ là bỏ qua, KHÔNG báo thiếu 8 mục như trước");
+  assert.deepEqual(seo.thieu, []);
+
+  // Bài HDSD chính thức thì vẫn đối chiếu như thường.
+  const hdsd = d.results.find((r) => r.id === 32387);
+  assert.equal(hdsd.loai_bai, "hdsd");
+});
+
+test("soạn nội dung bổ sung cũng chặn bài SEO — không tiêu tiền AI vô ích", () => {
+  assert.match(SCAN, /if \(!laBaiHdsdChinhThuc\(p\.name\)\) \{\s*\n\s*results\.push\(\{ id, name: p\.name, permalink: p\.permalink, bo_qua: "khong_phai_bai_hdsd" \}\)/);
+});
+
+test("soát tiêu đề: bắt bài mất tiêu đề, trùng tên và sai khuôn", async () => {
+  const d = await goiNoma({ site: "noma", target: "guide", mode: "title" });
+  assert.ok(d.ok, d.error);
+  assert.equal(d.scanned, 4, "phải quét TOÀN BỘ bài, không bó trong mục hướng dẫn");
+
+  const rong = d.results.find((r) => r.id === 32801);
+  assert.ok(rong, "bài mất tiêu đề phải lọt vào danh sách — đây là lỗi nặng nhất");
+  assert.ok(rong.van_de.some((v) => v.ma === "rong"));
+  assert.equal(d.results[0].id, 32801, "bài mất tiêu đề phải xếp lên đầu");
+
+  const trung = d.results.filter((r) => r.van_de.some((v) => v.ma === "trung"));
+  assert.equal(trung.length, 2, "cả hai bài trùng tên đều phải được nêu");
+
+  // Bài SEO nằm trong mục hướng dẫn + nhắc NOMA → nhắc là sai khuôn tiêu đề HDSD.
+  const saiKhuon = d.results.find((r) => r.id === 33355);
+  assert.ok(saiKhuon.van_de.some((v) => v.ma === "khuon"));
+
+  // Bài HDSD chính thức không có vấn đề gì → không được xuất hiện.
+  assert.ok(!d.results.some((r) => r.id === 32387));
+});
+
+test("khuôn tiêu đề HDSD chỉ áp cho bài NOMA — không bắt bài Doscom theo khuôn NOMA", () => {
+  /* doscom.vn có 93 bài hướng dẫn camera/máy dò trong đúng mục này. Bắt chúng theo khuôn
+     "Hướng dẫn sử dụng NOMA <mã>" là 93 bài cùng báo lỗi một lượt, vô nghĩa. */
+  assert.match(SCAN, /if \(trongMucHdsd && tenNoma && !laBaiHdsdChinhThuc\(p\.tieu_de\)\)/);
+});
+
+test("tiêu đề AI đặt ra vẫn bị soát lại trước khi cho vá", () => {
+  // Đây là chữ sẽ thành <title> + <h1> của bài — tin prompt là có ngày "NOMA 911 tốt nhất" lên web.
+  assert.match(SCAN, /const viPham = scanForbidden\(moi, forbidden\);/);
+  assert.match(SCAN, /trung_voi: idTrung && idTrung !== id \? idTrung : null/);
+  assert.match(UI, /if \(chuaSuaTay && \(\(d\.vi_pham && d\.vi_pham\.length\) \|\| d\.trung_voi\)\) continue;/,
+    "giao diện phải chặn vá tiêu đề vi phạm mà người dùng chưa sửa tay");
+});
+
+test("giao diện có đủ ba nấc của phần tiêu đề", () => {
+  for (const id of ["btnTitleScan", "btnTitleDraft", "btnTitleApply", "btnTitlePickEmpty"]) {
+    assert.match(UI, new RegExp(`id="${id}"`), `thiếu nút #${id}`);
+  }
+  // Vá tiêu đề gửi trường `title`, không phải content.
+  assert.match(UI, /fixes\.push\(\{ id: row\.id, title: moi \}\)/);
 });

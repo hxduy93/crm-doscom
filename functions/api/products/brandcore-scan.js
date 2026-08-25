@@ -5,10 +5,23 @@
 // Body:
 //   { site, target } — `target` chọn LOẠI nội dung muốn soát (mặc định "product"):
 //     · "product" : sản phẩm WooCommerce (mô tả bán hàng)  → _wc.js
-//     · "guide"   : BÀI HƯỚNG DẪN SỬ DỤNG (bài viết WordPress trong các danh mục
-//                   "Hướng dẫn sử dụng / Hướng dẫn chăm sóc xe / Product Guide")
-//                   trên doscom.vn và noma.vn → _wp-posts.js
+//     · "guide"   : BÀI VIẾT WordPress → _wp-posts.js. Phạm vi = ĐÚNG mục "Hướng dẫn
+//                   sử dụng" của menu Kiến thức (noma.vn /danh-muc/huong-dan-su-dung,
+//                   doscom.vn /category/huong-dan-su-dung) — cố ý BỎ bài SEO ở các danh
+//                   mục "chăm sóc xe / DIY / so sánh". Trong mục đó, chỉ bài HDSD CHÍNH
+//                   THỨC (tiêu đề "Hướng dẫn sử dụng NOMA <mã>: …") mới bị đối chiếu hồ
+//                   sơ sản phẩm; bài khác chỉ soát brand core + tiêu đề.
 //     Bốn mode dưới đây chạy được cho CẢ HAI target; khác nhau ở nguồn đọc/ghi.
+//
+//   { site, target: "guide", mode: "title" }
+//     → soát TIÊU ĐỀ toàn bộ bài viết của web (không bó trong mục hướng dẫn): tiêu đề
+//       rỗng, trái brand core, trùng tên, quá dài, sai khuôn bài HDSD. Không tốn AI.
+//     Trả: { ok, scanned, tong_van_de, dem_theo_loai, results:[{id,name,tieu_de,van_de[]}] }
+//
+//   { site, target: "guide", mode: "title-draft", ids: [...] }
+//     → AI đặt lại tiêu đề dựa nội dung THẬT của bài (tối đa 10 bài/lượt). Chỉ đề xuất,
+//       ghi là việc của brandcore-apply với { id, title }.
+//     Trả: { ok, cost_usd, results:[{id,tieu_de_cu,tieu_de_moi,do_dai,vi_pham[],trung_voi}] }
 //
 //   { site: "doscom"|"noma"|"nomaauto", mode: "list" }
 //     → liệt kê SP NOMA + cờ vi phạm (regex, không tốn AI).
@@ -39,9 +52,9 @@ import {
   scanForbidden, applyFixes, deterministicFixes,
 } from "../geo/_utils/noma-brandcore.js";
 import { findSkuCode, skuSpecText, loadSkuSpecs } from "../geo/_utils/noma-sku-specs.js";
-import { doiChieuSanPham, doiChieuBaiHdsd } from "./_gap.js";
+import { doiChieuSanPham, doiChieuBaiHdsd, boDau, boHtml as boHtmlNhe } from "./_gap.js";
 import { siteCreds, isConfigured, listProducts, getProduct, isNomaProduct } from "./_wc.js";
-import { listGuideCategories, listGuidePosts, getPost, laBaiNoma } from "./_wp-posts.js";
+import { listGuideCategories, listGuidePosts, listAllPosts, getPost, laBaiNoma, laBaiHdsdChinhThuc } from "./_wp-posts.js";
 
 function json(o, s = 200) {
   return new Response(JSON.stringify(o), {
@@ -81,6 +94,19 @@ TRẢ VỀ DUY NHẤT JSON hợp lệ (không markdown, không chữ ngoài JSON
   "sections": [ { "truong": "mã trường được giao", "tieu_de": "Tiêu đề mục", "html": "<p>…</p>" } ]
 }`;
 
+
+const TITLE_SYSTEM = `Bạn là biên tập viên nội dung. Nhiệm vụ: đặt TIÊU ĐỀ cho 1 bài viết ĐÃ ĐĂNG, dựa trên nội dung thật của bài (nhiều bài bị mất tiêu đề khi đăng nên phải đặt lại).
+
+QUY TẮC BẤT DI BẤT DỊCH:
+1. Tiêu đề phải phản ánh ĐÚNG nội dung bài. TUYỆT ĐỐI KHÔNG bịa công dụng, số liệu, chứng nhận, cam kết không có trong bài.
+2. Tiếng Việt có dấu. Dài 45–65 ký tự, KHÔNG quá 70. Không kết thúc bằng dấu chấm. Không dùng dấu ngoặc kép bao quanh.
+3. Tuân thủ brand core ở dưới: không claim tuyệt đối ("100%", "tuyệt đối", "vĩnh viễn"), không từ thổi phồng ("số 1", "tốt nhất", "vượt trội", "đột phá", "tiên tiến"), không nói "Made in USA / sản xuất tại Mỹ / công nghệ Mỹ".
+4. Nếu bài là HƯỚNG DẪN SỬ DỤNG một sản phẩm NOMA có mã → dùng ĐÚNG khuôn: "Hướng dẫn sử dụng NOMA <mã>: <công dụng chính>".
+5. Nếu là bài kiến thức/so sánh/mẹo → tiêu đề mô tả đúng nội dung, đặt từ khoá chính lên đầu, KHÔNG gắn khuôn "Hướng dẫn sử dụng".
+6. KHÔNG đặt trùng hoặc na ná các tiêu đề đã dùng được liệt kê trong user prompt.
+
+TRẢ VỀ DUY NHẤT JSON hợp lệ (không markdown, không chữ ngoài JSON):
+{ "tieu_de": "tiêu đề mới", "ly_do": "một câu vì sao đặt vậy" }`;
 
 /* ── Khối nội dung bổ sung ────────────────────────────────────────────────────
    Đánh dấu bằng cặp chú thích HTML để lần soạn sau THAY khối cũ thay vì nối thêm —
@@ -427,6 +453,10 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
       return {
         id: p.id, name: p.name, permalink: p.permalink, status: p.status,
         la_noma: laNoma, raw: p.raw,
+        tieu_de_rong: p.tieu_de_rong,
+        // Bài HDSD chính thức mới bị đối chiếu hồ sơ; bài khác lọt vào danh mục thì
+        // chỉ soát brandcore + tiêu đề (xem laBaiHdsdChinhThuc).
+        loai_bai: laBaiHdsdChinhThuc(p.name) ? "hdsd" : "khac",
         sku: skuCuaBai(p, skuSpecs),
         flags: scanForbidden(`${p.name} ${p.content}`, forbidden),
       };
@@ -435,6 +465,7 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
       ok: true, site, target: "guide",
       scanned: ds.length,
       noma_count: ds.filter((x) => x.la_noma).length,
+      hdsd_count: ds.filter((x) => x.loai_bai === "hdsd").length,
       flagged_count: ds.filter((x) => x.flags.length).length,
       guide_categories: cats,
       con_bai_chua_quet: !het,   // chạm trần số trang → nói thẳng, không giấu phần chưa soát
@@ -449,16 +480,31 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
     const { items } = await napBaiHuongDan(c);
     const chon = ids ? items.filter((p) => ids.includes(p.id)) : items;
 
+    /* CHỈ đối chiếu hồ sơ với BÀI HDSD CHÍNH THỨC.
+       Bài kiến thức/so sánh lọt vào danh mục ("Phủ kính chống nước top 3 năm 2026: NOMA
+       922, 3M, Soft9") không có nghĩa vụ chép đủ hướng dẫn, hạn dùng, PPE, sơ cứu —
+       đòi là tạo ra hàng trăm mục "thiếu" vô lý (đo thật 25/08/2026: 204/250 mục thiếu
+       đến từ nhóm bài này). Vẫn liệt kê chúng ra, chỉ ghi rõ là đã bỏ qua. */
     const results = [];
-    let chuaCoHoSo = 0;
+    let chuaCoHoSo = 0, boQuaSeo = 0;
     for (const p of chon) {
       const laNoma = laBaiNoma(p);
+      if (!laBaiHdsdChinhThuc(p.name)) {
+        boQuaSeo++;
+        results.push({
+          id: p.id, name: p.name, permalink: p.permalink, la_noma: laNoma,
+          loai_bai: "khac", co_ho_so: false, bo_qua: "khong_phai_bai_hdsd",
+          diem: null, thieu: [], khong_chac: [], so_co: 0,
+        });
+        continue;
+      }
       const code = laNoma ? skuCuaBai(p, skuSpecs) : null;
       const spec = code ? skuSpecs[code] : null;
       const kq = doiChieuBaiHdsd(p, spec);
       if (!kq.co_ho_so) chuaCoHoSo++;
       results.push({
         id: p.id, name: p.name, permalink: p.permalink, sku: code, la_noma: laNoma,
+        loai_bai: "hdsd",
         co_ho_so: kq.co_ho_so, diem: kq.diem,
         thieu: kq.thieu, khong_chac: kq.khong_chac, so_co: kq.co.length,
       });
@@ -470,7 +516,11 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
     });
     return json({
       ok: true, site, target: "guide", mode: "gap",
-      scanned: chon.length, chua_co_ho_so: chuaCoHoSo, results,
+      scanned: chon.length,
+      hdsd_count: chon.length - boQuaSeo,
+      bo_qua_khong_phai_hdsd: boQuaSeo,
+      chua_co_ho_so: chuaCoHoSo,
+      results,
     });
   }
 
@@ -485,6 +535,10 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
     for (const id of ids) {
       const p = await getPost(c, id);
       const laNoma = laBaiNoma(p);
+      if (!laBaiHdsdChinhThuc(p.name)) {
+        results.push({ id, name: p.name, permalink: p.permalink, bo_qua: "khong_phai_bai_hdsd" });
+        continue;
+      }
       const code = laNoma ? skuCuaBai(p, skuSpecs) : null;
       const spec = code ? skuSpecs[code] : null;
       const kq = doiChieuBaiHdsd(p, spec);
@@ -617,6 +671,156 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
       }
     }
     return json({ ok: true, site, target: "guide", cost_usd: Number(cost.toFixed(6)), results });
+  }
+
+  /* ── SOÁT TIÊU ĐỀ BÀI VIẾT ──────────────────────────────────────────────────
+     Phạm vi KHÁC các mode trên: quét TOÀN BỘ bài của site, không bó trong danh mục
+     hướng dẫn. Lý do: 25/08/2026 đo được 46/111 bài noma.vn có post_title RỖNG (trang
+     thật hiện `<title>- Noma</title>`, `<h1></h1>`) và chúng nằm rải khắp danh mục —
+     bó vào mục hướng dẫn là không nhìn thấy chúng.
+     Chỉ đọc tiêu đề, KHÔNG kéo nội dung → nhẹ, chạy được cả web vài trăm bài. */
+  if (mode === "title") {
+    const cats = await listGuideCategories(c);
+    const idMucHdsd = new Set(cats.map((x) => x.id));
+    const { items, het } = await listAllPosts(c);
+
+    // Đếm trùng tiêu đề trên bản bỏ dấu — "Tẩy ố kính" và "TẨY Ố KÍNH" là một.
+    const theoTen = new Map();
+    for (const p of items) {
+      if (!p.tieu_de) continue;
+      const k = boDau(p.tieu_de);
+      theoTen.set(k, [...(theoTen.get(k) || []), p.id]);
+    }
+
+    const results = [];
+    const dem = { rong: 0, brandcore: 0, dai: 0, trung: 0, khuon: 0 };
+    for (const p of items) {
+      const trongMucHdsd = p.categories.some((id) => idMucHdsd.has(id));
+      const tenNoma = /\bnoma\b/i.test(p.tieu_de);
+      const forbidden = site === "nomaauto"
+        ? NOMA_FORBIDDEN_EN
+        : (tenNoma ? NOMA_FORBIDDEN : CLAIM_QUANG_CAO_CHUNG);
+
+      const vanDe = [];
+      if (p.tieu_de_rong) {
+        vanDe.push({ ma: "rong", nhan: "Chưa có tiêu đề", chi_tiet: "post_title rỗng — trang mất thẻ <title> và <h1>" });
+      } else {
+        for (const f of scanForbidden(p.tieu_de, forbidden)) {
+          vanDe.push({ ma: "brandcore", nhan: `Trái brand core: ${f.type}`, chi_tiet: f.quote });
+        }
+        if (p.tieu_de.length > 70) {
+          vanDe.push({ ma: "dai", nhan: `Dài ${p.tieu_de.length} ký tự`, chi_tiet: "Google cắt tiêu đề quanh 60–70 ký tự" });
+        }
+        const cungTen = (theoTen.get(boDau(p.tieu_de)) || []).filter((x) => x !== p.id);
+        if (cungTen.length) {
+          vanDe.push({ ma: "trung", nhan: "Trùng tiêu đề bài khác", chi_tiet: `trùng với #${cungTen.join(", #")}` });
+        }
+        /* Khuôn "Hướng dẫn sử dụng NOMA <mã>: <công dụng>" CHỈ đòi ở bài trong mục hướng
+           dẫn có nhắc NOMA. Bài hướng dẫn camera Doscom không có khuôn nào cả — bắt theo
+           khuôn NOMA là 93 bài doscom.vn cùng báo lỗi một lượt, vô nghĩa. */
+        if (trongMucHdsd && tenNoma && !laBaiHdsdChinhThuc(p.tieu_de)) {
+          vanDe.push({
+            ma: "khuon", nhan: "Không theo khuôn bài hướng dẫn sử dụng",
+            chi_tiet: 'nằm trong mục Hướng dẫn sử dụng nhưng tiêu đề không có dạng "Hướng dẫn sử dụng NOMA <mã>: <công dụng>"',
+          });
+        }
+      }
+      if (!vanDe.length) continue;
+      for (const v of vanDe) dem[v.ma] = (dem[v.ma] || 0) + 1;
+      results.push({
+        id: p.id, name: p.name, permalink: p.permalink,
+        tieu_de: p.tieu_de, tieu_de_rong: p.tieu_de_rong,
+        trong_muc_hdsd: trongMucHdsd,
+        van_de: vanDe,
+      });
+    }
+    // Bài mất tiêu đề lên đầu — đó là cái hỏng nặng nhất và sửa được ngay.
+    results.sort((a, b) => Number(b.tieu_de_rong) - Number(a.tieu_de_rong) || b.van_de.length - a.van_de.length);
+
+    return json({
+      ok: true, site, target: "guide", mode: "title",
+      scanned: items.length,
+      con_bai_chua_quet: !het,
+      tong_van_de: results.length,
+      dem_theo_loai: dem,
+      results,
+    });
+  }
+
+  /* ── AI ĐẶT LẠI TIÊU ĐỀ (chỉ đề xuất, chưa ghi) ────────────────────────────── */
+  if (mode === "title-draft") {
+    if (env.USE_CLAUDE === "false") return json({ ok: false, error: "AI đang tắt (USE_CLAUDE=false)" }, 503);
+    const ids = (Array.isArray(body.ids) ? body.ids.map(Number).filter(Boolean) : []).slice(0, 10);
+    if (!ids.length) return json({ ok: false, error: "chưa chọn bài nào" }, 400);
+
+    // Danh sách tiêu đề đang dùng → ép AI không đặt trùng, và tự kiểm lại sau khi AI trả.
+    const { items: tatCa } = await listAllPosts(c);
+    const dangDung = new Map(tatCa.filter((x) => x.tieu_de).map((x) => [boDau(x.tieu_de), x.id]));
+
+    let cost = 0;
+    const results = [];
+    for (const id of ids) {
+      let p;
+      try { p = await getPost(c, id); }
+      catch (e) { results.push({ id, error: String(e.message || e) }); continue; }
+
+      const laNoma = laBaiNoma(p);
+      const code = laNoma ? skuCuaBai(p, skuSpecs) : null;
+      const spec = code ? skuSpecText(code, skuSpecs) : "";
+      const forbidden = site === "nomaauto"
+        ? NOMA_FORBIDDEN_EN
+        : (laNoma ? NOMA_FORBIDDEN : CLAIM_QUANG_CAO_CHUNG);
+      const guide = site === "nomaauto"
+        ? NOMA_BRAND_GUIDE_EN
+        : (laNoma ? NOMA_BRAND_GUIDE : QUY_TAC_QUANG_CAO_CHUNG);
+
+      // Slug thường giữ đúng chủ đề bài kể cả khi tiêu đề đã mất → là gợi ý tốt cho AI.
+      const slug = (p.permalink || "").replace(/\/+$/, "").split("/").pop() || "";
+      const than = boHtmlNhe(p.content).slice(0, 3500);
+      const cungSku = tatCa
+        .filter((x) => x.tieu_de && code && new RegExp(`noma\\s?${code}\\b`, "i").test(x.tieu_de))
+        .map((x) => `- ${x.tieu_de}`).slice(0, 12).join("\n");
+
+      const userPrompt =
+        `TIÊU ĐỀ HIỆN TẠI: ${p.tieu_de || "(TRỐNG — bài chưa có tiêu đề)"}\n` +
+        `ĐƯỜNG DẪN (slug): ${slug}\n` +
+        (code ? `SẢN PHẨM ĐƯỢC NHẮC: NOMA ${code}\n${spec}\n` : "") +
+        `\nNỘI DUNG BÀI (đã bỏ thẻ HTML, cắt bớt):\n${than}\n` +
+        (cungSku ? `\nTIÊU ĐỀ ĐÃ DÙNG CHO SẢN PHẨM NÀY (KHÔNG được đặt trùng hoặc na ná):\n${cungSku}\n` : "") +
+        `\nĐặt 1 tiêu đề mới. Trả JSON đúng schema.`;
+
+      try {
+        const res = await callClaude(env, {
+          model: "haiku",
+          systemPrompt: `${TITLE_SYSTEM}\n\n${guide}`,
+          userPrompt,
+          maxTokens: 500,
+          jsonOutput: true,
+        });
+        cost += res.cost_usd || 0;
+        let moi = String(res.parsed?.tieu_de || "").replace(/^["'\s]+|["'\s.]+$/g, "").replace(/\s+/g, " ");
+        if (!moi) { results.push({ id, name: p.name, permalink: p.permalink, error: "AI không trả được tiêu đề" }); continue; }
+
+        /* Tự kiểm lại tiêu đề AI vừa đặt. Đây là chữ sẽ thành <title> + <h1> của bài —
+           tin lời dặn trong prompt là đủ để một hôm nào đó "NOMA 911 tốt nhất" lên web. */
+        const viPham = scanForbidden(moi, forbidden);
+        const idTrung = dangDung.get(boDau(moi));
+        results.push({
+          id, name: p.name, permalink: p.permalink,
+          tieu_de_cu: p.tieu_de,
+          tieu_de_moi: moi,
+          do_dai: moi.length,
+          sku: code,
+          ly_do: String(res.parsed?.ly_do || "").slice(0, 300),
+          vi_pham: viPham,                                    // có phần tử → KHÔNG cho ghi
+          trung_voi: idTrung && idTrung !== id ? idTrung : null,
+          qua_dai: moi.length > 70 ? moi.length : null,
+        });
+      } catch (e) {
+        results.push({ id, name: p.name, permalink: p.permalink, error: String(e.message || e).slice(0, 200) });
+      }
+    }
+    return json({ ok: true, site, target: "guide", mode: "title-draft", cost_usd: Number(cost.toFixed(6)), results });
   }
 
   return json({ ok: false, error: `mode không hợp lệ: ${mode}` }, 400);

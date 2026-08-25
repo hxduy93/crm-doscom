@@ -2,9 +2,10 @@
    ĐỌC / GHI BÀI VIẾT WORDPRESS — phần "hướng dẫn sử dụng" trên doscom.vn & noma.vn.
 
    Sản phẩm bán hàng đi qua WooCommerce REST (_wc.js). Bài hướng dẫn KHÔNG phải sản
-   phẩm: nó là POST của WordPress, nằm trong các danh mục "Hướng dẫn sử dụng",
-   "Hướng dẫn chăm sóc xe", "NOMA Product Guide"… nên phải đi đường /wp-json/wp/v2/posts
-   với Application Password (cùng cặp user/app password đang dùng để up ảnh).
+   phẩm: nó là POST của WordPress trong mục "Hướng dẫn sử dụng" của menu Kiến thức
+   (noma.vn /danh-muc/huong-dan-su-dung/, doscom.vn /category/huong-dan-su-dung) nên phải
+   đi đường /wp-json/wp/v2/posts với Application Password (cùng cặp user/app password
+   đang dùng để up ảnh).
 
    ⚠ VÌ SAO BẮT BUỘC context=edit: `content.rendered` là bản WordPress đã DỰNG LẠI —
    shortcode đã chạy, khối Gutenberg `<!-- wp:… -->` đã biến mất. Ghi bản đó ngược lại
@@ -15,15 +16,31 @@ import { boDau } from "./_gap.js";
 
 const wpAuth = (u, p) => "Basic " + btoa(`${u}:${p}`);
 
-/* Danh mục nào được coi là "hướng dẫn". Dò theo TÊN + SLUG đã bỏ dấu để bắt được cả
-   "Hướng Dẫn Sử Dụng", "huong-dan-diy", "NOMA Product Guide". Cố ý rộng: hai web có
-   hàng chục danh mục do agent GEO tự tạo, liệt kê tay là chắc chắn sót. */
-const DANH_MUC_HD = /(huong dan|guide|how to|su dung|cach dung|instruction|manual|tutorial)/;
+/* Danh mục nào thuộc phần HƯỚNG DẪN SỬ DỤNG của menu "Kiến thức".
+   Bám ĐÚNG mục menu trên web: noma.vn "Kiến thức – hướng dẫn" → /danh-muc/huong-dan-su-dung/,
+   doscom.vn "Hướng dẫn sử dụng" → /category/huong-dan-su-dung. Cùng biến thể cùng gốc
+   (huong-dan-su-dung-noma, -san-pham, -doscom).
+
+   HẸP LẠI 25/08/2026, đừng nới ra: bản đầu nhận mọi danh mục có chữ "hướng dẫn/guide"
+   nên kéo về cả "Hướng dẫn chăm sóc xe", "Hướng dẫn DIY" — vốn là bài SEO/so sánh chỉ
+   nhắc tên sản phẩm. Đo thật trên noma.vn: 89 bài quét được thì 71 bài là SEO, gánh
+   204/250 mục "còn thiếu" — toàn báo thiếu vô lý (đòi bài "NOMA 250 vs Liqui Moly"
+   phải chép đủ hướng dẫn sử dụng, hạn dùng, sơ cứu). Chủ dự án chốt: chỉ soát đúng
+   phần hướng dẫn sử dụng trong menu, bỏ bài SEO. */
+const DANH_MUC_HD = /^huong dan su dung\b/;
 
 export function laDanhMucHuongDan(cat) {
   const ten = boDau(cat && cat.name);
   const slug = boDau(String((cat && cat.slug) || "").replace(/-/g, " "));
-  return DANH_MUC_HD.test(`${ten} ${slug}`);
+  return DANH_MUC_HD.test(ten) || DANH_MUC_HD.test(slug);
+}
+
+/* Bài HDSD CHÍNH THỨC hay bài thường lọt vào danh mục.
+   Khuôn tiêu đề chuẩn: "HƯỚNG DẪN SỬ DỤNG NOMA <mã>: <công dụng>". Chỉ bài dạng này
+   mới bị đối chiếu đủ hồ sơ sản phẩm — bài khác chỉ soát brandcore và tiêu đề. */
+export function laBaiHdsdChinhThuc(name) {
+  const t = boDau(name);
+  return /\bhuong dan su dung\b/.test(t) && /\bnoma\s?\d{2,4}\b/.test(t);
 }
 
 /* Bài này có nói về NOMA không. Quan trọng vì doscom.vn trộn hai thế giới: bài hướng
@@ -46,9 +63,16 @@ function goEntity(s) {
    `raw` = có đọc được nội dung gốc không → quyết định có cho GHI hay không. */
 function chuanHoaBai(p) {
   const coRaw = typeof (p && p.content && p.content.raw) === "string";
+  /* Tiêu đề RỖNG là chuyện có thật, không phải lỗi đọc: 25/08/2026 đo được 46/111 bài
+     trên noma.vn có post_title = "" (trang thật hiện <title>- Noma</title>, <h1></h1>).
+     Phải phân biệt "bài chưa có tiêu đề" với "không đọc được tiêu đề" — nên giữ cờ riêng
+     thay vì chỉ thấy cái tên giả "#123". */
+  const tieuDe = goEntity((p.title && (p.title.raw || p.title.rendered)) || "").trim();
   return {
     id: p.id,
-    name: goEntity((p.title && (p.title.raw || p.title.rendered)) || `#${p.id}`),
+    name: tieuDe || `#${p.id}`,
+    tieu_de: tieuDe,
+    tieu_de_rong: !tieuDe,
     permalink: p.link || "",
     status: p.status || "publish",
     content: coRaw ? p.content.raw : ((p.content && p.content.rendered) || ""),
@@ -133,15 +157,49 @@ export async function getPost(c, id) {
   return chuanHoaBai(d);
 }
 
-// Ghi nội dung mới. CHỈ gửi `content` → không đụng tiêu đề, ảnh đại diện, danh mục, trạng thái.
-export async function updatePost(c, id, content) {
+/* Ghi bài. CHỈ gửi đúng trường được giao ({content} hoặc {title}) → không đụng ảnh đại
+   diện, danh mục, trạng thái đăng, và không vô tình ghi đè trường mình không định sửa.
+   Vá tiêu đề thì chỉ gửi title; sửa brandcore thì chỉ gửi content. */
+export async function updatePost(c, id, truong) {
+  const payload = {};
+  if (typeof truong?.content === "string") payload.content = truong.content;
+  if (typeof truong?.title === "string") payload.title = truong.title;
+  if (!Object.keys(payload).length) throw new Error("updatePost: không có trường nào để ghi");
   const r = await fetch(`${c.url}/wp-json/wp/v2/posts/${id}`, {
     method: "POST",
     headers: { Authorization: wpAuth(c.user, c.pwd), "Content-Type": "application/json" },
-    body: JSON.stringify({ content }),
+    body: JSON.stringify(payload),
     signal: AbortSignal.timeout(30000),
   });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(`WP update ${r.status}: ${JSON.stringify(d).slice(0, 300)}`);
   return d;
+}
+
+/* Liệt kê TIÊU ĐỀ toàn bộ bài viết của site (không kéo nội dung → nhẹ, chạy được cả
+   web vài trăm bài trong một lượt).
+   Vì sao KHÔNG giới hạn trong danh mục hướng dẫn như phần soát nội dung: tiêu đề rỗng
+   hay tiêu đề sai brand core là lỗi ở MỌI bài, và 46 bài mất tiêu đề của noma.vn nằm
+   rải khắp các danh mục SEO — bó vào danh mục hướng dẫn là không thấy chúng. */
+export async function listAllPosts(c, { perPage = 100, maxPages = 10 } = {}) {
+  const items = [];
+  let het = true;
+  for (let page = 1; page <= maxPages; page++) {
+    const r = await wpLay(c, "posts", {
+      status: "publish",
+      per_page: String(perPage),
+      page: String(page),
+      orderby: "date",
+      _fields: "id,title,link,status,categories",
+    }, { timeout: 30000 });
+    if (r.status === 400) break;
+    if (!r.ok) throw new Error(`WP posts ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    const arr = await r.json();
+    if (!Array.isArray(arr) || !arr.length) break;
+    for (const p of arr) items.push(chuanHoaBai(p));
+    const tongTrang = Number(r.headers.get("X-WP-TotalPages") || 1);
+    if (page >= tongTrang) break;
+    if (page === maxPages) het = false;
+  }
+  return { items, het };
 }

@@ -70,9 +70,13 @@
      → tìm chỗ vi phạm Brand Core v3 → sửa đúng chỗ đó.</p>
 
   <div id="guideNote" class="note hide">
-    <b>Bài hướng dẫn sử dụng</b> = bài viết WordPress trong các danh mục “Hướng dẫn sử dụng / Hướng dẫn chăm sóc xe /
-    Product Guide”. Trên doscom.vn có cả bài Doscom (camera, máy dò) nằm chung danh mục: bài <b>không nói về NOMA</b>
-    chỉ được soát bằng luật quảng cáo chung (claim tuyệt đối, từ thổi phồng) — <b>không</b> áp định danh/xuất xứ NOMA vào.
+    <b>Phạm vi:</b> đúng mục <b>Hướng dẫn sử dụng</b> trong menu Kiến thức của web
+    (noma.vn <code>/danh-muc/huong-dan-su-dung</code>, doscom.vn <code>/category/huong-dan-su-dung</code>) —
+    <b>bỏ qua bài SEO</b> ở các danh mục “chăm sóc xe / DIY / so sánh”.<br />
+    Trong mục đó, chỉ bài <b>hướng dẫn sử dụng chính thức</b> (tiêu đề dạng “Hướng dẫn sử dụng NOMA &lt;mã&gt;: …”)
+    mới bị đối chiếu đủ hồ sơ sản phẩm; bài khác lọt vào danh mục chỉ soát brand core và tiêu đề.
+    Bài <b>không nói về NOMA</b> (camera, máy dò Doscom) chỉ soát bằng luật quảng cáo chung —
+    <b>không</b> áp định danh/xuất xứ NOMA vào.
   </div>
 
   <div class="note">
@@ -118,6 +122,24 @@
       <button id="btnGap" class="sec" title="Đối chiếu bài đã đăng với hồ sơ sản phẩm — tìm phần nội dung chưa được cập nhật lên web">Soát nội dung thiếu</button>
       <input id="token" type="text" placeholder="X-Products-Token (nếu Access tắt)" style="flex:1;min-width:180px" />
       <span id="scanInfo" class="muted"></span>
+    </div>
+  </div>
+
+  <!-- SOÁT TIÊU ĐỀ BÀI VIẾT (quét toàn bộ bài của web, không chỉ mục hướng dẫn) -->
+  <div id="titleCard" class="card hide">
+    <div class="row" style="justify-content:space-between">
+      <b>Tiêu đề bài viết</b>
+      <div class="row">
+        <span class="muted">Quét TOÀN BỘ bài của web · dò bằng luật, không tốn AI</span>
+        <button id="btnTitleScan" class="sec">Soát tiêu đề</button>
+      </div>
+    </div>
+    <div id="titleInfo" class="muted" style="margin-top:6px"></div>
+    <div id="titleBody"></div>
+    <div id="titleActions" class="row hide" style="margin-top:10px">
+      <button id="btnTitlePickEmpty" class="sec">Chọn tất cả bài mất tiêu đề</button>
+      <button id="btnTitleDraft">Đề xuất tiêu đề (AI)</button>
+      <button id="btnTitleApply" class="warn hide">Vá tiêu đề đã duyệt</button>
     </div>
   </div>
 
@@ -231,6 +253,11 @@ const dvi = () => (laBai() ? "bài" : "sản phẩm");
 $("#loai").onchange = () => {
   $("#btnScan").textContent = laBai() ? "Quét bài hướng dẫn" : "Quét sản phẩm NOMA";
   $("#guideNote").classList.toggle("hide", !laBai());
+  // Soát tiêu đề chỉ có nghĩa với bài viết — sản phẩm WooCommerce không đi đường này.
+  $("#titleCard").classList.toggle("hide", !laBai());
+  $("#titleBody").innerHTML = ""; $("#titleInfo").textContent = "";
+  $("#titleActions").classList.add("hide");
+  titleRows = [];
   for (const id of ["scanCard", "applyCard", "reportCard", "gapCard", "daSuaCard"]) $("#" + id).classList.add("hide");
   scanned = []; proposals = []; daSuaPhien = [];
   $("#scanInfo").textContent = "";
@@ -533,7 +560,10 @@ function renderGap(j) {
   const bai = j.target === "guide";
   const dv = bai ? "bài hướng dẫn" : "sản phẩm";
   const tongThieu = rs.reduce((a, r) => a + (r.thieu?.length || 0), 0);
-  gapTitle.textContent = `${j.site} — soát ${j.scanned} ${dv} · ${tongThieu} mục nội dung còn thiếu`;
+  gapTitle.textContent = bai
+    ? `${j.site} — ${j.hdsd_count} bài hướng dẫn sử dụng chính thức · ${tongThieu} mục còn thiếu` +
+      (j.bo_qua_khong_phai_hdsd ? ` · bỏ qua ${j.bo_qua_khong_phai_hdsd} bài không phải HDSD` : "")
+    : `${j.site} — soát ${j.scanned} ${dv} · ${tongThieu} mục nội dung còn thiếu`;
 
   /* Với bài hướng dẫn, bộ trường đối chiếu KHÁC trang bán hàng: chỉ đòi các bước dùng,
      lưu ý, đồ bảo hộ, sơ cứu… — bài hướng dẫn không có nghĩa vụ nhắc dung tích/bảo hành. */
@@ -542,6 +572,12 @@ function renderGap(j) {
     : "";
 
   const rows = rs.map((r) => {
+    if (r.bo_qua === "khong_phai_bai_hdsd") {
+      /* Bài kiến thức/so sánh lọt vào danh mục hướng dẫn: cố ý KHÔNG đòi nó chép đủ hồ sơ.
+         Vẫn hiện ra để biết nó nằm trong mục, và vẫn soát brand core + tiêu đề như thường. */
+      return `<div class="prod"><h3><a href="${r.permalink}" target="_blank" rel="noopener">${r.name}</a></h3>
+        <div class="muted">Không phải bài hướng dẫn sử dụng chính thức — chỉ soát brand core &amp; tiêu đề, không đòi bổ sung hồ sơ.</div></div>`;
+    }
     if (!r.co_ho_so) {
       return `<div class="prod"><h3>${r.name}</h3><div class="muted">Chưa có hồ sơ ${bai ? "SKU cho bài này" : "cho sản phẩm này"} — bỏ qua.</div></div>`;
     }
@@ -771,6 +807,174 @@ $duyet("duyetAp").onclick = async () => {
   }
 };
 
+
+
+/* ── Soát & vá TIÊU ĐỀ bài viết ───────────────────────────────────────────────
+   Tách khỏi phần soát nội dung vì phạm vi khác hẳn: quét TOÀN BỘ bài của web, không
+   bó trong mục hướng dẫn. Lý do có phần này: 25/08/2026 phát hiện 46/111 bài trên
+   noma.vn có tiêu đề RỖNG — trang thật hiện `<title>- Noma</title>` và `<h1></h1>`,
+   mất sạch SEO mà nhìn danh sách bài trong WP vẫn thấy "bình thường".
+
+   Ba nấc như mọi chỗ khác: soát (miễn phí) → AI đề xuất (xem trước, sửa tay được)
+   → vá lên web (có sao lưu + hoàn tác). Tiêu đề là chữ đầu tiên khách nhìn thấy nên
+   KHÔNG bao giờ ghi thẳng từ AI mà không cho người đọc lại. */
+let titleRows = [];   // [{id,name,permalink,tieu_de,tieu_de_rong,van_de[],draft?}]
+
+const tEl = (id) => document.getElementById(id);
+
+document.getElementById("btnTitleScan").onclick = async () => {
+  const btn = tEl("btnTitleScan");
+  btn.disabled = true; btn.textContent = "Đang soát…";
+  tEl("titleInfo").textContent = "Đang đọc tiêu đề toàn bộ bài viết…";
+  tEl("titleBody").innerHTML = "";
+  try {
+    const r = await fetch("/api/products/brandcore-scan", {
+      method: "POST", headers: { "content-type": "application/json", ...dossierHeaders() },
+      credentials: "same-origin",
+      body: JSON.stringify({ site: site(), target: loai(), mode: "title" }),
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "lỗi soát tiêu đề");
+    titleRows = j.results || [];
+    const d = j.dem_theo_loai || {};
+    tEl("titleInfo").innerHTML =
+      `Soát ${j.scanned} bài · <b>${j.tong_van_de}</b> bài có vấn đề về tiêu đề · ` +
+      [
+        d.rong ? `<span class="err">${d.rong} bài mất tiêu đề</span>` : "",
+        d.brandcore ? `${d.brandcore} trái brand core` : "",
+        d.khuon ? `${d.khuon} sai khuôn HDSD` : "",
+        d.trung ? `${d.trung} trùng tên` : "",
+        d.dai ? `${d.dai} quá dài` : "",
+      ].filter(Boolean).join(" · ") +
+      (j.con_bai_chua_quet ? ' · <span class="err">còn bài chưa quét tới</span>' : "");
+    renderTitle();
+  } catch (e) {
+    tEl("titleInfo").innerHTML = '<span class="err">' + esc(e.message) + "</span>";
+  }
+  btn.disabled = false; btn.textContent = "Soát tiêu đề";
+};
+
+function renderTitle() {
+  if (!titleRows.length) {
+    tEl("titleBody").innerHTML = '<p class="muted">Không có bài nào lỗi tiêu đề.</p>';
+    tEl("titleActions").classList.add("hide");
+    return;
+  }
+  tEl("titleActions").classList.remove("hide");
+  const rows = titleRows.map((r, i) => {
+    const vd = (r.van_de || []).map((v) =>
+      `<span class="flag" title="${esc(v.chi_tiet || "")}">${esc(v.nhan)}</span>`).join(" ");
+    const hienTai = r.tieu_de_rong
+      ? '<span class="pill red">trống</span>'
+      : esc(r.tieu_de);
+    /* Ô nhập cho sửa tay: AI đặt tiêu đề chỉ là đề xuất, người duyệt vẫn phải được
+       gõ lại — nhất là tên sản phẩm/mã SKU thì con người biết rõ hơn. */
+    const draft = r.draft || {};
+    const canhBao = draft.vi_pham && draft.vi_pham.length
+      ? `<div class="err" style="font-size:12px">⛔ Tiêu đề AI đề xuất TRÁI brand core (${draft.vi_pham.map((x) => esc(x.type)).join(", ")}) — sửa tay trước khi vá.</div>`
+      : (draft.trung_voi ? `<div class="err" style="font-size:12px">⛔ Trùng tiêu đề bài #${draft.trung_voi}</div>` : "");
+    const oNhap = draft.tieu_de_moi || draft.loi
+      ? (draft.loi
+          ? `<div class="err" style="font-size:12px">${esc(draft.loi)}</div>`
+          : `<input type="text" class="tnew" data-id="${r.id}" value="${esc(draft.tieu_de_moi)}" style="width:100%" />
+             <div class="muted" style="font-size:12px">${draft.do_dai} ký tự${draft.ly_do ? " · " + esc(draft.ly_do) : ""}</div>${canhBao}`)
+      : '<span class="muted">—</span>';
+    return `<tr>
+      <td><input type="checkbox" class="tpick" data-i="${i}" data-id="${r.id}" ${r.tieu_de_rong ? "checked" : ""} /></td>
+      <td style="max-width:320px">${hienTai}
+        <div><a href="${esc(r.permalink)}" target="_blank" rel="noopener" class="muted">mở bài ↗</a>
+          ${r.trong_muc_hdsd ? '<span class="pill grey">mục hướng dẫn</span>' : ""}</div></td>
+      <td>${vd}</td>
+      <td style="min-width:280px">${oNhap}</td>
+    </tr>`;
+  }).join("");
+  tEl("titleBody").innerHTML =
+    `<table><thead><tr><th></th><th>Tiêu đề hiện tại</th><th>Vấn đề</th><th>Tiêu đề đề xuất (sửa được)</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+document.getElementById("btnTitlePickEmpty").onclick = () => {
+  document.querySelectorAll(".tpick").forEach((cb) => {
+    cb.checked = !!titleRows[+cb.dataset.i].tieu_de_rong;
+  });
+};
+
+document.getElementById("btnTitleDraft").onclick = async () => {
+  const chon = [...document.querySelectorAll(".tpick:checked")].map((cb) => +cb.dataset.i);
+  if (!chon.length) { alert("Chưa chọn bài nào."); return; }
+  const btn = tEl("btnTitleDraft");
+  btn.disabled = true;
+  let cost = 0;
+  // Mỗi lượt tối đa 10 bài ở phía máy chủ → chia lô, chạy tuần tự cho khỏi quá hạn.
+  for (let i = 0; i < chon.length; i += 5) {
+    const lo = chon.slice(i, i + 5);
+    btn.textContent = `Đang soạn ${Math.min(i + 5, chon.length)}/${chon.length}…`;
+    try {
+      const r = await fetch("/api/products/brandcore-scan", {
+        method: "POST", headers: { "content-type": "application/json", ...dossierHeaders() },
+        credentials: "same-origin",
+        body: JSON.stringify({ site: site(), target: loai(), mode: "title-draft", ids: lo.map((k) => titleRows[k].id) }),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || "lỗi");
+      cost += j.cost_usd || 0;
+      for (const kq of j.results || []) {
+        const row = titleRows.find((x) => x.id === kq.id);
+        if (!row) continue;
+        row.draft = kq.error ? { loi: kq.error } : kq;
+      }
+      renderTitle();
+      // Giữ nguyên lựa chọn sau khi vẽ lại để lô sau vẫn đúng bài.
+      for (const k of chon) { const cb = document.querySelector(`.tpick[data-i="${k}"]`); if (cb) cb.checked = true; }
+    } catch (e) {
+      alert("Lỗi khi soạn tiêu đề: " + e.message);
+      break;
+    }
+  }
+  tEl("titleInfo").innerHTML += ` · chi phí AI ~$${cost.toFixed(4)}`;
+  tEl("btnTitleApply").classList.remove("hide");
+  btn.disabled = false; btn.textContent = "Đề xuất tiêu đề (AI)";
+};
+
+document.getElementById("btnTitleApply").onclick = async () => {
+  /* Chỉ vá những dòng ĐANG TICK và có tiêu đề mới hợp lệ. Dòng nào AI trả về tiêu đề
+     trái brand core hoặc trùng bài khác thì bỏ, trừ khi người dùng đã gõ lại tay
+     (so với chuỗi AI trả) — không tự tiện ghi đè phán đoán của người duyệt. */
+  const fixes = [];
+  for (const cb of document.querySelectorAll(".tpick:checked")) {
+    const row = titleRows[+cb.dataset.i];
+    const o = document.querySelector(`.tnew[data-id="${row.id}"]`);
+    if (!o) continue;
+    const moi = o.value.trim();
+    if (!moi) continue;
+    const d = row.draft || {};
+    const chuaSuaTay = moi === d.tieu_de_moi;
+    if (chuaSuaTay && ((d.vi_pham && d.vi_pham.length) || d.trung_voi)) continue;
+    fixes.push({ id: row.id, title: moi });
+  }
+  if (!fixes.length) return alert("Không có tiêu đề nào hợp lệ để vá.\nDòng bị chặn là dòng AI đề xuất trái brand core hoặc trùng tên — sửa tay rồi thử lại.");
+  if (!confirm(`Vá tiêu đề cho ${fixes.length} bài trên ${site()}? (có sao lưu, hoàn tác được)`)) return;
+
+  const btn = tEl("btnTitleApply");
+  btn.disabled = true; btn.textContent = "Đang vá…";
+  try {
+    const r = await fetch("/api/products/brandcore-apply", {
+      method: "POST", headers: headers(true), credentials: "same-origin",
+      body: JSON.stringify({ site: site(), target: loai(), fixes }),
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "lỗi vá");
+    // Bài vá xong thì bỏ khỏi danh sách chờ — khỏi vá lại lần hai.
+    const xong = new Set((j.items || []).filter((x) => x.applied).map((x) => x.id));
+    titleRows = titleRows.filter((x) => !xong.has(x.id));
+    renderTitle();
+    renderReport(j);
+    $("#reportCard").classList.remove("hide");
+    $("#reportCard").scrollIntoView({ behavior: "smooth" });
+  } catch (e) {
+    alert(e.message);
+  }
+  btn.disabled = false; btn.textContent = "Vá tiêu đề đã duyệt";
+};
 
 </script>
 </body>
