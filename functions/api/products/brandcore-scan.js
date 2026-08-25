@@ -3,6 +3,13 @@
 // KHÔNG ghi gì lên web ở endpoint này (chỉ đọc + đề xuất bản sửa).
 //
 // Body:
+//   { site, target } — `target` chọn LOẠI nội dung muốn soát (mặc định "product"):
+//     · "product" : sản phẩm WooCommerce (mô tả bán hàng)  → _wc.js
+//     · "guide"   : BÀI HƯỚNG DẪN SỬ DỤNG (bài viết WordPress trong các danh mục
+//                   "Hướng dẫn sử dụng / Hướng dẫn chăm sóc xe / Product Guide")
+//                   trên doscom.vn và noma.vn → _wp-posts.js
+//     Bốn mode dưới đây chạy được cho CẢ HAI target; khác nhau ở nguồn đọc/ghi.
+//
 //   { site: "doscom"|"noma"|"nomaauto", mode: "list" }
 //     → liệt kê SP NOMA + cờ vi phạm (regex, không tốn AI).
 //     Trả: { ok, site, scanned, noma_count, flagged_count, products:[{id,name,permalink,flags:[{type,quote}]}] }
@@ -26,10 +33,15 @@
 //
 // Chống hại: chỉ đụng SP NOMA (isNomaProduct); AI được lệnh GIỮ NGUYÊN mọi phần khác, chỉ sửa cụm vi phạm.
 import { callClaude } from "../geo/_utils/claude.js";
-import { NOMA_BRAND_GUIDE, NOMA_BRAND_GUIDE_EN, NOMA_FORBIDDEN_EN, scanForbidden, applyFixes, deterministicFixes } from "../geo/_utils/noma-brandcore.js";
+import {
+  NOMA_BRAND_GUIDE, NOMA_BRAND_GUIDE_EN, NOMA_FORBIDDEN, NOMA_FORBIDDEN_EN,
+  CLAIM_QUANG_CAO_CHUNG, QUY_TAC_QUANG_CAO_CHUNG,
+  scanForbidden, applyFixes, deterministicFixes,
+} from "../geo/_utils/noma-brandcore.js";
 import { findSkuCode, skuSpecText, loadSkuSpecs } from "../geo/_utils/noma-sku-specs.js";
-import { doiChieuSanPham } from "./_gap.js";
+import { doiChieuSanPham, doiChieuBaiHdsd } from "./_gap.js";
 import { siteCreds, isConfigured, listProducts, getProduct, isNomaProduct } from "./_wc.js";
+import { listGuideCategories, listGuidePosts, getPost, laBaiNoma } from "./_wp-posts.js";
 
 function json(o, s = 200) {
   return new Response(JSON.stringify(o), {
@@ -131,8 +143,16 @@ export async function onRequestPost({ request, env }) {
 
   const site = String(body.site || "").toLowerCase();
   const mode = String(body.mode || "list");
+  const target = String(body.target || "product").toLowerCase();
   const c = siteCreds(site, env);
   if (!isConfigured(c)) return json({ ok: false, error: `Site '${site}' chưa cấu hình credential WooCommerce` }, 400);
+
+  // Bài hướng dẫn đi đường riêng (WordPress posts) — xem khối cuối file.
+  if (target === "guide") {
+    try { return await soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }); }
+    catch (e) { return json({ ok: false, error: String(e.message || e) }, 502); }
+  }
+  if (target !== "product") return json({ ok: false, error: `target không hợp lệ: ${target}` }, 400);
 
   try {
     if (mode === "list") {
@@ -346,4 +366,258 @@ export async function onRequestPost({ request, env }) {
   } catch (e) {
     return json({ ok: false, error: String(e.message || e) }, 502);
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   PHẦN HƯỚNG DẪN SỬ DỤNG — soát BÀI VIẾT WordPress (doscom.vn & noma.vn)
+
+   Vì sao phải có: trước đây tool chỉ soát MÔ TẢ SẢN PHẨM. Nhưng phần lớn chữ về cách
+   dùng sản phẩm lại nằm ở BÀI HƯỚNG DẪN trên blog (noma.vn có hơn 20 bài "HƯỚNG DẪN SỬ
+   DỤNG NOMA …", doscom.vn hơn 90 bài) — do agent GEO viết. Sản phẩm sạch brand core mà
+   bài hướng dẫn vẫn "Made in USA / an toàn 100%" thì coi như chưa sửa được gì.
+
+   Ba điểm KHÁC sản phẩm, cố ý:
+   1. doscom.vn trộn bài Doscom (camera, máy dò) với bài NOMA trong cùng danh mục hướng
+      dẫn. Bài KHÔNG nói về NOMA chỉ soát bằng luật quảng cáo chung — không đem định danh
+      thương hiệu NOMA áp vào (xem CLAIM_QUANG_CAO_CHUNG).
+   2. Đối chiếu hồ sơ dùng bộ trường riêng cho bài hướng dẫn (GAP_FIELDS_HDSD): bài hướng
+      dẫn không có nghĩa vụ nhắc dung tích/bảo hành, nhưng thiếu bước dùng/lưu ý/PPE/sơ cứu
+      thì nguy hiểm thật.
+   3. Nội dung phải đọc bằng `content.raw` (context=edit). Đọc nhầm bản rendered rồi ghi
+      lại là xoá sạch khối Gutenberg của bài — nên bài nào không lấy được raw thì báo rõ
+      `raw:false` và brandcore-apply sẽ TỪ CHỐI ghi.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+const GUIDE_NOTE = `\n\n⚠️ LOẠI NỘI DUNG: đây là BÀI HƯỚNG DẪN SỬ DỤNG trên blog, KHÔNG phải mô tả sản phẩm. Bài gồm các BƯỚC LÀM: TUYỆT ĐỐI KHÔNG xoá bước, không đổi thứ tự, không rút gọn, không gộp bước. Chỉ thay đúng cụm chữ vi phạm.`;
+const GUIDE_NOTE_NGOAI_NOMA = `\n\n⚠️ Bài này KHÔNG nói về NOMA (là bài sản phẩm Doscom). TUYỆT ĐỐI KHÔNG chèn tên, định danh hay xuất xứ NOMA vào bài. Chỉ sửa claim quảng cáo quá đà.`;
+
+// Bài đang soát chịu bộ luật nào: EN → brand core EN; bài NOMA → brand core v3;
+// bài không phải NOMA → chỉ luật quảng cáo chung (không đụng tới định danh thương hiệu).
+function luatChoBai(site, laNoma) {
+  if (site === "nomaauto") {
+    return { forbidden: NOMA_FORBIDDEN_EN, guide: NOMA_BRAND_GUIDE_EN, note: GUIDE_NOTE, ap_ho_so: false };
+  }
+  if (laNoma) {
+    return { forbidden: NOMA_FORBIDDEN, guide: NOMA_BRAND_GUIDE, note: GUIDE_NOTE, ap_ho_so: true };
+  }
+  return {
+    forbidden: CLAIM_QUANG_CAO_CHUNG,
+    guide: QUY_TAC_QUANG_CAO_CHUNG,
+    note: GUIDE_NOTE + GUIDE_NOTE_NGOAI_NOMA,
+    ap_ho_so: false,
+  };
+}
+
+// Mã SKU của bài: ưu tiên TIÊU ĐỀ. Trong thân bài thường nhắc SKU khác ("dùng kèm
+// NOMA 310") — dò theo thân bài trước là đối chiếu nhầm sang hồ sơ sản phẩm khác.
+const skuCuaBai = (bai, specs) => findSkuCode(bai.name, specs) || findSkuCode(bai.content, specs);
+
+async function napBaiHuongDan(c) {
+  const cats = await listGuideCategories(c);
+  const { items, het, raw_ok } = await listGuidePosts(c, { catIds: cats.map((x) => x.id) });
+  return { cats, items, het, raw_ok };
+}
+
+async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
+  if (mode === "list") {
+    const { cats, items, het, raw_ok } = await napBaiHuongDan(c);
+    const ds = items.map((p) => {
+      const laNoma = laBaiNoma(p);
+      const { forbidden } = luatChoBai(site, laNoma);
+      return {
+        id: p.id, name: p.name, permalink: p.permalink, status: p.status,
+        la_noma: laNoma, raw: p.raw,
+        sku: skuCuaBai(p, skuSpecs),
+        flags: scanForbidden(`${p.name} ${p.content}`, forbidden),
+      };
+    });
+    return json({
+      ok: true, site, target: "guide",
+      scanned: ds.length,
+      noma_count: ds.filter((x) => x.la_noma).length,
+      flagged_count: ds.filter((x) => x.flags.length).length,
+      guide_categories: cats,
+      con_bai_chua_quet: !het,   // chạm trần số trang → nói thẳng, không giấu phần chưa soát
+      raw_ok,
+      items: ds,
+    });
+  }
+
+  /* ── Đối chiếu hồ sơ: bài hướng dẫn còn thiếu mục nào ──────────────────────── */
+  if (mode === "gap") {
+    const ids = Array.isArray(body.ids) ? body.ids.map(Number).filter(Boolean) : null;
+    const { items } = await napBaiHuongDan(c);
+    const chon = ids ? items.filter((p) => ids.includes(p.id)) : items;
+
+    const results = [];
+    let chuaCoHoSo = 0;
+    for (const p of chon) {
+      const laNoma = laBaiNoma(p);
+      const code = laNoma ? skuCuaBai(p, skuSpecs) : null;
+      const spec = code ? skuSpecs[code] : null;
+      const kq = doiChieuBaiHdsd(p, spec);
+      if (!kq.co_ho_so) chuaCoHoSo++;
+      results.push({
+        id: p.id, name: p.name, permalink: p.permalink, sku: code, la_noma: laNoma,
+        co_ho_so: kq.co_ho_so, diem: kq.diem,
+        thieu: kq.thieu, khong_chac: kq.khong_chac, so_co: kq.co.length,
+      });
+    }
+    // Thiếu phần TRỌNG YẾU (bước dùng, lưu ý, PPE, sơ cứu) xếp lên đầu.
+    results.sort((a, b) => {
+      const w = (r) => (r.thieu || []).filter((x) => x.trong_yeu).length;
+      return w(b) - w(a) || (a.diem ?? 101) - (b.diem ?? 101);
+    });
+    return json({
+      ok: true, site, target: "guide", mode: "gap",
+      scanned: chon.length, chua_co_ho_so: chuaCoHoSo, results,
+    });
+  }
+
+  /* ── AI soạn phần còn thiếu, ghép vào cuối bài (CHỈ xem trước, không ghi) ──── */
+  if (mode === "gap-draft") {
+    if (env.USE_CLAUDE === "false") return json({ ok: false, error: "AI đang tắt (USE_CLAUDE=false)" }, 503);
+    const ids = (Array.isArray(body.ids) ? body.ids.map(Number).filter(Boolean) : []).slice(0, 10);
+    if (!ids.length) return json({ ok: false, error: "chưa chọn bài nào" }, 400);
+
+    let cost = 0;
+    const results = [];
+    for (const id of ids) {
+      const p = await getPost(c, id);
+      const laNoma = laBaiNoma(p);
+      const code = laNoma ? skuCuaBai(p, skuSpecs) : null;
+      const spec = code ? skuSpecs[code] : null;
+      const kq = doiChieuBaiHdsd(p, spec);
+
+      if (!kq.co_ho_so || !kq.thieu.length) {
+        results.push({ id, name: p.name, permalink: p.permalink, bo_qua: kq.co_ho_so ? "khong_thieu_gi" : "chua_co_ho_so" });
+        continue;
+      }
+      // Soạn ra rồi không ghi được thì chỉ tổ tốn tiền AI → chặn ngay từ đây.
+      if (!p.raw) {
+        results.push({ id, name: p.name, permalink: p.permalink, error: "không đọc được nội dung gốc (raw) — tài khoản WordPress thiếu quyền sửa bài" });
+        continue;
+      }
+
+      const lieuKe = kq.thieu.map((x) => `### ${x.nhan} (mã trường: ${x.truong})\n${x.trich_ho_so}`).join("\n\n");
+      const userPrompt =
+        `BÀI HƯỚNG DẪN: ${p.name}\n\n` +
+        `CÁC MỤC CÒN THIẾU TRONG BÀI — viết bổ sung đúng ${kq.thieu.length} mục này, giữ nguyên số liệu:\n\n${lieuKe}\n\n` +
+        `Trả JSON đúng schema, mỗi mục một phần tử trong "sections".`;
+
+      try {
+        const res = await callClaude(env, {
+          model: "haiku",
+          systemPrompt: `${DRAFT_SYSTEM}\n\n${NOMA_BRAND_GUIDE}`,
+          userPrompt,
+          maxTokens: 4000,
+          jsonOutput: true,
+        });
+        cost += res.cost_usd || 0;
+        const sections = Array.isArray(res.parsed?.sections) ? res.parsed.sections : [];
+        if (!sections.length) {
+          results.push({ id, name: p.name, permalink: p.permalink, error: "AI không trả được nội dung" });
+          continue;
+        }
+        const added = sections
+          .map((sec) => `<h3>${escapeHtml(sec.tieu_de || "")}</h3>\n${sanitizeHtml(sec.html || "")}`)
+          .join("\n");
+        const block = `${MARK_OPEN}\n${added}\n${MARK_CLOSE}`;
+        results.push({
+          id, name: p.name, permalink: p.permalink, sku: code,
+          thieu: kq.thieu.map((x) => x.nhan),
+          added_html: block,
+          new_content: ghepBoSung(p.content, block),
+          noi_dung_cu: p.content,
+        });
+      } catch (e) {
+        results.push({ id, name: p.name, permalink: p.permalink, error: String(e.message || e).slice(0, 200) });
+      }
+    }
+    return json({ ok: true, site, target: "guide", mode: "gap-draft", cost_usd: Number(cost.toFixed(6)), results });
+  }
+
+  /* ── Rà bằng AI: đề xuất cặp sửa cho từng bài ──────────────────────────────── */
+  if (mode === "audit") {
+    if (env.USE_CLAUDE === "false") return json({ ok: false, error: "AI đang tắt (USE_CLAUDE=false)" }, 503);
+    const ids = Array.isArray(body.ids) ? body.ids.slice(0, 20) : [];
+    if (!ids.length) return json({ ok: false, error: "Thiếu danh sách ids để rà" }, 400);
+
+    const isEN = site === "nomaauto";
+    const langNote = isEN
+      ? `\n\n⚠️ NGÔN NGỮ: nội dung bài LÀ TIẾNG ANH (nomaauto.us). "original" và "fixed" trong JSON PHẢI bằng TIẾNG ANH, KHÔNG dịch sang tiếng Việt.`
+      : "";
+
+    const results = [];
+    let cost = 0;
+    for (const id of ids) {
+      let p;
+      try { p = await getPost(c, id); }
+      catch (e) { results.push({ id, error: String(e.message || e) }); continue; }
+
+      const laNoma = laBaiNoma(p);
+      const { forbidden, guide, note, ap_ho_so } = luatChoBai(site, laNoma);
+      const noiDung = p.content || "";
+      const bodyFlags = scanForbidden(noiDung, forbidden);      // sửa được (nằm trong thân bài)
+      const nameFlags = scanForbidden(p.name, forbidden);       // nằm ở TIÊU ĐỀ → tool không tự sửa
+      const regexFlags = scanForbidden(`${p.name} ${noiDung}`, forbidden);
+
+      const mustFix = bodyFlags.length
+        ? `\nCÁC CỤM VI PHẠM ĐÃ DÒ ĐƯỢC trong bài (BẮT BUỘC tạo 1 cặp sửa cho MỖI cụm, "original" copy đúng cụm này): ${bodyFlags.map((f) => `"${f.quote}"`).join(", ")}.\n`
+        : "";
+      const specCode = ap_ho_so ? skuCuaBai(p, skuSpecs) : null;
+      const specBlock = specCode ? `\n${skuSpecText(specCode, skuSpecs)}\n\n` : "";
+      const userPrompt =
+        `TIÊU ĐỀ BÀI: ${p.name}\n\n` +
+        specBlock +
+        `NỘI DUNG BÀI (HTML):\n${noiDung || "(trống)"}\n` +
+        mustFix +
+        `\nHãy trả JSON đúng schema. Sửa HẾT chỗ vi phạm${specCode ? ", và sửa HDSD/thời gian nếu lệch thông số chuẩn ở trên" : ""}; giữ nguyên phần còn lại.`;
+
+      try {
+        const res = await callClaude(env, {
+          model: "haiku",
+          systemPrompt: `${AUDIT_SYSTEM}${langNote}${note}\n\n${guide}`,
+          userPrompt,
+          maxTokens: 4000,
+          jsonOutput: true,
+        });
+        cost += res.cost_usd || 0;
+        const aiViolations = Array.isArray(res.parsed?.violations) ? res.parsed.violations : [];
+        // Cặp sửa chắc chắn (regex) đi trước, cặp AI không trùng original bổ sung sau —
+        // giống hệt nhánh sản phẩm để hai loại nội dung cho ra cùng kiểu kết quả.
+        const detPairs = deterministicFixes(noiDung, forbidden);
+        const seenOrig = new Set(detPairs.map((v) => v.original));
+        const violations = [
+          ...detPairs,
+          ...aiViolations.filter((v) => v && typeof v.original === "string" && v.original && !seenOrig.has(v.original)),
+        ];
+        const fc = applyFixes(noiDung, violations);
+        const appliedSet = new Set(fc.applied);
+        const notApplied = violations
+          .map((v) => (v && v.type) || (v && v.original) || "")
+          .filter((lbl) => lbl && !appliedSet.has(lbl));
+
+        results.push({
+          id, name: p.name, permalink: p.permalink, status: p.status,
+          la_noma: laNoma, sku: specCode, raw: p.raw,
+          // Không đọc được raw thì CẤM áp — báo ngay để giao diện chặn trước;
+          // brandcore-apply vẫn kiểm lại lần nữa ở phía server.
+          khong_ghi_duoc: p.raw ? null : "không đọc được nội dung gốc (raw) — tài khoản WordPress thiếu quyền sửa bài",
+          has_violations: violations.length > 0,
+          violations,
+          original_content: noiDung,
+          fixed_content: fc.fixed,
+          not_applied: [...new Set(notApplied)],
+          regex_flags: regexFlags,
+          name_flags: nameFlags.map((f) => f.type),
+        });
+      } catch (e) {
+        results.push({ id, name: p.name, permalink: p.permalink, error: String(e.message || e), regex_flags: regexFlags });
+      }
+    }
+    return json({ ok: true, site, target: "guide", cost_usd: Number(cost.toFixed(6)), results });
+  }
+
+  return json({ ok: false, error: `mode không hợp lệ: ${mode}` }, 400);
 }

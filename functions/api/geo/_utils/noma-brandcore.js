@@ -101,6 +101,37 @@ export const NOMA_FORBIDDEN = [
   { type: "claim: kiểm định/tiêu chuẩn quốc tế (chỉ có MSDS)", re: /(kiem dinh quoc te|tieu chuan quoc te|\bsgs\b|intertek)/, fix: "MSDS theo chuẩn GHS" },
 ];
 
+/* ── Bộ luật CHUNG cho nội dung KHÔNG nói về NOMA ────────────────────────────
+   doscom.vn trộn hai thế giới: bài hướng dẫn dùng camera/máy dò Doscom nằm chung
+   danh mục "Hướng dẫn sử dụng" với bài NOMA. Đem Brand Core NOMA áp lên bài Doscom là
+   SAI NGƯỜI SAI VIỆC — sửa "made in USA" thành "thương hiệu gốc Mỹ" trên bài camera
+   Doscom thì vừa vô nghĩa vừa gán nhầm định danh thương hiệu.
+
+   Nên tách ra: bài không nói về NOMA chỉ soát mấy claim quảng cáo sai bản chất (đúng
+   sai không phụ thuộc thương hiệu nào cả). BỎ HẲN nhóm xuất xứ và claim MSDS/GHS —
+   đó là luật riêng của NOMA. */
+const TYPE_CHUNG = [
+  "claim: an toàn tuyệt đối", "claim: 100%", "claim: bảo hành trọn đời",
+  "claim: vĩnh viễn", "claim: xoá hoàn toàn",
+  "từ cấm: số 1", "từ cấm: tốt nhất", "từ cấm: vô địch", "từ cấm: cực phẩm",
+  "từ cấm: vượt trội", "từ cấm: đột phá", "từ cấm: tiên tiến", "từ cấm: giá rẻ / siêu rẻ",
+];
+export const CLAIM_QUANG_CAO_CHUNG = TYPE_CHUNG
+  .map((t) => NOMA_FORBIDDEN.find((f) => f.type === t))
+  .filter(Boolean);
+
+// Khối luật nối vào system prompt khi soát bài KHÔNG thuộc NOMA. Cố ý KHÔNG có một
+// chữ nào về định danh/xuất xứ thương hiệu.
+export const QUY_TAC_QUANG_CAO_CHUNG = `═══ QUY TẮC NỘI DUNG CHUNG (bài KHÔNG nói về NOMA) ═══
+Bài này KHÔNG thuộc thương hiệu NOMA. TUYỆT ĐỐI KHÔNG chèn định danh, xuất xứ hay thông điệp NOMA vào bài.
+
+CHỈ soát đúng các claim quảng cáo sai bản chất — đúng/sai không phụ thuộc thương hiệu:
+- Claim tuyệt đối: "100%", "tuyệt đối an toàn", "vĩnh viễn", "xoá hoàn toàn", "bảo hành trọn đời".
+- Từ ngữ thổi phồng không chứng minh được: "số 1", "tốt nhất", "vô địch", "cực phẩm", "vượt trội", "đột phá", "tiên tiến", "giá rẻ nhất".
+- Chứng nhận/kiểm định nêu ra mà không có giấy tờ kèm theo.
+
+KHÔNG đụng tới: các bước hướng dẫn, thông số kỹ thuật, tên sản phẩm, cảnh báo an toàn. Chỉ thay đúng cụm chữ vi phạm.`;
+
 // Bộ từ cấm TIẾNG ANH — cho nomaauto.us (bản EN). Áp dụng cùng nguyên tắc brand core.
 export const NOMA_FORBIDDEN_EN = [
   // Origin (nặng nhất)

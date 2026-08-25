@@ -41,6 +41,18 @@ export const GAP_FIELDS = [
   { key: "so_cuu",             nhan: "Sơ cứu y tế",                trong_yeu: false },
 ];
 
+/* Bộ trường cho BÀI HƯỚNG DẪN SỬ DỤNG (bài viết trên doscom.vn / noma.vn).
+   Chỉ giữ những gì một bài hướng dẫn BẮT BUỘC phải nói. Mức "trọng yếu" cũng khác
+   trang bán hàng: ở đây các bước dùng, lưu ý, đồ bảo hộ và sơ cứu là trọng yếu —
+   thiếu chúng là người đọc làm sai/gặp nguy, chứ không chỉ là bài chưa đủ ý. */
+const HDSD_TRONG_YEU = {
+  hdsd: true, luu_y: true, ppe: true, so_cuu: true,
+  thoi_gian: false, thoi_gian_hieu_qua: false, doi_tuong: false, so_lan_dung: false,
+};
+export const GAP_FIELDS_HDSD = GAP_FIELDS
+  .filter((f) => f.key in HDSD_TRONG_YEU)
+  .map((f) => ({ ...f, trong_yeu: HDSD_TRONG_YEU[f.key] }));
+
 // Từ quá phổ thông → xuất hiện ở mọi bài, dùng làm mốc sẽ cho kết quả "có" giả.
 const STOP = new Set(`
  duoc khong nhung cung voi cho tren duoi trong ngoai theo hoac
@@ -128,13 +140,27 @@ export const boHtml = (html) =>
    `spec` là hồ sơ dạng mới (nhiều trường chữ). Hồ sơ dạng cũ (mảng) không có đủ
    trường nên trả về rỗng — nói rõ bằng `co_ho_so:false` thay vì báo "thiếu hết". */
 export function doiChieuSanPham({ name, description, short_description }, spec) {
+  return doiChieuText(`${name || ""} ${boHtml(short_description)} ${boHtml(description)}`, spec, GAP_FIELDS);
+}
+
+/* Đối chiếu 1 BÀI HƯỚNG DẪN SỬ DỤNG (bài viết WordPress trên doscom.vn / noma.vn).
+
+   Cố ý dùng BỘ TRƯỜNG KHÁC sản phẩm: bài hướng dẫn không có nghĩa vụ nhắc dung tích,
+   thành phần hay bảo hành — đòi mấy thứ đó là tạo ra danh sách "thiếu" giả rồi người
+   dùng bỏ luôn công cụ. Ngược lại, thứ một bài hướng dẫn THIẾU thì nguy hiểm thật:
+   bước dùng, lưu ý, đồ bảo hộ, sơ cứu. */
+export function doiChieuBaiHdsd({ name, content }, spec) {
+  return doiChieuText(`${name || ""} ${boHtml(content)}`, spec, GAP_FIELDS_HDSD);
+}
+
+/* Lõi dùng chung: đo từng trường của hồ sơ trên text của trang. */
+export function doiChieuText(pageText, spec, fields = GAP_FIELDS) {
   if (!spec || Array.isArray(spec.cong_dung) || Array.isArray(spec.hdsd)) {
     return { co_ho_so: false, thieu: [], khong_chac: [], co: [], diem: null };
   }
-  const pageText = `${name || ""} ${boHtml(short_description)} ${boHtml(description)}`;
 
   const thieu = [], khongChac = [], co = [];
-  for (const f of GAP_FIELDS) {
+  for (const f of fields) {
     const giaTri = spec[f.key];
     if (!giaTri) continue;                       // hồ sơ không có thì không đòi web phải có
     const kq = doTruong(pageText, giaTri);

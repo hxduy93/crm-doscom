@@ -66,7 +66,14 @@
 <body>
 <div class="wrap">
   <h1>Sửa brandcore — NOMA</h1>
-  <p class="sub">Quét sản phẩm NOMA đã đăng → tìm chỗ vi phạm Brand Core v3 → sửa đúng chỗ đó. Không đụng sản phẩm Doscom.</p>
+  <p class="sub">Quét nội dung đã đăng (mô tả sản phẩm <b>hoặc</b> bài hướng dẫn sử dụng trên doscom.vn / noma.vn)
+     → tìm chỗ vi phạm Brand Core v3 → sửa đúng chỗ đó.</p>
+
+  <div id="guideNote" class="note hide">
+    <b>Bài hướng dẫn sử dụng</b> = bài viết WordPress trong các danh mục “Hướng dẫn sử dụng / Hướng dẫn chăm sóc xe /
+    Product Guide”. Trên doscom.vn có cả bài Doscom (camera, máy dò) nằm chung danh mục: bài <b>không nói về NOMA</b>
+    chỉ được soát bằng luật quảng cáo chung (claim tuyệt đối, từ thổi phồng) — <b>không</b> áp định danh/xuất xứ NOMA vào.
+  </div>
 
   <div class="note">
     Quy trình an toàn: <b>Quét</b> (không tốn AI) → <b>Rà bằng AI</b> để xem bản sửa trước → <b>Áp bản sửa</b> (backup gốc, giữ trạng thái đăng). Có nút Hoàn tác trong báo cáo.
@@ -99,6 +106,12 @@
           <option value="doscom">doscom.vn</option>
           <option value="noma">noma.vn</option>
           <option value="nomaauto">nomaauto.us (EN)</option>
+        </select>
+      </label>
+      <label>Nội dung:
+        <select id="loai">
+          <option value="product">Sản phẩm (mô tả bán hàng)</option>
+          <option value="guide">Bài hướng dẫn sử dụng (blog)</option>
         </select>
       </label>
       <button id="btnScan">Quét sản phẩm NOMA</button>
@@ -206,6 +219,23 @@ function headers(write) {
 }
 const site = () => $("#site").value;
 
+/* Loại nội dung đang soát. Một trang, hai nguồn: mô tả sản phẩm (WooCommerce) và bài
+   hướng dẫn sử dụng (bài viết WordPress). Mọi request đều phải kèm `target` — thiếu là
+   máy chủ mặc định về "product" và người dùng tưởng đã soát bài hướng dẫn mà thực ra chưa. */
+const loai = () => $("#loai").value;
+const laBai = () => loai() === "guide";
+const dvi = () => (laBai() ? "bài" : "sản phẩm");
+
+// Đổi loại nội dung → dọn sạch kết quả cũ. Để lại danh sách sản phẩm rồi bấm "Rà bằng AI"
+// là gửi id sản phẩm sang đường bài viết (hoặc ngược lại) — sai bài, sai cả bản sửa.
+$("#loai").onchange = () => {
+  $("#btnScan").textContent = laBai() ? "Quét bài hướng dẫn" : "Quét sản phẩm NOMA";
+  $("#guideNote").classList.toggle("hide", !laBai());
+  for (const id of ["scanCard", "applyCard", "reportCard", "gapCard", "daSuaCard"]) $("#" + id).classList.add("hide");
+  scanned = []; proposals = []; daSuaPhien = [];
+  $("#scanInfo").textContent = "";
+};
+
 let scanned = [];    // [{id,name,permalink,flags}]
 let proposals = [];  // [{id,name,permalink,has_violations,violations,fixed_description,fixed_short_description,...}]
 
@@ -214,11 +244,22 @@ $("#btnScan").onclick = async () => {
   $("#btnScan").disabled = true; $("#scanInfo").textContent = "Đang quét...";
   $("#scanCard").classList.add("hide"); $("#applyCard").classList.add("hide"); $("#reportCard").classList.add("hide");
   try {
-    const r = await fetch("/api/products/brandcore-scan", { method:"POST", headers:headers(false), body: JSON.stringify({ site: site(), mode:"list" }) });
+    const r = await fetch("/api/products/brandcore-scan", { method:"POST", headers:headers(false), body: JSON.stringify({ site: site(), target: loai(), mode:"list" }) });
     const d = await r.json();
     if (!d.ok) throw new Error(d.error || "lỗi quét");
-    scanned = d.products || [];
-    $("#scanInfo").textContent = `Quét ${d.scanned} SP · ${d.noma_count} SP NOMA · ${d.flagged_count} SP có cờ vi phạm`;
+    scanned = d.items || d.products || [];
+    if (laBai()) {
+      const canhBao = [];
+      // Nói rõ phần CHƯA soát tới: im lặng cắt bớt sẽ bị hiểu là "cả web đã sạch".
+      if (d.con_bai_chua_quet) canhBao.push('<span class="err">còn bài chưa quét tới (chạm trần số trang)</span>');
+      if (d.raw_ok === false) canhBao.push('<span class="err">có bài không đọc được nội dung gốc → sẽ không ghi được</span>');
+      $("#scanInfo").innerHTML =
+        `Quét ${d.scanned} bài trong ${(d.guide_categories || []).length} danh mục hướng dẫn · ` +
+        `${d.noma_count} bài NOMA · ${d.flagged_count} bài có cờ vi phạm` +
+        (canhBao.length ? " · " + canhBao.join(" · ") : "");
+    } else {
+      $("#scanInfo").textContent = `Quét ${d.scanned} SP · ${d.noma_count} SP NOMA · ${d.flagged_count} SP có cờ vi phạm`;
+    }
     renderList();
     $("#scanCard").classList.remove("hide");
   } catch (e) {
@@ -229,17 +270,25 @@ $("#btnScan").onclick = async () => {
 };
 
 function renderList() {
-  $("#scanTitle").textContent = `${scanned.length} sản phẩm NOMA`;
+  $("#scanTitle").textContent = laBai() ? `${scanned.length} bài hướng dẫn` : `${scanned.length} sản phẩm NOMA`;
   scanned.sort((a,b) => (b.flags.length - a.flags.length));
   $("#list").innerHTML = scanned.map((p, i) => {
     const flags = p.flags.length
       ? `<div class="flags">${p.flags.map(f => `<span class="flag">${esc(f.type)}</span>`).join("")}</div>`
       : `<span class="pill green">Chưa thấy vi phạm (regex)</span>`;
+    /* Bài Doscom nằm chung danh mục hướng dẫn với bài NOMA. Phải nói rõ bài nào đang
+       chịu bộ luật nào, không thì người duyệt tưởng brand core NOMA áp cho tất. */
+    const nhan = laBai()
+      ? (p.la_noma ? `<span class="pill green">bài NOMA</span>` : `<span class="pill grey">bài Doscom — chỉ soát luật QC chung</span>`)
+        + (p.sku ? ` <span class="pill grey">SKU ${esc(p.sku)}</span>` : "")
+        + (p.raw === false ? ` <span class="pill red">không đọc được bản gốc — không ghi được</span>` : "")
+      : "";
     return `<div class="prod">
       <label class="row" style="align-items:flex-start">
         <input type="checkbox" class="pick" data-i="${i}" ${p.flags.length ? "checked" : ""} style="margin-top:3px" />
         <span style="flex:1">
           <h3>${esc(p.name)} <span class="muted">#${p.id}</span></h3>
+          ${nhan}
           ${flags}
           <a href="${esc(p.permalink)}" target="_blank" class="muted">Mở trên web ↗</a>
         </span>
@@ -265,7 +314,7 @@ $("#btnAudit").onclick = async () => {
   for (let i = 0; i < ids.length; i++) {
     $("#btnAudit").textContent = `Đang rà ${i + 1}/${ids.length}...`;
     try {
-      const r = await fetch("/api/products/brandcore-scan", { method:"POST", headers:headers(false), body: JSON.stringify({ site: site(), mode:"audit", ids: [ids[i]] }) });
+      const r = await fetch("/api/products/brandcore-scan", { method:"POST", headers:headers(false), body: JSON.stringify({ site: site(), target: loai(), mode:"audit", ids: [ids[i]] }) });
       const d = await r.json();
       if (d.ok && Array.isArray(d.results)) { allResults.push(...d.results); cost += d.cost_usd || 0; }
       else allResults.push({ id: ids[i], error: d.error || "lỗi rà" });
@@ -280,38 +329,44 @@ $("#btnAudit").onclick = async () => {
 function renderProposals(results, cost) {
   const clean = results.filter(x => !x.has_violations && !x.error && !x.skipped).length;
   const errs = results.filter(x => x.error).length;
-  const head = `<p class="muted">${proposals.length} SP có vi phạm · ${clean} SP sạch · ${errs} lỗi · chi phí AI ~$${(cost||0).toFixed(4)}</p>`;
+  const dv = laBai() ? "bài" : "SP";
+  const head = `<p class="muted">${proposals.length} ${dv} có vi phạm · ${clean} ${dv} sạch · ${errs} lỗi · chi phí AI ~$${(cost||0).toFixed(4)}</p>`;
   $("#proposals").innerHTML = head + proposals.map((p, i) => {
     const vio = (p.violations||[]).map(v =>
       `<tr><td><span class="flag">${esc(v.type)}</span></td><td>${esc(v.original)}</td><td>${esc(v.fixed)}</td></tr>`).join("");
     const warn = (p.not_applied && p.not_applied.length)
       ? `<div class="err" style="font-size:12px;margin:4px 0">⚠ ${p.not_applied.length} cặp AI đề xuất KHÔNG khớp đúng chữ gốc → sẽ KHÔNG áp (an toàn, không đụng layout): ${p.not_applied.map(esc).join(", ")}</div>` : "";
     const nameWarn = (p.name_flags && p.name_flags.length)
-      ? `<div class="err" style="font-size:12px;margin:4px 0">⚠ Lỗi nằm ở TÊN sản phẩm (tool KHÔNG sửa tên): ${p.name_flags.map(esc).join(", ")} — bạn sửa tên tay trên WP nếu muốn.</div>` : "";
+      ? `<div class="err" style="font-size:12px;margin:4px 0">⚠ Lỗi nằm ở ${laBai() ? "TIÊU ĐỀ bài" : "TÊN sản phẩm"} (tool KHÔNG sửa ${laBai() ? "tiêu đề" : "tên"}): ${p.name_flags.map(esc).join(", ")} — bạn sửa tay trên WP nếu muốn.</div>` : "";
+    // Bài chỉ đọc được bản rendered → ghi vào là mất khối Gutenberg. Chặn ngay từ giao diện.
+    const ghiWarn = p.khong_ghi_duoc
+      ? `<div class="err" style="font-size:12px;margin:4px 0">⛔ ${esc(p.khong_ghi_duoc)} — bài này sẽ KHÔNG được ghi.</div>` : "";
+    const goc = p.original_description ?? p.original_content ?? "";
+    const moi = p.fixed_description ?? p.fixed_content ?? "";
     return `<div class="prod">
-      <label class="row"><input type="checkbox" class="applypick" data-i="${i}" checked />
+      <label class="row"><input type="checkbox" class="applypick" data-i="${i}" ${p.khong_ghi_duoc ? "" : "checked"} />
         <b>${esc(p.name)} <span class="muted">#${p.id}</span></b></label>
-      <table><thead><tr><th>Loại vi phạm</th><th>Gốc</th><th>Sửa thành</th></tr></thead><tbody>${vio}</tbody></table>${warn}${nameWarn}
+      <table><thead><tr><th>Loại vi phạm</th><th>Gốc</th><th>Sửa thành</th></tr></thead><tbody>${vio}</tbody></table>${warn}${nameWarn}${ghiWarn}
       <div class="cmp">
-        <div><div class="lab">Mô tả dài — GỐC</div><div class="box old">${esc(stripHtml(p.original_description || ""))}</div></div>
-        <div><div class="lab">Mô tả dài — ĐÃ SỬA</div><div class="box new">${esc(stripHtml(p.fixed_description || ""))}</div></div>
+        <div><div class="lab">${laBai() ? "Nội dung bài" : "Mô tả dài"} — GỐC</div><div class="box old">${esc(stripHtml(goc))}</div></div>
+        <div><div class="lab">${laBai() ? "Nội dung bài" : "Mô tả dài"} — ĐÃ SỬA</div><div class="box new">${esc(stripHtml(moi))}</div></div>
       </div>
       <a href="${esc(p.permalink)}" target="_blank" class="muted">Mở trên web ↗</a>
     </div>`;
-  }).join("") || `<p class="muted">Không có SP nào cần sửa trong nhóm đã chọn.</p>`;
+  }).join("") || `<p class="muted">Không có ${dv} nào cần sửa trong nhóm đã chọn.</p>`;
 }
 function stripHtml(h){ return String(h).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim(); }
 
 // ---------- NẤC 2: ÁP BẢN SỬA ----------
 $("#btnApply").onclick = async () => {
   const picks = [...document.querySelectorAll(".applypick:checked")].map(cb => proposals[+cb.dataset.i]);
-  if (!picks.length) return alert("Chọn ít nhất 1 sản phẩm để áp.");
-  if (!confirm(`Áp bản sửa cho ${picks.length} sản phẩm trên ${site()}? (đã backup, có thể hoàn tác)`)) return;
+  if (!picks.length) return alert(`Chọn ít nhất 1 ${dvi()} để áp.`);
+  if (!confirm(`Áp bản sửa cho ${picks.length} ${dvi()} trên ${site()}? (đã backup, có thể hoàn tác)`)) return;
   $("#btnApply").disabled = true; $("#btnApply").textContent = "Đang áp...";
   try {
     // Gửi CẶP SỬA (violations) — server thay chuỗi nguyên văn trên HTML gốc, giữ nguyên layout.
     const fixes = picks.map(p => ({ id: p.id, violations: p.violations }));
-    const r = await fetch("/api/products/brandcore-apply", { method:"POST", headers:headers(true), body: JSON.stringify({ site: site(), fixes }) });
+    const r = await fetch("/api/products/brandcore-apply", { method:"POST", headers:headers(true), body: JSON.stringify({ site: site(), target: loai(), fixes }) });
     const d = await r.json();
     if (!d.ok) throw new Error(d.error || "lỗi áp");
     renderReport(d);
@@ -325,13 +380,13 @@ $("#btnApply").onclick = async () => {
 function renderReport(d) {
   const byType = Object.entries(d.summary_by_type || {}).sort((a,b)=>b[1]-a[1]);
   const stat = `<div class="stat">
-    <div class="b"><div class="n">${d.applied}</div><div class="l">SP đã sửa</div></div>
+    <div class="b"><div class="n">${d.applied}</div><div class="l">${d.target === "guide" ? "Bài" : "SP"} đã sửa</div></div>
     <div class="b"><div class="n">${d.fixed_total}</div><div class="l">Lỗi brandcore khắc phục</div></div>
     <div class="b"><div class="n">${d.skipped}</div><div class="l">Bỏ qua (không đổi)</div></div>
     <div class="b"><div class="n">${d.failed}</div><div class="l">Lỗi ghi</div></div>
   </div>`;
   const typeTable = byType.length
-    ? `<h3>Theo loại vi phạm</h3><table><thead><tr><th>Loại</th><th>Số SP</th></tr></thead><tbody>${
+    ? `<h3>Theo loại vi phạm</h3><table><thead><tr><th>Loại</th><th>Số ${d.target === "guide" ? "bài" : "SP"}</th></tr></thead><tbody>${
         byType.map(([t,n])=>`<tr><td>${esc(t)}</td><td>${n}</td></tr>`).join("")}</tbody></table>` : "";
   const rows = (d.items||[]).map(it => {
     const status = it.applied ? `<span class="pill green">Đã sửa</span>`
@@ -344,16 +399,17 @@ function renderReport(d) {
     return `<tr><td>${link} <span class="muted">#${it.id}</span>${it.error?`<div class="err" style="font-size:12px">${esc(it.error)}</div>`:""}</td>
       <td>${status}</td><td>${fixedList}${residual}</td><td>${revert}</td></tr>`;
   }).join("");
-  $("#reportBody").innerHTML = `<p class="muted">Website: <b>${esc(d.site)}</b> · lúc ${esc(d.generated_at)}</p>`
+  const nhanCot = d.target === "guide" ? "bài hướng dẫn" : "sản phẩm";
+  $("#reportBody").innerHTML = `<p class="muted">Website: <b>${esc(d.site)}</b> · nội dung: <b>${esc(nhanCot)}</b> · lúc ${esc(d.generated_at)}</p>`
     + stat + typeTable
-    + `<h3>Chi tiết từng sản phẩm</h3><table><thead><tr><th>Sản phẩm</th><th>Trạng thái</th><th>Đã khắc phục</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+    + `<h3>Chi tiết từng ${nhanCot}</h3><table><thead><tr><th>Nội dung</th><th>Trạng thái</th><th>Đã khắc phục</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 async function revert(id, key, btn) {
   if (!confirm("Khôi phục nội dung gốc cho sản phẩm này?")) return;
   btn.disabled = true; btn.textContent = "Đang hoàn tác...";
   try {
-    const r = await fetch("/api/products/brandcore-apply", { method:"POST", headers:headers(true), body: JSON.stringify({ mode:"revert", site: site(), id, backup_key: key }) });
+    const r = await fetch("/api/products/brandcore-apply", { method:"POST", headers:headers(true), body: JSON.stringify({ mode:"revert", site: site(), target: loai(), id, backup_key: key }) });
     const d = await r.json();
     if (!d.ok) throw new Error(d.error || "lỗi");
     btn.textContent = "Đã hoàn tác ✓";
@@ -448,13 +504,13 @@ document.getElementById("btnGap").onclick = async () => {
   btn.disabled = true;
   gapCard.classList.remove("hide");
   gapTitle.textContent = "Đang đối chiếu…";
-  gapBody.innerHTML = '<p class="muted">Đang tải bài đã đăng và so với hồ sơ sản phẩm…</p>';
+  gapBody.innerHTML = '<p class="muted">Đang tải nội dung đã đăng và so với hồ sơ sản phẩm…</p>';
   try {
     const r = await fetch("/api/products/brandcore-scan", {
       method: "POST",
       headers: { "content-type": "application/json", ...dossierHeaders() },
       credentials: "same-origin",
-      body: JSON.stringify({ site, mode: "gap" }),
+      body: JSON.stringify({ site, target: loai(), mode: "gap" }),
     });
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || "lỗi");
@@ -474,16 +530,20 @@ function gapPill(n, loai) {
 
 function renderGap(j) {
   const rs = j.results || [];
+  const bai = j.target === "guide";
+  const dv = bai ? "bài hướng dẫn" : "sản phẩm";
   const tongThieu = rs.reduce((a, r) => a + (r.thieu?.length || 0), 0);
-  gapTitle.textContent = `${j.site} — soát ${j.scanned} sản phẩm · ${tongThieu} mục nội dung còn thiếu`;
+  gapTitle.textContent = `${j.site} — soát ${j.scanned} ${dv} · ${tongThieu} mục nội dung còn thiếu`;
 
+  /* Với bài hướng dẫn, bộ trường đối chiếu KHÁC trang bán hàng: chỉ đòi các bước dùng,
+     lưu ý, đồ bảo hộ, sơ cứu… — bài hướng dẫn không có nghĩa vụ nhắc dung tích/bảo hành. */
   const canhBao = j.chua_co_ho_so
-    ? `<div class="note">${j.chua_co_ho_so} sản phẩm chưa đối chiếu được — không dò ra mã SKU trong tên, hoặc mã đó không có trong hồ sơ đang dùng. Kiểm tra lại tên sản phẩm hoặc tải hồ sơ đầy đủ hơn lên.</div>`
+    ? `<div class="note">${j.chua_co_ho_so} ${dv} chưa đối chiếu được — không dò ra mã SKU NOMA trong ${bai ? "tiêu đề/nội dung bài" : "tên sản phẩm"}, hoặc mã đó không có trong hồ sơ đang dùng.${bai ? " Bài Doscom (không nói về NOMA) luôn nằm nhóm này — đúng như thiết kế." : ""}</div>`
     : "";
 
   const rows = rs.map((r) => {
     if (!r.co_ho_so) {
-      return `<div class="prod"><h3>${r.name}</h3><div class="muted">Chưa có hồ sơ cho sản phẩm này — bỏ qua.</div></div>`;
+      return `<div class="prod"><h3>${r.name}</h3><div class="muted">Chưa có hồ sơ ${bai ? "SKU cho bài này" : "cho sản phẩm này"} — bỏ qua.</div></div>`;
     }
     const muc = (x, mau) =>
       `<div style="margin:6px 0"><b>${x.nhan}</b> ${x.trong_yeu ? '<span class="pill red">trọng yếu</span>' : ""}
@@ -519,8 +579,8 @@ document.getElementById("btnGapPickAll").onclick = () => {
 
 document.getElementById("btnGapDraft").onclick = async () => {
   const ids = [...document.querySelectorAll(".gappick:checked")].map((c) => Number(c.dataset.id));
-  if (!ids.length) { alert("Chưa chọn sản phẩm nào."); return; }
-  if (ids.length > 10) { alert("Mỗi lượt tối đa 10 sản phẩm."); return; }
+  if (!ids.length) { alert(`Chưa chọn ${dvi()} nào.`); return; }
+  if (ids.length > 10) { alert(`Mỗi lượt tối đa 10 ${dvi()}.`); return; }
 
   const btn = document.getElementById("btnGapDraft");
   btn.disabled = true;
@@ -530,12 +590,14 @@ document.getElementById("btnGapDraft").onclick = async () => {
       method: "POST",
       headers: { "content-type": "application/json", ...dossierHeaders() },
       credentials: "same-origin",
-      body: JSON.stringify({ site: document.getElementById("site").value, mode: "gap-draft", ids }),
+      body: JSON.stringify({ site: document.getElementById("site").value, target: loai(), mode: "gap-draft", ids }),
     });
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || "lỗi");
-    const canDuyet = (j.results || []).filter((x) => x.new_description);
-    const boQua = (j.results || []).filter((x) => !x.new_description);
+    // Sản phẩm trả `new_description`, bài hướng dẫn trả `new_content` — hai nguồn, hai trường.
+    const noiDungMoi = (x) => x.new_description || x.new_content;
+    const canDuyet = (j.results || []).filter(noiDungMoi);
+    const boQua = (j.results || []).filter((x) => !noiDungMoi(x));
     if (boQua.length) {
       console.info("Bỏ qua:", boQua.map((x) => `${x.name}: ${x.error || x.bo_qua}`));
     }
@@ -579,7 +641,7 @@ function veDuyet(cost) {
   $duyet("duyetDem").textContent =
     `${duyetI + 1}/${duyetDS.length}` + (cost != null ? ` · chi phí AI $${Number(cost).toFixed(4)}` : "");
   $duyet("duyetThieu").innerHTML = "Bổ sung: " + (r.thieu || []).map((t) => `<span class="flag">${esc(t)}</span>`).join(" ");
-  $duyet("duyetCu").textContent = (r.description_cu || "(trống)").slice(-1500);
+  $duyet("duyetCu").textContent = (r.description_cu || r.noi_dung_cu || "(trống)").slice(-1500);
   $duyet("duyetMoi").textContent = r.added_html || "";
   $duyet("duyetKq").innerHTML = "";
   // Về trạng thái "chưa ghi": nút Áp bật lại, nút đi tiếp và link bài ẩn đi.
@@ -598,6 +660,7 @@ function dongDuyet() {
   renderReport({
     ok: true,
     site: document.getElementById("site").value,
+    target: loai(),
     applied: items.filter((x) => x.applied).length,
     skipped: 0,
     failed: items.filter((x) => x.error).length,
@@ -627,9 +690,9 @@ function veDaSua() {
   const card = document.getElementById("daSuaCard");
   if (!daSuaPhien.length) { card.classList.add("hide"); return; }
   card.classList.remove("hide");
-  document.getElementById("daSuaTitle").textContent = `Đã sửa trong phiên này — ${daSuaPhien.length} sản phẩm`;
+  document.getElementById("daSuaTitle").textContent = `Đã sửa trong phiên này — ${daSuaPhien.length} ${dvi()}`;
   document.getElementById("daSuaBody").innerHTML =
-    `<table><thead><tr><th>Sản phẩm</th><th>Đã bổ sung</th><th>Trạng thái</th></tr></thead><tbody>` +
+    `<table><thead><tr><th>Nội dung</th><th>Đã bổ sung</th><th>Trạng thái</th></tr></thead><tbody>` +
     daSuaPhien.map((x) => `<tr>
       <td><a href="${esc(x.permalink)}" target="_blank" rel="noopener">${esc(x.name)}</a>
           <span class="muted">#${x.id}</span></td>
@@ -645,7 +708,7 @@ function capNhatTieuDeGap() {
   if (!t) return;
   const goc = t.dataset.goc || t.textContent;
   t.dataset.goc = goc;
-  t.textContent = daSuaPhien.length ? `${goc} · còn ${con} sản phẩm chờ sửa` : goc;
+  t.textContent = daSuaPhien.length ? `${goc} · còn ${con} ${dvi()} chờ sửa` : goc;
 }
 
 $duyet("duyetDong").onclick = dongDuyet;
@@ -666,8 +729,9 @@ $duyet("duyetAp").onclick = async () => {
       method: "POST",
       headers: { "content-type": "application/json", ...dossierHeaders() },
       credentials: "same-origin",
-      body: JSON.stringify({ site: document.getElementById("site").value,
-                             fixes: [{ id: r.id, description: r.new_description }] }),
+      // Bài hướng dẫn ghi vào trường `content`; sản phẩm ghi vào `description`.
+      body: JSON.stringify({ site: document.getElementById("site").value, target: loai(),
+                             fixes: [{ id: r.id, ...(laBai() ? { content: r.new_content } : { description: r.new_description }) }] }),
     });
     const j = await res.json();
     if (!j.ok) throw new Error(j.error || "lỗi");
@@ -685,8 +749,8 @@ $duyet("duyetAp").onclick = async () => {
     const link = it.permalink || r.permalink;
     $duyet("duyetKq").innerHTML =
       '<span class="pill green">✓ Đã ghi lên web</span> ' +
-      `<span class="muted">— đã bổ sung ${(r.thieu || []).length} mục vào cuối bài. ` +
-      'Bài này đã được bỏ khỏi danh sách chờ sửa.</span>';
+      `<span class="muted">— đã bổ sung ${(r.thieu || []).length} mục vào cuối ${laBai() ? "bài hướng dẫn" : "mô tả"}. ` +
+      'Đã bỏ khỏi danh sách chờ sửa.</span>';
     if (link) {
       const a = $duyet("duyetXemBai");
       a.href = link;
@@ -698,7 +762,7 @@ $duyet("duyetAp").onclick = async () => {
     $duyet("duyetBoQua").classList.add("hide");
     $duyet("duyetTiep").classList.remove("hide");
     $duyet("duyetTiep").textContent =
-      duyetI + 1 < duyetDS.length ? "Sản phẩm tiếp theo →" : "Xong — đóng lại";
+      duyetI + 1 < duyetDS.length ? (laBai() ? "Bài tiếp theo →" : "Sản phẩm tiếp theo →") : "Xong — đóng lại";
   } catch (e) {
     $duyet("duyetKq").innerHTML = '<span class="err">✕ Ghi KHÔNG thành công: ' + esc(e.message) +
       '</span> <span class="muted">— bài giữ nguyên, vẫn nằm trong danh sách chờ sửa.</span>';
