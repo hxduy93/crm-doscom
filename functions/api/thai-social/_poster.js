@@ -119,6 +119,43 @@ export function buildScenePrompt(angle, scene, seed = 0) {
   ].join(" ");
 }
 
+/* BRIEF cho model dòng gpt-image.
+
+   Khác hẳn prompt cho model khuếch tán: chuỗi tag ngắt bằng dấu phẩy ("flat vector, bright,
+   NO text") là ngôn ngữ của Flux/SD. gpt-image nghe BRIEF viết bằng câu như giao việc cho
+   designer, và tuân lệnh phủ định viết bằng lời rõ ràng — nên không cần negative_prompt,
+   chỉ cần nói thẳng "không được có chữ".
+
+   Cố ý mô tả cả BỐ CỤC: nửa phải chừa chỗ cho ảnh sản phẩm thật sẽ dán đè, nửa trái chừa
+   cho chữ Thái. Không nói ra thì model dựng thiết kế kín khung, dán sản phẩm lên là đè
+   mất trọng tâm. */
+export function buildDesignBrief(angle, scene, seed = 0) {
+  const bank = SCENE_BY_ANGLE[angle] || SCENE_BY_ANGLE.combo;
+  const base = String(scene || "").trim() || bank[seed % bank.length];
+  const mood = MOODS[(seed >> 3) % MOODS.length];
+  const style = STYLES[(seed >> 7) % STYLES.length];
+
+  return [
+    "Design a square background artwork for a Facebook product advertisement.",
+    `The visual direction is: ${base}.`,
+    `Use a ${mood}, rendered as ${style}.`,
+    "",
+    "Composition requirements:",
+    "- Keep the LEFT half visually calm and uncluttered. A headline will be placed there later.",
+    "- Keep the LOWER RIGHT area relatively simple. A product photo will be placed there later.",
+    "- Overall brightness must be light; avoid dark or heavy areas.",
+    "",
+    "Strict rules:",
+    "- Do NOT draw any text, letters, numbers, words, captions, labels or signatures.",
+    "- Do NOT draw any bottle, spray can, product or packaging.",
+    "- Do NOT draw people, hands, faces, cars or vehicles.",
+    "- Do NOT add any logo or watermark.",
+    "",
+    "The result should look like a polished advertising key visual made by a graphic designer,",
+    "not a photograph and not a cluttered collage.",
+  ].join("\n");
+}
+
 /* Prompt phủ định — model nào nhận `negative_prompt` thì dùng cái này.
 
    flux-1-schnell KHÔNG nhận negative_prompt, nên với nó những chữ "NO bottle" ở trên chỉ

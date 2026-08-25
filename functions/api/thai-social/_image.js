@@ -12,7 +12,8 @@
 
 import { estimateNeurons, logAIUsage } from "../geo/_utils/ai-usage.js";
 import { buildImagePrompt } from "./_prompt.js";
-import { buildScenePrompt, seedFrom, NEGATIVE_PROMPT } from "./_poster.js";
+import { buildScenePrompt, buildDesignBrief, seedFrom, NEGATIVE_PROMPT } from "./_poster.js";
+import { generateOpenAIImage, openaiImageAvailable } from "./_image-openai.js";
 
 /* Model sinh ảnh.
 
@@ -49,13 +50,36 @@ function costOf(model, steps) {
   return Number((n / 1000 * 0.011).toFixed(6));
 }
 
-export async function generateFlux(env, { scene, steps = 20, raw = false, seed = 0 }) {
+/* Sinh MỘT ảnh nền. Thứ tự thử — dừng ở cái đầu tiên chạy được:
+
+     1. OpenAI dòng gpt-image  — bám bố cục và dựng đồ hoạ tốt nhất trong ba. Mặc định
+        từ 25/08/2026 vì hai đường dưới cho ra ảnh mà chủ dự án đánh giá là xấu.
+     2. lucid-origin (Workers AI) — có seed + negative_prompt, khá hơn flux.
+     3. flux-1-schnell — đường lui cuối, luôn có sẵn theo binding AI.
+
+   Tắt OpenAI bằng env USE_OPENAI_IMAGE=false (cùng kiểu kill switch USE_CLAUDE). */
+export async function generateFlux(env, { scene, steps = 20, raw = false, seed = 0, brief = "" }) {
   if (!env.AI) {
     const e = new Error("Thiếu binding Workers AI 'AI' — Pages → Settings → Functions → Bindings → Workers AI");
     e.kind = "no_binding";
     throw e;
   }
   const prompt = (raw ? String(scene || "") : buildImagePrompt(scene)).slice(0, 2000);
+
+  let lastOpenAiErr = null;
+  const openaiOff = String(env.USE_OPENAI_IMAGE || "").toLowerCase() === "false";
+  if (!openaiOff && openaiImageAvailable(env)) {
+    try {
+      // gpt-image nghe brief viết bằng câu; chuỗi tag của Flux đưa cho nó là phí.
+      const r = await generateOpenAIImage(env, { prompt: brief || prompt });
+      try { await logAIUsage(env, { neurons: Math.round(r.cost_usd / 0.011 * 1000), isImage: true }); } catch {}
+      return { b64: r.b64, model: r.model, cost_usd: r.cost_usd };
+    } catch (err) {
+      // Hết tiền / bị chặn thì Workers AI cũng không cứu được chất lượng, nhưng vẫn còn
+      // hơn không có ảnh → rơi xuống, chỉ ghi lại lý do.
+      lastOpenAiErr = String(err?.message || err);
+    }
+  }
 
   let lastErr = null;
   for (const model of [MODEL_MAIN, MODEL_FALLBACK]) {
@@ -79,7 +103,10 @@ export async function generateFlux(env, { scene, steps = 20, raw = false, seed =
       }
     }
   }
-  const e = new Error(`Sinh ảnh lỗi: ${String(lastErr?.message || lastErr)}`);
+  const e = new Error(
+    `Sinh ảnh lỗi: ${String(lastErr?.message || lastErr)}`
+    + (lastOpenAiErr ? ` | OpenAI trước đó: ${lastOpenAiErr}` : "")
+  );
   e.kind = "flux";
   throw e;
 }
@@ -108,6 +135,7 @@ export async function buildArtwork(env, { skuMain, images, angle, scene, seedKey
     try {
       const f = await generateFlux(env, {
         scene: buildScenePrompt(angle, scene, seed), raw: true, seed,
+        brief: buildDesignBrief(angle, scene, seed),
       });
       return { image_url: product, bg_base64: f.b64, image_base64: null,
                image_note: null, cost_usd: f.cost_usd, image_model: f.model };

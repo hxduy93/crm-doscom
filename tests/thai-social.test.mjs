@@ -553,3 +553,57 @@ test("canvas vẽ quầng sáng quanh chữ rồi TẮT đi trước khi xuất 
   assert.ok(iOff > -1 && iOut > iOff,
     "quên tắt shadow thì lần vẽ sau kế thừa, ảnh mờ dần qua mỗi lần ghép");
 });
+
+/* ── 15. Đường sinh ảnh OpenAI ──────────────────────────────────────────────
+   25/08/2026: ảnh do Workers AI sinh vẫn bị đánh giá là xấu → ưu tiên dòng gpt-image,
+   giữ Workers AI làm đường lui. */
+
+test("OpenAI được thử TRƯỚC Workers AI", () => {
+  const src = read("../functions/api/thai-social/_image.js");
+  const iOpenAI = src.indexOf("generateOpenAIImage(env");
+  const iCf = src.indexOf("for (const model of [MODEL_MAIN, MODEL_FALLBACK])");
+  assert.ok(iOpenAI > -1 && iCf > iOpenAI, "gpt-image phải đứng trước Workers AI");
+  assert.match(src, /USE_OPENAI_IMAGE/, "phải có kill switch như USE_CLAUDE");
+});
+
+test("OpenAI đi qua AI Gateway, KHÔNG gọi thẳng api.openai.com", () => {
+  const src = read("../functions/api/thai-social/_image-openai.js");
+  assert.match(src, /gateway\.ai\.cloudflare\.com/,
+    "gọi thẳng từ colo Hong Kong bị 403 unsupported_country_region_territory");
+  const iGw = src.indexOf("gateway.ai.cloudflare.com");
+  const iDirect = src.indexOf('"https://api.openai.com/v1"');
+  assert.ok(iGw > -1 && iDirect > iGw, "gọi thẳng chỉ là đường lui khi thiếu CF_ACCOUNT_ID");
+});
+
+test("chi phí ảnh lấy từ usage API trả về, không ước lượng cứng", () => {
+  const src = read("../functions/api/thai-social/_image-openai.js");
+  assert.match(src, /usage\.output_tokens/,
+    "giá gpt-image tính theo token — đoán số ảnh là sai bản chất");
+});
+
+test("lỗi hết tiền / chặn vùng thì DỪNG, không thử tiếp model khác", () => {
+  const src = read("../functions/api/thai-social/_image-openai.js");
+  assert.match(src, /res\.status === 401 \|\| res\.status === 429/,
+    "401/429 thì đổi model cũng vô ích — đừng đốt thêm lượt");
+});
+
+test("brief cho gpt-image viết bằng CÂU, cấm bằng lời rõ ràng", async () => {
+  const { buildDesignBrief } = await import("../functions/api/thai-social/_poster.js");
+  const b = buildDesignBrief("combo", "", 5);
+  assert.match(b, /Do NOT draw any text/, "phủ định phải viết bằng lời, gpt-image không có negative_prompt");
+  assert.match(b, /Do NOT draw any bottle/);
+  // Không nói ra bố cục thì model dựng kín khung, dán sản phẩm lên là đè mất trọng tâm.
+  assert.match(b, /LEFT half visually calm/, "phải chừa chỗ đặt chữ");
+  assert.match(b, /LOWER RIGHT area/, "phải chừa chỗ dán ảnh sản phẩm");
+  assert.ok(b.split("\n").length > 8, "brief phải là đoạn văn giao việc, không phải chuỗi tag");
+});
+
+test("hai đường dùng hai kiểu prompt khác nhau", async () => {
+  const { buildDesignBrief, buildScenePrompt } = await import("../functions/api/thai-social/_poster.js");
+  const brief = buildDesignBrief("combo", "", 5);
+  const tags = buildScenePrompt("combo", "", 5);
+  assert.notEqual(brief, tags);
+  assert.ok(!tags.includes("Do NOT"), "prompt cho model khuếch tán vẫn là chuỗi tag");
+  assert.ok(!brief.includes("NO text,"), "brief không dùng cú pháp tag");
+});
+

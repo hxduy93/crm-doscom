@@ -26,6 +26,11 @@ binding = "AI"
 #   - LARK_APP_ID        (App ID custom app Lark — cho /api/lark/*)
 #   - LARK_APP_SECRET    (App Secret Lark)
 #   - THAI_SOCIAL_TOKEN  (mã ghi dữ liệu cho /api/thai-social/* — sinh bài + đăng fanpage Thái)
+# Ảnh bài fanpage Thái (đều CÓ MẶC ĐỊNH, không đặt vẫn chạy):
+#   - THAI_IMAGE_QUALITY  low | medium (mặc định) | high — high nét hơn, đắt ~4 lần
+#   - THAI_IMAGE_SIZE     mặc định 1024x1024
+#   - THAI_IMAGE_MODEL    ép đúng một model gpt-image, bỏ qua chuỗi thử
+#   - USE_OPENAI_IMAGE    "false" = tắt OpenAI, quay về Workers AI (kill switch)
 [vars]
 CF_ACCOUNT_ID = "cffb0c35f8c649872436b2087a64b7bc"
 # Model OpenAI dùng khi Claude không gọi được (xem functions/api/geo/_utils/openai-chat.js).
