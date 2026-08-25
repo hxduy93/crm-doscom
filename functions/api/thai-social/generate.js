@@ -111,8 +111,12 @@ export async function onRequestPost({ request, env }) {
     await writeCache(env, key, gen);
   }
 
+  const now0 = nowSec();
   const { images } = await loadSkuImages(env);
-  const img = await buildArtwork(env, { skuMain, images, angle, scene: gen.scene_prompt });
+  /* seedKey quyết định ảnh nền. Cùng bài + cùng ngày → cùng ảnh, mở lại không đổi.
+     Bấm "Ép làm mới" thì kèm giờ phút vào seed để ra tấm khác. */
+  const seedKey = b.force === true ? `${pageId}|${day}|${now0}` : `${pageId}|${day}`;
+  const img = await buildArtwork(env, { skuMain, images, angle, scene: gen.scene_prompt, seedKey });
 
   const now = nowSec();
   const source = b.source === "schedule" ? "schedule" : "manual";

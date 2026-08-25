@@ -364,9 +364,62 @@ test("prompt nền cấm vẽ chữ, chai và người", async () => {
 test("mỗi góc bán hàng cho ra cảnh nền KHÁC nhau", async () => {
   const { buildScenePrompt } = await import("../functions/api/thai-social/_poster.js");
   const angles = ["combo", "howto", "ba", "vs_shop"];
-  const seen = new Set(angles.map((a) => buildScenePrompt(a, "")));
+  const seen = new Set(angles.map((a) => buildScenePrompt(a, "", 0)));
   assert.equal(seen.size, angles.length,
     "cảnh nền phải bám góc bán hàng — giống hệt nhau thì ảnh không nói lên điều gì");
+});
+
+/* ── 13. Ảnh không được đơn điệu ────────────────────────────────────────────
+   25/08/2026 người dùng phản ánh ảnh nhìn đơn điệu. Gốc rễ là PROMPT chứ không phải
+   model: mỗi góc bán hàng chỉ có ĐÚNG MỘT chuỗi cố định và không có seed. */
+
+test("cùng một góc, seed khác nhau phải ra prompt khác nhau", async () => {
+  const { buildScenePrompt } = await import("../functions/api/thai-social/_poster.js");
+  const many = new Set([1, 2, 3, 5, 8, 13, 21, 34, 55, 89].map((sd) => buildScenePrompt("combo", "", sd)));
+  assert.ok(many.size >= 5,
+    `10 seed chỉ ra ${many.size} prompt khác nhau — vẫn đơn điệu`);
+});
+
+test("seed ổn định: cùng bài mở lại phải ra cùng ảnh", async () => {
+  const { seedFrom } = await import("../functions/api/thai-social/_poster.js");
+  assert.equal(seedFrom("a|911|combo"), seedFrom("a|911|combo"), "mở lại bài không được đổi ảnh");
+  assert.notEqual(seedFrom("a|911|combo"), seedFrom("a|922|combo"), "hai sản phẩm phải khác ảnh");
+  assert.ok(Number.isInteger(seedFrom("x")) && seedFrom("x") >= 0);
+});
+
+test("mỗi góc có nhiều biến thể cảnh, không phải một chuỗi cứng", async () => {
+  const { SCENE_BY_ANGLE } = await import("../functions/api/thai-social/_poster.js");
+  for (const [angle, bank] of Object.entries(SCENE_BY_ANGLE)) {
+    assert.ok(Array.isArray(bank) && bank.length >= 3,
+      `${angle}: cần ít nhất 3 biến thể cảnh`);
+    assert.equal(new Set(bank).size, bank.length, `${angle}: có biến thể trùng nhau`);
+  }
+});
+
+test("dùng model bám prompt tốt, giữ flux làm đường lui", () => {
+  const src = read("../functions/api/thai-social/_image.js");
+  assert.match(src, /MODEL_MAIN = "@cf\/leonardo\/lucid-origin"/);
+  assert.match(src, /MODEL_FALLBACK = "@cf\/black-forest-labs\/flux-1-schnell"/,
+    "model đối tác có thể chưa bật trên tài khoản — mất ảnh thì hỏng cả bài");
+});
+
+test("tham số dựng RIÊNG theo model, không gửi chung một gói", async () => {
+  // flux-1-schnell bỏ width/height khỏi schema từ 16/08/2026 — gửi kèm là fail 5006.
+  // lucid-origin thì cần width/height + negative_prompt. Gộp chung là hỏng một trong hai.
+  const src = read("../functions/api/thai-social/_image.js");
+  assert.match(src, /function inputFor\(model/);
+  const i = src.indexOf("function inputFor");
+  const body = src.slice(i, i + 500);
+  assert.match(body, /negative_prompt/, "model chính phải dùng prompt phủ định");
+  assert.match(body, /return \{ prompt, steps: 4 \}/,
+    "flux chỉ được gửi prompt + steps, thêm width/height là fail 5006");
+});
+
+test("prompt phủ định chặn đúng thứ hay lạc vào nền", async () => {
+  const { NEGATIVE_PROMPT } = await import("../functions/api/thai-social/_poster.js");
+  for (const cam of ["text", "bottle", "logo", "people", "watermark"]) {
+    assert.ok(NEGATIVE_PROMPT.includes(cam), `prompt phủ định thiếu: ${cam}`);
+  }
 });
 
 test("prompt xin chữ trên ảnh kèm bản dịch, KHÔNG giá KHÔNG CTA", async () => {
