@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import {
   NOMA_BRAND,
   NOMA_BRAND_GUIDE,
+  scanForbidden,
+  applyFixes,
+  deterministicFixes,
 } from "../functions/api/geo/_utils/noma-brandcore.js";
 
 test("NOMA_BRAND có đủ field cho generator (name/short/site/voice/products/audience/usp/tagline)", () => {
@@ -60,4 +63,34 @@ test("applyFixes giữ nguyên layout: chỉ đổi đúng cụm chữ, không m
   const html = "<h2>Ưu điểm</h2><ul><li>Hiệu quả vượt trội</li><li>Bền</li></ul>";
   const { fixed } = applyFixes(html, [{ type: "từ cấm: vượt trội", original: "vượt trội", fixed: "hiệu quả" }]);
   assert.equal(fixed, "<h2>Ưu điểm</h2><ul><li>Hiệu quả hiệu quả</li><li>Bền</li></ul>");
+});
+
+/* ── Vị trí trích dẫn khi chữ ở dạng NFD ──────────────────────────────────────
+   Quét bài thật trên noma.vn 25/08/2026 trả về quote vô nghĩa: "t ô" cho luật
+   "số 1", "mang lạ" cho luật "tốt nhất". Nguyên nhân: foldVi cũ giả định bỏ dấu
+   không đổi độ dài — đúng với NFC (ố = 1 ký tự), sai với NFD (ố = o + 2 dấu tổ hợp).
+   Quote lệch đó thành `original` của cặp sửa, mà applyFixes thay MỌI chỗ khớp →
+   "t ô" → "hàng đầu" biến "một ô tô" thành "mộhàng đầutô" ngay trên trang bán hàng. */
+test("trích đúng cụm vi phạm kể cả khi bài ở dạng NFD", () => {
+  const cau = "Giải pháp tốt nhất cho xe ô tô của bạn";
+  for (const [dang, t] of [["NFC", cau.normalize("NFC")], ["NFD", cau.normalize("NFD")]]) {
+    const q = scanForbidden(t);
+    assert.equal(q.length, 1, dang);
+    assert.equal(q[0].quote.normalize("NFC"), "tốt nhất", `quote lệch ở dạng ${dang}`);
+  }
+});
+
+test("áp cặp sửa trên bài NFD KHÔNG được cắt nát chữ khác", () => {
+  const nfd = "Giải pháp tốt nhất cho xe ô tô của bạn".normalize("NFD");
+  const sau = applyFixes(nfd, deterministicFixes(nfd)).fixed.normalize("NFC");
+  assert.equal(sau, "Giải pháp cao cho xe ô tô của bạn");
+  assert.ok(sau.includes("xe ô tô"), "cụm 'xe ô tô' phải còn nguyên vẹn");
+});
+
+test("cặp sửa nào cắt ra không khớp lại luật thì BỊ BỎ, không đem đi ghi", () => {
+  // Lưới an toàn cho đúng loại lỗi trên: thà bỏ cặp còn hơn thay nhầm chuỗi trên web.
+  const pairs = deterministicFixes("Giải pháp tốt nhất cho xe");
+  for (const v of pairs) {
+    assert.ok(v.original && v.original.length >= 2, `original quá ngắn/rỗng: ${JSON.stringify(v)}`);
+  }
 });

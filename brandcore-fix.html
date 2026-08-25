@@ -137,7 +137,8 @@
     <div id="titleInfo" class="muted" style="margin-top:6px"></div>
     <div id="titleBody"></div>
     <div id="titleActions" class="row hide" style="margin-top:10px">
-      <button id="btnTitlePickEmpty" class="sec">Chọn tất cả bài mất tiêu đề</button>
+      <button id="btnTitlePickEmpty" class="sec">Chọn bài mất tiêu đề</button>
+      <button id="btnTitlePickName" class="sec">Chọn bài sai tên sản phẩm</button>
       <button id="btnTitleDraft">Đề xuất tiêu đề (AI)</button>
       <button id="btnTitleApply" class="warn hide">Vá tiêu đề đã duyệt</button>
     </div>
@@ -841,6 +842,9 @@ document.getElementById("btnTitleScan").onclick = async () => {
       `Soát ${j.scanned} bài · <b>${j.tong_van_de}</b> bài có vấn đề về tiêu đề · ` +
       [
         d.rong ? `<span class="err">${d.rong} bài mất tiêu đề</span>` : "",
+        d.ten_sp ? `<b>${d.ten_sp} sai tên sản phẩm so với hồ sơ</b>` : "",
+        d.sai_sku ? `<span class="err">${d.sai_sku} gắn nhầm mã sản phẩm</span>` : "",
+        d.trung_sku ? `${d.trung_sku} bài trùng mã` : "",
         d.brandcore ? `${d.brandcore} trái brand core` : "",
         d.khuon ? `${d.khuon} sai khuôn HDSD` : "",
         d.trung ? `${d.trung} trùng tên` : "",
@@ -874,12 +878,18 @@ function renderTitle() {
       ? `<div class="err" style="font-size:12px">⛔ Tiêu đề AI đề xuất TRÁI brand core (${draft.vi_pham.map((x) => esc(x.type)).join(", ")}) — sửa tay trước khi vá.</div>`
       : (draft.trung_voi ? `<div class="err" style="font-size:12px">⛔ Trùng tiêu đề bài #${draft.trung_voi}</div>`
       : (draft.trung_khuon ? `<div class="err" style="font-size:12px">⛔ Cướp khuôn của bài hướng dẫn sử dụng chính thức #${draft.trung_khuon.id} (“${esc(draft.trung_khuon.tieu_de)}”) — đặt lại theo góc riêng của bài này.</div>` : ""));
-    const oNhap = draft.tieu_de_moi || draft.loi
-      ? (draft.loi
-          ? `<div class="err" style="font-size:12px">${esc(draft.loi)}</div>`
-          : `<input type="text" class="tnew" data-id="${r.id}" value="${esc(draft.tieu_de_moi)}" style="width:100%" />
-             <div class="muted" style="font-size:12px">${draft.do_dai} ký tự${draft.ly_do ? " · " + esc(draft.ly_do) : ""}</div>${canhBao}`)
-      : '<span class="muted">—</span>';
+    /* Tên chuẩn dựng thẳng từ hồ sơ sản phẩm thì KHÔNG cần AI — điền sẵn luôn, chỉ
+       những bài không suy ra được (mất tiêu đề, bài kiến thức) mới phải nhờ AI. */
+    const goiY = draft.tieu_de_moi || r.de_xuat || "";
+    const nguon = draft.tieu_de_moi
+      ? `${draft.do_dai} ký tự${draft.ly_do ? " · " + esc(draft.ly_do) : ""}`
+      : '<span class="pill green">theo hồ sơ sản phẩm</span> không tốn AI';
+    const oNhap = draft.loi
+      ? `<div class="err" style="font-size:12px">${esc(draft.loi)}</div>`
+      : (goiY
+          ? `<input type="text" class="tnew" data-id="${r.id}" value="${esc(goiY)}" style="width:100%" />
+             <div class="muted" style="font-size:12px">${nguon}</div>${canhBao}`
+          : '<span class="muted">— cần AI đề xuất</span>');
     return `<tr>
       <td><input type="checkbox" class="tpick" data-i="${i}" data-id="${r.id}" ${r.tieu_de_rong ? "checked" : ""} /></td>
       <td style="max-width:320px">${hienTai}
@@ -897,6 +907,14 @@ document.getElementById("btnTitlePickEmpty").onclick = () => {
   document.querySelectorAll(".tpick").forEach((cb) => {
     cb.checked = !!titleRows[+cb.dataset.i].tieu_de_rong;
   });
+};
+
+document.getElementById("btnTitlePickName").onclick = () => {
+  // Nhóm này sửa được ngay: tên chuẩn đã dựng sẵn từ hồ sơ, bấm vá là xong.
+  document.querySelectorAll(".tpick").forEach((cb) => {
+    cb.checked = !!titleRows[+cb.dataset.i].de_xuat;
+  });
+  tEl("btnTitleApply").classList.remove("hide");
 };
 
 document.getElementById("btnTitleDraft").onclick = async () => {
@@ -953,6 +971,14 @@ document.getElementById("btnTitleApply").onclick = async () => {
     fixes.push({ id: row.id, title: moi });
   }
   if (!fixes.length) return alert("Không có tiêu đề nào hợp lệ để vá.\nDòng bị chặn là dòng AI đề xuất trái brand core hoặc trùng tên — sửa tay rồi thử lại.");
+  // Hai bài cùng nhận một tiêu đề trong cùng một lượt = tự tạo trùng lặp mới.
+  const dem = {};
+  for (const f of fixes) dem[f.title] = (dem[f.title] || 0) + 1;
+  const trungLo = Object.keys(dem).filter((t) => dem[t] > 1);
+  if (trungLo.length) {
+    return alert("Đang định đặt CÙNG MỘT tiêu đề cho nhiều bài:\n\n" + trungLo.join("\n") +
+      "\n\nGộp hoặc xoá bớt bài trùng trước, hoặc sửa tay cho khác nhau.");
+  }
   if (!confirm(`Vá tiêu đề cho ${fixes.length} bài trên ${site()}? (có sao lưu, hoàn tác được)`)) return;
 
   const btn = tEl("btnTitleApply");

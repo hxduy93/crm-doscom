@@ -184,23 +184,50 @@ TONE: straightforward, transparent (state limits too), practical, friendly. No h
 ⚠ SAFETY WARNINGS: do NOT touch — do not add/edit/remove safety warnings; leave as-is.`;
 
 // Bỏ dấu tiếng Việt + hạ thường (đ→d). Giữ độ dài 1:1 theo ký tự gốc NFC (để lấy quote đúng vị trí).
-export function foldVi(s) {
-  return String(s || "")
-    .normalize("NFD").replace(/[̀-ͯ]/g, "")
-    .replace(/đ/g, "d").replace(/Đ/g, "d")
-    .toLowerCase();
+/* Bỏ dấu tiếng Việt + hạ thường (đ→d), KÈM bản đồ vị trí về chuỗi gốc.
+
+   ⚠ VÌ SAO PHẢI CÓ BẢN ĐỒ, đừng rút lại thành một phép replace như bản cũ:
+   bản cũ giả định "bỏ dấu không đổi độ dài" — đúng với chữ dạng NFC (ố = 1 ký tự),
+   SAI với chữ dạng NFD (ố = o + 2 dấu tổ hợp = 3 ký tự). Nội dung bài trên web có cả
+   hai dạng. Khi lệch, vị trí khớp trên bản bỏ dấu trỏ sang chỗ khác trong bản gốc nên
+   scanForbidden cắt ra chữ vô nghĩa: quét bài thật 25/08/2026 ra quote "t ô" cho luật
+   "số 1", "mang lạ" cho luật "tốt nhất".
+   Nguy hiểm ở chỗ quote đó thành `original` của cặp sửa, mà applyFixes thay MỌI chỗ
+   khớp: "t ô" → "hàng đầu" sẽ biến "một ô tô" thành "mộhàng đầutô" ngay trên trang. */
+export function foldViMap(s) {
+  const src = String(s || "");
+  let folded = "";
+  const map = [];                       // map[i] = vị trí trong chuỗi GỐC của ký tự folded[i]
+  for (let i = 0; i < src.length; i++) {
+    const f = src[i]
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/\u0111/g, "d").replace(/\u0110/g, "d")
+      .toLowerCase();
+    for (const ch of f) { folded += ch; map.push(i); }   // dấu tổ hợp đứng riêng → f rỗng → bỏ qua
+  }
+  return { folded, map };
 }
+
+export const foldVi = (s) => foldViMap(s).folded;
 
 // Tạo cặp sửa DETERMINISTIC cho mọi cụm regex bắt được (không cần AI): {type, original=quote, fixed=fix}.
 // original = cụm chữ gốc CHÍNH XÁC (từ scanForbidden) → applyFixes chắc chắn khớp và thay được.
 export function deterministicFixes(text, list = NOMA_FORBIDDEN) {
-  const fixByType = new Map(list.map((f) => [f.type, typeof f.fix === "string" ? f.fix : ""]));
-  return scanForbidden(text, list).map((f) => ({
-    type: f.type,
-    original: f.quote,
-    fixed: fixByType.get(f.type) ?? "",
-    reason: "vi phạm brand core (dò tự động)",
-  }));
+  const byType = new Map(list.map((f) => [f.type, f]));
+  return scanForbidden(text, list)
+    /* Tự kiểm: cụm cắt ra phải khớp LẠI đúng luật đã bắt nó. Cặp sửa ở đây được áp bằng
+       thay-chuỗi-mọi-chỗ nên một `original` lệch là sửa hỏng nội dung thật — thà bỏ cặp
+       đó còn hơn ghi bừa. Đây là lưới an toàn cho đúng loại lỗi vị trí nói ở foldViMap. */
+    .filter((f) => {
+      const luat = byType.get(f.type);
+      return luat && f.quote && luat.re.test(foldVi(f.quote));
+    })
+    .map((f) => ({
+      type: f.type,
+      original: f.quote,
+      fixed: typeof byType.get(f.type).fix === "string" ? byType.get(f.type).fix : "",
+      reason: "vi phạm brand core (dò tự động)",
+    }));
 }
 
 // Áp các cặp sửa {original -> fixed} vào HTML bằng THAY CHUỖI NGUYÊN VĂN.
@@ -235,14 +262,20 @@ export function applyFixes(html, violations) {
 // Bỏ thẻ HTML trước khi quét để không dính vào tên class/thuộc tính.
 export function scanForbidden(text, list = NOMA_FORBIDDEN) {
   const orig = String(text || "").replace(/<[^>]+>/g, " ");
-  const folded = foldVi(orig);
+  const { folded, map } = foldViMap(orig);
   const seen = new Set();
   const out = [];
   for (const f of list) {
     const m = folded.match(f.re);
     if (m && !seen.has(f.type)) {
       seen.add(f.type);
-      out.push({ type: f.type, quote: orig.slice(m.index, m.index + m[0].length).trim() });
+      // Cắt quote QUA BẢN ĐỒ vị trí — không lấy thẳng chỉ số của bản bỏ dấu (xem foldViMap).
+      const dau = map[m.index];
+      const cuoi = map[m.index + m[0].length - 1];
+      out.push({
+        type: f.type,
+        quote: dau === undefined ? "" : orig.slice(dau, (cuoi === undefined ? dau : cuoi) + 1).trim(),
+      });
     }
   }
   return out;

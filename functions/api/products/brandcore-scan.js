@@ -438,6 +438,45 @@ function luatChoBai(site, laNoma) {
 // NOMA 310") — dò theo thân bài trước là đối chiếu nhầm sang hồ sơ sản phẩm khác.
 const skuCuaBai = (bai, specs) => findSkuCode(bai.name, specs) || findSkuCode(bai.content, specs);
 
+/* ── Khuôn đặt tên bài hướng dẫn sử dụng ──────────────────────────────────────
+   NGUỒN DUY NHẤT của tên sản phẩm là cột "Tên sản phẩm" trong hồ sơ (file
+   "_Hồ sơ sản phẩm cập nhật" tải lên KV), không phải chữ ai đó gõ trên WordPress.
+   Hồ sơ viết lẫn "Noma 620 -" và "NOMA 998 –" nên phải chuẩn hoá về một khuôn
+   "NOMA <mã> - <tính năng>" trước khi đem so. */
+function tenChuanSku(code, specs) {
+  const s = specs && specs[code];
+  const raw = String((s && (s.ten || s.ma)) || "").replace(/\s+/g, " ").trim();
+  if (!raw) return null;
+  return raw.replace(/^noma\s*(\d{2,4})\s*[-–—:]*\s*/i, (_m, ma) => `NOMA ${ma} - `);
+}
+
+const tieuDeChuanHdsd = (code, specs) => {
+  const t = tenChuanSku(code, specs);
+  return t ? `Hướng dẫn sử dụng ${t}` : null;
+};
+
+// So tiêu đề theo CHỮ, bỏ dấu và bỏ mọi dấu câu: "NOMA 350 - X" và "NOMA 350: X" là một.
+const giongTieuDe = (a, b) =>
+  boDau(a).replace(/[^a-z0-9]+/g, " ").trim() === boDau(b).replace(/[^a-z0-9]+/g, " ").trim();
+
+/* Tiêu đề đang mô tả sản phẩm NÀO — để bắt bài gắn nhầm mã.
+   Có thật trên noma.vn: "Hướng dẫn sử dụng bộ vệ sinh và dưỡng ghế da Noma 692" mang
+   tên sản phẩm của NOMA 686, trong khi 692 là dung dịch vệ sinh nội thất và trần xe.
+   Loại này KHÔNG tự sửa được: hoặc sai mã, hoặc sai phần mô tả — phải người quyết. */
+function khopTenNhat(tieuDe, specs) {
+  const t = boDau(tieuDe);
+  let best = null;
+  for (const code of Object.keys(specs || {})) {
+    const ten = tenChuanSku(code, specs);
+    if (!ten) continue;
+    const tu = boDau(ten).split(" ").filter((w) => w.length >= 3 && w !== "noma" && !/^\d+$/.test(w));
+    if (tu.length < 3) continue;
+    const diem = tu.filter((w) => t.includes(w)).length / tu.length;
+    if (!best || diem > best.diem) best = { code, diem };
+  }
+  return best;
+}
+
 async function napBaiHuongDan(c) {
   const cats = await listGuideCategories(c);
   const { items, het, raw_ok } = await listGuidePosts(c, { catIds: cats.map((x) => x.id) });
@@ -692,14 +731,30 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
       theoTen.set(k, [...(theoTen.get(k) || []), p.id]);
     }
 
+    /* Hai bài HDSD cho cùng một mã (có thật: 2 bài NOMA 350, 2 bài NOMA 692) thì KHÔNG
+       đề xuất tên chuẩn — đổi cả hai về cùng một tiêu đề là biến trùng lặp thành trùng
+       khít. Phải gộp/xoá bớt trước, đó là việc của người. */
+    const baiTheoSku = new Map();
+    for (const p of items) {
+      if (p.tieu_de_rong || !laBaiHdsdChinhThuc(p.tieu_de)) continue;
+      const ma = findSkuCode(p.tieu_de, skuSpecs);
+      if (ma) baiTheoSku.set(ma, [...(baiTheoSku.get(ma) || []), p.id]);
+    }
+
     const results = [];
-    const dem = { rong: 0, brandcore: 0, dai: 0, trung: 0, khuon: 0 };
+    const dem = { rong: 0, brandcore: 0, dai: 0, trung: 0, khuon: 0, ten_sp: 0, sai_sku: 0, trung_sku: 0 };
     for (const p of items) {
       const trongMucHdsd = p.categories.some((id) => idMucHdsd.has(id));
       const tenNoma = /\bnoma\b/i.test(p.tieu_de);
       const forbidden = site === "nomaauto"
         ? NOMA_FORBIDDEN_EN
         : (tenNoma ? NOMA_FORBIDDEN : CLAIM_QUANG_CAO_CHUNG);
+
+      // Bài HDSD chính thức: tên sản phẩm trong tiêu đề phải khớp hồ sơ.
+      const maHdsd = (!p.tieu_de_rong && laBaiHdsdChinhThuc(p.tieu_de)) ? findSkuCode(p.tieu_de, skuSpecs) : null;
+      const chuan = maHdsd ? tieuDeChuanHdsd(maHdsd, skuSpecs) : null;
+      const laChuan = chuan ? giongTieuDe(p.tieu_de, chuan) : false;
+      let deXuat = null;
 
       const vanDe = [];
       if (p.tieu_de_rong) {
@@ -708,7 +763,10 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
         for (const f of scanForbidden(p.tieu_de, forbidden)) {
           vanDe.push({ ma: "brandcore", nhan: `Trái brand core: ${f.type}`, chi_tiet: f.quote });
         }
-        if (p.tieu_de.length > 70) {
+        /* Tên chuẩn của vài SKU vốn đã dài hơn 70 ký tự (NOMA 130 chẳng hạn). Giữa
+           "đúng tên sản phẩm theo hồ sơ" và "gọn cho Google", brand core thắng — nên
+           tiêu đề ĐÃ đúng chuẩn thì không nhắc chuyện dài nữa. */
+        if (p.tieu_de.length > 70 && !laChuan) {
           vanDe.push({ ma: "dai", nhan: `Dài ${p.tieu_de.length} ký tự`, chi_tiet: "Google cắt tiêu đề quanh 60–70 ký tự" });
         }
         const cungTen = (theoTen.get(boDau(p.tieu_de)) || []).filter((x) => x !== p.id);
@@ -721,8 +779,34 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
         if (trongMucHdsd && tenNoma && !laBaiHdsdChinhThuc(p.tieu_de)) {
           vanDe.push({
             ma: "khuon", nhan: "Không theo khuôn bài hướng dẫn sử dụng",
-            chi_tiet: 'nằm trong mục Hướng dẫn sử dụng nhưng tiêu đề không có dạng "Hướng dẫn sử dụng NOMA <mã>: <công dụng>"',
+            chi_tiet: 'nằm trong mục Hướng dẫn sử dụng nhưng tiêu đề không có dạng "Hướng dẫn sử dụng NOMA <mã> - <tính năng>"',
           });
+        }
+
+        if (maHdsd && !laChuan) {
+          const khop = khopTenNhat(p.tieu_de, skuSpecs);
+          const cungMa = baiTheoSku.get(maHdsd) || [];
+          if (khop && khop.code !== maHdsd && khop.diem >= 0.8) {
+            // Gắn nhầm mã — không tự sửa, vì không biết sai ở mã hay ở phần mô tả.
+            vanDe.push({
+              ma: "sai_sku",
+              nhan: `Tiêu đề mang tên sản phẩm của NOMA ${khop.code}`,
+              chi_tiet: `hồ sơ: NOMA ${maHdsd} = "${tenChuanSku(maHdsd, skuSpecs)}" · NOMA ${khop.code} = "${tenChuanSku(khop.code, skuSpecs)}" — kiểm lại bài này viết về sản phẩm nào rồi sửa tay`,
+            });
+          } else if (cungMa.length > 1) {
+            vanDe.push({
+              ma: "trung_sku",
+              nhan: `Có ${cungMa.length} bài hướng dẫn cho NOMA ${maHdsd}`,
+              chi_tiet: `bài #${cungMa.join(", #")} — gộp hoặc xoá bớt trước, đổi tên cả hai về cùng một tiêu đề chỉ làm trùng khít hơn`,
+            });
+          } else if (chuan) {
+            vanDe.push({
+              ma: "ten_sp",
+              nhan: "Tên sản phẩm không khớp hồ sơ",
+              chi_tiet: `theo hồ sơ phải là: "${chuan}"`,
+            });
+            deXuat = chuan;     // sửa được ngay, không cần AI
+          }
         }
       }
       if (!vanDe.length) continue;
@@ -731,11 +815,16 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
         id: p.id, name: p.name, permalink: p.permalink,
         tieu_de: p.tieu_de, tieu_de_rong: p.tieu_de_rong,
         trong_muc_hdsd: trongMucHdsd,
+        sku: maHdsd,
+        de_xuat: deXuat,      // tên chuẩn dựng từ hồ sơ — điền sẵn cho người duyệt
         van_de: vanDe,
       });
     }
     // Bài mất tiêu đề lên đầu — đó là cái hỏng nặng nhất và sửa được ngay.
-    results.sort((a, b) => Number(b.tieu_de_rong) - Number(a.tieu_de_rong) || b.van_de.length - a.van_de.length);
+    results.sort((a, b) =>
+      Number(b.tieu_de_rong) - Number(a.tieu_de_rong) ||
+      Number(Boolean(b.de_xuat)) - Number(Boolean(a.de_xuat)) ||
+      b.van_de.length - a.van_de.length);
 
     return json({
       ok: true, site, target: "guide", mode: "title",

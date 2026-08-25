@@ -465,3 +465,114 @@ test("không cho AI cướp khuôn tiêu đề của bài hướng dẫn chính 
   assert.match(UI, /d\.trung_voi \|\| d\.trung_khuon\)\) continue;/,
     "giao diện phải chặn vá tiêu đề cướp khuôn khi người dùng chưa sửa tay");
 });
+
+/* ══ Khuôn đặt tên bài hướng dẫn theo HỒ SƠ SẢN PHẨM ══════════════════════════
+   Chủ dự án chốt 25/08/2026: tên trong tiêu đề bài hướng dẫn phải đúng cột "Tên sản
+   phẩm" của hồ sơ (_Hồ sơ sản phẩm cập nhật 22-8), không phải chữ ai đó gõ trên WP.
+   Ba tình huống có thật trên noma.vn, mỗi cái xử lý một kiểu:
+     · lệch chữ            → dựng tên chuẩn, sửa được ngay, KHÔNG cần AI
+     · gắn nhầm mã sản phẩm → chỉ báo, người quyết (không biết sai mã hay sai mô tả)
+     · hai bài cùng một mã  → chỉ báo, đổi cả hai về một tên là trùng khít hơn
+   ═════════════════════════════════════════════════════════════════════════════ */
+const HO_SO = {
+  "350": { ten: "NOMA 350 - Dung Dịch Vệ Sinh Đĩa Phanh", hdsd: "Xịt lên đĩa phanh" },
+  "686": { ten: "NOMA 686 - Bộ vệ sinh và dưỡng ghế da", hdsd: "Lau ghế da" },
+  "692": { ten: "NOMA 692 - Dung dịch vệ sinh nội thất và trần xe", hdsd: "Xịt lên nội thất" },
+  "911": { ten: "NOMA 911 - Dung dịch tẩy ố kính", hdsd: "Chà lên kính" },
+};
+
+// KV giả: hồ sơ sản phẩm dạng mới (như file .xlsx chủ dự án tải lên).
+const ENV_HOSO = {
+  ...ENV_NOMA,
+  INVENTORY: { get: async (k) => (k === "noma_sku_specs:v2" ? JSON.stringify({ specs: HO_SO, ten_file: "test.xlsx" }) : null) },
+};
+
+function gaTieuDe() {
+  const BAI = [
+    { id: 1, link: "https://noma.vn/a/", status: "publish", categories: [37],
+      title: { raw: "HƯỚNG DẪN SỬ DỤNG NOMA 350 - DUNG DỊCH VỆ SINH PHANH ĐĨA" }, content: { raw: "<p>x</p>" } },
+    { id: 2, link: "https://noma.vn/b/", status: "publish", categories: [37],
+      title: { raw: "Hướng dẫn sử dụng NOMA 911: Dung dịch tẩy ố kính" }, content: { raw: "<p>x</p>" } },
+    { id: 3, link: "https://noma.vn/c/", status: "publish", categories: [37],
+      title: { raw: "Hướng dẫn sử dụng bộ vệ sinh và dưỡng ghế da Noma 692" }, content: { raw: "<p>x</p>" } },
+  ];
+  return async (url) => {
+    const u = new URL(String(url));
+    if (u.pathname.endsWith("/wp-json/wp/v2/categories")) {
+      return gia([{ id: 37, name: "Hướng Dẫn Sử Dụng", slug: "huong-dan-su-dung", count: 3 }]);
+    }
+    if (u.pathname.endsWith("/wp-json/wp/v2/posts")) {
+      return gia(BAI, { "X-WP-TotalPages": "1" });
+    }
+    throw new Error("gọi nhầm endpoint: " + u.pathname);
+  };
+}
+
+async function soatTieuDe(fetchGia = gaTieuDe(), env = ENV_HOSO) {
+  const goc = globalThis.fetch;
+  globalThis.fetch = fetchGia;
+  try {
+    const res = await scan({
+      request: new Request("https://crm.test/api/products/brandcore-scan", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ site: "noma", target: "guide", mode: "title" }),
+      }),
+      env,
+    });
+    return await res.json();
+  } finally { globalThis.fetch = goc; }
+}
+
+test("tên sản phẩm lệch hồ sơ → dựng sẵn tiêu đề chuẩn, không cần AI", async () => {
+  const d = await soatTieuDe();
+  const r = d.results.find((x) => x.id === 1);
+  assert.ok(r, "bài sai tên phải được nêu ra");
+  assert.ok(r.van_de.some((v) => v.ma === "ten_sp"));
+  assert.equal(r.de_xuat, "Hướng dẫn sử dụng NOMA 350 - Dung Dịch Vệ Sinh Đĩa Phanh",
+    'tên chuẩn phải lấy NGUYÊN VĂN cột "Tên sản phẩm" của hồ sơ');
+});
+
+test("khác nhau mỗi dấu câu / hoa thường thì KHÔNG bắt lỗi", async () => {
+  // "NOMA 911: Dung dịch tẩy ố kính" vs hồ sơ "NOMA 911 - Dung dịch tẩy ố kính".
+  const d = await soatTieuDe();
+  const r = d.results.find((x) => x.id === 2);
+  assert.ok(!r || !r.van_de.some((v) => v.ma === "ten_sp"),
+    "bắt lỗi ở mức dấu câu là tạo việc vô ích cho người duyệt");
+});
+
+test("gắn nhầm mã sản phẩm → CHỈ BÁO, không tự sửa", async () => {
+  /* Bài "…bộ vệ sinh và dưỡng ghế da Noma 692" mang tên sản phẩm của NOMA 686.
+     Không biết sai ở mã hay ở phần mô tả nên tuyệt đối không tự đặt lại tên. */
+  const d = await soatTieuDe();
+  const r = d.results.find((x) => x.id === 3);
+  const v = r.van_de.find((x) => x.ma === "sai_sku");
+  assert.ok(v, "phải bắt được bài gắn nhầm mã");
+  assert.match(v.nhan, /NOMA 686/);
+  assert.equal(r.de_xuat, null, "bài gắn nhầm mã KHÔNG được có tên đề xuất tự động");
+});
+
+test("hai bài cùng một mã → chỉ báo, không đổi cả hai về một tên", async () => {
+  const haiBai = async (url) => {
+    const u = new URL(String(url));
+    if (u.pathname.endsWith("/wp-json/wp/v2/categories")) {
+      return gia([{ id: 37, name: "Hướng Dẫn Sử Dụng", slug: "huong-dan-su-dung", count: 2 }]);
+    }
+    return gia([
+      { id: 10, link: "https://noma.vn/x/", status: "publish", categories: [37],
+        title: { raw: "HƯỚNG DẪN SỬ DỤNG NOMA 350 - DUNG DỊCH VỆ SINH PHANH ĐĨA" }, content: { raw: "<p>x</p>" } },
+      { id: 11, link: "https://noma.vn/y/", status: "publish", categories: [37],
+        title: { raw: "HƯỚNG DẪN SỬ DỤNG NOMA 350: DUNG DỊCH VỆ SINH PHANH ĐĨA" }, content: { raw: "<p>x</p>" } },
+    ], { "X-WP-TotalPages": "1" });
+  };
+  const d = await soatTieuDe(haiBai);
+  for (const id of [10, 11]) {
+    const r = d.results.find((x) => x.id === id);
+    assert.ok(r.van_de.some((v) => v.ma === "trung_sku"), `bài #${id} phải bị báo trùng mã`);
+    assert.equal(r.de_xuat, null, "trùng mã thì không đề xuất — đổi cả hai về một tên là trùng khít hơn");
+  }
+});
+
+test("giao diện chặn vá cùng một tiêu đề cho nhiều bài trong một lượt", () => {
+  assert.match(UI, /const trungLo = Object\.keys\(dem\)\.filter\(\(t\) => dem\[t\] > 1\);/);
+  assert.match(UI, /id="btnTitlePickName"/, "thiếu nút chọn nhanh nhóm sai tên sản phẩm");
+});
