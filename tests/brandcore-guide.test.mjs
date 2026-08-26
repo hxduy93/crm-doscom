@@ -299,25 +299,28 @@ test("MỌI request tới brandcore-scan/apply đều kèm target", () => {
   /* Thiếu `target` là máy chủ mặc định về "product": người dùng chọn "Bài hướng dẫn",
      bấm nút, thấy chạy ngon — nhưng thực ra vừa soát/sửa sản phẩm. Loại lỗi im lặng
      đúng nghĩa, nên phải canh từng chỗ gọi. */
-  for (const ep of ["/api/products/brandcore-scan", "/api/products/brandcore-apply"]) {
-    const phan = UI.split(`fetch("${ep}"`).slice(1);
-    assert.ok(phan.length >= 2, `không tìm thấy chỗ gọi ${ep}`);
+  /* Giao diện gọi hai endpoint này qua đúng hai hàm bọc, nên chỉ cần soi thân các lời
+     gọi đó. */
+  for (const ham of ["goiScan(", "goiApply("]) {
+    const phan = UI.split(ham).slice(1).filter((x) => x.trimStart().startsWith("{"));
+    assert.ok(phan.length >= 3, `không tìm thấy chỗ gọi ${ham}`);
     for (const chunk of phan) {
-      const than = chunk.slice(0, 700);
-      assert.match(than, /target: loai\(\)/, `một lời gọi ${ep} quên kèm target:\n${than.slice(0, 200)}`);
+      const than = chunk.slice(0, 400);
+      // Chấp nhận cả dạng viết tắt `{ target }` khi biến đã tên sẵn là target.
+      assert.match(than, /\btarget\b\s*[:,}]/, `một lời gọi ${ham} quên kèm target:\n${than.slice(0, 200)}`);
     }
   }
 });
 
-test("đổi loại nội dung thì dọn kết quả cũ", () => {
-  // Giữ lại danh sách sản phẩm rồi bấm "Rà bằng AI" ở chế độ bài = gửi id sản phẩm
-  // sang đường bài viết → rà nhầm bài, và bản sửa đề xuất là của nội dung khác.
-  assert.match(UI, /\$\("#loai"\)\.onchange/);
-  assert.match(UI, /scanned = \[\]; proposals = \[\]; daSuaPhien = \[\];/);
+test("đổi WEBSITE thì dọn sạch kết quả cũ", () => {
+  /* Giữ lại danh sách của web trước rồi bấm áp = ghi nhầm web. Từ 26/08/2026 trang chỉ
+     còn một ô chọn (website) nên đây là chỗ duy nhất phải dọn. */
+  assert.match(UI, /\$\("#site"\)\.onchange/);
+  assert.match(UI, /proposals = \[\]; daSua = \[\];/);
 });
 
 test("nội dung bổ sung cho bài ghi vào trường content, không phải description", () => {
-  assert.match(UI, /laBai\(\) \? \{ content: r\.new_content \} : \{ description: r\.new_description \}/);
+  assert.match(UI, /r\.target === "guide" \? \{ content: r\.new_content \} : \{ description: r\.new_description \}/);
 });
 
 
@@ -441,7 +444,7 @@ test("tiêu đề AI đặt ra vẫn bị soát lại trước khi cho vá", () 
 });
 
 test("giao diện có đủ ba nấc của phần tiêu đề", () => {
-  for (const id of ["btnTitleScan", "btnTitleDraft", "btnTitleApply", "btnTitlePickEmpty"]) {
+  for (const id of ["btnScanAll", "btnTitleDraft", "btnTitleApply", "pickAll"]) {
     assert.match(UI, new RegExp(`id="${id}"`), `thiếu nút #${id}`);
   }
   // Vá tiêu đề gửi trường `title`, không phải content.
@@ -571,7 +574,8 @@ test("hai bài cùng một mã → chỉ báo, không đổi cả hai về một
 
 test("giao diện chặn vá cùng một tiêu đề cho nhiều bài trong một lượt", () => {
   assert.match(UI, /const trungLo = Object\.keys\(dem\)\.filter\(\(t\) => dem\[t\] > 1\);/);
-  assert.match(UI, /id="btnTitlePickName"/, "thiếu nút chọn nhanh nhóm sai tên sản phẩm");
+  // Đổi tên hàng loạt cũng phải chặn tương tự ở nhánh "Đổi tên đã chọn".
+  assert.match(UI, /const trung = Object\.keys\(dem\)\.filter\(\(t\) => dem\[t\] > 1\);/);
 });
 
 /* ══ Đổi tên bài hướng dẫn theo hồ sơ — KHÔNG dùng AI ═════════════════════════
@@ -601,11 +605,11 @@ test("bài không dò ra mã NOMA thì không có tên chuẩn để thay", asyn
 });
 
 test("giao diện đổi tên bằng nút THAY THẾ, gửi thẳng tiêu đề chuẩn", () => {
-  assert.match(UI, /id="btnRename"/, "thiếu nút thay thế tiêu đề");
-  assert.match(UI, /laTenSp\(\) \? \{ id: p\.id, name: p\.ten_chuan \} : \{ id: p\.id, title: p\.ten_chuan \}/,
+  assert.match(UI, /id="btnRename"/, "thiếu nút thay thế tên/tiêu đề");
+  assert.match(UI, /laTen \? \{ id: p\.id, name: p\.ten_chuan \} : \{ id: p\.id, title: p\.ten_chuan \}/,
     "phải gửi thẳng tên chuẩn từ hồ sơ, không qua AI — bài đổi `title`, sản phẩm đổi `name`");
   // Nút AI chỉ còn dành cho bài MẤT tiêu đề hẳn (không suy ra được từ hồ sơ).
-  assert.match(UI, /\.filter\(\(i\) => titleRows\[i\] && titleRows\[i\]\.tieu_de_rong\)/);
+  assert.match(UI, /ST\.tieude\.rows\[i\] && ST\.tieude\.rows\[i\]\.tieu_de_rong/);
 });
 
 // Bộ dữ liệu cho bốn test trên: 1 bài sai tên, 1 bài đã đúng, 1 bài Doscom.

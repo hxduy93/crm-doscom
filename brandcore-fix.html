@@ -6,203 +6,176 @@
 <title>Sửa brandcore — NOMA</title>
 <style>
   :root { --bg:#f6f7fb; --card:#fff; --ink:#1f2430; --mut:#6b7280; --line:#e6e8ef;
-          --blue:#2563eb; --purple:#7c3aed; --red:#dc2626; --green:#16a34a; --amber:#d97706; }
+          --blue:#2563eb; --red:#dc2626; --green:#16a34a; --amber:#d97706; }
   * { box-sizing:border-box; }
   body { margin:0; font-family:'Nunito',system-ui,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--ink); font-size:14px; }
-  .wrap { max-width:1000px; margin:0 auto; padding:18px; }
-  h1 { font-size:20px; margin:0 0 2px; }
-  .sub { color:var(--mut); margin:0 0 16px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
+  .wrap { max-width:1100px; margin:0 auto; padding:16px; }
+  h1 { font-size:18px; margin:0; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:12px; }
   .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-  select, input[type=text] { padding:9px 11px; border:1px solid var(--line); border-radius:10px; font:inherit; background:#fff; }
-  button { padding:9px 15px; border:0; border-radius:10px; font:inherit; font-weight:700; cursor:pointer; background:var(--blue); color:#fff; }
+  .grow { flex:1; }
+  select, input[type=text] { padding:8px 10px; border:1px solid var(--line); border-radius:9px; font:inherit; background:#fff; }
+  button { padding:8px 14px; border:0; border-radius:9px; font:inherit; font-weight:700; cursor:pointer; background:var(--blue); color:#fff; }
   button.sec { background:#eef1f8; color:var(--ink); }
   button.warn { background:var(--amber); }
   button:disabled { opacity:.5; cursor:not-allowed; }
-  .pill { display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px; font-weight:700; }
+  .pill { display:inline-block; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:700; }
   .pill.red { background:#fde8e8; color:var(--red); }
   .pill.green { background:#e7f6ec; color:var(--green); }
   .pill.grey { background:#eef1f8; color:var(--mut); }
+  .pill.amber { background:#fef3c7; color:var(--amber); }
   .muted { color:var(--mut); font-size:13px; }
-  .prod { border:1px solid var(--line); border-radius:12px; padding:12px; margin:10px 0; }
-  .prod h3 { margin:0 0 4px; font-size:15px; }
-  .flags { display:flex; gap:6px; flex-wrap:wrap; margin:6px 0; }
-  .flag { background:#fde8e8; color:var(--red); border-radius:8px; padding:2px 8px; font-size:12px; font-weight:700; }
-  .cmp { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px; }
-  .cmp .box { border:1px solid var(--line); border-radius:10px; padding:8px; max-height:180px; overflow:auto; font-size:12px; white-space:pre-wrap; word-break:break-word; background:#fbfbfd; }
-  .cmp .lab { font-weight:700; font-size:12px; margin-bottom:4px; color:var(--mut); }
-  .box.old { background:#fff7f7; }
-  .box.new { background:#f4fbf6; }
-  table { width:100%; border-collapse:collapse; }
-  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); font-size:13px; vertical-align:top; }
-  th { color:var(--mut); font-size:12px; text-transform:uppercase; letter-spacing:.03em; }
-  .stat { display:flex; gap:12px; flex-wrap:wrap; margin:6px 0 12px; }
-  .stat .b { background:#f4f6fb; border-radius:12px; padding:12px 16px; min-width:120px; }
-  .stat .n { font-size:24px; font-weight:800; }
-  .stat .l { color:var(--mut); font-size:12px; }
-  a { color:var(--blue); }
   .err { color:var(--red); font-weight:700; }
   .hide { display:none; }
-  /* Cửa sổ nổi duyệt nội dung bổ sung — duyệt lần lượt từng SP, khỏi cuộn trang. */
+  a { color:var(--blue); }
+
+  /* Thanh trên cùng: chọn web MỘT LẦN, dính lại khi cuộn để luôn biết đang làm ở web nào. */
+  .bar { position:sticky; top:0; z-index:20; background:var(--card); border:1px solid var(--line);
+         border-radius:12px; padding:12px 14px; margin-bottom:12px; }
+
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .tab { padding:8px 12px; border-radius:9px; background:#eef1f8; color:var(--ink); font-weight:700;
+         cursor:pointer; font-size:13px; }
+  .tab.on { background:var(--blue); color:#fff; }
+  .tab .n { display:inline-block; margin-left:6px; padding:0 7px; border-radius:999px; background:rgba(0,0,0,.12); font-size:11px; }
+  .tab.on .n { background:rgba(255,255,255,.25); }
+  .tab.hetviec { opacity:.6; }
+
+  /* Thanh hành động — LUÔN nằm trên danh sách, dính lại khi cuộn. */
+  .act { position:sticky; top:68px; z-index:10; background:#fbfbfe; border:1px solid var(--line);
+         border-radius:10px; padding:9px 12px; margin-bottom:10px; }
+
+  /* Dòng kết quả: gọn, chi tiết mở bằng ▸ */
+  .it { border-bottom:1px solid var(--line); padding:7px 4px; }
+  .it:last-child { border-bottom:0; }
+  .it .hd { display:flex; gap:8px; align-items:flex-start; }
+  .it .tt { font-weight:700; font-size:13.5px; word-break:break-word; }
+  .it .meta { font-size:12px; color:var(--mut); margin-top:2px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .it details { margin-top:5px; }
+  .it summary { cursor:pointer; font-size:12px; color:var(--blue); }
+  .flag { background:#fde8e8; color:var(--red); border-radius:7px; padding:1px 7px; font-size:11px; font-weight:700; }
+  .cmp { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px; }
+  .cmp .box { border:1px solid var(--line); border-radius:8px; padding:7px; max-height:200px; overflow:auto;
+              font-size:12px; white-space:pre-wrap; word-break:break-word; background:#fbfbfd; }
+  .cmp .lab { font-weight:700; font-size:11px; margin-bottom:3px; color:var(--mut); }
+  .box.old { background:#fff7f7; }
+  .box.new { background:#f4fbf6; }
+  input.tnew { width:100%; padding:6px 9px; border:1px solid var(--line); border-radius:8px; font:inherit; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:7px 9px; border-bottom:1px solid var(--line); font-size:13px; vertical-align:top; }
+  th { color:var(--mut); font-size:11px; text-transform:uppercase; letter-spacing:.03em; }
+  .stat { display:flex; gap:10px; flex-wrap:wrap; margin:4px 0 10px; }
+  .stat .b { background:#f4f6fb; border-radius:10px; padding:10px 14px; min-width:110px; }
+  .stat .n { font-size:22px; font-weight:800; }
+  .stat .l { color:var(--mut); font-size:11px; }
+  details.nguon > summary { cursor:pointer; font-weight:700; }
+
+  /* Cửa sổ nổi duyệt nội dung bổ sung. */
   .modal-bg { position:fixed; inset:0; background:rgba(15,23,42,.55); display:flex;
               align-items:center; justify-content:center; z-index:999; padding:20px; }
-  /* PHẢI có luật này. `.hide{display:none}` khai ở TRÊN, mà hai luật cùng độ ưu tiên
-     thì luật đứng SAU thắng — thiếu dòng dưới đây là cửa sổ luôn hiện, bật lên lúc
-     chưa soạn gì và bấm × cũng không tắt (đã dính đúng lỗi này 22/08/2026). */
+  /* PHẢI có luật này: `.hide{display:none}` khai ở TRÊN, hai luật cùng độ ưu tiên thì
+     luật đứng SAU thắng — thiếu dòng này là cửa sổ luôn hiện và bấm × không tắt. */
   .modal-bg.hide { display:none; }
   .modal { background:#fff; border-radius:14px; width:min(1100px,96vw); max-height:92vh;
            display:flex; flex-direction:column; box-shadow:0 24px 70px rgba(0,0,0,.35); }
-  .modal-head, .modal-foot { padding:14px 18px; display:flex; align-items:center;
-                             justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .modal-head, .modal-foot { padding:12px 16px; display:flex; align-items:center;
+                             justify-content:space-between; gap:10px; flex-wrap:wrap; }
   .modal-head { border-bottom:1px solid var(--line); }
   .modal-foot { border-top:1px solid var(--line); background:#fafbfe; border-radius:0 0 14px 14px; }
-  .modal-body { padding:14px 18px; overflow:auto; }
+  .modal-body { padding:12px 16px; overflow:auto; }
   .modal .cmp .box { max-height:46vh; }
-  .modal h2 { margin:0; font-size:17px; }
+  .modal h2 { margin:0; font-size:16px; }
   .xbtn { background:transparent; color:var(--mut); font-size:22px; padding:0 8px; }
-  .note { background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:10px 12px; font-size:13px; color:#92400e; margin-bottom:12px; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Sửa brandcore — NOMA</h1>
-  <p class="sub">Quét nội dung đã đăng (mô tả sản phẩm <b>hoặc</b> bài hướng dẫn sử dụng trên doscom.vn / noma.vn)
-     → tìm chỗ vi phạm Brand Core v3 → sửa đúng chỗ đó.</p>
 
-  <div id="guideNote" class="note hide">
-    <b>Phạm vi:</b> mọi bài viết có <b>“hướng dẫn sử dụng” trong tiêu đề</b>, quét trên toàn web —
-    không kèm bài nào khác, không phụ thuộc danh mục.<br />
-    Trên <b>nomaauto.us</b>: bài có <b>“How to Use” / “Usage Guide” / “Directions for Use”</b> trong tiêu đề.<br />
-    <b>Đổi tên:</b> tiêu đề chuẩn = “Hướng dẫn sử dụng ” (bên Mỹ: <b>“How to Use ”</b>) + <b>tên sản phẩm chuẩn</b>
-    (vd “Hướng dẫn sử dụng NOMA 890 - Dung dịch xịt phủ bóng, làm mới sơn xe”) — bỏ hết đuôi quảng cáo,
-    không dùng AI.
-    Tên chuẩn lấy từ hồ sơ (bên Mỹ: bảng tên tiếng Anh) và được <b>nắn hoa/thường</b>: chỉ viết hoa
-    <b>NOMA</b>, chữ đầu câu và chữ ngay sau dấu “-”. Bài không dò ra mã NOMA (thiết bị Doscom) thì không có hồ sơ nên không đổi tên.
-    Bài <b>không nói về NOMA</b> chỉ soát bằng luật quảng cáo chung — <b>không</b> áp định danh/xuất xứ NOMA vào.
-  </div>
-
-  <div id="tenSpNote" class="note hide">
-    <b>Quét tên sản phẩm:</b> đọc toàn bộ sản phẩm NOMA trong danh mục bán hàng, đối chiếu với cột
-    <b>“Tên sản phẩm”</b> của hồ sơ rồi thay đúng nguyên văn — cùng một luật đặt tên với bài hướng dẫn.
-    Chỉ ghi trường <code>name</code>: <b>đường dẫn (slug), mô tả, giá, ảnh, danh mục giữ nguyên</b> nên link
-    và quảng cáo đang chạy không gãy. Combo hoặc tên không có mã NOMA thì không có hồ sơ → bỏ qua.<br />
-    <b>Viết hoa:</b> tên chuẩn chỉ viết hoa <b>NOMA</b>, chữ đầu câu và chữ ngay sau dấu “-”
-    (“NOMA 350 - Dung Dịch Vệ Sinh Đĩa Phanh” → “NOMA 350 - Dung dịch vệ sinh đĩa phanh”); riêng
-    <b>nomaauto.us</b> giữ Title Case kiểu Mỹ (“NOMA 350 - Brake Cleaner”).
-  </div>
-
-  <div class="note">
-    Quy trình an toàn: <b>Quét</b> (không tốn AI) → <b>Rà bằng AI</b> để xem bản sửa trước → <b>Áp bản sửa</b> (backup gốc, giữ trạng thái đăng). Có nút Hoàn tác trong báo cáo.
-  </div>
-
-  <!-- HỒ SƠ SẢN PHẨM (nguồn thông số cho AI khi soát/viết bài) -->
-  <div class="card">
-    <div class="row" style="justify-content:space-between">
-      <b>Hồ sơ sản phẩm</b>
-      <span id="dossierNow" class="muted">đang kiểm tra…</span>
-    </div>
-    <p class="muted" style="margin:6px 0 10px">
-      Thông số chuẩn từng SKU (công dụng, HDSD, thời gian hiệu lực, claim được/cấm dùng).
-      AI dùng bảng này làm mốc khi soát bài đã đăng và khi viết bài mới — tải hồ sơ mới lên
-      là áp dụng ngay, không phải deploy lại.
-    </p>
+  <!-- Chọn web một lần rồi quét hết -->
+  <div class="bar">
     <div class="row">
-      <input id="dossierFile" type="file" style="flex:1;min-width:220px" />
+      <h1>Sửa brandcore</h1>
+      <select id="site">
+        <option value="doscom">doscom.vn</option>
+        <option value="noma">noma.vn</option>
+        <option value="nomaauto">nomaauto.us (EN)</option>
+      </select>
+      <button id="btnScanAll">Quét toàn bộ</button>
+      <span id="tienDo" class="muted"></span>
+      <span class="grow"></span>
+      <input id="token" type="text" placeholder="Token (nếu Access tắt)" style="width:180px" />
+    </div>
+  </div>
+
+  <!-- Nguồn tên chuẩn: hồ sơ SP + bảng tên EN -->
+  <details id="nguonCard" class="card nguon">
+    <summary>Nguồn tên chuẩn <span id="dossierNow" class="muted"></span></summary>
+
+    <div class="row" style="margin-top:10px">
+      <input id="dossierFile" type="file" style="flex:1;min-width:200px" />
       <button id="btnDossierPreview" class="sec">Xem trước</button>
-      <button id="btnDossierApply">Nhập hồ sơ này</button>
+      <button id="btnDossierApply">Nhập hồ sơ</button>
       <button id="btnDossierUndo" class="warn hide">Hoàn tác</button>
     </div>
-    <div id="dossierMsg" class="muted" style="margin-top:8px"></div>
-  </div>
+    <div id="dossierMsg" class="muted" style="margin-top:6px"></div>
 
-  <!-- BẢNG TÊN TIẾNG ANH (chỉ hiện khi đang soát nomaauto.us) -->
-  <div id="enCard" class="card hide">
-    <div class="row" style="justify-content:space-between">
-      <b>Tên tiếng Anh cho nomaauto.us</b>
-      <span id="enNow" class="muted">đang kiểm tra…</span>
-    </div>
-    <p class="muted" style="margin:6px 0 10px">
-      Hồ sơ chỉ có tên <b>tiếng Việt</b>, nên web Mỹ cần một bảng tên riêng để đối chiếu —
-      không có bảng này thì công cụ sẽ đem tên tiếng Việt đi rủ đổi tên sản phẩm bán cho khách Mỹ.
-      Tên đề xuất lấy theo thứ tự: <b>bảng đang có → tên sẵn trên nomaauto.us → AI dịch</b>
-      (chỉ dịch mã nào chưa có). Tiêu đề bài hướng dẫn bên Mỹ = <b>“How to Use ” + tên này</b>.
-      Sửa tay được ngay trong ô trước khi lưu.
-    </p>
-    <div class="row">
-      <button id="btnEnDraft" class="sec">Soạn tên tiếng Anh</button>
-      <button id="btnEnRedo" class="sec" title="Bỏ qua bảng cũ và tên sẵn trên web, bắt AI dịch lại từ hồ sơ tiếng Việt">Dịch lại toàn bộ (AI)</button>
-      <button id="btnEnSave" class="hide">Lưu bảng tên</button>
-      <button id="btnEnUndo" class="warn hide">Hoàn tác</button>
-    </div>
-    <div id="enMsg" class="muted" style="margin-top:8px"></div>
-    <div id="enBody"></div>
-  </div>
-
-  <div class="card">
-    <div class="row">
-      <label>Website:
-        <select id="site">
-          <option value="doscom">doscom.vn</option>
-          <option value="noma">noma.vn</option>
-          <option value="nomaauto">nomaauto.us (EN)</option>
-        </select>
-      </label>
-      <label>Nội dung:
-        <select id="loai">
-          <option value="product">Sản phẩm (mô tả bán hàng)</option>
-          <option value="guide">Bài hướng dẫn sử dụng (blog)</option>
-          <option value="product-name">Tên sản phẩm trong danh mục</option>
-        </select>
-      </label>
-      <button id="btnScan">Quét sản phẩm NOMA</button>
-      <button id="btnGap" class="sec" title="Đối chiếu bài đã đăng với hồ sơ sản phẩm — tìm phần nội dung chưa được cập nhật lên web">Soát nội dung thiếu</button>
-      <input id="token" type="text" placeholder="X-Products-Token (nếu Access tắt)" style="flex:1;min-width:180px" />
-      <span id="scanInfo" class="muted"></span>
-    </div>
-  </div>
-
-  <!-- SOÁT TIÊU ĐỀ BÀI VIẾT (quét toàn bộ bài của web, không chỉ mục hướng dẫn) -->
-  <div id="titleCard" class="card hide">
-    <div class="row" style="justify-content:space-between">
-      <b>Tiêu đề bài viết</b>
-      <div class="row">
-        <span class="muted">Quét TOÀN BỘ bài của web · dò bằng luật, không tốn AI</span>
-        <button id="btnTitleScan" class="sec">Soát tiêu đề</button>
+    <div id="enCard" class="hide" style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+      <div class="row"><b>Tên tiếng Anh (nomaauto.us)</b> <span id="enNow" class="muted"></span></div>
+      <div class="row" style="margin-top:8px">
+        <button id="btnEnDraft" class="sec">Soạn tên</button>
+        <button id="btnEnRedo" class="sec">Dịch lại toàn bộ (AI)</button>
+        <button id="btnEnSave" class="hide">Lưu bảng tên</button>
+        <button id="btnEnUndo" class="warn hide">Hoàn tác</button>
       </div>
+      <div id="enMsg" class="muted" style="margin-top:6px"></div>
+      <div id="enBody"></div>
     </div>
-    <div id="titleInfo" class="muted" style="margin-top:6px"></div>
-    <div id="titleBody"></div>
-    <div id="titleActions" class="row hide" style="margin-top:10px">
-      <button id="btnTitlePickEmpty" class="sec">Chọn bài mất tiêu đề</button>
-      <button id="btnTitlePickName" class="sec">Chọn bài sai tên sản phẩm</button>
-      <button id="btnTitleDraft">Đặt tiêu đề cho bài MẤT tiêu đề (AI)</button>
-      <button id="btnTitleApply" class="warn hide">Vá tiêu đề đã duyệt</button>
+  </details>
+
+  <!-- Việc cần làm -->
+  <div id="tabs" class="tabs hide"></div>
+
+  <div id="panel" class="card hide">
+    <!-- Thanh hành động nằm TRÊN danh sách; chỉ hiện nút của việc đang chọn. -->
+    <div class="act row">
+      <label class="row" style="gap:6px"><input type="checkbox" id="pickAll" /> Chọn tất cả</label>
+      <span id="pickCount" class="muted"></span>
+      <span class="grow"></span>
+      <button id="btnRename" class="warn hide">Đổi tên đã chọn</button>
+      <button id="btnTitleApply" class="warn hide">Vá tiêu đề đã chọn</button>
+      <button id="btnTitleDraft" class="sec hide">Đặt tiêu đề bằng AI</button>
+      <button id="btnAudit" class="sec hide">Rà brandcore bằng AI</button>
+      <button id="btnGapDraft" class="hide">Soạn bổ sung (AI)</button>
+      <button id="btnGap" class="sec hide">Quét lại</button>
     </div>
+    <div id="panelInfo" class="muted" style="margin-bottom:6px"></div>
+    <div id="panelBody"></div>
   </div>
 
-  <!-- ĐÃ SỬA TRONG PHIÊN NÀY (hiện ngay, không cần tải lại trang) -->
-  <div id="daSuaCard" class="card hide">
-    <div class="row" style="justify-content:space-between">
-      <b id="daSuaTitle"></b>
-      <span class="muted">bấm tên bài để mở trang đã sửa</span>
+  <!-- Bản sửa AI đề xuất -->
+  <div id="applyCard" class="card hide">
+    <div class="act row">
+      <b>Bản sửa AI đề xuất</b>
+      <span id="applyInfo" class="muted"></span>
+      <span class="grow"></span>
+      <button id="btnApply" class="warn">Áp bản sửa đã chọn</button>
     </div>
+    <div id="proposals"></div>
+  </div>
+
+  <!-- Đã sửa trong phiên -->
+  <div id="daSuaCard" class="card hide">
+    <b id="daSuaTitle"></b>
     <div id="daSuaBody"></div>
   </div>
 
-  <!-- KẾT QUẢ ĐỐI CHIẾU HỒ SƠ (nội dung còn thiếu trên web) -->
-  <div id="gapCard" class="card hide">
-    <div class="row" style="justify-content:space-between">
-      <b id="gapTitle"></b>
-      <div class="row">
-        <span class="muted">Dò bằng luật, không tốn AI</span>
-        <button id="btnGapPickAll" class="sec">Chọn tất cả SP thiếu</button>
-        <button id="btnGapDraft">Soạn nội dung bổ sung (AI)</button>
-      </div>
-    </div>
-    <div id="gapBody"></div>
+  <!-- Báo cáo -->
+  <div id="reportCard" class="card hide">
+    <b>Báo cáo</b>
+    <div id="reportBody"></div>
   </div>
 
-  <!-- CỬA SỔ DUYỆT NỘI DUNG BỔ SUNG (nổi giữa màn hình, duyệt lần lượt từng SP) -->
+  <!-- Duyệt nội dung bổ sung, lần lượt từng mục -->
   <div id="duyetModal" class="modal-bg hide">
     <div class="modal">
       <div class="modal-head">
@@ -215,60 +188,34 @@
       <div class="modal-body">
         <div id="duyetThieu" class="muted" style="margin-bottom:8px"></div>
         <div class="cmp">
-          <div><div class="lab">Mô tả hiện tại (phần cuối)</div><div id="duyetCu" class="box old"></div></div>
-          <div><div class="lab">Sẽ thêm vào cuối bài</div><div id="duyetMoi" class="box new"></div></div>
+          <div><div class="lab">Hiện tại (phần cuối)</div><div id="duyetCu" class="box old"></div></div>
+          <div><div class="lab">Sẽ thêm vào cuối</div><div id="duyetMoi" class="box new"></div></div>
         </div>
         <div id="duyetKq" style="margin-top:10px"></div>
       </div>
       <div class="modal-foot">
-        <span class="muted">Ghép vào <b>cuối mô tả</b> giữa cặp mốc <code>noma:bo-sung</code> ·
-          soạn lại lần sau THAY khối này · bản gốc được sao lưu trước khi ghi</span>
+        <span class="muted">Ghép vào cuối nội dung · có sao lưu trước khi ghi</span>
         <div class="row">
-          <a id="duyetXemBai" class="hide" target="_blank" rel="noopener"
-             style="font-weight:700">Xem bài trên web ↗</a>
+          <a id="duyetXemBai" class="hide" target="_blank" rel="noopener" style="font-weight:700">Xem trên web ↗</a>
           <button id="duyetBoQua" class="sec">Bỏ qua</button>
           <button id="duyetAp" class="warn">Áp lên web</button>
-          <button id="duyetTiep" class="hide">Sản phẩm tiếp theo →</button>
+          <button id="duyetTiep" class="hide">Tiếp theo →</button>
         </div>
       </div>
     </div>
   </div>
-
-  <!-- KẾT QUẢ QUÉT + RÀ AI -->
-  <div id="scanCard" class="card hide">
-    <div class="row" style="justify-content:space-between">
-      <b id="scanTitle"></b>
-      <div class="row">
-        <button id="btnCheckAll" class="sec">Chọn tất cả có cờ</button>
-        <button id="btnRename" class="warn hide">Thay thế tiêu đề (đã chọn)</button>
-        <span id="renameHint" class="muted hide"></span>
-        <button id="btnAudit">Rà bằng AI (đã chọn)</button>
-      </div>
-    </div>
-    <div id="list"></div>
-  </div>
-
-  <!-- ÁP BẢN SỬA -->
-  <div id="applyCard" class="card hide">
-    <div class="row" style="justify-content:space-between">
-      <b>Bản sửa đề xuất — tick sản phẩm muốn áp</b>
-      <button id="btnApply" class="warn">Áp bản sửa (đã duyệt)</button>
-    </div>
-    <div id="proposals"></div>
-  </div>
-
-  <!-- BÁO CÁO -->
-  <div id="reportCard" class="card hide">
-    <h1 style="font-size:18px">Báo cáo sửa brandcore</h1>
-    <div id="reportBody"></div>
-  </div>
 </div>
 
 <script>
-// Bắt mọi lỗi JS để hiện rõ (tránh "bấm không thấy gì").
-window.addEventListener("error", (e) => { try { document.getElementById("scanInfo").innerHTML = '<span style="color:#dc2626;font-weight:700">Lỗi JS: ' + (e.message||e) + '</span>'; } catch(_){} });
 const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
 const esc = (s) => String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const stripHtml = (h) => String(h).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();
+
+window.addEventListener("error", (e) => {
+  try { $("#tienDo").innerHTML = '<span class="err">Lỗi JS: ' + esc(e.message || e) + "</span>"; } catch (_) {}
+});
+
 const TK = "products_token";
 $("#token").value = localStorage.getItem(TK) || "";
 $("#token").addEventListener("change", () => localStorage.setItem(TK, $("#token").value.trim()));
@@ -280,952 +227,391 @@ function headers(write) {
 }
 const site = () => $("#site").value;
 
-/* Loại nội dung đang soát. Một trang, hai nguồn: mô tả sản phẩm (WooCommerce) và bài
-   hướng dẫn sử dụng (bài viết WordPress). Mọi request đều phải kèm `target` — thiếu là
-   máy chủ mặc định về "product" và người dùng tưởng đã soát bài hướng dẫn mà thực ra chưa. */
-const loai = () => $("#loai").value;
-const laBai = () => loai() === "guide";
-const laTenSp = () => loai() === "product-name";
-const dvi = () => (laBai() ? "bài" : "sản phẩm");
-
-// Đổi loại nội dung → dọn sạch kết quả cũ. Để lại danh sách sản phẩm rồi bấm "Rà bằng AI"
-// là gửi id sản phẩm sang đường bài viết (hoặc ngược lại) — sai bài, sai cả bản sửa.
-$("#loai").onchange = () => {
-  $("#btnScan").textContent = laBai() ? "Quét bài hướng dẫn"
-    : laTenSp() ? "Quét tên sản phẩm" : "Quét sản phẩm NOMA";
-  $("#guideNote").classList.toggle("hide", !laBai());
-  $("#tenSpNote").classList.toggle("hide", !laTenSp());
-  /* Phần tên sản phẩm chỉ làm đúng một việc: đối chiếu tên với hồ sơ rồi thay.
-     Rà nội dung bằng AI và soát nội dung thiếu không thuộc đường này. */
-  $("#btnGap").classList.toggle("hide", laTenSp());
-  $("#btnAudit").classList.toggle("hide", laTenSp());
-  $("#btnRename").textContent = laTenSp() ? "Thay thế tên sản phẩm (đã chọn)" : "Thay thế tiêu đề (đã chọn)";
-  // Soát tiêu đề chỉ có nghĩa với bài viết — sản phẩm WooCommerce không đi đường này.
-  $("#titleCard").classList.toggle("hide", !laBai());
-  $("#titleBody").innerHTML = ""; $("#titleInfo").textContent = "";
-  $("#titleActions").classList.add("hide");
-  titleRows = [];
-  for (const id of ["scanCard", "applyCard", "reportCard", "gapCard", "daSuaCard"]) $("#" + id).classList.add("hide");
-  scanned = []; proposals = []; daSuaPhien = [];
-  $("#scanInfo").textContent = "";
-};
-
-let scanned = [];    // [{id,name,permalink,flags}]
-let proposals = [];  // [{id,name,permalink,has_violations,violations,fixed_description,fixed_short_description,...}]
-
-// ---------- NẤC 1: QUÉT ----------
-$("#btnScan").onclick = async () => {
-  $("#btnScan").disabled = true; $("#scanInfo").textContent = "Đang quét...";
-  $("#scanCard").classList.add("hide"); $("#applyCard").classList.add("hide"); $("#reportCard").classList.add("hide");
-  try {
-    const r = await fetch("/api/products/brandcore-scan", { method:"POST", headers:headers(false), body: JSON.stringify({ site: site(), target: loai(), mode:"list" }) });
-    const d = await r.json();
-    if (!d.ok) throw new Error(d.error || "lỗi quét");
-    scanned = d.items || d.products || [];
-    if (laTenSp()) {
-      const canhBao = [];
-      if (d.chua_co_ho_so_count) canhBao.push(`${d.chua_co_ho_so_count} SP không dò ra mã NOMA (combo…) — bỏ qua`);
-      if (d.trung_ma_count) canhBao.push(`${d.trung_ma_count} SP trùng mã — không tự đổi tên`);
-      if (d.chua_co_ten_en_count) canhBao.push(`<span class="err">${d.chua_co_ten_en_count} SP chưa có tên tiếng Anh trong bảng — soạn &amp; lưu bảng tên ở trên trước</span>`);
-      $("#scanInfo").innerHTML =
-        `<b>${d.scanned}</b> sản phẩm NOMA · ${d.doi_ten_count} sản phẩm cần đổi tên theo hồ sơ` +
-        (canhBao.length ? " · " + canhBao.join(" · ") : "");
-      $("#btnRename").classList.toggle("hide", !d.doi_ten_count);
-    } else if (laBai()) {
-      const canhBao = [];
-      // Nói rõ phần CHƯA soát tới: im lặng cắt bớt sẽ bị hiểu là "cả web đã sạch".
-      if (d.con_bai_chua_quet) canhBao.push('<span class="err">còn bài chưa quét tới (chạm trần số trang)</span>');
-      if (d.raw_ok === false) canhBao.push('<span class="err">có bài không đọc được nội dung gốc → sẽ không ghi được</span>');
-      if (d.trung_ma_count) canhBao.push(`${d.trung_ma_count} bài trùng mã sản phẩm — không tự đổi tên`);
-      if (d.sai_sp_count) canhBao.push(`<span class="err">${d.sai_sp_count} bài NGHI VIẾT SAI SẢN PHẨM — xem đầu danh sách</span>`);
-      if (d.chua_co_ten_en_count) canhBao.push(`<span class="err">${d.chua_co_ten_en_count} bài chưa có tên tiếng Anh trong bảng — soạn &amp; lưu bảng tên ở trên trước</span>`);
-      $("#scanInfo").innerHTML =
-        `<b>${d.scanned}</b> bài có “hướng dẫn sử dụng” trong tiêu đề (trong ${d.tong_bai_tren_web} bài của web) · ` +
-        `${d.doi_ten_count} bài cần đổi tên theo hồ sơ · ${d.flagged_count} bài có cờ vi phạm` +
-        (canhBao.length ? " · " + canhBao.join(" · ") : "");
-      $("#btnRename").classList.toggle("hide", !d.doi_ten_count);
-    } else {
-      $("#scanInfo").textContent = `Quét ${d.scanned} SP · ${d.noma_count} SP NOMA · ${d.flagged_count} SP có cờ vi phạm`;
-    }
-    renderList();
-    $("#scanCard").classList.remove("hide");
-  } catch (e) {
-    $("#scanInfo").innerHTML = `<span class="err">Lỗi: ${esc(e.message)}</span>`;
-    alert("Quét lỗi: " + e.message + "\n\nNếu là lỗi 401/Access, dán X-Products-Token vào ô rồi thử lại.");
-  }
-  $("#btnScan").disabled = false;
-};
-
-function renderList() {
-  $("#scanTitle").textContent = laBai() ? `${scanned.length} bài hướng dẫn` : `${scanned.length} sản phẩm NOMA`;
-  /* Sai sản phẩm xếp TRƯỚC cả bài có cờ vi phạm: viết nhầm sang sản phẩm khác là lỗi
-     nặng nhất ở đây — sửa vài chữ cấm trên một bài viết sai sản phẩm là vô nghĩa. */
-  const nang = (x) => (x.sai_ten_sp || x.sai_sp_noi_dung ? 1000 : 0) + (x.flags ? x.flags.length : 0);
-  scanned.sort((a,b) => nang(b) - nang(a));
-  $("#list").innerHTML = scanned.map((p, i) => {
-    const flags = p.flags.length
-      ? `<div class="flags">${p.flags.map(f => `<span class="flag">${esc(f.type)}</span>`).join("")}</div>`
-      : `<span class="pill green">Chưa thấy vi phạm (regex)</span>`;
-    /* Bài Doscom nằm chung phạm vi với bài NOMA. Phải nói rõ bài nào đang chịu bộ luật
-       nào, không thì người duyệt tưởng brand core NOMA áp cho tất. */
-    const nhan = laBai()
-      ? (p.la_noma ? `<span class="pill green">bài NOMA</span>` : `<span class="pill grey">bài Doscom — chỉ soát luật QC chung</span>`)
-        + (p.sku ? ` <span class="pill grey">SKU ${esc(p.sku)}</span>` : "")
-        + (p.trung_ma ? ` <span class="pill red">trùng mã — gộp/xoá bớt trước rồi mới đổi tên</span>` : "")
-        + (p.raw === false ? ` <span class="pill red">không đọc được bản gốc — không ghi được</span>` : "")
-      : "";
-    /* Tiêu đề chuẩn dựng thẳng từ hồ sơ sản phẩm: hiện luôn cả trước và sau để người
-       duyệt đọc bằng mắt, không phải tin suông rồi bấm. */
-    const doiTen = p.can_doi_ten
-      ? `<div class="cmp" style="margin-top:6px">
-           <div><div class="lab">${laTenSp() ? "Tên hiện tại" : "Tiêu đề hiện tại"}</div><div class="box old" style="max-height:none">${esc(p.name)}</div></div>
-           <div><div class="lab">Đổi thành (nguyên văn tên trong hồ sơ)</div><div class="box new" style="max-height:none">${esc(p.ten_chuan)}</div></div>
-         </div>`
-      : "";
-    /* SAI SẢN PHẨM — trước 26/08/2026 chỉ hiện ở nút "Soát tiêu đề" nên bài trùng mã
-       (bị chặn đổi tên) nhìn y như bài sạch ở màn hình này. */
-    const saiSp = (p.sai_ten_sp || p.sai_sp_noi_dung)
-      ? `<div class="note" style="margin:8px 0 0">
-           <b>Kiểm lại bài này viết về sản phẩm nào.</b>
-           ${p.sai_ten_sp ? `<br />· <b>Tiêu đề</b> đang mang tên sản phẩm của <b>NOMA ${esc(p.sai_ten_sp.ma)}</b> — “${esc(p.sai_ten_sp.ten)}”.` : ""}
-           ${p.sai_sp_noi_dung ? `<br />· <b>Nội dung</b> chỉ khớp ${p.sai_sp_noi_dung.phu}% tên sản phẩm của bài, trong khi khớp ${p.sai_sp_noi_dung.phu_khop}% với <b>NOMA ${esc(p.sai_sp_noi_dung.ma_khop)}</b> · không thấy: ${esc((p.sai_sp_noi_dung.moc_thieu || []).join(", "))}.` : ""}
-           <br /><span class="muted">Công cụ CỐ Ý không tự sửa: không biết sai ở mã, ở tiêu đề hay ở cả bài.</span>
-         </div>`
-      : "";
-
-    // Nhãn riêng cho phần tên sản phẩm: nói rõ vì sao một số dòng không đổi được.
-    const nhanTen = laTenSp()
-      ? (p.sku ? `<span class="pill grey">SKU ${esc(p.sku)}</span>` : `<span class="pill grey">không dò ra mã NOMA — bỏ qua</span>`)
-        + (p.trung_ma ? ` <span class="pill red">trùng mã — sửa tay</span>` : "")
-      : "";
-    return `<div class="prod">
-      <label class="row" style="align-items:flex-start">
-        <input type="checkbox" class="pick" data-i="${i}" ${(p.flags.length || p.can_doi_ten) ? "checked" : ""} style="margin-top:3px" />
-        <span style="flex:1">
-          <h3>${esc(p.name)} <span class="muted">#${p.id}</span></h3>
-          ${nhan}${nhanTen}
-          ${flags}
-          ${saiSp}
-          ${doiTen}
-          <a href="${esc(p.permalink)}" target="_blank" class="muted">Mở trên web ↗</a>
-        </span>
-      </label></div>`;
-  }).join("");
+async function goiScan(body) {
+  const r = await fetch("/api/products/brandcore-scan", {
+    method: "POST", headers: headers(true), credentials: "same-origin", body: JSON.stringify(body),
+  });
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || "lỗi quét");
+  return j;
+}
+async function goiApply(body) {
+  const r = await fetch("/api/products/brandcore-apply", {
+    method: "POST", headers: headers(true), credentials: "same-origin", body: JSON.stringify(body),
+  });
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || "lỗi ghi");
+  return j;
 }
 
-$("#btnCheckAll").onclick = () => {
-  document.querySelectorAll(".pick").forEach(cb => { cb.checked = scanned[+cb.dataset.i].flags.length > 0; });
+/* Năm việc của trang, mỗi việc bám một `target` cố định. Trước đây phải tự chọn loại
+   nội dung trong ô thả xuống rồi quét lại từng loại; giờ "Quét toàn bộ" chạy hết một
+   lượt, tab nào có việc thì hiện số ở đó. */
+const VIEC = {
+  ten:    { nhan: "Tên sản phẩm",     target: "product-name", dv: "sản phẩm" },
+  bai:    { nhan: "Bài hướng dẫn",    target: "guide",        dv: "bài" },
+  tieude: { nhan: "Tiêu đề bài viết", target: "guide",        dv: "bài" },
+  mota:   { nhan: "Mô tả sản phẩm",   target: "product",      dv: "sản phẩm" },
+  thieu:  { nhan: "Nội dung thiếu",   target: null,           dv: "mục" },
+};
+const ST = {};
+for (const k of Object.keys(VIEC)) ST[k] = { rows: [], info: "", loi: null };
+let viec = "ten";
+let proposals = [];
+let proposalTarget = "guide";
+let daSua = [];
+
+/* Đổi website là mọi kết quả cũ vô nghĩa: bấm áp trên danh sách của web trước = ghi
+   nhầm web. Dọn sạch, không giữ lại gì. */
+$("#site").onchange = () => {
+  for (const k of Object.keys(ST)) ST[k] = { rows: [], info: "", loi: null };
+  proposals = []; daSua = [];
+  $("#tabs").classList.add("hide"); $("#panel").classList.add("hide");
+  for (const id of ["applyCard", "reportCard", "daSuaCard"]) $("#" + id).classList.add("hide");
+  $("#tienDo").textContent = "";
+  capNhatNguon();
 };
 
-/* ---------- THAY THẾ TIÊU ĐỀ THEO HỒ SƠ ----------------------------------------
-   Không có AI trong đường này: tiêu đề mới = "Hướng dẫn sử dụng " + nguyên văn tên sản
-   phẩm trong hồ sơ. Cùng một bài, chạy bao nhiêu lần cũng ra đúng một kết quả, và người
-   duyệt đọc được trước/sau ngay trên danh sách trước khi bấm. */
-$("#btnRename").onclick = async () => {
-  const picks = [...document.querySelectorAll(".pick:checked")]
-    .map((cb) => scanned[+cb.dataset.i])
-    .filter((p) => p && p.can_doi_ten && p.ten_chuan);
-  if (!picks.length) {
-    return alert("Không có bài nào cần đổi tên trong nhóm đang chọn.\n\n" +
-      "Bài trùng mã sản phẩm bị loại khỏi đây — phải gộp/xoá bớt trước.");
+// Quét toàn bộ: chạy tuần tự, bước nào hỏng chỉ hỏng bước đó.
+$("#btnScanAll").onclick = async () => {
+  const btn = $("#btnScanAll");
+  btn.disabled = true;
+  for (const k of Object.keys(ST)) ST[k] = { rows: [], info: "", loi: null };
+  proposals = [];
+  $("#applyCard").classList.add("hide");
+
+  const buoc = [
+    ["ten",    "tên sản phẩm",     () => goiScan({ site: site(), target: "product-name", mode: "list" })],
+    ["bai",    "bài hướng dẫn",    () => goiScan({ site: site(), target: "guide", mode: "list" })],
+    ["tieude", "tiêu đề bài viết", () => goiScan({ site: site(), target: "guide", mode: "title" })],
+    ["mota",   "mô tả sản phẩm",   () => goiScan({ site: site(), target: "product", mode: "list" })],
+    ["thieu",  "nội dung thiếu",   napThieu],
+  ];
+  for (let i = 0; i < buoc.length; i++) {
+    const [k, ten, chay] = buoc[i];
+    $("#tienDo").textContent = `Đang quét ${i + 1}/${buoc.length}: ${ten}…`;
+    try { nhanKetQua(k, await chay()); }
+    catch (e) { ST[k].loi = e.message; }
+    veTabs();
   }
-  // Hai bài cùng nhận một tiêu đề trong một lượt = tự tạo trùng lặp mới.
+  $("#tienDo").innerHTML = Object.values(ST).some((v) => v.loi)
+    ? '<span class="err">Xong — có bước lỗi, xem trong tab</span>' : "Quét xong";
+  $("#tabs").classList.remove("hide");
+  $("#panel").classList.remove("hide");
+  moViec(viec);
+  btn.disabled = false;
+};
+
+// Nội dung thiếu gộp CẢ HAI nguồn — người dùng không phải chọn lại loại nội dung.
+async function napThieu() {
+  const rows = [], canhBao = [];
+  for (const target of ["guide", "product"]) {
+    try {
+      const j = await goiScan({ site: site(), target, mode: "gap" });
+      for (const r of j.results || []) {
+        if (!r.co_ho_so || r.bo_qua || !(r.thieu || []).length) continue;
+        rows.push({ ...r, target });
+      }
+    } catch (e) { canhBao.push(`${target}: ${e.message}`); }
+  }
+  return { __thieu: true, rows, canh_bao: canhBao };
+}
+
+function nhanKetQua(k, j) {
+  if (k === "thieu") {
+    ST.thieu.rows = j.rows;
+    ST.thieu.info = `${j.rows.length} mục còn thiếu nội dung so với hồ sơ`;
+    if (j.canh_bao.length) ST.thieu.loi = j.canh_bao.join(" · ");
+    return;
+  }
+  if (k === "tieude") {
+    ST.tieude.rows = j.results || [];
+    const d = j.dem_theo_loai || {};
+    ST.tieude.info = `soát ${j.scanned} bài · ${j.tong_van_de} bài có vấn đề · ` + [
+      d.rong ? `${d.rong} mất tiêu đề` : "",
+      d.ten_sp ? `${d.ten_sp} sai tên sản phẩm` : "",
+      d.sai_sku ? `${d.sai_sku} gắn nhầm mã` : "",
+      d.trung_sku ? `${d.trung_sku} trùng mã` : "",
+      d.brandcore ? `${d.brandcore} trái brand core` : "",
+      d.trung ? `${d.trung} trùng tên` : "",
+      d.dai ? `${d.dai} quá dài` : "",
+    ].filter(Boolean).join(" · ");
+    return;
+  }
+  const items = j.items || j.products || [];
+  const canhBao = [];
+  if (j.chua_co_ten_en_count) canhBao.push(`${j.chua_co_ten_en_count} chưa có tên tiếng Anh — soạn bảng tên ở "Nguồn tên chuẩn"`);
+  if (j.trung_ma_count) canhBao.push(`${j.trung_ma_count} trùng mã — không tự đổi tên`);
+  if (j.sai_sp_count) canhBao.push(`${j.sai_sp_count} nghi viết sai sản phẩm`);
+  if (j.con_bai_chua_quet) canhBao.push("còn bài chưa quét tới");
+  if (j.raw_ok === false) canhBao.push("có bài không đọc được bản gốc — sẽ không ghi được");
+
+  if (k === "ten") {
+    ST.ten.rows = items.filter((x) => x.can_doi_ten || x.trung_ma || x.chua_co_ten_en);
+    ST.ten.info = `${j.scanned} sản phẩm NOMA · ${j.doi_ten_count} cần đổi tên`;
+  } else if (k === "bai") {
+    ST.bai.rows = items.filter((x) => x.can_doi_ten || x.sai_ten_sp || x.sai_sp_noi_dung || (x.flags || []).length);
+    ST.bai.info = `${j.scanned} bài hướng dẫn · ${j.doi_ten_count} cần đổi tiêu đề · ${j.flagged_count} có cờ vi phạm`;
+  } else {
+    ST.mota.rows = items.filter((x) => (x.flags || []).length);
+    ST.mota.info = `${j.scanned} sản phẩm · ${j.flagged_count} có cờ vi phạm`;
+  }
+  if (canhBao.length) ST[k].info += " · " + canhBao.join(" · ");
+}
+
+function veTabs() {
+  $("#tabs").innerHTML = Object.entries(VIEC).map(([k, v]) => {
+    const n = ST[k].rows.length;
+    return `<div class="tab ${k === viec ? "on" : ""} ${n ? "" : "hetviec"}" data-k="${k}">${v.nhan}<span class="n">${n}${ST[k].loi ? " ⚠" : ""}</span></div>`;
+  }).join("");
+  $$("#tabs .tab").forEach((t) => { t.onclick = () => moViec(t.dataset.k); });
+}
+
+function moViec(k) {
+  viec = k;
+  veTabs();
+  // Chỉ bật nút của việc đang mở — không bày hết ra rồi để người dùng đoán.
+  const hien = {
+    btnRename:     k === "ten" || k === "bai",
+    btnTitleApply: k === "tieude",
+    btnTitleDraft: k === "tieude",
+    btnAudit:      k === "bai" || k === "mota",
+    btnGapDraft:   k === "thieu",
+    btnGap:        k === "thieu",
+  };
+  for (const [id, on] of Object.entries(hien)) $("#" + id).classList.toggle("hide", !on);
+  $("#btnRename").textContent = k === "ten" ? "Đổi tên đã chọn" : "Đổi tiêu đề đã chọn";
+  $("#applyCard").classList.toggle("hide", !(proposals.length && (k === "bai" || k === "mota")));
+  veBang();
+}
+
+function veBang() {
+  const s = ST[viec];
+  $("#panelInfo").innerHTML = (s.loi ? `<span class="err">${esc(s.loi)}</span> · ` : "") + esc(s.info || "");
+  if (!s.rows.length) {
+    $("#panelBody").innerHTML = `<p class="muted">${s.loi ? "Không quét được." : "Không có việc cần làm."}</p>`;
+    $("#pickAll").checked = false;
+    return demChon();
+  }
+  const ve = { ten: veTen, bai: veBai, tieude: veTieuDe, mota: veMota, thieu: veThieu }[viec];
+  $("#panelBody").innerHTML = s.rows.map(ve).join("");
+  $$(".pick").forEach((cb) => { cb.onchange = demChon; });
+  $("#pickAll").checked = $$(".pick").length > 0 && $$(".pick:not(:checked)").length === 0;
+  demChon();
+}
+
+const oTick = (i, tick) => `<input type="checkbox" class="pick" data-i="${i}" ${tick ? "checked" : ""} />`;
+const link = (p) => (p.permalink ? `<a href="${esc(p.permalink)}" target="_blank" rel="noopener">↗</a>` : "");
+
+function khoiSaiSp(p) {
+  if (!p.sai_ten_sp && !p.sai_sp_noi_dung) return "";
+  const a = p.sai_ten_sp ? `tiêu đề mang tên của <b>NOMA ${esc(p.sai_ten_sp.ma)}</b>` : "";
+  const b = p.sai_sp_noi_dung
+    ? `nội dung khớp ${p.sai_sp_noi_dung.phu}% tên sản phẩm của bài, khớp ${p.sai_sp_noi_dung.phu_khop}% với <b>NOMA ${esc(p.sai_sp_noi_dung.ma_khop)}</b>`
+    : "";
+  return `<div class="meta"><span class="pill red">sai sản phẩm?</span> ${[a, b].filter(Boolean).join(" · ")}</div>`;
+}
+
+function veTen(p, i) {
+  const nhan = [
+    p.sku ? `<span class="pill grey">SKU ${esc(p.sku)}</span>` : "",
+    p.trung_ma ? `<span class="pill red">trùng mã — sửa tay</span>` : "",
+    p.chua_co_ten_en ? `<span class="pill red">chưa có tên tiếng Anh</span>` : "",
+  ].filter(Boolean).join(" ");
+  const doi = p.can_doi_ten ? `<div class="meta">→ <b>${esc(p.ten_chuan)}</b></div>` : "";
+  return `<div class="it"><div class="hd">${oTick(i, p.can_doi_ten)}
+    <div style="flex:1"><div class="tt">${esc(p.name)} <span class="muted">#${p.id}</span> ${link(p)}</div>
+      <div class="meta">${nhan}</div>${doi}</div></div></div>`;
+}
+
+function veBai(p, i) {
+  const nhan = [
+    p.la_noma ? `<span class="pill green">NOMA</span>` : `<span class="pill grey">Doscom</span>`,
+    p.sku ? `<span class="pill grey">SKU ${esc(p.sku)}</span>` : "",
+    p.trung_ma ? `<span class="pill red">trùng mã</span>` : "",
+    p.raw === false ? `<span class="pill red">không ghi được</span>` : "",
+    ...(p.flags || []).map((f) => `<span class="flag">${esc(f.type)}</span>`),
+  ].filter(Boolean).join(" ");
+  const doi = p.can_doi_ten ? `<div class="meta">→ <b>${esc(p.ten_chuan)}</b></div>` : "";
+  return `<div class="it"><div class="hd">${oTick(i, p.can_doi_ten || (p.flags || []).length > 0)}
+    <div style="flex:1"><div class="tt">${esc(p.name)} <span class="muted">#${p.id}</span> ${link(p)}</div>
+      <div class="meta">${nhan}</div>${doi}${khoiSaiSp(p)}</div></div></div>`;
+}
+
+function veMota(p, i) {
+  const nhan = (p.flags || []).map((f) => `<span class="flag">${esc(f.type)}</span>`).join(" ");
+  return `<div class="it"><div class="hd">${oTick(i, true)}
+    <div style="flex:1"><div class="tt">${esc(p.name)} <span class="muted">#${p.id}</span> ${link(p)}</div>
+      <div class="meta">${nhan}</div></div></div></div>`;
+}
+
+function veTieuDe(r, i) {
+  const vd = (r.van_de || []).map((v) => `<span class="flag" title="${esc(v.chi_tiet || "")}">${esc(v.nhan)}</span>`).join(" ");
+  const d = r.draft || {};
+  const chan = (d.vi_pham && d.vi_pham.length)
+    ? `trái brand core (${d.vi_pham.map((x) => esc(x.type)).join(", ")}) — sửa tay trước khi vá`
+    : d.trung_voi ? `trùng tiêu đề bài #${d.trung_voi}`
+    : d.trung_khuon ? `cướp khuôn bài hướng dẫn #${d.trung_khuon.id}` : "";
+  const goiY = d.tieu_de_moi || r.de_xuat || "";
+  const o = d.loi
+    ? `<div class="err" style="font-size:12px">${esc(d.loi)}</div>`
+    : goiY
+      ? `<input type="text" class="tnew" data-id="${r.id}" value="${esc(goiY)}" />
+         ${chan ? `<div class="err" style="font-size:12px">⛔ ${chan}</div>` : ""}`
+      : `<span class="muted">cần AI đề xuất</span>`;
+  const hienTai = r.tieu_de_rong ? `<span class="pill red">mất tiêu đề</span>` : esc(r.tieu_de);
+  return `<div class="it"><div class="hd">${oTick(i, Boolean(r.tieu_de_rong || r.de_xuat))}
+    <div style="flex:1"><div class="tt">${hienTai} <span class="muted">#${r.id}</span> ${link(r)}</div>
+      <div class="meta">${vd}</div><div style="margin-top:4px">${o}</div></div></div></div>`;
+}
+
+function veThieu(r, i) {
+  const muc = (r.thieu || []).map((x) => `<span class="flag">${esc(x.nhan)}</span>`).join(" ");
+  const chiTiet = (r.thieu || []).map((x) =>
+    `<div style="margin:5px 0"><b>${esc(x.nhan)}</b><div class="box old">${esc(x.trich_ho_so)}</div></div>`).join("");
+  return `<div class="it"><div class="hd">${oTick(i, true)}
+    <div style="flex:1"><div class="tt">${esc(r.name)} <span class="muted">#${r.id}</span> ${link(r)}</div>
+      <div class="meta"><span class="pill grey">${r.target === "guide" ? "bài" : "sản phẩm"}</span>
+        <span class="pill amber">độ phủ ${r.diem ?? "—"}%</span> ${muc}</div>
+      <details><summary>xem trích hồ sơ</summary>${chiTiet}</details></div></div></div>`;
+}
+
+$("#pickAll").onchange = () => {
+  $$(".pick").forEach((cb) => { cb.checked = $("#pickAll").checked; });
+  demChon();
+};
+function demChon() {
+  const n = $$(".pick:checked").length;
+  $("#pickCount").textContent = n ? `đã chọn ${n}/${$$(".pick").length}` : "";
+}
+const dangChon = () => $$(".pick:checked").map((cb) => ST[viec].rows[+cb.dataset.i]).filter(Boolean);
+
+// Đổi tên sản phẩm / tiêu đề bài theo hồ sơ — không AI.
+$("#btnRename").onclick = async () => {
+  const laTen = viec === "ten";
+  const picks = dangChon().filter((p) => p.can_doi_ten && p.ten_chuan);
+  if (!picks.length) return alert("Không có dòng nào đổi được trong nhóm đang chọn.\nDòng trùng mã bị loại — phải gộp/xoá bớt trước.");
+  // Hai dòng cùng nhận một tên trong một lượt = tự tạo trùng lặp mới.
   const dem = {};
   for (const p of picks) dem[p.ten_chuan] = (dem[p.ten_chuan] || 0) + 1;
   const trung = Object.keys(dem).filter((t) => dem[t] > 1);
-  if (trung.length) return alert("Nhiều bài đang nhận CÙNG một tiêu đề:\n\n" + trung.join("\n"));
+  if (trung.length) return alert("Nhiều dòng đang nhận CÙNG một tên:\n\n" + trung.join("\n"));
+  if (!confirm(`Đổi tên ${picks.length} ${VIEC[viec].dv} trên ${site()}? (có sao lưu, hoàn tác được)`)) return;
 
-  const dv = laTenSp() ? "sản phẩm" : "bài";
-  if (!confirm(`Đổi tên ${picks.length} ${dv} trên ${site()} theo đúng tên trong hồ sơ?\n(có sao lưu, hoàn tác được)`)) return;
   const btn = $("#btnRename");
-  btn.disabled = true; btn.textContent = "Đang đổi tên...";
+  btn.disabled = true; btn.textContent = "Đang đổi…";
   try {
-    const r = await fetch("/api/products/brandcore-apply", {
-      method: "POST", headers: headers(true), credentials: "same-origin",
-      /* Bài viết đổi `title`, sản phẩm WooCommerce đổi `name` — hai nguồn, hai trường. */
-      body: JSON.stringify({
-        site: site(), target: loai(),
-        fixes: picks.map((p) => (laTenSp() ? { id: p.id, name: p.ten_chuan } : { id: p.id, title: p.ten_chuan })),
-      }),
+    const j = await goiApply({
+      site: site(), target: VIEC[viec].target,
+      // Bài viết đổi `title`, sản phẩm WooCommerce đổi `name` — hai nguồn, hai trường.
+      fixes: picks.map((p) => (laTen ? { id: p.id, name: p.ten_chuan } : { id: p.id, title: p.ten_chuan })),
     });
-    const d = await r.json();
-    if (!d.ok) throw new Error(d.error || "lỗi đổi tên");
-    // Bài đã đổi xong thì cập nhật ngay trong danh sách — khỏi bấm lại lần hai.
-    for (const it of d.items || []) {
-      if (!it.applied) continue;
-      const row = scanned.find((x) => x.id === it.id);
-      if (row) { row.name = row.ten_chuan; row.can_doi_ten = false; }
-    }
-    renderList();
-    $("#btnRename").classList.toggle("hide", !scanned.some((x) => x.can_doi_ten));
-    renderReport(d);
-    $("#reportCard").classList.remove("hide");
-    $("#reportCard").scrollIntoView({ behavior: "smooth" });
+    const xong = new Set((j.items || []).filter((x) => x.applied).map((x) => x.id));
+    ST[viec].rows = ST[viec].rows.filter((x) => !xong.has(x.id));
+    veTabs(); veBang(); veReport(j);
   } catch (e) { alert(e.message); }
-  btn.disabled = false; btn.textContent = laTenSp() ? "Thay thế tên sản phẩm (đã chọn)" : "Thay thế tiêu đề (đã chọn)";
+  btn.disabled = false; btn.textContent = laTen ? "Đổi tên đã chọn" : "Đổi tiêu đề đã chọn";
 };
 
-// ---------- NẤC 1b: RÀ BẰNG AI (xem trước) ----------
-// Rà TỪNG SP một (mỗi request 1 SP ~10-15s) thay vì gộp nhiều SP vào 1 request (dễ treo/timeout
-// vì Claude ~90s/lần × nhiều SP > giới hạn ~100s của Cloudflare). Kết quả đổ dần + hiện tiến độ.
+/* Rà brandcore bằng AI: TỪNG mục một (mỗi request ~10-15s) thay vì gộp — gộp nhiều mục
+   vào một request là chạm trần thời gian của Cloudflare. Kết quả đổ dần. */
 $("#btnAudit").onclick = async () => {
-  const ids = [...document.querySelectorAll(".pick:checked")].map(cb => scanned[+cb.dataset.i].id);
-  if (!ids.length) return alert("Chọn ít nhất 1 sản phẩm để rà.");
-  $("#btnAudit").disabled = true;
+  const picks = dangChon();
+  if (!picks.length) return alert("Chọn ít nhất 1 dòng để rà.");
+  proposalTarget = VIEC[viec].target;
+  const btn = $("#btnAudit");
+  btn.disabled = true;
   $("#applyCard").classList.remove("hide");
-  $("#applyCard").scrollIntoView({ behavior:"smooth" });
-  const allResults = [];
+  const tatCa = [];
   let cost = 0;
-  for (let i = 0; i < ids.length; i++) {
-    $("#btnAudit").textContent = `Đang rà ${i + 1}/${ids.length}...`;
+  for (let i = 0; i < picks.length; i++) {
+    btn.textContent = `Đang rà ${i + 1}/${picks.length}…`;
     try {
-      const r = await fetch("/api/products/brandcore-scan", { method:"POST", headers:headers(false), body: JSON.stringify({ site: site(), target: loai(), mode:"audit", ids: [ids[i]] }) });
-      const d = await r.json();
-      if (d.ok && Array.isArray(d.results)) { allResults.push(...d.results); cost += d.cost_usd || 0; }
-      else allResults.push({ id: ids[i], error: d.error || "lỗi rà" });
-    } catch (e) { allResults.push({ id: ids[i], error: e.message }); }
-    // đổ kết quả dần sau mỗi SP để không phải chờ hết mới thấy gì
-    proposals = allResults.filter(x => x.has_violations && !x.error && !x.skipped);
-    renderProposals(allResults, cost);
+      const j = await goiScan({ site: site(), target: proposalTarget, mode: "audit", ids: [picks[i].id] });
+      tatCa.push(...(j.results || [])); cost += j.cost_usd || 0;
+    } catch (e) { tatCa.push({ id: picks[i].id, name: picks[i].name, error: e.message }); }
+    proposals = tatCa.filter((x) => x.has_violations && !x.error && !x.skipped);
+    veProposals(tatCa, cost);
   }
-  $("#btnAudit").disabled = false; $("#btnAudit").textContent = "Rà bằng AI (đã chọn)";
+  btn.disabled = false; btn.textContent = "Rà brandcore bằng AI";
 };
 
-function renderProposals(results, cost) {
-  const clean = results.filter(x => !x.has_violations && !x.error && !x.skipped).length;
-  const errs = results.filter(x => x.error).length;
-  const dv = laBai() ? "bài" : "SP";
-  const head = `<p class="muted">${proposals.length} ${dv} có vi phạm · ${clean} ${dv} sạch · ${errs} lỗi · chi phí AI ~$${(cost||0).toFixed(4)}</p>`;
-  $("#proposals").innerHTML = head + proposals.map((p, i) => {
-    const vio = (p.violations||[]).map(v =>
+function veProposals(results, cost) {
+  const sach = results.filter((x) => !x.has_violations && !x.error && !x.skipped).length;
+  const loi = results.filter((x) => x.error).length;
+  $("#applyInfo").textContent = `${proposals.length} có vi phạm · ${sach} sạch · ${loi} lỗi · ~$${(cost || 0).toFixed(4)}`;
+  $("#proposals").innerHTML = proposals.map((p, i) => {
+    const vio = (p.violations || []).map((v) =>
       `<tr><td><span class="flag">${esc(v.type)}</span></td><td>${esc(v.original)}</td><td>${esc(v.fixed)}</td></tr>`).join("");
-    const warn = (p.not_applied && p.not_applied.length)
-      ? `<div class="err" style="font-size:12px;margin:4px 0">⚠ ${p.not_applied.length} cặp AI đề xuất KHÔNG khớp đúng chữ gốc → sẽ KHÔNG áp (an toàn, không đụng layout): ${p.not_applied.map(esc).join(", ")}</div>` : "";
-    const nameWarn = (p.name_flags && p.name_flags.length)
-      ? `<div class="err" style="font-size:12px;margin:4px 0">⚠ Lỗi nằm ở ${laBai() ? "TIÊU ĐỀ bài" : "TÊN sản phẩm"} (tool KHÔNG sửa ${laBai() ? "tiêu đề" : "tên"}): ${p.name_flags.map(esc).join(", ")} — bạn sửa tay trên WP nếu muốn.</div>` : "";
-    // Bài chỉ đọc được bản rendered → ghi vào là mất khối Gutenberg. Chặn ngay từ giao diện.
-    const ghiWarn = p.khong_ghi_duoc
-      ? `<div class="err" style="font-size:12px;margin:4px 0">⛔ ${esc(p.khong_ghi_duoc)} — bài này sẽ KHÔNG được ghi.</div>` : "";
-    const goc = p.original_description ?? p.original_content ?? "";
-    const moi = p.fixed_description ?? p.fixed_content ?? "";
-    return `<div class="prod">
-      <label class="row"><input type="checkbox" class="applypick" data-i="${i}" ${p.khong_ghi_duoc ? "" : "checked"} />
-        <b>${esc(p.name)} <span class="muted">#${p.id}</span></b></label>
-      <table><thead><tr><th>Loại vi phạm</th><th>Gốc</th><th>Sửa thành</th></tr></thead><tbody>${vio}</tbody></table>${warn}${nameWarn}${ghiWarn}
-      <div class="cmp">
-        <div><div class="lab">${laBai() ? "Nội dung bài" : "Mô tả dài"} — GỐC</div><div class="box old">${esc(stripHtml(goc))}</div></div>
-        <div><div class="lab">${laBai() ? "Nội dung bài" : "Mô tả dài"} — ĐÃ SỬA</div><div class="box new">${esc(stripHtml(moi))}</div></div>
-      </div>
-      <a href="${esc(p.permalink)}" target="_blank" class="muted">Mở trên web ↗</a>
-    </div>`;
-  }).join("") || `<p class="muted">Không có ${dv} nào cần sửa trong nhóm đã chọn.</p>`;
+    const canhBao = [
+      (p.not_applied || []).length ? `⚠ ${p.not_applied.length} cặp không khớp chữ gốc → không áp: ${p.not_applied.map(esc).join(", ")}` : "",
+      (p.name_flags || []).length ? `⚠ Lỗi nằm ở tiêu đề/tên (tool không sửa): ${p.name_flags.map(esc).join(", ")}` : "",
+      p.khong_ghi_duoc ? `⛔ ${esc(p.khong_ghi_duoc)} — sẽ KHÔNG ghi` : "",
+    ].filter(Boolean).map((t) => `<div class="err" style="font-size:12px">${t}</div>`).join("");
+    return `<div class="it"><div class="hd">
+      <input type="checkbox" class="applypick" data-i="${i}" ${p.khong_ghi_duoc ? "" : "checked"} />
+      <div style="flex:1"><div class="tt">${esc(p.name)} <span class="muted">#${p.id}</span> ${link(p)}</div>
+        <table><thead><tr><th>Loại</th><th>Gốc</th><th>Sửa thành</th></tr></thead><tbody>${vio}</tbody></table>${canhBao}
+        <details><summary>xem nội dung trước/sau</summary><div class="cmp">
+          <div><div class="lab">GỐC</div><div class="box old">${esc(stripHtml(p.original_description ?? p.original_content ?? ""))}</div></div>
+          <div><div class="lab">ĐÃ SỬA</div><div class="box new">${esc(stripHtml(p.fixed_description ?? p.fixed_content ?? ""))}</div></div>
+        </div></details></div></div></div>`;
+  }).join("") || `<p class="muted">Không có dòng nào cần sửa.</p>`;
 }
-function stripHtml(h){ return String(h).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim(); }
 
-// ---------- NẤC 2: ÁP BẢN SỬA ----------
 $("#btnApply").onclick = async () => {
-  const picks = [...document.querySelectorAll(".applypick:checked")].map(cb => proposals[+cb.dataset.i]);
-  if (!picks.length) return alert(`Chọn ít nhất 1 ${dvi()} để áp.`);
-  if (!confirm(`Áp bản sửa cho ${picks.length} ${dvi()} trên ${site()}? (đã backup, có thể hoàn tác)`)) return;
-  $("#btnApply").disabled = true; $("#btnApply").textContent = "Đang áp...";
+  const picks = $$(".applypick:checked").map((cb) => proposals[+cb.dataset.i]).filter(Boolean);
+  if (!picks.length) return alert("Chọn ít nhất 1 dòng để áp.");
+  if (!confirm(`Áp bản sửa cho ${picks.length} mục trên ${site()}? (đã backup, hoàn tác được)`)) return;
+  const btn = $("#btnApply");
+  btn.disabled = true; btn.textContent = "Đang áp…";
   try {
-    // Gửi CẶP SỬA (violations) — server thay chuỗi nguyên văn trên HTML gốc, giữ nguyên layout.
-    const fixes = picks.map(p => ({ id: p.id, violations: p.violations }));
-    const r = await fetch("/api/products/brandcore-apply", { method:"POST", headers:headers(true), body: JSON.stringify({ site: site(), target: loai(), fixes }) });
-    const d = await r.json();
-    if (!d.ok) throw new Error(d.error || "lỗi áp");
-    renderReport(d);
-    $("#reportCard").classList.remove("hide");
-    $("#reportCard").scrollIntoView({ behavior:"smooth" });
+    // Gửi CẶP SỬA — máy chủ thay chuỗi nguyên văn trên HTML gốc, giữ nguyên layout.
+    const j = await goiApply({
+      site: site(), target: proposalTarget,
+      fixes: picks.map((p) => ({ id: p.id, violations: p.violations })),
+    });
+    veReport(j);
   } catch (e) { alert(e.message); }
-  $("#btnApply").disabled = false; $("#btnApply").textContent = "Áp bản sửa (đã duyệt)";
+  btn.disabled = false; btn.textContent = "Áp bản sửa đã chọn";
 };
 
-// ---------- BÁO CÁO ----------
-function renderReport(d) {
-  const byType = Object.entries(d.summary_by_type || {}).sort((a,b)=>b[1]-a[1]);
-  const stat = `<div class="stat">
-    <div class="b"><div class="n">${d.applied}</div><div class="l">${d.target === "guide" ? "Bài" : "SP"} đã sửa</div></div>
-    <div class="b"><div class="n">${d.fixed_total}</div><div class="l">Lỗi brandcore khắc phục</div></div>
-    <div class="b"><div class="n">${d.skipped}</div><div class="l">Bỏ qua (không đổi)</div></div>
-    <div class="b"><div class="n">${d.failed}</div><div class="l">Lỗi ghi</div></div>
-  </div>`;
-  const typeTable = byType.length
-    ? `<h3>Theo loại vi phạm</h3><table><thead><tr><th>Loại</th><th>Số ${d.target === "guide" ? "bài" : "SP"}</th></tr></thead><tbody>${
-        byType.map(([t,n])=>`<tr><td>${esc(t)}</td><td>${n}</td></tr>`).join("")}</tbody></table>` : "";
-  const rows = (d.items||[]).map(it => {
-    const status = it.applied ? `<span class="pill green">Đã sửa</span>`
-      : it.error ? `<span class="pill red">Lỗi</span>` : `<span class="pill grey">Bỏ qua</span>`;
-    const fixedList = (it.violations_fixed||[]).map(t=>`<span class="flag">${esc(t)}</span>`).join(" ") || "—";
-    const residual = (it.residual_flags||[]).length ? `<div class="err" style="font-size:12px;margin-top:4px">⚠ Còn: ${it.residual_flags.map(f=>esc(f.type)).join(", ")}</div>` : "";
-    const revert = it.applied && it.backup_key
-      ? `<button class="sec" onclick="revert(${it.id},'${esc(it.backup_key)}',this)">Hoàn tác</button>` : "";
-    const link = it.permalink ? `<a href="${esc(it.permalink)}" target="_blank">${esc(it.name||("#"+it.id))}</a>` : esc(it.name||("#"+it.id));
-    return `<tr><td>${link} <span class="muted">#${it.id}</span>${it.error?`<div class="err" style="font-size:12px">${esc(it.error)}</div>`:""}</td>
-      <td>${status}</td><td>${fixedList}${residual}</td><td>${revert}</td></tr>`;
-  }).join("");
-  const nhanCot = d.target === "guide" ? "bài hướng dẫn" : "sản phẩm";
-  $("#reportBody").innerHTML = `<p class="muted">Website: <b>${esc(d.site)}</b> · nội dung: <b>${esc(nhanCot)}</b> · lúc ${esc(d.generated_at)}</p>`
-    + stat + typeTable
-    + `<h3>Chi tiết từng ${nhanCot}</h3><table><thead><tr><th>Nội dung</th><th>Trạng thái</th><th>Đã khắc phục</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
-}
-
-async function revert(id, key, btn) {
-  if (!confirm("Khôi phục nội dung gốc cho sản phẩm này?")) return;
-  btn.disabled = true; btn.textContent = "Đang hoàn tác...";
-  try {
-    const r = await fetch("/api/products/brandcore-apply", { method:"POST", headers:headers(true), body: JSON.stringify({ mode:"revert", site: site(), target: loai(), id, backup_key: key }) });
-    const d = await r.json();
-    if (!d.ok) throw new Error(d.error || "lỗi");
-    btn.textContent = "Đã hoàn tác ✓";
-  } catch (e) { alert(e.message); btn.disabled = false; btn.textContent = "Hoàn tác"; }
-}
-window.revert = revert;
-
-/* ── Hồ sơ sản phẩm ─────────────────────────────────────────────────────────
-   Xem trước (dryrun) trước khi ghi đè: hồ sơ là nguồn thông số cho MỌI bài AI viết,
-   nhập nhầm file là bài mới sai HDSD hàng loạt mà không ai để ý ngay. */
-const dFile = document.getElementById("dossierFile");
-const dMsg = document.getElementById("dossierMsg");
-const dNow = document.getElementById("dossierNow");
-const dUndo = document.getElementById("btnDossierUndo");
-
-function dossierHeaders() {
-  const t = (document.getElementById("token").value || "").trim();
-  return t ? { "X-Products-Token": t } : {};
-}
-
-async function dossierStatus() {
-  try {
-    const r = await fetch("/api/products/brandcore-import", { credentials: "same-origin" });
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || "lỗi");
-    const d = j.data;
-    dNow.textContent = d.nguon === "kv"
-      ? `Đang dùng: ${d.ten_file || "hồ sơ đã tải"} · ${d.so_san_pham} sản phẩm · cập nhật ${new Date(d.cap_nhat).toLocaleString("vi-VN")}`
-      : `Đang dùng bản dự phòng trong code · ${d.so_san_pham} sản phẩm — nên tải hồ sơ mới nhất lên`;
-    dUndo.classList.toggle("hide", !d.co_ban_hoan_tac);
-  } catch (e) {
-    dNow.textContent = "không đọc được trạng thái: " + e.message;
-  }
-}
-
-async function dossierSend(dryrun, undo) {
-  if (!undo && !dFile.files[0]) { dMsg.innerHTML = '<span class="err">Chưa chọn file.</span>'; return; }
-  const fd = new FormData();
-  if (undo) fd.append("undo", "1");
-  else { fd.append("file", dFile.files[0]); if (dryrun) fd.append("dryrun", "1"); }
-
-  dMsg.textContent = undo ? "Đang hoàn tác…" : (dryrun ? "Đang đọc file…" : "Đang nhập…");
-  try {
-    const r = await fetch("/api/products/brandcore-import", {
-      method: "POST", body: fd, headers: dossierHeaders(), credentials: "same-origin",
-    });
-    const j = await r.json();
-    if (!j.ok) { dMsg.innerHTML = '<span class="err">' + (j.error || "lỗi") + "</span>"; return; }
-    const d = j.data;
-    if (d.hoan_tac) {
-      dMsg.innerHTML = '<span class="pill green">Đã hoàn tác</span> về ' + (d.ten_file || "bản trước") + " · " + d.so_san_pham + " sản phẩm.";
-    } else {
-      const t = d.thay_doi || {};
-      const parts = [
-        `<span class="pill ${d.dryrun ? "grey" : "green"}">${d.dryrun ? "Xem trước — CHƯA ghi" : "Đã nhập"}</span>`,
-        `<b>${d.so_san_pham}</b> sản phẩm · ${d.so_cot} cột`,
-        `mã: ${d.ma_san_pham.join(", ")}`,
-      ];
-      if (t.them?.length) parts.push(`thêm mới: <b>${t.them.join(", ")}</b>`);
-      // "Mất" = có trong bản đang dùng nhưng KHÔNG có trong file mới. Phải nói rõ vì
-      // hệ thống ghi đè toàn bộ: sản phẩm thiếu trong file sẽ mất thông số chuẩn.
-      if (t.mat?.length) parts.push(`<span class="err">file thiếu (sẽ mất thông số): ${t.mat.join(", ")}</span>`);
-      if (d.cot_bo_qua?.length) parts.push(`cột chưa dùng tới: ${d.cot_bo_qua.join(", ")}`);
-      dMsg.innerHTML = parts.join(" · ");
-    }
-    dossierStatus();
-  } catch (e) {
-    dMsg.innerHTML = '<span class="err">' + e.message + "</span>";
-  }
-}
-
-document.getElementById("btnDossierPreview").onclick = () => dossierSend(true, false);
-document.getElementById("btnDossierApply").onclick = () => {
-  if (!confirm("Nhập hồ sơ này? Bản đang dùng sẽ bị thay hoàn toàn (có nút Hoàn tác).")) return;
-  dossierSend(false, false);
-};
-dUndo.onclick = () => dossierSend(false, true);
-dossierStatus();
-
-
-/* ── Bảng tên tiếng Anh (nomaauto.us) ───────────────────────────────────────
-   BA NẤC như phần hồ sơ: soạn (xem trước, chưa ghi) → lưu → hoàn tác. Tên ở đây đi
-   thẳng lên tên sản phẩm và tiêu đề bài trên trang bán hàng Mỹ nên phải đọc lại trước
-   khi lưu — không gộp thành một nút. */
-const enCard = document.getElementById("enCard");
-const enBody = document.getElementById("enBody");
-const enMsg = document.getElementById("enMsg");
-const enNow = document.getElementById("enNow");
-const enSave = document.getElementById("btnEnSave");
-const enUndo = document.getElementById("btnEnUndo");
-
-const NHAN_NGUON_EN = {
-  bang: "bảng đang dùng", web_us: "tên sẵn trên nomaauto.us", dich: "AI dịch", chua_co: "chưa có",
-};
-
-async function enStatus() {
-  try {
-    const r = await fetch("/api/products/names-en", { credentials: "same-origin" });
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || "lỗi");
-    const d = j.data;
-    enNow.textContent = d.nguon === "kv"
-      ? `Đang dùng ${d.so_ten} tên · cập nhật ${new Date(d.cap_nhat).toLocaleString("vi-VN")}` +
-        (d.thieu.length ? ` · thiếu mã: ${d.thieu.join(", ")}` : "")
-      : "CHƯA có bảng tên tiếng Anh — soạn rồi lưu trước khi đổi tên bên nomaauto.us";
-    enUndo.classList.toggle("hide", !d.co_ban_hoan_tac);
-  } catch (e) {
-    enNow.textContent = "không đọc được trạng thái: " + e.message;
-  }
-}
-
-function veBangTenEn(items) {
-  enBody.innerHTML = `<table><thead><tr><th>Mã</th><th>Tên hồ sơ (VI)</th><th>Tên tiếng Anh</th><th>Nguồn</th></tr></thead><tbody>${
-    items.map((x) => `<tr>
-      <td><b>NOMA ${esc(x.ma)}</b></td>
-      <td class="muted">${esc(x.ten_vn || "")}</td>
-      <td><input class="enTen" data-ma="${esc(x.ma)}" value="${esc(x.de_xuat || "")}" style="width:100%;min-width:260px" /></td>
-      <td class="muted">${esc(NHAN_NGUON_EN[x.nguon] || x.nguon)}${x.doi_khuon ? " · nắn lại khuôn" : ""}</td>
-    </tr>`).join("")}</tbody></table>`;
-  enSave.classList.toggle("hide", !items.length);
-}
-
-async function enDraft(dichLai) {
-  enMsg.textContent = dichLai ? "Đang dịch lại toàn bộ…" : "Đang soạn…";
-  enSave.classList.add("hide");
-  try {
-    const r = await fetch("/api/products/names-en", {
-      method: "POST", headers: headers(true), credentials: "same-origin",
-      body: JSON.stringify({ mode: "draft", dich_lai: dichLai === true }),
-    });
-    const j = await r.json();
-    if (!j.ok) { enMsg.innerHTML = '<span class="err">' + esc(j.error || "lỗi") + "</span>"; return; }
-    const d = j.data;
-    veBangTenEn(d.items || []);
-    const parts = [
-      '<span class="pill grey">Xem trước — CHƯA ghi</span>',
-      `<b>${(d.items || []).length}</b> mã · AI dịch ${d.so_dich} mã · ${d.cost_usd} USD`,
-    ];
-    // Thiếu nguồn (credential web Mỹ, lỗi dịch) phải nói thẳng: im lặng là người dùng
-    // tưởng mã trống kia không có tên, rồi lưu đè mất.
-    for (const c of d.canh_bao || []) parts.push('<span class="err">' + esc(c) + "</span>");
-    enMsg.innerHTML = parts.join(" · ");
-  } catch (e) {
-    enMsg.innerHTML = '<span class="err">' + esc(e.message) + "</span>";
-  }
-}
-
-document.getElementById("btnEnDraft").onclick = () => enDraft(false);
-document.getElementById("btnEnRedo").onclick = () => {
-  if (!confirm("Dịch lại TOÀN BỘ bằng AI? Tên đang có trong bảng và tên sẵn trên nomaauto.us sẽ bị đề xuất thay.")) return;
-  enDraft(true);
-};
-
-enSave.onclick = async () => {
-  const names = {};
-  for (const o of enBody.querySelectorAll(".enTen")) {
-    const v = (o.value || "").trim();
-    if (v) names[o.dataset.ma] = v;
-  }
-  if (!Object.keys(names).length) { enMsg.innerHTML = '<span class="err">Chưa có tên nào để lưu.</span>'; return; }
-  if (!confirm(`Lưu ${Object.keys(names).length} tên tiếng Anh? (có nút Hoàn tác)`)) return;
-  enMsg.textContent = "Đang lưu…";
-  try {
-    const r = await fetch("/api/products/names-en", {
-      method: "POST", headers: headers(true), credentials: "same-origin",
-      body: JSON.stringify({ mode: "save", names }),
-    });
-    const j = await r.json();
-    if (!j.ok) { enMsg.innerHTML = '<span class="err">' + esc(j.error || "lỗi") + "</span>"; return; }
-    enMsg.innerHTML = `<span class="pill green">Đã lưu</span> ${j.data.so_ten} tên · quét lại để đối chiếu.`;
-    enStatus();
-  } catch (e) {
-    enMsg.innerHTML = '<span class="err">' + esc(e.message) + "</span>";
-  }
-};
-
-enUndo.onclick = async () => {
-  if (!confirm("Hoàn tác về bảng tên trước đó?")) return;
-  const r = await fetch("/api/products/names-en", {
-    method: "POST", headers: headers(true), credentials: "same-origin",
-    body: JSON.stringify({ mode: "revert" }),
-  });
-  const j = await r.json();
-  enMsg.innerHTML = j.ok
-    ? '<span class="pill green">Đã hoàn tác</span> · ' + j.data.so_ten + " tên"
-    : '<span class="err">' + esc(j.error || "lỗi") + "</span>";
-  enStatus();
-};
-
-/* Bảng tên EN chỉ có nghĩa với nomaauto.us — để hiện thường trực là mời người dùng
-   sửa tên tiếng Anh trong lúc đang soát web tiếng Việt. */
-function capNhatTheoSite() {
-  const laUS = site() === "nomaauto";
-  enCard.classList.toggle("hide", !laUS);
-  if (laUS) enStatus();
-}
-$("#site").addEventListener("change", capNhatTheoSite);
-capNhatTheoSite();
-
-
-/* ── Soát nội dung THIẾU (đối chiếu bài đã đăng ↔ hồ sơ sản phẩm) ────────────
-   Khác nút "Quét": quét tìm chữ SAI để thay; nút này tìm chữ THIẾU để bổ sung.
-   Cố ý CHỈ BÁO, không tự sửa — chèn thêm mục vào giữa HTML bài đã đăng là việc
-   dễ làm hỏng bố cục, và nội dung bổ sung cần người đọc lại trước khi đăng. */
-const gapCard = document.getElementById("gapCard");
-const gapBody = document.getElementById("gapBody");
-const gapTitle = document.getElementById("gapTitle");
-
-document.getElementById("btnGap").onclick = async () => {
-  const site = document.getElementById("site").value;
-  const btn = document.getElementById("btnGap");
-  btn.disabled = true;
-  gapCard.classList.remove("hide");
-  gapTitle.textContent = "Đang đối chiếu…";
-  gapBody.innerHTML = '<p class="muted">Đang tải nội dung đã đăng và so với hồ sơ sản phẩm…</p>';
-  try {
-    const r = await fetch("/api/products/brandcore-scan", {
-      method: "POST",
-      headers: { "content-type": "application/json", ...dossierHeaders() },
-      credentials: "same-origin",
-      body: JSON.stringify({ site, target: loai(), mode: "gap" }),
-    });
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || "lỗi");
-    renderGap(j);
-  } catch (e) {
-    gapTitle.textContent = "Lỗi";
-    gapBody.innerHTML = '<p class="err">' + e.message + "</p>";
-  } finally {
-    btn.disabled = false;
-  }
-};
-
-function gapPill(n, loai) {
-  if (!n) return '<span class="pill green">đủ</span>';
-  return '<span class="pill ' + (loai === "thieu" ? "red" : "grey") + '">' + n + "</span>";
-}
-
-function renderGap(j) {
-  const rs = j.results || [];
-  const bai = j.target === "guide";
-  const dv = bai ? "bài hướng dẫn" : "sản phẩm";
-  const tongThieu = rs.reduce((a, r) => a + (r.thieu?.length || 0), 0);
-  gapTitle.textContent = bai
-    ? `${j.site} — ${j.hdsd_count} bài hướng dẫn sử dụng chính thức · ${tongThieu} mục còn thiếu` +
-      (j.bo_qua_khong_phai_hdsd ? ` · bỏ qua ${j.bo_qua_khong_phai_hdsd} bài không phải HDSD` : "")
-    : `${j.site} — soát ${j.scanned} ${dv} · ${tongThieu} mục nội dung còn thiếu`;
-
-  /* Với bài hướng dẫn, bộ trường đối chiếu KHÁC trang bán hàng: chỉ đòi các bước dùng,
-     lưu ý, đồ bảo hộ, sơ cứu… — bài hướng dẫn không có nghĩa vụ nhắc dung tích/bảo hành. */
-  const canhBao = j.chua_co_ho_so
-    ? `<div class="note">${j.chua_co_ho_so} ${dv} chưa đối chiếu được — không dò ra mã SKU NOMA trong ${bai ? "tiêu đề/nội dung bài" : "tên sản phẩm"}, hoặc mã đó không có trong hồ sơ đang dùng.${bai ? " Bài Doscom (không nói về NOMA) luôn nằm nhóm này — đúng như thiết kế." : ""}</div>`
-    : "";
-
-  const rows = rs.map((r) => {
-    if (r.bo_qua === "khong_phai_bai_hdsd") {
-      /* Bài kiến thức/so sánh lọt vào danh mục hướng dẫn: cố ý KHÔNG đòi nó chép đủ hồ sơ.
-         Vẫn hiện ra để biết nó nằm trong mục, và vẫn soát brand core + tiêu đề như thường. */
-      return `<div class="prod"><h3><a href="${r.permalink}" target="_blank" rel="noopener">${r.name}</a></h3>
-        <div class="muted">Không phải bài hướng dẫn sử dụng chính thức — chỉ soát brand core &amp; tiêu đề, không đòi bổ sung hồ sơ.</div></div>`;
-    }
-    if (!r.co_ho_so) {
-      return `<div class="prod"><h3>${r.name}</h3><div class="muted">Chưa có hồ sơ ${bai ? "SKU cho bài này" : "cho sản phẩm này"} — bỏ qua.</div></div>`;
-    }
-    const muc = (x, mau) =>
-      `<div style="margin:6px 0"><b>${x.nhan}</b> ${x.trong_yeu ? '<span class="pill red">trọng yếu</span>' : ""}
-        <div class="box ${mau}" style="margin-top:4px">${x.trich_ho_so.replace(/</g, "&lt;")}</div>
-        ${x.bang_chung?.length ? `<div class="muted">đã khớp được: ${x.bang_chung.join(" · ")}</div>` : ""}
-      </div>`;
-    return `<div class="prod">
-      <h3><input type="checkbox" class="gappick" data-id="${r.id}" ${r.thieu.length ? "" : "disabled"} />
-        <a href="${r.permalink}" target="_blank" rel="noopener">${r.name}</a>
-        <span class="muted">· độ phủ ${r.diem ?? "—"}%</span></h3>
-      <div class="flags">
-        ${gapPill(r.thieu.length, "thieu")} thiếu ·
-        ${gapPill(r.khong_chac.length, "cc")} chưa chắc ·
-        <span class="pill green">${r.so_co}</span> đã có
-      </div>
-      ${r.thieu.length ? "<div><b>Chưa có trên web — cần bổ sung:</b>" + r.thieu.map((x) => muc(x, "old")).join("") + "</div>" : ""}
-      ${r.khong_chac.length ? '<details><summary class="muted">Mới nói được một phần (' + r.khong_chac.length + ") — bấm xem</summary>" + r.khong_chac.map((x) => muc(x, "new")).join("") + "</details>" : ""}
-    </div>`;
-  }).join("");
-
-  gapBody.innerHTML = canhBao + (rows || '<p class="muted">Không có sản phẩm nào.</p>');
-}
-
-
-/* ── Soạn nội dung bổ sung rồi áp lên web ───────────────────────────────────
-   Ba nấc, cố ý tách rời: dò (miễn phí) → soạn (tốn AI, chỉ xem trước) → áp (ghi
-   thật, có sao lưu). Gộp lại thành một nút thì người bấm không kịp đọc nội dung
-   AI viết trước khi nó lên trang bán hàng. */
-
-document.getElementById("btnGapPickAll").onclick = () => {
-  document.querySelectorAll(".gappick").forEach((c) => { c.checked = !c.disabled; });
-};
-
-document.getElementById("btnGapDraft").onclick = async () => {
-  const ids = [...document.querySelectorAll(".gappick:checked")].map((c) => Number(c.dataset.id));
-  if (!ids.length) { alert(`Chưa chọn ${dvi()} nào.`); return; }
-  if (ids.length > 10) { alert(`Mỗi lượt tối đa 10 ${dvi()}.`); return; }
-
-  const btn = document.getElementById("btnGapDraft");
-  btn.disabled = true;
-  btn.textContent = "Đang soạn…";
-  try {
-    const r = await fetch("/api/products/brandcore-scan", {
-      method: "POST",
-      headers: { "content-type": "application/json", ...dossierHeaders() },
-      credentials: "same-origin",
-      body: JSON.stringify({ site: document.getElementById("site").value, target: loai(), mode: "gap-draft", ids }),
-    });
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || "lỗi");
-    // Sản phẩm trả `new_description`, bài hướng dẫn trả `new_content` — hai nguồn, hai trường.
-    const noiDungMoi = (x) => x.new_description || x.new_content;
-    const canDuyet = (j.results || []).filter(noiDungMoi);
-    const boQua = (j.results || []).filter((x) => !noiDungMoi(x));
-    if (boQua.length) {
-      console.info("Bỏ qua:", boQua.map((x) => `${x.name}: ${x.error || x.bo_qua}`));
-    }
-    if (!canDuyet.length) {
-      alert("Không soạn được nội dung nào.\n" +
-            boQua.map((x) => `• ${x.name}: ${x.error || x.bo_qua}`).join("\n"));
-    } else {
-      moDuyet(canDuyet, j.cost_usd);
-    }
-  } catch (e) {
-    alert("Lỗi khi soạn: " + e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Soạn nội dung bổ sung (AI)";
-  }
-};
-
-/* ── Duyệt lần lượt trong cửa sổ nổi ─────────────────────────────────────────
-   Vì sao không đổ hết ra trang: bảng xem trước dài, phải cuộn xa mới tới nút áp,
-   và duyệt hàng loạt thì rất dễ bấm áp mà chưa đọc kỹ. Mỗi lần một sản phẩm,
-   quyết xong tự sang cái tiếp theo. */
-let duyetDS = [];      // danh sách chờ duyệt
-let duyetI = 0;        // đang ở sản phẩm nào
-let duyetKetQua = [];  // gom lại để dựng báo cáo cuối
-let daSuaPhien = [];   // bài ĐÃ ghi thành công trong phiên này
-
-const $duyet = (id) => document.getElementById(id);
-
-function moDuyet(ds, cost) {
-  duyetDS = ds; duyetI = 0; duyetKetQua = [];
-  if (!ds.length) { alert("Không có sản phẩm nào cần bổ sung."); return; }
-  $duyet("duyetModal").classList.remove("hide");
-  veDuyet(cost);
-}
-
-function veDuyet(cost) {
-  if (duyetI >= duyetDS.length) return dongDuyet();
-  const r = duyetDS[duyetI];
-  if (!r || !r.added_html) return dongDuyet();
-  $duyet("duyetTen").textContent = r.name;
-  $duyet("duyetDem").textContent =
-    `${duyetI + 1}/${duyetDS.length}` + (cost != null ? ` · chi phí AI $${Number(cost).toFixed(4)}` : "");
-  $duyet("duyetThieu").innerHTML = "Bổ sung: " + (r.thieu || []).map((t) => `<span class="flag">${esc(t)}</span>`).join(" ");
-  $duyet("duyetCu").textContent = (r.description_cu || r.noi_dung_cu || "(trống)").slice(-1500);
-  $duyet("duyetMoi").textContent = r.added_html || "";
-  $duyet("duyetKq").innerHTML = "";
-  // Về trạng thái "chưa ghi": nút Áp bật lại, nút đi tiếp và link bài ẩn đi.
-  $duyet("duyetAp").disabled = false;
-  $duyet("duyetAp").classList.remove("hide");
-  $duyet("duyetBoQua").disabled = false;
-  $duyet("duyetBoQua").classList.remove("hide");
-  $duyet("duyetTiep").classList.add("hide");
-  $duyet("duyetXemBai").classList.add("hide");
-}
-
-function dongDuyet() {
-  $duyet("duyetModal").classList.add("hide");
-  if (!duyetKetQua.length) return;
-  const items = duyetKetQua.flatMap((x) => x.items || []);
-  renderReport({
-    ok: true,
-    site: document.getElementById("site").value,
-    target: loai(),
-    applied: items.filter((x) => x.applied).length,
-    skipped: 0,
-    failed: items.filter((x) => x.error).length,
-    fixed_total: items.filter((x) => x.applied).length,
-    summary_by_type: { "Bổ sung nội dung thiếu": items.filter((x) => x.applied).length },
-    items,
-    generated_at: new Date().toISOString(),
-  });
-}
-
-/* Bài vừa ghi xong thì BỎ NGAY khỏi danh sách chờ sửa và đưa sang khối "Đã sửa".
-   Trước đây phải tải lại trang mới thấy thay đổi, nên không biết đã sửa hay chưa —
-   và rất dễ sửa lại lần hai cùng một bài. */
-function chuyenSangDaSua(r) {
-  const cb = document.querySelector(`.gappick[data-id="${r.id}"]`);
-  const khoi = cb ? cb.closest(".prod") : null;
-  if (khoi) khoi.remove();
-
-  if (!daSuaPhien.some((x) => x.id === r.id)) {
-    daSuaPhien.push({ id: r.id, name: r.name, permalink: r.permalink, thieu: r.thieu || [] });
-  }
-  veDaSua();
-  capNhatTieuDeGap();
-}
-
-function veDaSua() {
-  const card = document.getElementById("daSuaCard");
-  if (!daSuaPhien.length) { card.classList.add("hide"); return; }
-  card.classList.remove("hide");
-  document.getElementById("daSuaTitle").textContent = `Đã sửa trong phiên này — ${daSuaPhien.length} ${dvi()}`;
-  document.getElementById("daSuaBody").innerHTML =
-    `<table><thead><tr><th>Nội dung</th><th>Đã bổ sung</th><th>Trạng thái</th></tr></thead><tbody>` +
-    daSuaPhien.map((x) => `<tr>
-      <td><a href="${esc(x.permalink)}" target="_blank" rel="noopener">${esc(x.name)}</a>
-          <span class="muted">#${x.id}</span></td>
-      <td>${(x.thieu || []).map((t) => `<span class="flag">${esc(t)}</span>`).join(" ") || "—"}</td>
-      <td><span class="pill green">Đã ghi lên web</span></td>
-    </tr>`).join("") + `</tbody></table>`;
-}
-
-// Số còn lại trong danh sách chờ sửa — đếm lại từ DOM để luôn khớp với cái đang thấy.
-function capNhatTieuDeGap() {
-  const con = document.querySelectorAll("#gapBody .gappick").length;
-  const t = document.getElementById("gapTitle");
-  if (!t) return;
-  const goc = t.dataset.goc || t.textContent;
-  t.dataset.goc = goc;
-  t.textContent = daSuaPhien.length ? `${goc} · còn ${con} ${dvi()} chờ sửa` : goc;
-}
-
-$duyet("duyetDong").onclick = dongDuyet;
-$duyet("duyetBoQua").onclick = () => { duyetI++; veDuyet(); };
-$duyet("duyetTiep").onclick = () => { duyetI++; veDuyet(); };
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !$duyet("duyetModal").classList.contains("hide")) dongDuyet();
-});
-
-$duyet("duyetAp").onclick = async () => {
-  const r = duyetDS[duyetI];
-  $duyet("duyetAp").disabled = true;
-  $duyet("duyetBoQua").disabled = true;
-  $duyet("duyetKq").innerHTML = '<span class="muted">Đang ghi lên web…</span>';
-  try {
-    // Ghi TỪNG SẢN PHẨM một: mỗi cái có bản sao lưu riêng, hỏng cái nào chỉ hỏng cái đó.
-    const res = await fetch("/api/products/brandcore-apply", {
-      method: "POST",
-      headers: { "content-type": "application/json", ...dossierHeaders() },
-      credentials: "same-origin",
-      // Bài hướng dẫn ghi vào trường `content`; sản phẩm ghi vào `description`.
-      body: JSON.stringify({ site: document.getElementById("site").value, target: loai(),
-                             fixes: [{ id: r.id, ...(laBai() ? { content: r.new_content } : { description: r.new_description }) }] }),
-    });
-    const j = await res.json();
-    if (!j.ok) throw new Error(j.error || "lỗi");
-
-    /* Không tin mỗi `ok` của phản hồi: brandcore-apply trả ok=true cả khi từng sản
-       phẩm ghi hỏng (lỗi nằm trong items[].error). Phải soi đúng dòng của SP này. */
-    const it = (j.items || []).find((x) => String(x.id) === String(r.id)) || {};
-    if (!it.applied) {
-      throw new Error(it.error || "web không xác nhận đã ghi");
-    }
-
-    duyetKetQua.push(j);
-    chuyenSangDaSua(r);
-
-    const link = it.permalink || r.permalink;
-    $duyet("duyetKq").innerHTML =
-      '<span class="pill green">✓ Đã ghi lên web</span> ' +
-      `<span class="muted">— đã bổ sung ${(r.thieu || []).length} mục vào cuối ${laBai() ? "bài hướng dẫn" : "mô tả"}. ` +
-      'Đã bỏ khỏi danh sách chờ sửa.</span>';
-    if (link) {
-      const a = $duyet("duyetXemBai");
-      a.href = link;
-      a.classList.remove("hide");
-    }
-    // ĐỨNG LẠI để người dùng đọc kết quả + mở bài kiểm tra, thay vì tự nhảy sau 0,5s
-    // (trước đây nhảy quá nhanh nên không kịp thấy đã ghi được hay chưa).
-    $duyet("duyetAp").classList.add("hide");
-    $duyet("duyetBoQua").classList.add("hide");
-    $duyet("duyetTiep").classList.remove("hide");
-    $duyet("duyetTiep").textContent =
-      duyetI + 1 < duyetDS.length ? (laBai() ? "Bài tiếp theo →" : "Sản phẩm tiếp theo →") : "Xong — đóng lại";
-  } catch (e) {
-    $duyet("duyetKq").innerHTML = '<span class="err">✕ Ghi KHÔNG thành công: ' + esc(e.message) +
-      '</span> <span class="muted">— bài giữ nguyên, vẫn nằm trong danh sách chờ sửa.</span>';
-    $duyet("duyetAp").disabled = false;
-    $duyet("duyetBoQua").disabled = false;
-  }
-};
-
-
-
-/* ── Soát & vá TIÊU ĐỀ bài viết ───────────────────────────────────────────────
-   Tách khỏi phần soát nội dung vì phạm vi khác hẳn: quét TOÀN BỘ bài của web, không
-   bó trong mục hướng dẫn. Lý do có phần này: 25/08/2026 phát hiện 46/111 bài trên
-   noma.vn có tiêu đề RỖNG — trang thật hiện `<title>- Noma</title>` và `<h1></h1>`,
-   mất sạch SEO mà nhìn danh sách bài trong WP vẫn thấy "bình thường".
-
-   Ba nấc như mọi chỗ khác: soát (miễn phí) → AI đề xuất (xem trước, sửa tay được)
-   → vá lên web (có sao lưu + hoàn tác). Tiêu đề là chữ đầu tiên khách nhìn thấy nên
-   KHÔNG bao giờ ghi thẳng từ AI mà không cho người đọc lại. */
-let titleRows = [];   // [{id,name,permalink,tieu_de,tieu_de_rong,van_de[],draft?}]
-
-const tEl = (id) => document.getElementById(id);
-
-document.getElementById("btnTitleScan").onclick = async () => {
-  const btn = tEl("btnTitleScan");
-  btn.disabled = true; btn.textContent = "Đang soát…";
-  tEl("titleInfo").textContent = "Đang đọc tiêu đề toàn bộ bài viết…";
-  tEl("titleBody").innerHTML = "";
-  try {
-    const r = await fetch("/api/products/brandcore-scan", {
-      method: "POST", headers: { "content-type": "application/json", ...dossierHeaders() },
-      credentials: "same-origin",
-      body: JSON.stringify({ site: site(), target: loai(), mode: "title" }),
-    });
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || "lỗi soát tiêu đề");
-    titleRows = j.results || [];
-    const d = j.dem_theo_loai || {};
-    tEl("titleInfo").innerHTML =
-      `Soát ${j.scanned} bài · <b>${j.tong_van_de}</b> bài có vấn đề về tiêu đề · ` +
-      [
-        d.rong ? `<span class="err">${d.rong} bài mất tiêu đề</span>` : "",
-        d.ten_sp ? `<b>${d.ten_sp} sai tên sản phẩm so với hồ sơ</b>` : "",
-        d.sai_sku ? `<span class="err">${d.sai_sku} gắn nhầm mã sản phẩm</span>` : "",
-        d.trung_sku ? `${d.trung_sku} bài trùng mã` : "",
-        d.brandcore ? `${d.brandcore} trái brand core` : "",
-        d.khuon ? `${d.khuon} sai khuôn HDSD` : "",
-        d.trung ? `${d.trung} trùng tên` : "",
-        d.dai ? `${d.dai} quá dài` : "",
-      ].filter(Boolean).join(" · ") +
-      (j.con_bai_chua_quet ? ' · <span class="err">còn bài chưa quét tới</span>' : "");
-    renderTitle();
-  } catch (e) {
-    tEl("titleInfo").innerHTML = '<span class="err">' + esc(e.message) + "</span>";
-  }
-  btn.disabled = false; btn.textContent = "Soát tiêu đề";
-};
-
-function renderTitle() {
-  if (!titleRows.length) {
-    tEl("titleBody").innerHTML = '<p class="muted">Không có bài nào lỗi tiêu đề.</p>';
-    tEl("titleActions").classList.add("hide");
-    return;
-  }
-  tEl("titleActions").classList.remove("hide");
-  const rows = titleRows.map((r, i) => {
-    const vd = (r.van_de || []).map((v) =>
-      `<span class="flag" title="${esc(v.chi_tiet || "")}">${esc(v.nhan)}</span>`).join(" ");
-    const hienTai = r.tieu_de_rong
-      ? '<span class="pill red">trống</span>'
-      : esc(r.tieu_de);
-    /* Ô nhập cho sửa tay: AI đặt tiêu đề chỉ là đề xuất, người duyệt vẫn phải được
-       gõ lại — nhất là tên sản phẩm/mã SKU thì con người biết rõ hơn. */
-    const draft = r.draft || {};
-    const canhBao = draft.vi_pham && draft.vi_pham.length
-      ? `<div class="err" style="font-size:12px">⛔ Tiêu đề AI đề xuất TRÁI brand core (${draft.vi_pham.map((x) => esc(x.type)).join(", ")}) — sửa tay trước khi vá.</div>`
-      : (draft.trung_voi ? `<div class="err" style="font-size:12px">⛔ Trùng tiêu đề bài #${draft.trung_voi}</div>`
-      : (draft.trung_khuon ? `<div class="err" style="font-size:12px">⛔ Cướp khuôn của bài hướng dẫn sử dụng chính thức #${draft.trung_khuon.id} (“${esc(draft.trung_khuon.tieu_de)}”) — đặt lại theo góc riêng của bài này.</div>` : ""));
-    /* Tên chuẩn dựng thẳng từ hồ sơ sản phẩm thì KHÔNG cần AI — điền sẵn luôn, chỉ
-       những bài không suy ra được (mất tiêu đề, bài kiến thức) mới phải nhờ AI. */
-    const goiY = draft.tieu_de_moi || r.de_xuat || "";
-    const nguon = draft.tieu_de_moi
-      ? `${draft.do_dai} ký tự${draft.ly_do ? " · " + esc(draft.ly_do) : ""}`
-      : '<span class="pill green">theo hồ sơ sản phẩm</span> không tốn AI';
-    const oNhap = draft.loi
-      ? `<div class="err" style="font-size:12px">${esc(draft.loi)}</div>`
-      : (goiY
-          ? `<input type="text" class="tnew" data-id="${r.id}" value="${esc(goiY)}" style="width:100%" />
-             <div class="muted" style="font-size:12px">${nguon}</div>${canhBao}`
-          : '<span class="muted">— cần AI đề xuất</span>');
-    return `<tr>
-      <td><input type="checkbox" class="tpick" data-i="${i}" data-id="${r.id}" ${r.tieu_de_rong ? "checked" : ""} /></td>
-      <td style="max-width:320px">${hienTai}
-        <div><a href="${esc(r.permalink)}" target="_blank" rel="noopener" class="muted">mở bài ↗</a>
-          ${r.trong_muc_hdsd ? '<span class="pill grey">mục hướng dẫn</span>' : ""}</div></td>
-      <td>${vd}</td>
-      <td style="min-width:280px">${oNhap}</td>
-    </tr>`;
-  }).join("");
-  tEl("titleBody").innerHTML =
-    `<table><thead><tr><th></th><th>Tiêu đề hiện tại</th><th>Vấn đề</th><th>Tiêu đề đề xuất (sửa được)</th></tr></thead><tbody>${rows}</tbody></table>`;
-}
-
-document.getElementById("btnTitlePickEmpty").onclick = () => {
-  document.querySelectorAll(".tpick").forEach((cb) => {
-    cb.checked = !!titleRows[+cb.dataset.i].tieu_de_rong;
-  });
-};
-
-document.getElementById("btnTitlePickName").onclick = () => {
-  // Nhóm này sửa được ngay: tên chuẩn đã dựng sẵn từ hồ sơ, bấm vá là xong.
-  document.querySelectorAll(".tpick").forEach((cb) => {
-    cb.checked = !!titleRows[+cb.dataset.i].de_xuat;
-  });
-  tEl("btnTitleApply").classList.remove("hide");
-};
-
-document.getElementById("btnTitleDraft").onclick = async () => {
-  /* AI chỉ dùng cho bài KHÔNG suy ra được tiêu đề: bài mất tiêu đề hẳn. Bài hướng dẫn
-     sai tên sản phẩm thì đã có tên chuẩn dựng từ hồ sơ — không nhờ AI nghĩ hộ. */
-  const chon = [...document.querySelectorAll(".tpick:checked")]
-    .map((cb) => +cb.dataset.i)
-    .filter((i) => titleRows[i] && titleRows[i].tieu_de_rong);
-  if (!chon.length) {
-    alert("Chưa chọn bài MẤT TIÊU ĐỀ nào.\n\nBài sai tên sản phẩm đã có sẵn tiêu đề chuẩn theo hồ sơ — " +
-          "chỉ cần bấm “Vá tiêu đề đã duyệt”, không cần AI.");
-    return;
-  }
-  const btn = tEl("btnTitleDraft");
+$("#btnTitleDraft").onclick = async () => {
+  /* AI chỉ dùng cho bài không suy ra được tiêu đề (mất tiêu đề hẳn). Bài sai tên sản
+     phẩm đã có tên chuẩn dựng sẵn từ hồ sơ — không nhờ AI nghĩ hộ. */
+  const chon = $$(".pick:checked").map((cb) => +cb.dataset.i).filter((i) => ST.tieude.rows[i] && ST.tieude.rows[i].tieu_de_rong);
+  if (!chon.length) return alert("Chưa chọn bài MẤT TIÊU ĐỀ nào.\nBài sai tên sản phẩm đã có sẵn tiêu đề chuẩn — bấm “Vá tiêu đề đã chọn” là xong.");
+  const btn = $("#btnTitleDraft");
   btn.disabled = true;
   let cost = 0;
-  // Mỗi lượt tối đa 10 bài ở phía máy chủ → chia lô, chạy tuần tự cho khỏi quá hạn.
+  // Máy chủ nhận tối đa 10 bài/lượt → chia lô, chạy tuần tự cho khỏi quá hạn.
   for (let i = 0; i < chon.length; i += 5) {
     const lo = chon.slice(i, i + 5);
     btn.textContent = `Đang soạn ${Math.min(i + 5, chon.length)}/${chon.length}…`;
     try {
-      const r = await fetch("/api/products/brandcore-scan", {
-        method: "POST", headers: { "content-type": "application/json", ...dossierHeaders() },
-        credentials: "same-origin",
-        body: JSON.stringify({ site: site(), target: loai(), mode: "title-draft", ids: lo.map((k) => titleRows[k].id) }),
-      });
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error || "lỗi");
+      const j = await goiScan({ site: site(), target: "guide", mode: "title-draft", ids: lo.map((k) => ST.tieude.rows[k].id) });
       cost += j.cost_usd || 0;
       for (const kq of j.results || []) {
-        const row = titleRows.find((x) => x.id === kq.id);
-        if (!row) continue;
-        row.draft = kq.error ? { loi: kq.error } : kq;
+        const row = ST.tieude.rows.find((x) => x.id === kq.id);
+        if (row) row.draft = kq.error ? { loi: kq.error } : kq;
       }
-      renderTitle();
+      veBang();
       // Giữ nguyên lựa chọn sau khi vẽ lại để lô sau vẫn đúng bài.
-      for (const k of chon) { const cb = document.querySelector(`.tpick[data-i="${k}"]`); if (cb) cb.checked = true; }
-    } catch (e) {
-      alert("Lỗi khi soạn tiêu đề: " + e.message);
-      break;
-    }
+      for (const k of chon) { const cb = document.querySelector(`.pick[data-i="${k}"]`); if (cb) cb.checked = true; }
+      demChon();
+    } catch (e) { alert("Lỗi khi soạn tiêu đề: " + e.message); break; }
   }
-  tEl("titleInfo").innerHTML += ` · chi phí AI ~$${cost.toFixed(4)}`;
-  tEl("btnTitleApply").classList.remove("hide");
-  btn.disabled = false; btn.textContent = "Đề xuất tiêu đề (AI)";
+  $("#panelInfo").innerHTML += ` · chi phí AI ~$${cost.toFixed(4)}`;
+  btn.disabled = false; btn.textContent = "Đặt tiêu đề bằng AI";
 };
 
-document.getElementById("btnTitleApply").onclick = async () => {
-  /* Chỉ vá những dòng ĐANG TICK và có tiêu đề mới hợp lệ. Dòng nào AI trả về tiêu đề
-     trái brand core hoặc trùng bài khác thì bỏ, trừ khi người dùng đã gõ lại tay
-     (so với chuỗi AI trả) — không tự tiện ghi đè phán đoán của người duyệt. */
+$("#btnTitleApply").onclick = async () => {
+  /* Chỉ vá dòng ĐANG TICK và có tiêu đề hợp lệ. Dòng nào AI trả về tiêu đề trái brand
+     core / trùng bài khác thì bỏ, TRỪ KHI người dùng đã gõ lại tay. */
   const fixes = [];
-  for (const cb of document.querySelectorAll(".tpick:checked")) {
-    const row = titleRows[+cb.dataset.i];
+  for (const cb of $$(".pick:checked")) {
+    const row = ST.tieude.rows[+cb.dataset.i];
+    if (!row) continue;
     const o = document.querySelector(`.tnew[data-id="${row.id}"]`);
     if (!o) continue;
     const moi = o.value.trim();
@@ -1236,38 +622,314 @@ document.getElementById("btnTitleApply").onclick = async () => {
     fixes.push({ id: row.id, title: moi });
   }
   if (!fixes.length) return alert("Không có tiêu đề nào hợp lệ để vá.\nDòng bị chặn là dòng AI đề xuất trái brand core hoặc trùng tên — sửa tay rồi thử lại.");
-  // Hai bài cùng nhận một tiêu đề trong cùng một lượt = tự tạo trùng lặp mới.
   const dem = {};
   for (const f of fixes) dem[f.title] = (dem[f.title] || 0) + 1;
   const trungLo = Object.keys(dem).filter((t) => dem[t] > 1);
-  if (trungLo.length) {
-    return alert("Đang định đặt CÙNG MỘT tiêu đề cho nhiều bài:\n\n" + trungLo.join("\n") +
-      "\n\nGộp hoặc xoá bớt bài trùng trước, hoặc sửa tay cho khác nhau.");
-  }
+  if (trungLo.length) return alert("Đang định đặt CÙNG MỘT tiêu đề cho nhiều bài:\n\n" + trungLo.join("\n"));
   if (!confirm(`Vá tiêu đề cho ${fixes.length} bài trên ${site()}? (có sao lưu, hoàn tác được)`)) return;
 
-  const btn = tEl("btnTitleApply");
+  const btn = $("#btnTitleApply");
   btn.disabled = true; btn.textContent = "Đang vá…";
   try {
-    const r = await fetch("/api/products/brandcore-apply", {
-      method: "POST", headers: headers(true), credentials: "same-origin",
-      body: JSON.stringify({ site: site(), target: loai(), fixes }),
-    });
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || "lỗi vá");
-    // Bài vá xong thì bỏ khỏi danh sách chờ — khỏi vá lại lần hai.
+    const j = await goiApply({ site: site(), target: "guide", fixes });
     const xong = new Set((j.items || []).filter((x) => x.applied).map((x) => x.id));
-    titleRows = titleRows.filter((x) => !xong.has(x.id));
-    renderTitle();
-    renderReport(j);
-    $("#reportCard").classList.remove("hide");
-    $("#reportCard").scrollIntoView({ behavior: "smooth" });
-  } catch (e) {
-    alert(e.message);
-  }
-  btn.disabled = false; btn.textContent = "Vá tiêu đề đã duyệt";
+    ST.tieude.rows = ST.tieude.rows.filter((x) => !xong.has(x.id));
+    veTabs(); veBang(); veReport(j);
+  } catch (e) { alert(e.message); }
+  btn.disabled = false; btn.textContent = "Vá tiêu đề đã chọn";
 };
 
+$("#btnGap").onclick = async () => {
+  const btn = $("#btnGap");
+  btn.disabled = true; btn.textContent = "Đang quét…";
+  ST.thieu.loi = null;
+  try { nhanKetQua("thieu", await napThieu()); }
+  catch (e) { ST.thieu.loi = e.message; }
+  veTabs(); veBang();
+  btn.disabled = false; btn.textContent = "Quét lại";
+};
+
+/* Ba nấc, cố ý tách rời: dò (miễn phí) → soạn (tốn AI, chỉ xem trước) → áp (ghi thật,
+   có sao lưu). Gộp lại một nút thì người bấm không kịp đọc nội dung AI viết. */
+$("#btnGapDraft").onclick = async () => {
+  const picks = dangChon();
+  if (!picks.length) return alert("Chưa chọn mục nào.");
+  if (picks.length > 10) return alert("Mỗi lượt tối đa 10 mục.");
+  const btn = $("#btnGapDraft");
+  btn.disabled = true; btn.textContent = "Đang soạn…";
+  const canDuyet = [], boQua = [];
+  let cost = 0;
+  try {
+    // Gộp theo target: bài viết và sản phẩm đi hai đường ghi khác nhau.
+    for (const target of ["guide", "product"]) {
+      const ids = picks.filter((p) => p.target === target).map((p) => p.id);
+      if (!ids.length) continue;
+      const j = await goiScan({ site: site(), target, mode: "gap-draft", ids });
+      cost += j.cost_usd || 0;
+      for (const x of j.results || []) {
+        if (x.new_description || x.new_content) canDuyet.push({ ...x, target });
+        else boQua.push(`${x.name}: ${x.error || x.bo_qua}`);
+      }
+    }
+    if (!canDuyet.length) alert("Không soạn được nội dung nào.\n" + boQua.join("\n"));
+    else moDuyet(canDuyet, cost);
+  } catch (e) { alert("Lỗi khi soạn: " + e.message); }
+  btn.disabled = false; btn.textContent = "Soạn bổ sung (AI)";
+};
+
+/* Duyệt lần lượt trong cửa sổ nổi: mỗi lần một mục. Đổ hết ra trang thì phải cuộn xa
+   mới tới nút áp, và duyệt hàng loạt rất dễ bấm áp mà chưa đọc. */
+let duyetDS = [], duyetI = 0, duyetKetQua = [];
+const $d = (id) => document.getElementById(id);
+
+function moDuyet(ds, cost) {
+  duyetDS = ds; duyetI = 0; duyetKetQua = [];
+  $d("duyetModal").classList.remove("hide");
+  veDuyet(cost);
+}
+function veDuyet(cost) {
+  if (duyetI >= duyetDS.length) return dongDuyet();
+  const r = duyetDS[duyetI];
+  if (!r || !r.added_html) return dongDuyet();
+  $d("duyetTen").textContent = r.name;
+  $d("duyetDem").textContent = `${duyetI + 1}/${duyetDS.length}` + (cost != null ? ` · AI $${Number(cost).toFixed(4)}` : "");
+  $d("duyetThieu").innerHTML = "Bổ sung: " + (r.thieu || []).map((t) => `<span class="flag">${esc(t)}</span>`).join(" ");
+  $d("duyetCu").textContent = (r.description_cu || r.noi_dung_cu || "(trống)").slice(-1500);
+  $d("duyetMoi").textContent = r.added_html || "";
+  $d("duyetKq").innerHTML = "";
+  $d("duyetAp").disabled = false; $d("duyetAp").classList.remove("hide");
+  $d("duyetBoQua").disabled = false; $d("duyetBoQua").classList.remove("hide");
+  $d("duyetTiep").classList.add("hide");
+  $d("duyetXemBai").classList.add("hide");
+}
+function dongDuyet() {
+  $d("duyetModal").classList.add("hide");
+  if (!duyetKetQua.length) return;
+  const items = duyetKetQua.flatMap((x) => x.items || []);
+  veReport({
+    ok: true, site: site(), target: "guide",
+    applied: items.filter((x) => x.applied).length,
+    skipped: 0, failed: items.filter((x) => x.error).length,
+    fixed_total: items.filter((x) => x.applied).length,
+    summary_by_type: { "Bổ sung nội dung thiếu": items.filter((x) => x.applied).length },
+    items, generated_at: new Date().toISOString(),
+  });
+}
+$d("duyetDong").onclick = dongDuyet;
+$d("duyetBoQua").onclick = () => { duyetI++; veDuyet(); };
+$d("duyetTiep").onclick = () => { duyetI++; veDuyet(); };
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$d("duyetModal").classList.contains("hide")) dongDuyet();
+});
+
+$d("duyetAp").onclick = async () => {
+  const r = duyetDS[duyetI];
+  $d("duyetAp").disabled = true; $d("duyetBoQua").disabled = true;
+  $d("duyetKq").innerHTML = '<span class="muted">Đang ghi lên web…</span>';
+  try {
+    // Ghi TỪNG MỤC một: mỗi cái một bản sao lưu riêng, hỏng cái nào chỉ hỏng cái đó.
+    const j = await goiApply({
+      site: site(), target: r.target,
+      // Bài hướng dẫn ghi vào `content`; sản phẩm ghi vào `description`.
+      fixes: [{ id: r.id, ...(r.target === "guide" ? { content: r.new_content } : { description: r.new_description }) }],
+    });
+    /* Không tin mỗi `ok`: brandcore-apply trả ok=true cả khi từng mục ghi hỏng (lỗi nằm
+       trong items[].error). Phải soi đúng dòng của mục này. */
+    const it = (j.items || []).find((x) => String(x.id) === String(r.id)) || {};
+    if (!it.applied) throw new Error(it.error || "web không xác nhận đã ghi");
+    duyetKetQua.push(j);
+    chuyenSangDaSua(r);
+    $d("duyetKq").innerHTML = '<span class="pill green">✓ Đã ghi lên web</span> <span class="muted">— đã bỏ khỏi danh sách chờ.</span>';
+    const l = it.permalink || r.permalink;
+    if (l) { const a = $d("duyetXemBai"); a.href = l; a.classList.remove("hide"); }
+    $d("duyetAp").classList.add("hide"); $d("duyetBoQua").classList.add("hide");
+    $d("duyetTiep").classList.remove("hide");
+    $d("duyetTiep").textContent = duyetI + 1 < duyetDS.length ? "Tiếp theo →" : "Xong — đóng lại";
+  } catch (e) {
+    $d("duyetKq").innerHTML = '<span class="err">✕ Ghi KHÔNG thành công: ' + esc(e.message) + "</span>";
+    $d("duyetAp").disabled = false; $d("duyetBoQua").disabled = false;
+  }
+};
+
+/* Mục vừa ghi xong thì bỏ khỏi danh sách chờ ngay — không phải tải lại trang, và không
+   sửa lại lần hai cùng một mục. */
+function chuyenSangDaSua(r) {
+  ST.thieu.rows = ST.thieu.rows.filter((x) => !(x.id === r.id && x.target === r.target));
+  if (!daSua.some((x) => x.id === r.id)) daSua.push({ id: r.id, name: r.name, permalink: r.permalink, thieu: r.thieu || [] });
+  veTabs(); veBang(); veDaSua();
+}
+function veDaSua() {
+  if (!daSua.length) return $("#daSuaCard").classList.add("hide");
+  $("#daSuaCard").classList.remove("hide");
+  $("#daSuaTitle").textContent = `Đã sửa trong phiên này — ${daSua.length} mục`;
+  $("#daSuaBody").innerHTML = "<table><tbody>" + daSua.map((x) => `<tr>
+      <td><a href="${esc(x.permalink)}" target="_blank" rel="noopener">${esc(x.name)}</a> <span class="muted">#${x.id}</span></td>
+      <td>${(x.thieu || []).map((t) => `<span class="flag">${esc(t)}</span>`).join(" ") || "—"}</td>
+      <td><span class="pill green">đã ghi</span></td></tr>`).join("") + "</tbody></table>";
+}
+
+function veReport(d) {
+  const byType = Object.entries(d.summary_by_type || {}).sort((a, b) => b[1] - a[1]);
+  const rows = (d.items || []).map((it) => {
+    const st = it.applied ? `<span class="pill green">đã sửa</span>`
+      : it.error ? `<span class="pill red">lỗi</span>` : `<span class="pill grey">bỏ qua</span>`;
+    const fixed = (it.violations_fixed || []).map((t) => `<span class="flag">${esc(t)}</span>`).join(" ") || "—";
+    const con = (it.residual_flags || []).length
+      ? `<div class="err" style="font-size:12px">còn: ${it.residual_flags.map((f) => esc(f.type)).join(", ")}</div>` : "";
+    const undo = it.applied && it.backup_key
+      ? `<button class="sec" onclick="revert(${it.id},'${esc(it.backup_key)}','${esc(d.target)}',this)">Hoàn tác</button>` : "";
+    const ten = it.permalink ? `<a href="${esc(it.permalink)}" target="_blank">${esc(it.name || "#" + it.id)}</a>` : esc(it.name || "#" + it.id);
+    return `<tr><td>${ten} <span class="muted">#${it.id}</span>${it.error ? `<div class="err" style="font-size:12px">${esc(it.error)}</div>` : ""}</td>
+      <td>${st}</td><td>${fixed}${con}</td><td>${undo}</td></tr>`;
+  }).join("");
+  $("#reportBody").innerHTML =
+    `<div class="stat">
+      <div class="b"><div class="n">${d.applied}</div><div class="l">đã sửa</div></div>
+      <div class="b"><div class="n">${d.fixed_total}</div><div class="l">lỗi khắc phục</div></div>
+      <div class="b"><div class="n">${d.skipped}</div><div class="l">bỏ qua</div></div>
+      <div class="b"><div class="n">${d.failed}</div><div class="l">lỗi ghi</div></div>
+    </div>` +
+    (byType.length ? `<table><tbody>${byType.map(([t, n]) => `<tr><td>${esc(t)}</td><td>${n}</td></tr>`).join("")}</tbody></table>` : "") +
+    `<table><tbody>${rows}</tbody></table>`;
+  $("#reportCard").classList.remove("hide");
+  $("#reportCard").scrollIntoView({ behavior: "smooth" });
+}
+
+async function revert(id, key, target, btn) {
+  if (!confirm("Khôi phục nội dung gốc cho mục này?")) return;
+  btn.disabled = true; btn.textContent = "Đang hoàn tác…";
+  try {
+    await goiApply({ mode: "revert", site: site(), target, id, backup_key: key });
+    btn.textContent = "Đã hoàn tác ✓";
+  } catch (e) { alert(e.message); btn.disabled = false; btn.textContent = "Hoàn tác"; }
+}
+window.revert = revert;
+
+/* Hồ sơ sản phẩm: xem trước (dryrun) trước khi ghi đè — hồ sơ là nguồn thông số cho MỌI
+   bài AI viết, nhập nhầm file là bài mới sai hướng dẫn hàng loạt mà không ai để ý ngay. */
+const dFile = $("#dossierFile"), dMsg = $("#dossierMsg"), dNow = $("#dossierNow"), dUndo = $("#btnDossierUndo");
+const tokenHeader = () => { const t = $("#token").value.trim(); return t ? { "X-Products-Token": t } : {}; };
+
+async function dossierStatus() {
+  try {
+    const j = await (await fetch("/api/products/brandcore-import", { credentials: "same-origin" })).json();
+    if (!j.ok) throw new Error(j.error || "lỗi");
+    const d = j.data;
+    dNow.textContent = d.nguon === "kv"
+      ? `· ${d.so_san_pham} sản phẩm · ${new Date(d.cap_nhat).toLocaleDateString("vi-VN")}`
+      : `· đang dùng bản dự phòng trong code (${d.so_san_pham} SP) — nên tải hồ sơ mới`;
+    dUndo.classList.toggle("hide", !d.co_ban_hoan_tac);
+  } catch (e) { dNow.textContent = "· không đọc được trạng thái: " + e.message; }
+}
+
+async function dossierSend(dryrun, undo) {
+  if (!undo && !dFile.files[0]) { dMsg.innerHTML = '<span class="err">Chưa chọn file.</span>'; return; }
+  const fd = new FormData();
+  if (undo) fd.append("undo", "1");
+  else { fd.append("file", dFile.files[0]); if (dryrun) fd.append("dryrun", "1"); }
+  dMsg.textContent = undo ? "Đang hoàn tác…" : (dryrun ? "Đang đọc file…" : "Đang nhập…");
+  try {
+    const j = await (await fetch("/api/products/brandcore-import", {
+      method: "POST", body: fd, headers: tokenHeader(), credentials: "same-origin",
+    })).json();
+    if (!j.ok) { dMsg.innerHTML = '<span class="err">' + esc(j.error || "lỗi") + "</span>"; return; }
+    const d = j.data;
+    if (d.hoan_tac) dMsg.innerHTML = `<span class="pill green">đã hoàn tác</span> ${d.so_san_pham} sản phẩm`;
+    else {
+      const t = d.thay_doi || {};
+      const p = [`<span class="pill ${d.dryrun ? "grey" : "green"}">${d.dryrun ? "xem trước — CHƯA ghi" : "đã nhập"}</span>`,
+                 `${d.so_san_pham} sản phẩm · ${d.so_cot} cột`];
+      if (t.them && t.them.length) p.push(`thêm: ${t.them.join(", ")}`);
+      // "Mất" = có trong bản đang dùng nhưng thiếu trong file mới → sẽ mất thông số.
+      if (t.mat && t.mat.length) p.push(`<span class="err">file thiếu: ${t.mat.join(", ")}</span>`);
+      dMsg.innerHTML = p.join(" · ");
+    }
+    dossierStatus();
+  } catch (e) { dMsg.innerHTML = '<span class="err">' + esc(e.message) + "</span>"; }
+}
+$("#btnDossierPreview").onclick = () => dossierSend(true, false);
+$("#btnDossierApply").onclick = () => {
+  if (!confirm("Nhập hồ sơ này? Bản đang dùng sẽ bị thay hoàn toàn (có nút Hoàn tác).")) return;
+  dossierSend(false, false);
+};
+dUndo.onclick = () => dossierSend(false, true);
+
+/* Bảng tên tiếng Anh (nomaauto.us) — ba nấc: soạn (chưa ghi) → lưu → hoàn tác. Tên ở
+   đây đi thẳng lên tên sản phẩm và tiêu đề bài trên trang bán hàng Mỹ. */
+const enBody = $("#enBody"), enMsg = $("#enMsg"), enNow = $("#enNow"), enSave = $("#btnEnSave"), enUndo = $("#btnEnUndo");
+const NGUON_EN = { bang: "bảng đang dùng", web_us: "tên sẵn trên web US", dich: "AI dịch", chua_co: "chưa có" };
+
+async function enStatus() {
+  try {
+    const j = await (await fetch("/api/products/names-en", { credentials: "same-origin" })).json();
+    if (!j.ok) throw new Error(j.error || "lỗi");
+    const d = j.data;
+    enNow.innerHTML = d.nguon === "kv"
+      ? `· ${d.so_ten} tên` + (d.thieu.length ? ` · <span class="err">thiếu mã: ${d.thieu.join(", ")}</span>` : "")
+      : '· <span class="err">CHƯA có bảng tên — soạn rồi lưu trước khi đổi tên bên nomaauto.us</span>';
+    enUndo.classList.toggle("hide", !d.co_ban_hoan_tac);
+  } catch (e) { enNow.textContent = "· không đọc được trạng thái: " + e.message; }
+}
+
+async function enDraft(dichLai) {
+  enMsg.textContent = dichLai ? "Đang dịch lại toàn bộ…" : "Đang soạn…";
+  enSave.classList.add("hide");
+  try {
+    const j = await (await fetch("/api/products/names-en", {
+      method: "POST", headers: headers(true), credentials: "same-origin",
+      body: JSON.stringify({ mode: "draft", dich_lai: dichLai === true }),
+    })).json();
+    if (!j.ok) { enMsg.innerHTML = '<span class="err">' + esc(j.error || "lỗi") + "</span>"; return; }
+    const d = j.data;
+    enBody.innerHTML = `<table><thead><tr><th>Mã</th><th>Tên hồ sơ (VI)</th><th>Tên tiếng Anh</th><th>Nguồn</th></tr></thead><tbody>` +
+      (d.items || []).map((x) => `<tr><td><b>${esc(x.ma)}</b></td><td class="muted">${esc(x.ten_vn || "")}</td>
+        <td><input class="enTen" data-ma="${esc(x.ma)}" value="${esc(x.de_xuat || "")}" style="width:100%;min-width:240px" /></td>
+        <td class="muted">${esc(NGUON_EN[x.nguon] || x.nguon)}</td></tr>`).join("") + `</tbody></table>`;
+    enSave.classList.toggle("hide", !(d.items || []).length);
+    // Thiếu nguồn (credential web Mỹ, lỗi dịch) phải nói thẳng — im lặng là lưu đè mất tên.
+    enMsg.innerHTML = [`<span class="pill grey">xem trước — CHƯA ghi</span>`,
+      `${(d.items || []).length} mã · AI dịch ${d.so_dich} · $${d.cost_usd}`,
+      ...(d.canh_bao || []).map((c) => `<span class="err">${esc(c)}</span>`)].join(" · ");
+  } catch (e) { enMsg.innerHTML = '<span class="err">' + esc(e.message) + "</span>"; }
+}
+$("#btnEnDraft").onclick = () => enDraft(false);
+$("#btnEnRedo").onclick = () => {
+  if (!confirm("Dịch lại TOÀN BỘ bằng AI? Tên đang có trong bảng và tên sẵn trên nomaauto.us sẽ bị đề xuất thay.")) return;
+  enDraft(true);
+};
+enSave.onclick = async () => {
+  const names = {};
+  for (const o of enBody.querySelectorAll(".enTen")) { const v = (o.value || "").trim(); if (v) names[o.dataset.ma] = v; }
+  if (!Object.keys(names).length) { enMsg.innerHTML = '<span class="err">Chưa có tên nào để lưu.</span>'; return; }
+  if (!confirm(`Lưu ${Object.keys(names).length} tên tiếng Anh? (có nút Hoàn tác)`)) return;
+  try {
+    const j = await (await fetch("/api/products/names-en", {
+      method: "POST", headers: headers(true), credentials: "same-origin",
+      body: JSON.stringify({ mode: "save", names }),
+    })).json();
+    enMsg.innerHTML = j.ok ? `<span class="pill green">đã lưu</span> ${j.data.so_ten} tên · quét lại để đối chiếu`
+                           : '<span class="err">' + esc(j.error || "lỗi") + "</span>";
+    enStatus();
+  } catch (e) { enMsg.innerHTML = '<span class="err">' + esc(e.message) + "</span>"; }
+};
+enUndo.onclick = async () => {
+  if (!confirm("Hoàn tác về bảng tên trước đó?")) return;
+  const j = await (await fetch("/api/products/names-en", {
+    method: "POST", headers: headers(true), credentials: "same-origin", body: JSON.stringify({ mode: "revert" }),
+  })).json();
+  enMsg.innerHTML = j.ok ? `<span class="pill green">đã hoàn tác</span> ${j.data.so_ten} tên`
+                         : '<span class="err">' + esc(j.error || "lỗi") + "</span>";
+  enStatus();
+};
+
+// Bảng tên EN chỉ có nghĩa với nomaauto.us.
+function capNhatNguon() {
+  const laUS = site() === "nomaauto";
+  $("#enCard").classList.toggle("hide", !laUS);
+  if (laUS) enStatus();
+}
+dossierStatus();
+capNhatNguon();
 </script>
 </body>
 </html>
