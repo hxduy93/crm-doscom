@@ -171,7 +171,9 @@ export async function onRequestPost(context) {
   }
 
   const report = {
-    ok: true, site,
+    // Ghi rõ target để bên hoàn tác gọi đúng đường (bỏ trống là mặc định về 'product'
+    // ở chỗ khác, dễ hoàn tác nhầm loại nội dung).
+    ok: true, site, target: "product",
     applied, skipped, failed,
     fixed_total: fixedTotal,
     summary_by_type: summary,

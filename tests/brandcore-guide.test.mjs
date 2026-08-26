@@ -316,7 +316,8 @@ test("đổi WEBSITE thì dọn sạch kết quả cũ", () => {
   /* Giữ lại danh sách của web trước rồi bấm áp = ghi nhầm web. Từ 26/08/2026 trang chỉ
      còn một ô chọn (website) nên đây là chỗ duy nhất phải dọn. */
   assert.match(UI, /\$\("#site"\)\.onchange/);
-  assert.match(UI, /proposals = \[\]; daSua = \[\];/);
+  assert.match(UI, /rows: \[\], info: "", loi: null, xong: \[\] \};\n  proposals = \[\];/,
+    "đổi web phải xoá cả danh sách chờ lẫn lịch sử đã xong của web trước");
 });
 
 test("nội dung bổ sung cho bài ghi vào trường content, không phải description", () => {

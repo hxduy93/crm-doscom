@@ -40,6 +40,9 @@
   .tab .n { display:inline-block; margin-left:6px; padding:0 7px; border-radius:999px; background:rgba(0,0,0,.12); font-size:11px; }
   .tab.on .n { background:rgba(255,255,255,.25); }
   .tab.hetviec { opacity:.6; }
+  .tab .n.xong { background:#e7f6ec; color:#16a34a; }
+  .tab.on .n.xong { background:rgba(255,255,255,.3); color:#fff; }
+  details.xongCard > summary { cursor:pointer; padding:6px 0; border-top:1px solid var(--line); }
 
   /* Thanh hành động — LUÔN nằm trên danh sách, dính lại khi cuộn. */
   .act { position:sticky; top:68px; z-index:10; background:#fbfbfe; border:1px solid var(--line);
@@ -163,18 +166,6 @@
     <div id="proposals"></div>
   </div>
 
-  <!-- Đã sửa trong phiên -->
-  <div id="daSuaCard" class="card hide">
-    <b id="daSuaTitle"></b>
-    <div id="daSuaBody"></div>
-  </div>
-
-  <!-- Báo cáo -->
-  <div id="reportCard" class="card hide">
-    <b>Báo cáo</b>
-    <div id="reportBody"></div>
-  </div>
-
   <!-- Duyệt nội dung bổ sung, lần lượt từng mục -->
   <div id="duyetModal" class="modal-bg hide">
     <div class="modal">
@@ -254,20 +245,24 @@ const VIEC = {
   mota:   { nhan: "Mô tả sản phẩm",   target: "product",      dv: "sản phẩm" },
   thieu:  { nhan: "Nội dung thiếu",   target: null,           dv: "mục" },
 };
+/* Mỗi việc giữ danh sách CHỜ LÀM (`rows`) và danh sách ĐÃ XONG (`xong`) của RIÊNG nó.
+   Dùng chung một khối "đã sửa" cho cả trang thì xem lại không biết dòng nào thuộc việc
+   nào, và bấm Hoàn tác dễ nhầm sang việc khác. */
 const ST = {};
-for (const k of Object.keys(VIEC)) ST[k] = { rows: [], info: "", loi: null };
+for (const k of Object.keys(VIEC)) ST[k] = { rows: [], info: "", loi: null, xong: [] };
 let viec = "ten";
 let proposals = [];
 let proposalTarget = "guide";
-let daSua = [];
+let proposalViec = "bai";     // proposals đang thuộc tab nào (để ghi "đã xong" đúng chỗ)
+let chiPhiRa = 0;             // tiền AI của lượt rà gần nhất, giữ lại khi vẽ lại danh sách
 
 /* Đổi website là mọi kết quả cũ vô nghĩa: bấm áp trên danh sách của web trước = ghi
    nhầm web. Dọn sạch, không giữ lại gì. */
 $("#site").onchange = () => {
-  for (const k of Object.keys(ST)) ST[k] = { rows: [], info: "", loi: null };
-  proposals = []; daSua = [];
+  for (const k of Object.keys(ST)) ST[k] = { rows: [], info: "", loi: null, xong: [] };
+  proposals = [];
   $("#tabs").classList.add("hide"); $("#panel").classList.add("hide");
-  for (const id of ["applyCard", "reportCard", "daSuaCard"]) $("#" + id).classList.add("hide");
+  $("#applyCard").classList.add("hide");
   $("#tienDo").textContent = "";
   capNhatNguon();
 };
@@ -276,7 +271,7 @@ $("#site").onchange = () => {
 $("#btnScanAll").onclick = async () => {
   const btn = $("#btnScanAll");
   btn.disabled = true;
-  for (const k of Object.keys(ST)) ST[k] = { rows: [], info: "", loi: null };
+  for (const k of Object.keys(ST)) Object.assign(ST[k], { rows: [], info: "", loi: null });
   proposals = [];
   $("#applyCard").classList.add("hide");
 
@@ -361,8 +356,9 @@ function nhanKetQua(k, j) {
 
 function veTabs() {
   $("#tabs").innerHTML = Object.entries(VIEC).map(([k, v]) => {
-    const n = ST[k].rows.length;
-    return `<div class="tab ${k === viec ? "on" : ""} ${n ? "" : "hetviec"}" data-k="${k}">${v.nhan}<span class="n">${n}${ST[k].loi ? " ⚠" : ""}</span></div>`;
+    const n = ST[k].rows.length, x = ST[k].xong.length;
+    return `<div class="tab ${k === viec ? "on" : ""} ${n ? "" : "hetviec"}" data-k="${k}">${v.nhan}` +
+      `<span class="n">${n}${ST[k].loi ? " ⚠" : ""}</span>${x ? `<span class="n xong">✓${x}</span>` : ""}</div>`;
   }).join("");
   $$("#tabs .tab").forEach((t) => { t.onclick = () => moViec(t.dataset.k); });
 }
@@ -389,15 +385,52 @@ function veBang() {
   const s = ST[viec];
   $("#panelInfo").innerHTML = (s.loi ? `<span class="err">${esc(s.loi)}</span> · ` : "") + esc(s.info || "");
   if (!s.rows.length) {
-    $("#panelBody").innerHTML = `<p class="muted">${s.loi ? "Không quét được." : "Không có việc cần làm."}</p>`;
+    $("#panelBody").innerHTML = `<p class="muted">${s.loi ? "Không quét được." : "Không có việc cần làm."}</p>` + veXong();
     $("#pickAll").checked = false;
     return demChon();
   }
   const ve = { ten: veTen, bai: veBai, tieude: veTieuDe, mota: veMota, thieu: veThieu }[viec];
-  $("#panelBody").innerHTML = s.rows.map(ve).join("");
+  $("#panelBody").innerHTML = s.rows.map(ve).join("") + veXong();
   $$(".pick").forEach((cb) => { cb.onchange = demChon; });
   $("#pickAll").checked = $$(".pick").length > 0 && $$(".pick:not(:checked)").length === 0;
   demChon();
+}
+
+/* Khối XEM LẠI của riêng việc đang mở: đã ghi gì lên web trong phiên này, kèm nút hoàn
+   tác từng dòng. Ghi hỏng cũng nằm ở đây — giấu đi là người dùng tưởng đã sửa xong. */
+function veXong() {
+  const ds = ST[viec].xong;
+  if (!ds.length) return "";
+  const ok = ds.filter((x) => x.applied).length;
+  const rows = ds.map((x, i) => {
+    const st = x.applied ? `<span class="pill green">đã ghi</span>` : `<span class="pill red">lỗi</span>`;
+    const undo = x.applied && x.backup_key
+      ? `<button class="sec" onclick="revert(${x.id},'${esc(x.backup_key)}','${esc(x.target)}',this)">Hoàn tác</button>` : "";
+    const ten = x.permalink
+      ? `<a href="${esc(x.permalink)}" target="_blank" rel="noopener">${esc(x.name)}</a>`
+      : esc(x.name);
+    return `<tr><td>${ten} <span class="muted">#${x.id}</span>${x.error ? `<div class="err" style="font-size:12px">${esc(x.error)}</div>` : ""}</td>
+      <td>${esc(x.viec_lam)}${x.chi_tiet ? `<div class="muted" style="font-size:12px">${esc(x.chi_tiet)}</div>` : ""}</td>
+      <td>${st}</td><td>${undo}</td></tr>`;
+  }).join("");
+  return `<details class="xongCard" open style="margin-top:14px">
+    <summary><b>Đã xong trong phiên này — ${ok}/${ds.length} ${VIEC[viec].dv}</b></summary>
+    <table><tbody>${rows}</tbody></table></details>`;
+}
+
+/* Ghi kết quả một lượt áp vào ĐÚNG việc vừa làm. Nhận nguyên phản hồi của
+   brandcore-apply: `ok` của phản hồi không đủ — từng dòng vẫn có thể hỏng riêng. */
+function ghiNhanXong(k, j, viecLam) {
+  for (const it of j.items || []) {
+    if (!it.applied && !it.error) continue;      // bỏ qua dòng "không có gì đổi"
+    ST[k].xong.unshift({
+      id: it.id, name: it.name || `#${it.id}`, permalink: it.permalink,
+      applied: Boolean(it.applied), error: it.error || null,
+      backup_key: it.backup_key || null, target: j.target || VIEC[k].target || "guide",
+      viec_lam: viecLam,
+      chi_tiet: (it.violations_fixed || []).join(", ") || (it.ten_cu ? `trước: ${it.ten_cu}` : ""),
+    });
+  }
 }
 
 const oTick = (i, tick) => `<input type="checkbox" class="pick" data-i="${i}" ${tick ? "checked" : ""} />`;
@@ -508,7 +541,8 @@ $("#btnRename").onclick = async () => {
     });
     const xong = new Set((j.items || []).filter((x) => x.applied).map((x) => x.id));
     ST[viec].rows = ST[viec].rows.filter((x) => !xong.has(x.id));
-    veTabs(); veBang(); veReport(j);
+    ghiNhanXong(viec, j, laTen ? "đổi tên sản phẩm" : "đổi tiêu đề bài");
+    veTabs(); veBang();
   } catch (e) { alert(e.message); }
   btn.disabled = false; btn.textContent = laTen ? "Đổi tên đã chọn" : "Đổi tiêu đề đã chọn";
 };
@@ -519,6 +553,7 @@ $("#btnAudit").onclick = async () => {
   const picks = dangChon();
   if (!picks.length) return alert("Chọn ít nhất 1 dòng để rà.");
   proposalTarget = VIEC[viec].target;
+  proposalViec = viec;
   const btn = $("#btnAudit");
   btn.disabled = true;
   $("#applyCard").classList.remove("hide");
@@ -528,7 +563,7 @@ $("#btnAudit").onclick = async () => {
     btn.textContent = `Đang rà ${i + 1}/${picks.length}…`;
     try {
       const j = await goiScan({ site: site(), target: proposalTarget, mode: "audit", ids: [picks[i].id] });
-      tatCa.push(...(j.results || [])); cost += j.cost_usd || 0;
+      tatCa.push(...(j.results || [])); cost += j.cost_usd || 0; chiPhiRa = cost;
     } catch (e) { tatCa.push({ id: picks[i].id, name: picks[i].name, error: e.message }); }
     proposals = tatCa.filter((x) => x.has_violations && !x.error && !x.skipped);
     veProposals(tatCa, cost);
@@ -571,7 +606,12 @@ $("#btnApply").onclick = async () => {
       site: site(), target: proposalTarget,
       fixes: picks.map((p) => ({ id: p.id, violations: p.violations })),
     });
-    veReport(j);
+    const xong = new Set((j.items || []).filter((x) => x.applied).map((x) => x.id));
+    ST[proposalViec].rows = ST[proposalViec].rows.filter((x) => !xong.has(x.id));
+    ghiNhanXong(proposalViec, j, "sửa brandcore");
+    proposals = proposals.filter((x) => !xong.has(x.id));
+    veProposals(proposals, chiPhiRa);
+    veTabs(); veBang();
   } catch (e) { alert(e.message); }
   btn.disabled = false; btn.textContent = "Áp bản sửa đã chọn";
 };
@@ -634,7 +674,8 @@ $("#btnTitleApply").onclick = async () => {
     const j = await goiApply({ site: site(), target: "guide", fixes });
     const xong = new Set((j.items || []).filter((x) => x.applied).map((x) => x.id));
     ST.tieude.rows = ST.tieude.rows.filter((x) => !xong.has(x.id));
-    veTabs(); veBang(); veReport(j);
+    ghiNhanXong("tieude", j, "vá tiêu đề");
+    veTabs(); veBang();
   } catch (e) { alert(e.message); }
   btn.disabled = false; btn.textContent = "Vá tiêu đề đã chọn";
 };
@@ -704,16 +745,8 @@ function veDuyet(cost) {
 }
 function dongDuyet() {
   $d("duyetModal").classList.add("hide");
-  if (!duyetKetQua.length) return;
-  const items = duyetKetQua.flatMap((x) => x.items || []);
-  veReport({
-    ok: true, site: site(), target: "guide",
-    applied: items.filter((x) => x.applied).length,
-    skipped: 0, failed: items.filter((x) => x.error).length,
-    fixed_total: items.filter((x) => x.applied).length,
-    summary_by_type: { "Bổ sung nội dung thiếu": items.filter((x) => x.applied).length },
-    items, generated_at: new Date().toISOString(),
-  });
+  // Từng mục đã được ghi vào "đã xong" của tab Nội dung thiếu ngay lúc áp.
+  veTabs(); veBang();
 }
 $d("duyetDong").onclick = dongDuyet;
 $d("duyetBoQua").onclick = () => { duyetI++; veDuyet(); };
@@ -738,7 +771,7 @@ $d("duyetAp").onclick = async () => {
     const it = (j.items || []).find((x) => String(x.id) === String(r.id)) || {};
     if (!it.applied) throw new Error(it.error || "web không xác nhận đã ghi");
     duyetKetQua.push(j);
-    chuyenSangDaSua(r);
+    chuyenSangDaSua(r, j);
     $d("duyetKq").innerHTML = '<span class="pill green">✓ Đã ghi lên web</span> <span class="muted">— đã bỏ khỏi danh sách chờ.</span>';
     const l = it.permalink || r.permalink;
     if (l) { const a = $d("duyetXemBai"); a.href = l; a.classList.remove("hide"); }
@@ -753,46 +786,10 @@ $d("duyetAp").onclick = async () => {
 
 /* Mục vừa ghi xong thì bỏ khỏi danh sách chờ ngay — không phải tải lại trang, và không
    sửa lại lần hai cùng một mục. */
-function chuyenSangDaSua(r) {
+function chuyenSangDaSua(r, j) {
   ST.thieu.rows = ST.thieu.rows.filter((x) => !(x.id === r.id && x.target === r.target));
-  if (!daSua.some((x) => x.id === r.id)) daSua.push({ id: r.id, name: r.name, permalink: r.permalink, thieu: r.thieu || [] });
-  veTabs(); veBang(); veDaSua();
-}
-function veDaSua() {
-  if (!daSua.length) return $("#daSuaCard").classList.add("hide");
-  $("#daSuaCard").classList.remove("hide");
-  $("#daSuaTitle").textContent = `Đã sửa trong phiên này — ${daSua.length} mục`;
-  $("#daSuaBody").innerHTML = "<table><tbody>" + daSua.map((x) => `<tr>
-      <td><a href="${esc(x.permalink)}" target="_blank" rel="noopener">${esc(x.name)}</a> <span class="muted">#${x.id}</span></td>
-      <td>${(x.thieu || []).map((t) => `<span class="flag">${esc(t)}</span>`).join(" ") || "—"}</td>
-      <td><span class="pill green">đã ghi</span></td></tr>`).join("") + "</tbody></table>";
-}
-
-function veReport(d) {
-  const byType = Object.entries(d.summary_by_type || {}).sort((a, b) => b[1] - a[1]);
-  const rows = (d.items || []).map((it) => {
-    const st = it.applied ? `<span class="pill green">đã sửa</span>`
-      : it.error ? `<span class="pill red">lỗi</span>` : `<span class="pill grey">bỏ qua</span>`;
-    const fixed = (it.violations_fixed || []).map((t) => `<span class="flag">${esc(t)}</span>`).join(" ") || "—";
-    const con = (it.residual_flags || []).length
-      ? `<div class="err" style="font-size:12px">còn: ${it.residual_flags.map((f) => esc(f.type)).join(", ")}</div>` : "";
-    const undo = it.applied && it.backup_key
-      ? `<button class="sec" onclick="revert(${it.id},'${esc(it.backup_key)}','${esc(d.target)}',this)">Hoàn tác</button>` : "";
-    const ten = it.permalink ? `<a href="${esc(it.permalink)}" target="_blank">${esc(it.name || "#" + it.id)}</a>` : esc(it.name || "#" + it.id);
-    return `<tr><td>${ten} <span class="muted">#${it.id}</span>${it.error ? `<div class="err" style="font-size:12px">${esc(it.error)}</div>` : ""}</td>
-      <td>${st}</td><td>${fixed}${con}</td><td>${undo}</td></tr>`;
-  }).join("");
-  $("#reportBody").innerHTML =
-    `<div class="stat">
-      <div class="b"><div class="n">${d.applied}</div><div class="l">đã sửa</div></div>
-      <div class="b"><div class="n">${d.fixed_total}</div><div class="l">lỗi khắc phục</div></div>
-      <div class="b"><div class="n">${d.skipped}</div><div class="l">bỏ qua</div></div>
-      <div class="b"><div class="n">${d.failed}</div><div class="l">lỗi ghi</div></div>
-    </div>` +
-    (byType.length ? `<table><tbody>${byType.map(([t, n]) => `<tr><td>${esc(t)}</td><td>${n}</td></tr>`).join("")}</tbody></table>` : "") +
-    `<table><tbody>${rows}</tbody></table>`;
-  $("#reportCard").classList.remove("hide");
-  $("#reportCard").scrollIntoView({ behavior: "smooth" });
+  ghiNhanXong("thieu", { ...j, target: r.target }, "bổ sung nội dung thiếu");
+  veTabs(); veBang();
 }
 
 async function revert(id, key, target, btn) {

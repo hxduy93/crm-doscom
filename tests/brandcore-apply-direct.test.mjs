@@ -56,7 +56,8 @@ test("giao diện phải soi items[].applied, không tin mỗi `ok` của phản
 test("ghi xong thì bài biến mất khỏi danh sách chờ sửa, không cần tải lại trang", () => {
   assert.match(UI, /function chuyenSangDaSua/);
   assert.match(UI, /ST\.thieu\.rows = ST\.thieu\.rows\.filter/, "phải gỡ mục đã ghi khỏi danh sách chờ");
-  assert.match(UI, /daSua\.push/, "phải đưa sang danh sách 'đã sửa' để còn thấy đường dẫn");
+  assert.match(UI, /ghiNhanXong\("thieu", \{ \.\.\.j, target: r\.target \}/,
+    "phải đưa sang danh sách 'đã xong' CỦA ĐÚNG VIỆC đó để còn xem lại + hoàn tác");
 });
 
 test("có đường dẫn mở bài đã sửa — cả trong cửa sổ lẫn bảng tổng kết", () => {

@@ -41,6 +41,36 @@ export function siteCreds(site, env) {
   };
 }
 
+/* Lỗi WooCommerce → câu người đọc sửa được.
+
+   Một web dùng HAI credential khác nhau: sản phẩm đi bằng consumer key/secret (CK/CS),
+   bài viết đi bằng username + Application Password. Nên có trạng thái rất dễ nhầm —
+   quét bài chạy được mà quét sản phẩm 401, hoặc ngược lại. Ném nguyên văn JSON của
+   WooCommerce ("woocommerce_rest_cannot_view — Sorry, you cannot list resources") thì
+   người dùng không đoán được là phải sửa biến môi trường nào.
+
+   Đo thật 27/08/2026: gửi CK/CS sai lên noma.vn và nomaauto.us đều ra đúng mã lỗi này,
+   nên nó KHÔNG phải chuyện server chặn header — mà là key sai / thiếu quyền Read. */
+export function loiWc(site, status, body) {
+  const t = String(body || "");
+  const S = String(site || "").toUpperCase();
+  if (/woocommerce_rest_cannot_view|woocommerce_rest_cannot_create|woocommerce_rest_cannot_edit/.test(t)) {
+    return `WooCommerce từ chối — WC_${S}_CK/WC_${S}_CS sai hoặc thiếu quyền. ` +
+           `Vào WooCommerce → Settings → Advanced → REST API tạo key mới với Permissions = Read/Write ` +
+           `cho một tài khoản Administrator, rồi cập nhật hai secret đó`;
+  }
+  if (/woocommerce_rest_authentication_error/.test(t)) {
+    return `Consumer key không hợp lệ — tạo lại rồi cập nhật WC_${S}_CK / WC_${S}_CS`;
+  }
+  if (status === 401 || status === 403) return `không đủ quyền với WC_${S}_CK / WC_${S}_CS`;
+  return null;
+}
+
+export function nemLoiWc(nhan, site, status, body) {
+  const goi = loiWc(site, status, body);
+  throw new Error(`WC ${nhan} ${status}: ${goi ? goi + " · " : ""}${String(body).slice(0, 200)}`);
+}
+
 export function isConfigured(c) {
   return !!(c && c.url && c.ck && c.cs && c.user && c.pwd);
 }
@@ -157,7 +187,7 @@ export async function fetchCategories(c) {
   for (let page = 1; page <= 5; page++) {
     const u = `${c.url}/wp-json/wc/v3/products/categories?per_page=100&page=${page}&_fields=id,name,parent,count,slug`;
     const r = await fetch(u, { headers: { Authorization: wcAuth(c.ck, c.cs) }, signal: AbortSignal.timeout(20000) });
-    if (!r.ok) throw new Error(`WC categories ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    if (!r.ok) nemLoiWc("categories", c.site, r.status, await r.text());
     const arr = await r.json();
     out.push(...arr);
     if (!Array.isArray(arr) || arr.length < 100) break;
@@ -226,7 +256,7 @@ export async function listProducts(c, { search = "", perPage = 50, page = 1, sta
     headers: { Authorization: wcAuth(c.ck, c.cs), "Cache-Control": "no-cache" },
     signal: AbortSignal.timeout(25000),
   });
-  if (!r.ok) throw new Error(`WC list ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  if (!r.ok) nemLoiWc("list", c.site, r.status, await r.text());
   const arr = await r.json();
   return {
     items: Array.isArray(arr) ? arr : [],
@@ -242,7 +272,7 @@ export async function getProduct(c, id) {
     signal: AbortSignal.timeout(20000),
   });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(`WC get ${r.status}: ${JSON.stringify(d).slice(0, 200)}`);
+  if (!r.ok) nemLoiWc("get", c.site, r.status, JSON.stringify(d));
   return d;
 }
 
@@ -254,7 +284,7 @@ export async function getProductFull(c, id) {
     signal: AbortSignal.timeout(25000),
   });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(`WC get full ${r.status}: ${JSON.stringify(d).slice(0, 200)}`);
+  if (!r.ok) nemLoiWc("get full", c.site, r.status, JSON.stringify(d));
   return d;
 }
 
@@ -318,7 +348,7 @@ export async function updateProduct(c, id, payload) {
     signal: AbortSignal.timeout(30000),
   });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(`WC update ${r.status}: ${JSON.stringify(d).slice(0, 300)}`);
+  if (!r.ok) nemLoiWc("update", c.site, r.status, JSON.stringify(d));
   return d;
 }
 
@@ -330,6 +360,6 @@ export async function createProduct(c, payload) {
     signal: AbortSignal.timeout(45000),
   });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(`WC product ${r.status}: ${JSON.stringify(d).slice(0, 300)}`);
+  if (!r.ok) nemLoiWc("product", c.site, r.status, JSON.stringify(d));
   return d;
 }
