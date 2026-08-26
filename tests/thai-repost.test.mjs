@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { parseFbPostUrl, collectImages, readToken, sourcePages } from "../functions/api/thai-social/_fb-source.js";
+import { parseFbPostUrl, collectImages, readToken, sourcePages, fetchSourcePost } from "../functions/api/thai-social/_fb-source.js";
 import {
   RSTATUS, RPUBLISHABLE, checkScheduledAt, imageIdentity, imageKey, publicRepost, fullMessage,
   SCHEDULE_MIN_LEAD,
@@ -104,6 +104,62 @@ test("lỗi 'cần mã truy cập Trang' được dịch thành: chọn fanpage 
   assert.match(src, /kind: "need_page"/);
   // Và đường chính phải là lấy page token, không phải dùng thẳng token người dùng.
   assert.match(src, /pageAccessToken\(env, pageId\)/);
+});
+
+/* ── 1c. Ghép id bài ────────────────────────────────────────────────────────
+   Đo thật 26/08/2026 trên fanpage "Noma Việt Nam" (id 1101583133049069): permalink của
+   chính bài đó lại là facebook.com/122117794587378629/posts/122117757075378629 — số đứng
+   trước /posts/ KHÔNG phải id fanpage. Nên phải thử CẢ HAI cách ghép, và id bài TRẦN thì
+   đừng thử (Graph trả "(#12) singular statuses API is deprecated"). */
+
+function stubGraph(handler) {
+  const goc = globalThis.fetch;
+  const hit = [];
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    hit.push(u);
+    const body = handler(u);
+    return new Response(JSON.stringify(body.json), { status: body.status || 200,
+      headers: { "content-type": "application/json" } });
+  };
+  return { hit, restore: () => { globalThis.fetch = goc; } };
+}
+
+test("số trên link không phải id fanpage → vẫn ghép được nhờ fanpage nguồn đã chọn", async () => {
+  const st = stubGraph((u) => {
+    if (u.includes("/me/accounts")) {
+      return { json: { data: [{ id: "1101583133049069", name: "Noma Việt Nam", access_token: "PAGE-TOK" }] } };
+    }
+    // Cách ghép theo số trên link: Facebook từ chối.
+    if (u.includes("122117794587378629_122117757075378629")) {
+      return { status: 400, json: { error: { message: "Unsupported get request", code: 100 } } };
+    }
+    // Cách ghép theo fanpage người dùng chọn: ra bài.
+    if (u.includes("1101583133049069_122117757075378629")) {
+      return { json: { id: "1101583133049069_122117757075378629", message: "Bài gốc",
+                       from: { id: "1101583133049069", name: "Noma Việt Nam" },
+                       permalink_url: "https://facebook.com/x", full_picture: "https://x/1.jpg" } };
+    }
+    return { status: 400, json: { error: { message: "khong mong doi: " + u, code: 1 } } };
+  });
+  try {
+    const r = await fetchSourcePost({ FB_PAGE_READ_TOKEN: "user-token" }, {
+      url: "https://www.facebook.com/122117794587378629/posts/122117757075378629",
+      srcPageId: "1101583133049069",
+    });
+    assert.equal(r.post_id, "1101583133049069_122117757075378629");
+    assert.equal(r.page_name, "Noma Việt Nam");
+    assert.deepEqual(r.images, ["https://x/1.jpg"]);
+
+    // Phải dùng PAGE token, không phải token người dùng, cho lời gọi đọc bài.
+    const doc = st.hit.filter((u) => u.includes("_122117757075378629"));
+    assert.ok(doc.length >= 1);
+    assert.ok(doc.every((u) => u.includes("PAGE-TOK")), "đọc bài phải đi bằng page token");
+
+    // KHÔNG được phí một lời gọi cho id bài trần.
+    assert.ok(!st.hit.some((u) => /\/122117757075378629\?/.test(u)),
+      "id bài trần Graph không nhận — thử là phí một lời gọi");
+  } finally { st.restore(); }
 });
 
 /* ── 2. Giờ hẹn đăng ────────────────────────────────────────────────────────

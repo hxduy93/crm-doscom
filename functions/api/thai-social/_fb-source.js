@@ -254,23 +254,46 @@ export async function fetchSourcePost(env, { url, srcPageId }) {
       { kind: "bad_url" });
   }
 
-  /* Fanpage nguồn: người dùng chọn ở ô "Fanpage nguồn" là chắc nhất. Không chọn thì thử
-     đoán từ đường dẫn — id số thì lấy luôn, tên trang thì hỏi Graph (có thể không ra với
-     trải nghiệm Trang mới, nên đây chỉ là tiện thêm, không phải đường chính). */
-  const pageId = srcPageId || (/^\d+$/.test(parsed.pageRef || "") ? parsed.pageRef : null)
-                 || await pageRefToId(parsed.pageRef, token);
+  /* SỐ ĐỨNG TRƯỚC "/posts/" TRONG LINK KHÔNG CHẮC LÀ ID FANPAGE.
 
-  // Đây mới là token đọc được bài. Thiếu page token thì vẫn thử token gốc — nếu token đang
-  // dùng vốn đã là page token thì nó chạy, còn không Facebook sẽ nói rõ và ta dịch lại lỗi.
-  const tok = (await pageAccessToken(env, pageId)) || token;
+     Đo thật 26/08/2026 trên fanpage "Noma Việt Nam" (id 1101583133049069): permalink của
+     bài lại là facebook.com/122117794587378629/posts/122117757075378629 — số đầu KHÔNG có
+     trong /me/accounts, nên không tra ra page token nào. Đó chính là lúc ô "Fanpage nguồn"
+     có việc: nó nói cho hệ thống biết token của trang nào mới đọc được bài này.
 
+     Hai id khác nhau nên phải giữ RIÊNG:
+       linkRef — số/tên lấy từ link, dùng để ghép id bài
+       ownerId — fanpage thật, dùng để lấy PAGE TOKEN (ưu tiên ô người dùng chọn) */
+  const linkRef = /^\d+$/.test(parsed.pageRef || "") ? parsed.pageRef
+                : await pageRefToId(parsed.pageRef, token);
+  const ownerId = srcPageId || linkRef;
+
+  /* Token đọc bài. Thử page token của trang người dùng chọn trước, rồi tới trang đoán từ
+     link. Không ra cái nào thì dùng tạm token gốc — nếu nó vốn đã là page token thì chạy,
+     còn không Facebook trả 2069032 và wrapNotFound() dịch thành "chọn Fanpage nguồn". */
+  const tok = (srcPageId && await pageAccessToken(env, srcPageId))
+              || (linkRef && await pageAccessToken(env, linkRef))
+              || token;
+
+  // Id bài đầy đủ luôn là {gì đó}_{post_id}. Id bài TRẦN không tra được (Graph trả
+  // "(#12) singular statuses API is deprecated") nên đừng phí một lời gọi cho nó.
+  const pageId = ownerId;
   let node = null;
 
   if (parsed.fullId) {
     node = await graphGet(parsed.fullId, { fields: POST_FIELDS }, tok);
   } else if (parsed.postId) {
-    // id bài đầy đủ là {page_id}_{post_id}; thiếu page_id thì thử luôn id trần.
-    const candidates = pageId ? [`${pageId}_${parsed.postId}`, parsed.postId] : [parsed.postId];
+    /* Thử cả hai cách ghép: theo số trên link (đo thật là CHẠY khi có đúng page token) và
+       theo fanpage người dùng chọn. Một trong hai trúng là xong. */
+    const candidates = [...new Set([
+      linkRef ? `${linkRef}_${parsed.postId}` : null,
+      srcPageId ? `${srcPageId}_${parsed.postId}` : null,
+    ].filter(Boolean))];
+    if (!candidates.length) {
+      throw Object.assign(
+        new Error("Link không cho biết bài thuộc fanpage nào. Chọn Fanpage nguồn ở ô bên trái rồi bấm lại."),
+        { kind: "need_page" });
+    }
     let lastErr = null;
     for (const id of candidates) {
       try { node = await graphGet(id, { fields: POST_FIELDS }, tok); break; }
