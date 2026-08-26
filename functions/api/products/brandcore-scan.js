@@ -60,6 +60,10 @@ import {
   listGuideCategories, listAllPosts, listPostsByIds, getPost,
   laBaiNoma, laBaiHdsdChinhThuc, laBaiHuongDanTheoTieuDe,
 } from "./_wp-posts.js";
+import {
+  tenChuanSku, tenChuanSkuEN, tieuDeChuanHdsd, giongTieuDe,
+} from "./_ten-chuan.js";
+import { loadTenEn } from "./_ten-en.js";
 
 function json(o, s = 200) {
   return new Response(JSON.stringify(o), {
@@ -178,14 +182,20 @@ export async function onRequestPost({ request, env }) {
   const c = siteCreds(site, env);
   if (!isConfigured(c)) return json({ ok: false, error: `Site '${site}' chưa cấu hình credential WooCommerce` }, 400);
 
+  /* Web tiếng Anh dùng BẢNG TÊN EN (KV `noma_sku_names:en:v1`) làm tên chuẩn thay cho
+     cột tên tiếng Việt của hồ sơ — không thì công cụ đem tên tiếng Việt đi rủ đổi tên
+     sản phẩm trên trang bán cho khách Mỹ. Bảng trống → báo "chưa có tên tiếng Anh"
+     chứ không đề xuất gì. */
+  const tenEn = site === "nomaauto" ? (await loadTenEn(env)).names : null;
+
   // Bài hướng dẫn đi đường riêng (WordPress posts) — xem khối cuối file.
   if (target === "guide") {
-    try { return await soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }); }
+    try { return await soatBaiHuongDan({ env, c, site, mode, body, skuSpecs, tenEn }); }
     catch (e) { return json({ ok: false, error: String(e.message || e) }, 502); }
   }
   // Soát TÊN sản phẩm trong danh mục — xem khối cuối file.
   if (target === "product-name") {
-    try { return await soatTenSanPham({ c, site, mode, skuSpecs }); }
+    try { return await soatTenSanPham({ c, site, mode, skuSpecs, tenEn }); }
     catch (e) { return json({ ok: false, error: String(e.message || e) }, 502); }
   }
   if (target !== "product") return json({ ok: false, error: `target không hợp lệ: ${target}` }, 400);
@@ -448,43 +458,32 @@ function luatChoBai(site, laNoma) {
 // NOMA 310") — dò theo thân bài trước là đối chiếu nhầm sang hồ sơ sản phẩm khác.
 const skuCuaBai = (bai, specs) => findSkuCode(bai.name, specs) || findSkuCode(bai.content, specs);
 
-/* ── Khuôn đặt tên bài hướng dẫn sử dụng ──────────────────────────────────────
+/* ── Khuôn đặt tên: xem functions/api/products/_ten-chuan.js ───────────────────
    NGUỒN DUY NHẤT của tên sản phẩm là cột "Tên sản phẩm" trong hồ sơ (file
-   "_Hồ sơ sản phẩm cập nhật" tải lên KV), không phải chữ ai đó gõ trên WordPress.
-   Hồ sơ viết lẫn "Noma 620 -" và "NOMA 998 –" nên phải chuẩn hoá về một khuôn
-   "NOMA <mã> - <tính năng>" trước khi đem so. */
-function tenChuanSku(code, specs) {
-  const s = specs && specs[code];
-  const raw = String((s && (s.ten || s.ma)) || "").replace(/\s+/g, " ").trim();
-  if (!raw) return null;
-  return raw.replace(/^noma\s*(\d{2,4})\s*[-–—:]*\s*/i, (_m, ma) => `NOMA ${ma} - `);
+   "_Hồ sơ sản phẩm cập nhật" tải lên KV) — với nomaauto.us là bảng tên tiếng Anh
+   (KV `noma_sku_names:en:v1`, dựng ở /api/products/names-en) — chứ không phải chữ ai đó
+   gõ trên WordPress. Luật viết hoa và khuôn "NOMA <mã> - <tính năng>" nằm trong module
+   đó để tên sản phẩm và tiêu đề bài không bao giờ lệch luật nhau. */
+
+// Bộ tra tên chuẩn cho MỘT lượt quét: chọn sẵn nguồn theo web đang soát.
+function boTenChuan({ site, skuSpecs, tenEn }) {
+  const en = site === "nomaauto";
+  return {
+    en,
+    ten: (code) => (en ? tenChuanSkuEN(code, tenEn) : tenChuanSku(code, skuSpecs)),
+    tieuDe: (code) => tieuDeChuanHdsd(code, { specs: skuSpecs, namesEn: tenEn, en }),
+  };
 }
-
-const tieuDeChuanHdsd = (code, specs) => {
-  const t = tenChuanSku(code, specs);
-  return t ? `Hướng dẫn sử dụng ${t}` : null;
-};
-
-/* KHỚP TỪNG KÝ TỰ với hồ sơ — hoa/thường và dấu câu đều tính.
-
-   Cố ý CHẶT (chốt 25/08/2026: "thay thế đúng theo như tên đặt trong brandcore"): tên
-   trên web đang mỗi nơi một kiểu chữ — "NOMA 922 – DUNG DỊCH PHỦ NANO KÍNH" viết hoa
-   toàn bộ với gạch dài, "NOMA 130  - …" thừa dấu cách. Bỏ qua mấy khác biệt đó thì tên
-   hiển thị vẫn lộn xộn, mà đây đúng là thứ khách nhìn thấy.
-   Chỉ chuẩn hoá Unicode NFC trước khi so: cùng một chữ gõ ở hai dạng tổ hợp trông y hệt
-   nhau, báo lệch là bắt người duyệt đi sửa thứ không ai nhìn ra. */
-const giongTieuDe = (a, b) =>
-  String(a || "").normalize("NFC").trim() === String(b || "").normalize("NFC").trim();
 
 /* Tiêu đề đang mô tả sản phẩm NÀO — để bắt bài gắn nhầm mã.
    Có thật trên noma.vn: "Hướng dẫn sử dụng bộ vệ sinh và dưỡng ghế da Noma 692" mang
    tên sản phẩm của NOMA 686, trong khi 692 là dung dịch vệ sinh nội thất và trần xe.
    Loại này KHÔNG tự sửa được: hoặc sai mã, hoặc sai phần mô tả — phải người quyết. */
-function khopTenNhat(tieuDe, specs) {
+function khopTenNhat(tieuDe, specs, tc) {
   const t = boDau(tieuDe);
   let best = null;
   for (const code of Object.keys(specs || {})) {
-    const ten = tenChuanSku(code, specs);
+    const ten = tc.ten(code);
     if (!ten) continue;
     const tu = boDau(ten).split(" ").filter((w) => w.length >= 3 && w !== "noma" && !/^\d+$/.test(w));
     if (tu.length < 3) continue;
@@ -501,17 +500,18 @@ function khopTenNhat(tieuDe, specs) {
    dụng, không kèm bài nào khác.
    Hai bước: đọc TIÊU ĐỀ toàn site (nhẹ) → lọc → lấy nội dung của đúng số bài đó bằng
    một lời gọi `include=`. */
-async function napBaiHuongDan(c) {
+async function napBaiHuongDan(c, en = false) {
   const { items: tatCa, het } = await listAllPosts(c);
-  const ids = tatCa.filter((p) => laBaiHuongDanTheoTieuDe(p.tieu_de)).map((p) => p.id);
+  const ids = tatCa.filter((p) => laBaiHuongDanTheoTieuDe(p.tieu_de, en)).map((p) => p.id);
   if (!ids.length) return { items: [], het, raw_ok: true, tong_bai: tatCa.length };
   const { items, raw_ok } = await listPostsByIds(c, ids);
   return { items, het, raw_ok, tong_bai: tatCa.length };
 }
 
-async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
+async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs, tenEn }) {
+  const tc = boTenChuan({ site, skuSpecs, tenEn });
   if (mode === "list") {
-    const { items, het, raw_ok, tong_bai } = await napBaiHuongDan(c);
+    const { items, het, raw_ok, tong_bai } = await napBaiHuongDan(c, tc.en);
     // Hai bài cùng một mã thì không đề xuất đổi tên — đổi cả hai về một tiêu đề là trùng khít.
     const demSku = new Map();
     for (const p of items) {
@@ -521,11 +521,11 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
     const ds = items.map((p) => {
       const laNoma = laBaiNoma(p);
       const { forbidden } = luatChoBai(site, laNoma);
-      /* Tiêu đề chuẩn = "Hướng dẫn sử dụng " + NGUYÊN VĂN tên sản phẩm trong hồ sơ.
-         Không cắt gọt, không thêm đuôi quảng cáo ("…ĐÚNG CÁCH TẠI NHÀ", "…CHUYÊN SÂU"),
-         không nhờ AI nghĩ hộ — hồ sơ là nguồn duy nhất. */
+      /* Tiêu đề chuẩn = "Hướng dẫn sử dụng " ("How to Use " bên nomaauto.us) + tên sản
+         phẩm chuẩn. Không cắt gọt, không thêm đuôi quảng cáo ("…ĐÚNG CÁCH TẠI NHÀ",
+         "…CHUYÊN SÂU"), không nhờ AI nghĩ hộ — hồ sơ/bảng tên là nguồn duy nhất. */
       const ma = findSkuCode(p.name, skuSpecs);
-      const chuan = ma ? tieuDeChuanHdsd(ma, skuSpecs) : null;
+      const chuan = ma ? tc.tieuDe(ma) : null;
       const trungMa = ma ? (demSku.get(ma) || 0) > 1 : false;
       return {
         id: p.id, name: p.name, permalink: p.permalink, status: p.status,
@@ -536,6 +536,9 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
         // Có tên chuẩn, đang lệch, và không trùng mã → thay được ngay bằng một nút.
         can_doi_ten: Boolean(chuan && !giongTieuDe(p.name, chuan) && !trungMa),
         trung_ma: trungMa,
+        /* Bên nomaauto.us: dò ra mã nhưng bảng tên tiếng Anh chưa có mã đó — nói rõ,
+           im lặng bỏ qua là người dùng tưởng bài đã đúng tên. */
+        chua_co_ten_en: Boolean(tc.en && ma && !chuan),
         flags: scanForbidden(`${p.name} ${p.content}`, forbidden),
       };
     });
@@ -547,6 +550,7 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
       flagged_count: ds.filter((x) => x.flags.length).length,
       doi_ten_count: ds.filter((x) => x.can_doi_ten).length,
       trung_ma_count: ds.filter((x) => x.trung_ma).length,
+      chua_co_ten_en_count: ds.filter((x) => x.chua_co_ten_en).length,
       con_bai_chua_quet: !het,   // chạm trần số trang → nói thẳng, không giấu phần chưa soát
       raw_ok,
       items: ds,
@@ -556,7 +560,7 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
   /* ── Đối chiếu hồ sơ: bài hướng dẫn còn thiếu mục nào ──────────────────────── */
   if (mode === "gap") {
     const ids = Array.isArray(body.ids) ? body.ids.map(Number).filter(Boolean) : null;
-    const { items } = await napBaiHuongDan(c);
+    const { items } = await napBaiHuongDan(c, tc.en);
     const chon = ids ? items.filter((p) => ids.includes(p.id)) : items;
 
     /* Phạm vi đã lọc theo tiêu đề nên mọi bài ở đây đều là bài hướng dẫn sử dụng.
@@ -741,7 +745,7 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
      bó vào mục hướng dẫn là không nhìn thấy chúng.
      Chỉ đọc tiêu đề, KHÔNG kéo nội dung → nhẹ, chạy được cả web vài trăm bài. */
   if (mode === "title") {
-    const cats = await listGuideCategories(c);
+    const cats = await listGuideCategories(c, { en: tc.en });
     const idMucHdsd = new Set(cats.map((x) => x.id));
     const { items, het } = await listAllPosts(c);
 
@@ -758,7 +762,7 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
        khít. Phải gộp/xoá bớt trước, đó là việc của người. */
     const baiTheoSku = new Map();
     for (const p of items) {
-      if (p.tieu_de_rong || !laBaiHdsdChinhThuc(p.tieu_de)) continue;
+      if (p.tieu_de_rong || !laBaiHdsdChinhThuc(p.tieu_de, tc.en)) continue;
       const ma = findSkuCode(p.tieu_de, skuSpecs);
       if (ma) baiTheoSku.set(ma, [...(baiTheoSku.get(ma) || []), p.id]);
     }
@@ -773,8 +777,8 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
         : (tenNoma ? NOMA_FORBIDDEN : CLAIM_QUANG_CAO_CHUNG);
 
       // Bài HDSD chính thức: tên sản phẩm trong tiêu đề phải khớp hồ sơ.
-      const maHdsd = (!p.tieu_de_rong && laBaiHdsdChinhThuc(p.tieu_de)) ? findSkuCode(p.tieu_de, skuSpecs) : null;
-      const chuan = maHdsd ? tieuDeChuanHdsd(maHdsd, skuSpecs) : null;
+      const maHdsd = (!p.tieu_de_rong && laBaiHdsdChinhThuc(p.tieu_de, tc.en)) ? findSkuCode(p.tieu_de, skuSpecs) : null;
+      const chuan = maHdsd ? tc.tieuDe(maHdsd) : null;
       const laChuan = chuan ? giongTieuDe(p.tieu_de, chuan) : false;
       let deXuat = null;
 
@@ -798,7 +802,7 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
         /* Khuôn "Hướng dẫn sử dụng NOMA <mã>: <công dụng>" CHỈ đòi ở bài trong mục hướng
            dẫn có nhắc NOMA. Bài hướng dẫn camera Doscom không có khuôn nào cả — bắt theo
            khuôn NOMA là 93 bài doscom.vn cùng báo lỗi một lượt, vô nghĩa. */
-        if (trongMucHdsd && tenNoma && !laBaiHdsdChinhThuc(p.tieu_de)) {
+        if (trongMucHdsd && tenNoma && !laBaiHdsdChinhThuc(p.tieu_de, tc.en)) {
           vanDe.push({
             ma: "khuon", nhan: "Không theo khuôn bài hướng dẫn sử dụng",
             chi_tiet: 'nằm trong mục Hướng dẫn sử dụng nhưng tiêu đề không có dạng "Hướng dẫn sử dụng NOMA <mã> - <tính năng>"',
@@ -806,14 +810,14 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
         }
 
         if (maHdsd && !laChuan) {
-          const khop = khopTenNhat(p.tieu_de, skuSpecs);
+          const khop = khopTenNhat(p.tieu_de, skuSpecs, tc);
           const cungMa = baiTheoSku.get(maHdsd) || [];
           if (khop && khop.code !== maHdsd && khop.diem >= 0.8) {
             // Gắn nhầm mã — không tự sửa, vì không biết sai ở mã hay ở phần mô tả.
             vanDe.push({
               ma: "sai_sku",
               nhan: `Tiêu đề mang tên sản phẩm của NOMA ${khop.code}`,
-              chi_tiet: `hồ sơ: NOMA ${maHdsd} = "${tenChuanSku(maHdsd, skuSpecs)}" · NOMA ${khop.code} = "${tenChuanSku(khop.code, skuSpecs)}" — kiểm lại bài này viết về sản phẩm nào rồi sửa tay`,
+              chi_tiet: `hồ sơ: NOMA ${maHdsd} = "${tc.ten(maHdsd)}" · NOMA ${khop.code} = "${tc.ten(khop.code)}" — kiểm lại bài này viết về sản phẩm nào rồi sửa tay`,
             });
           } else if (cungMa.length > 1) {
             vanDe.push({
@@ -896,7 +900,7 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
          nhau (đã suýt xảy ra khi AI đặt "Hướng dẫn sử dụng NOMA 620: Xóa ố vàng đèn pha"
          cho một bài mẹo, trong khi bài HDSD 620 chính thức đang chạy). */
       const chuKhuon = code
-        ? tatCa.find((x) => x.id !== id && laBaiHdsdChinhThuc(x.tieu_de) &&
+        ? tatCa.find((x) => x.id !== id && laBaiHdsdChinhThuc(x.tieu_de, tc.en) &&
             new RegExp(`noma\\s?${code}\\b`, "i").test(x.tieu_de))
         : null;
 
@@ -935,7 +939,7 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
           vi_pham: viPham,                                    // có phần tử → KHÔNG cho ghi
           trung_voi: idTrung && idTrung !== id ? idTrung : null,
           // AI vẫn cướp khuôn HDSD của bài khác → chặn ở đây, không tin mỗi lời dặn.
-          trung_khuon: chuKhuon && laBaiHdsdChinhThuc(moi) ? { id: chuKhuon.id, tieu_de: chuKhuon.tieu_de } : null,
+          trung_khuon: chuKhuon && laBaiHdsdChinhThuc(moi, tc.en) ? { id: chuKhuon.id, tieu_de: chuKhuon.tieu_de } : null,
           qua_dai: moi.length > 70 ? moi.length : null,
         });
       } catch (e) {
@@ -961,9 +965,10 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
    liên kết đang chạy vẫn sống. Combo (không có mã NOMA trong tên) thì không có hồ sơ →
    bỏ qua, không đoán bừa.
    ══════════════════════════════════════════════════════════════════════════════ */
-async function soatTenSanPham({ c, site, mode, skuSpecs }) {
+async function soatTenSanPham({ c, site, mode, skuSpecs, tenEn }) {
   if (mode !== "list") return json({ ok: false, error: `target 'product-name' chỉ có mode "list"` }, 400);
 
+  const tc = boTenChuan({ site, skuSpecs, tenEn });
   const { products, scanned } = await listNomaProducts(c, site);
 
   // Hai sản phẩm cùng mã thì không tự đổi — đổi cả hai về một tên là tạo trùng lặp mới.
@@ -975,7 +980,7 @@ async function soatTenSanPham({ c, site, mode, skuSpecs }) {
 
   const items = products.map((p) => {
     const ma = findSkuCode(p.name, skuSpecs);
-    const chuan = ma ? tenChuanSku(ma, skuSpecs) : null;
+    const chuan = ma ? tc.ten(ma) : null;
     const trungMa = ma ? (demSku.get(ma) || 0) > 1 : false;
     return {
       id: p.id, name: p.name, permalink: p.permalink, status: p.status,
@@ -985,6 +990,8 @@ async function soatTenSanPham({ c, site, mode, skuSpecs }) {
       trung_ma: trungMa,
       // Không dò ra mã: combo, hoặc tên thiếu hẳn mã sản phẩm — nói rõ để còn sửa tay.
       chua_co_ho_so: !ma,
+      // Có mã nhưng bảng tên tiếng Anh chưa có — phải dựng bảng tên trước khi đổi.
+      chua_co_ten_en: Boolean(tc.en && ma && !chuan),
       flags: p.flags,
     };
   });
@@ -996,6 +1003,7 @@ async function soatTenSanPham({ c, site, mode, skuSpecs }) {
     doi_ten_count: items.filter((x) => x.can_doi_ten).length,
     trung_ma_count: items.filter((x) => x.trung_ma).length,
     chua_co_ho_so_count: items.filter((x) => x.chua_co_ho_so).length,
+    chua_co_ten_en_count: items.filter((x) => x.chua_co_ten_en).length,
     flagged_count: items.filter((x) => x.flags.length).length,
     items,
   });

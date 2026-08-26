@@ -429,7 +429,7 @@ test("soát tiêu đề: bắt bài mất tiêu đề, trùng tên và sai khuô
 test("khuôn tiêu đề HDSD chỉ áp cho bài NOMA — không bắt bài Doscom theo khuôn NOMA", () => {
   /* doscom.vn có 93 bài hướng dẫn camera/máy dò trong đúng mục này. Bắt chúng theo khuôn
      "Hướng dẫn sử dụng NOMA <mã>" là 93 bài cùng báo lỗi một lượt, vô nghĩa. */
-  assert.match(SCAN, /if \(trongMucHdsd && tenNoma && !laBaiHdsdChinhThuc\(p\.tieu_de\)\)/);
+  assert.match(SCAN, /if \(trongMucHdsd && tenNoma && !laBaiHdsdChinhThuc\(p\.tieu_de, tc\.en\)\)/);
 });
 
 test("tiêu đề AI đặt ra vẫn bị soát lại trước khi cho vá", () => {
@@ -453,7 +453,7 @@ test("không cho AI cướp khuôn tiêu đề của bài hướng dẫn chính 
      "Hướng dẫn sử dụng NOMA 620: Xóa ố vàng đèn pha tại nhà", trong khi bài HDSD 620
      chính thức đang chạy — hai bài cùng khuôn cho một sản phẩm là tự cắn từ khoá nhau. */
   assert.match(SCAN, /const chuKhuon = code/, "mất bước dò xem khuôn HDSD của SKU đã có chủ chưa");
-  assert.match(SCAN, /trung_khuon: chuKhuon && laBaiHdsdChinhThuc\(moi\) \? \{ id: chuKhuon\.id/,
+  assert.match(SCAN, /trung_khuon: chuKhuon && laBaiHdsdChinhThuc\(moi, tc\.en\) \? \{ id: chuKhuon\.id/,
     "phải tự kiểm lại kết quả AI, không tin mỗi lời dặn trong prompt");
   assert.match(UI, /d\.trung_voi \|\| d\.trung_khuon\)\) continue;/,
     "giao diện phải chặn vá tiêu đề cướp khuôn khi người dùng chưa sửa tay");
@@ -521,7 +521,9 @@ test("tên sản phẩm lệch hồ sơ → dựng sẵn tiêu đề chuẩn, kh
   const r = d.results.find((x) => x.id === 1);
   assert.ok(r, "bài sai tên phải được nêu ra");
   assert.ok(r.van_de.some((v) => v.ma === "ten_sp"));
-  assert.equal(r.de_xuat, "Hướng dẫn sử dụng NOMA 350 - Dung Dịch Vệ Sinh Đĩa Phanh",
+  /* Hồ sơ ghi "Dung Dịch Vệ Sinh Đĩa Phanh" (hoa mọi chữ) nhưng tên chuẩn phải theo luật
+     viết hoa chốt 26/08/2026: chỉ NOMA, chữ đầu câu và chữ sau dấu "-". */
+  assert.equal(r.de_xuat, "Hướng dẫn sử dụng NOMA 350 - Dung dịch vệ sinh đĩa phanh",
     'tên chuẩn phải lấy NGUYÊN VĂN cột "Tên sản phẩm" của hồ sơ');
 });
 

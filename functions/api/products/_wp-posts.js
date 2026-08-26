@@ -28,27 +28,38 @@ const wpAuth = (u, p) => "Basic " + btoa(`${u}:${p}`);
    phải chép đủ hướng dẫn sử dụng, hạn dùng, sơ cứu). Chủ dự án chốt: chỉ soát đúng
    phần hướng dẫn sử dụng trong menu, bỏ bài SEO. */
 const DANH_MUC_HD = /^huong dan su dung\b/;
+// nomaauto.us dùng đúng MỘT mục cho phần này: "Directions For Use" (id 37, 19 bài).
+const DANH_MUC_HD_EN = /^(directions for use|usage guides?|user guides?)\b/;
 
-export function laDanhMucHuongDan(cat) {
+export function laDanhMucHuongDan(cat, en = false) {
   const ten = boDau(cat && cat.name);
   const slug = boDau(String((cat && cat.slug) || "").replace(/-/g, " "));
-  return DANH_MUC_HD.test(ten) || DANH_MUC_HD.test(slug);
+  const re = en ? DANH_MUC_HD_EN : DANH_MUC_HD;
+  return re.test(ten) || re.test(slug);
 }
 
 /* Bài hướng dẫn sử dụng = bài có CỤM ĐÓ TRONG TIÊU ĐỀ. Đây là phạm vi quét chính thức
    (chốt 25/08/2026): "quét ra tất cả bài viết có tiêu đề hướng dẫn sử dụng, đừng kèm
    bài viết khác". Bám tiêu đề chứ không bám danh mục vì danh mục trên hai web do agent
-   GEO tự đẻ ra hàng trăm cái, không tin được. */
-export function laBaiHuongDanTheoTieuDe(name) {
-  return /\bhuong dan su dung\b/.test(boDau(name));
+   GEO tự đẻ ra hàng trăm cái, không tin được.
+
+   Bản tiếng Anh (nomaauto.us) phải nhận CẢ HAI khuôn đang tồn tại — "How to Use NOMA
+   250: …" (14 bài) và "NOMA 686 Usage Guide: …" (4 bài) — nếu không thì đúng 4 bài lệch
+   khuôn lại là 4 bài công cụ không nhìn thấy. Bám danh mục thay cho tiêu đề không cứu
+   được: mục "Directions For Use" bên đó có 19 bài, trong đó 1 bài SEO lạc vào. */
+const RE_HDSD_EN = /\b(how to use|usage guide|user guide|directions for use|instructions for use)\b/;
+
+export function laBaiHuongDanTheoTieuDe(name, en = false) {
+  const t = boDau(name);
+  return en ? RE_HDSD_EN.test(t) : /\bhuong dan su dung\b/.test(t);
 }
 
 /* Bài HDSD của một SẢN PHẨM NOMA có mã — chỉ bài này mới đối chiếu được hồ sơ và mới
    dựng được tiêu đề chuẩn. Bài hướng dẫn thiết bị Doscom cũng nằm trong phạm vi quét
    nhưng không có hồ sơ nên không đổi tên được. */
-export function laBaiHdsdChinhThuc(name) {
+export function laBaiHdsdChinhThuc(name, en = false) {
   const t = boDau(name);
-  return /\bhuong dan su dung\b/.test(t) && /\bnoma\s?\d{2,4}\b/.test(t);
+  return laBaiHuongDanTheoTieuDe(name, en) && /\bnoma\s?\d{2,4}\b/.test(t);
 }
 
 /* Bài này có nói về NOMA không. Quan trọng vì doscom.vn trộn hai thế giới: bài hướng
@@ -108,7 +119,7 @@ async function wpLay(c, duong, params, { timeout = 25000 } = {}) {
 }
 
 // Danh mục "hướng dẫn" của site. Trả [{id,name,slug,count}] — chỉ danh mục CÓ bài.
-export async function listGuideCategories(c, { maxPages = 6, perPage = 100 } = {}) {
+export async function listGuideCategories(c, { maxPages = 6, perPage = 100, en = false } = {}) {
   const out = [];
   for (let page = 1; page <= maxPages; page++) {
     const r = await wpLay(c, "categories", {
@@ -118,7 +129,7 @@ export async function listGuideCategories(c, { maxPages = 6, perPage = 100 } = {
     if (!r.ok) throw new Error(`WP categories ${r.status}: ${(await r.text()).slice(0, 200)}`);
     const arr = await r.json();
     if (!Array.isArray(arr) || !arr.length) break;
-    out.push(...arr.filter((x) => x.count > 0 && laDanhMucHuongDan(x))
+    out.push(...arr.filter((x) => x.count > 0 && laDanhMucHuongDan(x, en))
                    .map((x) => ({ id: x.id, name: goEntity(x.name), slug: x.slug, count: x.count })));
     if (arr.length < perPage) break;
   }

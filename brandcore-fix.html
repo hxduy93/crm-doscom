@@ -72,9 +72,12 @@
   <div id="guideNote" class="note hide">
     <b>Phạm vi:</b> mọi bài viết có <b>“hướng dẫn sử dụng” trong tiêu đề</b>, quét trên toàn web —
     không kèm bài nào khác, không phụ thuộc danh mục.<br />
-    <b>Đổi tên:</b> tiêu đề chuẩn = “Hướng dẫn sử dụng ” + <b>nguyên văn tên sản phẩm trong hồ sơ</b>
+    Trên <b>nomaauto.us</b>: bài có <b>“How to Use” / “Usage Guide” / “Directions for Use”</b> trong tiêu đề.<br />
+    <b>Đổi tên:</b> tiêu đề chuẩn = “Hướng dẫn sử dụng ” (bên Mỹ: <b>“How to Use ”</b>) + <b>tên sản phẩm chuẩn</b>
     (vd “Hướng dẫn sử dụng NOMA 890 - Dung dịch xịt phủ bóng, làm mới sơn xe”) — bỏ hết đuôi quảng cáo,
-    không dùng AI. Bài không dò ra mã NOMA (thiết bị Doscom) thì không có hồ sơ nên không đổi tên.
+    không dùng AI.
+    Tên chuẩn lấy từ hồ sơ (bên Mỹ: bảng tên tiếng Anh) và được <b>nắn hoa/thường</b>: chỉ viết hoa
+    <b>NOMA</b>, chữ đầu câu và chữ ngay sau dấu “-”. Bài không dò ra mã NOMA (thiết bị Doscom) thì không có hồ sơ nên không đổi tên.
     Bài <b>không nói về NOMA</b> chỉ soát bằng luật quảng cáo chung — <b>không</b> áp định danh/xuất xứ NOMA vào.
   </div>
 
@@ -82,7 +85,10 @@
     <b>Quét tên sản phẩm:</b> đọc toàn bộ sản phẩm NOMA trong danh mục bán hàng, đối chiếu với cột
     <b>“Tên sản phẩm”</b> của hồ sơ rồi thay đúng nguyên văn — cùng một luật đặt tên với bài hướng dẫn.
     Chỉ ghi trường <code>name</code>: <b>đường dẫn (slug), mô tả, giá, ảnh, danh mục giữ nguyên</b> nên link
-    và quảng cáo đang chạy không gãy. Combo hoặc tên không có mã NOMA thì không có hồ sơ → bỏ qua.
+    và quảng cáo đang chạy không gãy. Combo hoặc tên không có mã NOMA thì không có hồ sơ → bỏ qua.<br />
+    <b>Viết hoa:</b> tên chuẩn chỉ viết hoa <b>NOMA</b>, chữ đầu câu và chữ ngay sau dấu “-”
+    (“NOMA 350 - Dung Dịch Vệ Sinh Đĩa Phanh” → “NOMA 350 - Dung dịch vệ sinh đĩa phanh”); riêng
+    <b>nomaauto.us</b> giữ Title Case kiểu Mỹ (“NOMA 350 - Brake Cleaner”).
   </div>
 
   <div class="note">
@@ -107,6 +113,29 @@
       <button id="btnDossierUndo" class="warn hide">Hoàn tác</button>
     </div>
     <div id="dossierMsg" class="muted" style="margin-top:8px"></div>
+  </div>
+
+  <!-- BẢNG TÊN TIẾNG ANH (chỉ hiện khi đang soát nomaauto.us) -->
+  <div id="enCard" class="card hide">
+    <div class="row" style="justify-content:space-between">
+      <b>Tên tiếng Anh cho nomaauto.us</b>
+      <span id="enNow" class="muted">đang kiểm tra…</span>
+    </div>
+    <p class="muted" style="margin:6px 0 10px">
+      Hồ sơ chỉ có tên <b>tiếng Việt</b>, nên web Mỹ cần một bảng tên riêng để đối chiếu —
+      không có bảng này thì công cụ sẽ đem tên tiếng Việt đi rủ đổi tên sản phẩm bán cho khách Mỹ.
+      Tên đề xuất lấy theo thứ tự: <b>bảng đang có → tên sẵn trên nomaauto.us → AI dịch</b>
+      (chỉ dịch mã nào chưa có). Tiêu đề bài hướng dẫn bên Mỹ = <b>“How to Use ” + tên này</b>.
+      Sửa tay được ngay trong ô trước khi lưu.
+    </p>
+    <div class="row">
+      <button id="btnEnDraft" class="sec">Soạn tên tiếng Anh</button>
+      <button id="btnEnRedo" class="sec" title="Bỏ qua bảng cũ và tên sẵn trên web, bắt AI dịch lại từ hồ sơ tiếng Việt">Dịch lại toàn bộ (AI)</button>
+      <button id="btnEnSave" class="hide">Lưu bảng tên</button>
+      <button id="btnEnUndo" class="warn hide">Hoàn tác</button>
+    </div>
+    <div id="enMsg" class="muted" style="margin-top:8px"></div>
+    <div id="enBody"></div>
   </div>
 
   <div class="card">
@@ -297,6 +326,7 @@ $("#btnScan").onclick = async () => {
       const canhBao = [];
       if (d.chua_co_ho_so_count) canhBao.push(`${d.chua_co_ho_so_count} SP không dò ra mã NOMA (combo…) — bỏ qua`);
       if (d.trung_ma_count) canhBao.push(`${d.trung_ma_count} SP trùng mã — không tự đổi tên`);
+      if (d.chua_co_ten_en_count) canhBao.push(`<span class="err">${d.chua_co_ten_en_count} SP chưa có tên tiếng Anh trong bảng — soạn &amp; lưu bảng tên ở trên trước</span>`);
       $("#scanInfo").innerHTML =
         `<b>${d.scanned}</b> sản phẩm NOMA · ${d.doi_ten_count} sản phẩm cần đổi tên theo hồ sơ` +
         (canhBao.length ? " · " + canhBao.join(" · ") : "");
@@ -307,6 +337,7 @@ $("#btnScan").onclick = async () => {
       if (d.con_bai_chua_quet) canhBao.push('<span class="err">còn bài chưa quét tới (chạm trần số trang)</span>');
       if (d.raw_ok === false) canhBao.push('<span class="err">có bài không đọc được nội dung gốc → sẽ không ghi được</span>');
       if (d.trung_ma_count) canhBao.push(`${d.trung_ma_count} bài trùng mã sản phẩm — không tự đổi tên`);
+      if (d.chua_co_ten_en_count) canhBao.push(`<span class="err">${d.chua_co_ten_en_count} bài chưa có tên tiếng Anh trong bảng — soạn &amp; lưu bảng tên ở trên trước</span>`);
       $("#scanInfo").innerHTML =
         `<b>${d.scanned}</b> bài có “hướng dẫn sử dụng” trong tiêu đề (trong ${d.tong_bai_tren_web} bài của web) · ` +
         `${d.doi_ten_count} bài cần đổi tên theo hồ sơ · ${d.flagged_count} bài có cờ vi phạm` +
@@ -606,6 +637,126 @@ document.getElementById("btnDossierApply").onclick = () => {
 };
 dUndo.onclick = () => dossierSend(false, true);
 dossierStatus();
+
+
+/* ── Bảng tên tiếng Anh (nomaauto.us) ───────────────────────────────────────
+   BA NẤC như phần hồ sơ: soạn (xem trước, chưa ghi) → lưu → hoàn tác. Tên ở đây đi
+   thẳng lên tên sản phẩm và tiêu đề bài trên trang bán hàng Mỹ nên phải đọc lại trước
+   khi lưu — không gộp thành một nút. */
+const enCard = document.getElementById("enCard");
+const enBody = document.getElementById("enBody");
+const enMsg = document.getElementById("enMsg");
+const enNow = document.getElementById("enNow");
+const enSave = document.getElementById("btnEnSave");
+const enUndo = document.getElementById("btnEnUndo");
+
+const NHAN_NGUON_EN = {
+  bang: "bảng đang dùng", web_us: "tên sẵn trên nomaauto.us", dich: "AI dịch", chua_co: "chưa có",
+};
+
+async function enStatus() {
+  try {
+    const r = await fetch("/api/products/names-en", { credentials: "same-origin" });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "lỗi");
+    const d = j.data;
+    enNow.textContent = d.nguon === "kv"
+      ? `Đang dùng ${d.so_ten} tên · cập nhật ${new Date(d.cap_nhat).toLocaleString("vi-VN")}` +
+        (d.thieu.length ? ` · thiếu mã: ${d.thieu.join(", ")}` : "")
+      : "CHƯA có bảng tên tiếng Anh — soạn rồi lưu trước khi đổi tên bên nomaauto.us";
+    enUndo.classList.toggle("hide", !d.co_ban_hoan_tac);
+  } catch (e) {
+    enNow.textContent = "không đọc được trạng thái: " + e.message;
+  }
+}
+
+function veBangTenEn(items) {
+  enBody.innerHTML = `<table><thead><tr><th>Mã</th><th>Tên hồ sơ (VI)</th><th>Tên tiếng Anh</th><th>Nguồn</th></tr></thead><tbody>${
+    items.map((x) => `<tr>
+      <td><b>NOMA ${esc(x.ma)}</b></td>
+      <td class="muted">${esc(x.ten_vn || "")}</td>
+      <td><input class="enTen" data-ma="${esc(x.ma)}" value="${esc(x.de_xuat || "")}" style="width:100%;min-width:260px" /></td>
+      <td class="muted">${esc(NHAN_NGUON_EN[x.nguon] || x.nguon)}${x.doi_khuon ? " · nắn lại khuôn" : ""}</td>
+    </tr>`).join("")}</tbody></table>`;
+  enSave.classList.toggle("hide", !items.length);
+}
+
+async function enDraft(dichLai) {
+  enMsg.textContent = dichLai ? "Đang dịch lại toàn bộ…" : "Đang soạn…";
+  enSave.classList.add("hide");
+  try {
+    const r = await fetch("/api/products/names-en", {
+      method: "POST", headers: headers(true), credentials: "same-origin",
+      body: JSON.stringify({ mode: "draft", dich_lai: dichLai === true }),
+    });
+    const j = await r.json();
+    if (!j.ok) { enMsg.innerHTML = '<span class="err">' + esc(j.error || "lỗi") + "</span>"; return; }
+    const d = j.data;
+    veBangTenEn(d.items || []);
+    const parts = [
+      '<span class="pill grey">Xem trước — CHƯA ghi</span>',
+      `<b>${(d.items || []).length}</b> mã · AI dịch ${d.so_dich} mã · ${d.cost_usd} USD`,
+    ];
+    // Thiếu nguồn (credential web Mỹ, lỗi dịch) phải nói thẳng: im lặng là người dùng
+    // tưởng mã trống kia không có tên, rồi lưu đè mất.
+    for (const c of d.canh_bao || []) parts.push('<span class="err">' + esc(c) + "</span>");
+    enMsg.innerHTML = parts.join(" · ");
+  } catch (e) {
+    enMsg.innerHTML = '<span class="err">' + esc(e.message) + "</span>";
+  }
+}
+
+document.getElementById("btnEnDraft").onclick = () => enDraft(false);
+document.getElementById("btnEnRedo").onclick = () => {
+  if (!confirm("Dịch lại TOÀN BỘ bằng AI? Tên đang có trong bảng và tên sẵn trên nomaauto.us sẽ bị đề xuất thay.")) return;
+  enDraft(true);
+};
+
+enSave.onclick = async () => {
+  const names = {};
+  for (const o of enBody.querySelectorAll(".enTen")) {
+    const v = (o.value || "").trim();
+    if (v) names[o.dataset.ma] = v;
+  }
+  if (!Object.keys(names).length) { enMsg.innerHTML = '<span class="err">Chưa có tên nào để lưu.</span>'; return; }
+  if (!confirm(`Lưu ${Object.keys(names).length} tên tiếng Anh? (có nút Hoàn tác)`)) return;
+  enMsg.textContent = "Đang lưu…";
+  try {
+    const r = await fetch("/api/products/names-en", {
+      method: "POST", headers: headers(true), credentials: "same-origin",
+      body: JSON.stringify({ mode: "save", names }),
+    });
+    const j = await r.json();
+    if (!j.ok) { enMsg.innerHTML = '<span class="err">' + esc(j.error || "lỗi") + "</span>"; return; }
+    enMsg.innerHTML = `<span class="pill green">Đã lưu</span> ${j.data.so_ten} tên · quét lại để đối chiếu.`;
+    enStatus();
+  } catch (e) {
+    enMsg.innerHTML = '<span class="err">' + esc(e.message) + "</span>";
+  }
+};
+
+enUndo.onclick = async () => {
+  if (!confirm("Hoàn tác về bảng tên trước đó?")) return;
+  const r = await fetch("/api/products/names-en", {
+    method: "POST", headers: headers(true), credentials: "same-origin",
+    body: JSON.stringify({ mode: "revert" }),
+  });
+  const j = await r.json();
+  enMsg.innerHTML = j.ok
+    ? '<span class="pill green">Đã hoàn tác</span> · ' + j.data.so_ten + " tên"
+    : '<span class="err">' + esc(j.error || "lỗi") + "</span>";
+  enStatus();
+};
+
+/* Bảng tên EN chỉ có nghĩa với nomaauto.us — để hiện thường trực là mời người dùng
+   sửa tên tiếng Anh trong lúc đang soát web tiếng Việt. */
+function capNhatTheoSite() {
+  const laUS = site() === "nomaauto";
+  enCard.classList.toggle("hide", !laUS);
+  if (laUS) enStatus();
+}
+$("#site").addEventListener("change", capNhatTheoSite);
+capNhatTheoSite();
 
 
 /* ── Soát nội dung THIẾU (đối chiếu bài đã đăng ↔ hồ sơ sản phẩm) ────────────

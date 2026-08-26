@@ -24,7 +24,7 @@ const SP = [
   { id: 1, name: "Dung Dịch Tẩy Ố Kính Chuyên Sâu - Noma 911", permalink: "https://noma.vn/p1", status: "publish", description: "", short_description: "" },
   { id: 2, name: "NOMA 890 - DUNG DỊCH XỊT  BÓNG, LÀM MỚI SƠN XE", permalink: "https://noma.vn/p2", status: "publish", description: "", short_description: "" },
   { id: 3, name: "NOMA 350 - Dung dịch vệ sinh đĩa phanh", permalink: "https://noma.vn/p3", status: "publish", description: "", short_description: "" },
-  { id: 5, name: "NOMA 350 - Dung Dịch Vệ Sinh Đĩa Phanh", permalink: "https://noma.vn/p5", status: "publish", description: "", short_description: "" },
+  { id: 5, name: "NOMA 350 - Dung dịch vệ sinh đĩa phanh", permalink: "https://noma.vn/p5", status: "publish", description: "", short_description: "" },
   { id: 4, name: "Combo chăm kính chuẩn chuyên gia", permalink: "https://noma.vn/p4", status: "publish", description: "Bộ đôi NOMA", short_description: "" },
 ];
 
@@ -81,7 +81,9 @@ test("lệch hoa/thường so với hồ sơ VẪN phải đổi — khớp từ
      chủ dự án là "thay đúng theo tên đặt trong brandcore" nên hoa/thường cũng tính. */
   const d = await quetTen();
   const c = d.items.find((x) => x.id === 3);   // "…vệ sinh đĩa phanh" thường
-  assert.equal(c.ten_chuan, "NOMA 350 - Dung Dịch Vệ Sinh Đĩa Phanh");
+  /* Hồ sơ viết hoa mọi chữ, tên chuẩn KHÔNG bê nguyên: luật viết hoa (chốt 26/08/2026)
+     chỉ hoa NOMA, chữ đầu câu, chữ ngay sau dấu "-". Xem _ten-chuan.js. */
+  assert.equal(c.ten_chuan, "NOMA 350 - Dung dịch vệ sinh đĩa phanh");
   // Ở bộ dữ liệu này có tới hai bản ghi mã 350 nên cả hai bị chặn tự đổi — đúng thiết kế.
   assert.equal(c.trung_ma, true);
 });
