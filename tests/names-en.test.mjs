@@ -174,3 +174,43 @@ test("GET nói rõ mã nào CHƯA có tên tiếng Anh", async () => {
   assert.deepEqual(j.data.thieu, ["998"]);
   assert.equal(j.data.so_ten, 1);
 });
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   BẢN SOẠN PHẢI ĐƯỢC GIỮ LẠI.
+
+   Mỗi lần "Soạn tên" là một lần tiêu tiền AI. Đóng trang mà mất bản soạn thì lần sau
+   phải trả tiền dịch lại đúng ngần ấy tên. Nhưng bản soạn CHƯA ĐƯỢC coi là tên chuẩn —
+   phải bấm Lưu, nếu không thì tên AI dịch đi thẳng lên trang bán hàng.
+   ══════════════════════════════════════════════════════════════════════════════ */
+test("soạn xong thì bản soạn được cất lại, nhưng KHÔNG thành tên chuẩn", async () => {
+  const kv = dungKV({ ...KV_HO_SO });
+  await goi(dungEnv(kv), { mode: "draft" }, gaMang({ dich: { "911": "NOMA 911 - Glass Cleaner" } }));
+
+  assert.equal(kv.kho["noma_sku_names:en:v1"], undefined, "bản soạn không được thành bảng tên đang dùng");
+  const nhap = JSON.parse(kv.kho["noma_sku_names:en:v1:draft"]);
+  assert.ok(nhap.items.length, "phải cất bản soạn để mở lại trang là thấy");
+  assert.ok(nhap.cap_nhat, "phải ghi lúc soạn để người duyệt biết bản này cũ hay mới");
+});
+
+test("GET trả lại bản soạn đang treo — mở trang là thấy, khỏi dịch lần nữa", async () => {
+  const kv = dungKV({
+    ...KV_HO_SO,
+    "noma_sku_names:en:v1:draft": JSON.stringify({
+      items: [{ ma: "911", ten_vn: "x", de_xuat: "NOMA 911 - Glass Cleaner", nguon: "dich" }],
+      cap_nhat: "2026-08-27T00:00:00.000Z",
+    }),
+  });
+  const j = await (await get({ env: dungEnv(kv) })).json();
+  assert.ok(j.ok, j.error);
+  assert.equal(j.data.ban_nhap.items.length, 1);
+});
+
+test("lưu xong thì dọn bản soạn — không để nhắc 'chưa lưu' mãi", async () => {
+  const kv = dungKV({
+    ...KV_HO_SO,
+    "noma_sku_names:en:v1:draft": JSON.stringify({ items: [{ ma: "911", de_xuat: "NOMA 911 - X" }], cap_nhat: "x" }),
+  });
+  await goi(dungEnv(kv), { mode: "save", names: { "911": "NOMA 911 - Glass Cleaner" } });
+  assert.equal(kv.kho["noma_sku_names:en:v1:draft"], undefined);
+  assert.ok(kv.kho["noma_sku_names:en:v1"], "bảng tên chuẩn phải được ghi");
+});

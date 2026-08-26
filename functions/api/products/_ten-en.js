@@ -10,6 +10,9 @@
 
 export const EN_NAMES_KV_KEY = "noma_sku_names:en:v1";
 export const EN_NAMES_PREV_KEY = EN_NAMES_KV_KEY + ":prev";
+/* Bản SOẠN (chưa duyệt). Giữ riêng, KHÔNG bao giờ được dùng làm tên chuẩn — nhưng phải
+   lưu lại: soạn xong mà đóng trang là mất công dịch, lần sau tốn tiền AI lần nữa. */
+export const EN_NAMES_DRAFT_KEY = EN_NAMES_KV_KEY + ":draft";
 
 export async function loadTenEn(env) {
   try {

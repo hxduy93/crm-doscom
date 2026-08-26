@@ -24,7 +24,7 @@ import { loadSkuSpecs, findSkuCode } from "../geo/_utils/noma-sku-specs.js";
 import { callClaude } from "../geo/_utils/claude.js";
 import { siteCreds, isConfigured, listProducts, isNomaProduct } from "./_wc.js";
 import { chuanHoaTen, tenChuanSku } from "./_ten-chuan.js";
-import { EN_NAMES_KV_KEY, EN_NAMES_PREV_KEY, loadTenEn } from "./_ten-en.js";
+import { EN_NAMES_KV_KEY, EN_NAMES_PREV_KEY, EN_NAMES_DRAFT_KEY, loadTenEn } from "./_ten-en.js";
 
 function json(o, s = 200) {
   return new Response(JSON.stringify(o), {
@@ -56,6 +56,12 @@ export async function onRequestOptions() {
 export async function onRequestGet({ env }) {
   const [bang, ho] = await Promise.all([loadTenEn(env), loadSkuSpecs(env)]);
   const ma = Object.keys(ho.specs).sort();
+  // Bản soạn lần trước (nếu có) trả luôn theo — mở lại trang là thấy, khỏi dịch lại.
+  let banNhap = null;
+  try {
+    const raw = env.INVENTORY ? await env.INVENTORY.get(EN_NAMES_DRAFT_KEY) : null;
+    if (raw) banNhap = JSON.parse(raw);
+  } catch (e) { /* bản soạn hỏng thì bỏ qua, không làm gãy trang */ }
   return json({
     ok: true,
     data: {
@@ -63,6 +69,7 @@ export async function onRequestGet({ env }) {
       names: bang.names,
       thieu: ma.filter((k) => !bang.names[k]),
       co_ban_hoan_tac: Boolean(env.INVENTORY && (await env.INVENTORY.get(EN_NAMES_PREV_KEY))),
+      ban_nhap: banNhap,
     },
   });
 }
@@ -180,6 +187,7 @@ export async function onRequestPost(context) {
     await env.INVENTORY.put(EN_NAMES_KV_KEY, JSON.stringify({
       names, cap_nhat: new Date().toISOString(), nguon_seed: body.nguon_seed || null,
     }));
+    await env.INVENTORY.delete(EN_NAMES_DRAFT_KEY).catch(() => {});
     return json({ ok: true, data: { so_ten: Object.keys(names).length, luu: true } });
   }
 
@@ -217,6 +225,14 @@ export async function onRequestPost(context) {
     /* Bảng đã có tên nhưng lệch khuôn/hoa-thường → nói rõ, để người duyệt hiểu bấm Lưu
        chỉ nắn lại cách viết chứ không đổi nội dung tên. */
     x.doi_khuon = Boolean(x.de_xuat && bang.names[x.ma] && bang.names[x.ma] !== x.de_xuat);
+  }
+
+  /* Cất bản soạn lại (90 ngày): tiền AI đã tiêu rồi, đóng trang mà mất là phải dịch
+     lần nữa. Đây KHÔNG phải nguồn tên chuẩn — muốn dùng vẫn phải bấm Lưu bảng tên. */
+  if (env.INVENTORY) {
+    await env.INVENTORY.put(EN_NAMES_DRAFT_KEY,
+      JSON.stringify({ items, cap_nhat: new Date().toISOString(), so_dich: Object.keys(dich).length }),
+      { expirationTtl: 90 * 86400 }).catch(() => {});
   }
 
   return json({

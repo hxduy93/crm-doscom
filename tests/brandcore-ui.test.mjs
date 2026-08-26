@@ -73,13 +73,30 @@ test("mỗi lượt ghi phải có tóm tắt ở chỗ luôn nhìn thấy", () 
   assert.match(HTML, /\$\("#tienDo"\)\.innerHTML = `\$\{viecLam\}: <b>\$\{ghi\}<\/b> đã ghi/);
 });
 
-test("sửa ở tab này thì tab khác cùng nguồn phải bỏ dòng đã cũ", () => {
-  /* Một bài viết nằm ở CẢ "Bài hướng dẫn" lẫn "Tiêu đề bài viết". Không dọn thì bấm
-     tiếp bên kia là gửi đúng cái web đang có → lượt ghi rỗng, không ai hiểu vì sao. */
-  assert.match(HTML, /function donDepTabKhac/);
-  assert.match(HTML, /guide: \["bai", "tieude"\]/, "hai tab này đọc chung một nguồn bài viết");
-  const goi = (HTML.match(/donDepTabKhac\(j, /g) || []).length;
-  assert.ok(goi >= 3, `phải dọn sau MỌI lượt ghi tên/tiêu đề/brandcore (thấy ${goi} chỗ gọi)`);
+test("mục ĐÃ XỬ LÝ thì không hiện lại nữa — kể cả ở tab khác và ở lần quét sau", () => {
+  /* Một bài viết nằm ở CẢ "Bài hướng dẫn" lẫn "Tiêu đề bài viết". Sổ `daXuLy` khoá theo
+     `target:id` nên vá ở tab nào là biến khỏi cả hai, và lần quét sau cũng không hiện.
+     Không có nó thì bấm tiếp bên kia là gửi đúng cái web đang có → lượt ghi rỗng, nhìn
+     hệt như nút hỏng (ca thật 27/08/2026). */
+  assert.match(HTML, /const daXuLy = new Map\(\);/);
+  assert.match(HTML, /const khoaXuLy = \(target, id\) => `\$\{target\}:\$\{id\}`;/,
+    "phải khoá theo NGUỒN chứ không theo tab, không thì mỗi tab quên một kiểu");
+  assert.match(HTML, /it\.applied \|\| it\.skipped === "không có gì thay đổi"/,
+    "web đã mang đúng nội dung định ghi cũng phải coi là xong");
+  assert.match(HTML, /function conViec/, "tab phải đếm theo việc CÒN LẠI");
+});
+
+test("giấu bớt thì phải nói là đang giấu, và soi lại được", () => {
+  // Giấu im lặng thì lần sau người dùng tưởng công cụ quét sót.
+  assert.match(HTML, /Đang ẩn <b>\$\{n\}<\/b> mục đã xử lý trong phiên này/);
+  assert.match(HTML, /id="btnHienLai"/);
+});
+
+test("ai đó sửa ngược trên web thì mục đó phải hiện lại", () => {
+  /* Ẩn vĩnh viễn theo id là sai: bài bị sửa ngược trên WordPress sẽ không bao giờ được
+     báo nữa. Nên sổ có lưu GIÁ TRỊ đã ghi và đối chiếu lại ở lần quét sau. */
+  assert.match(HTML, /if \(d\.gia_tri == null\) return true;/);
+  assert.match(HTML, /\[row\.tieu_de, row\.name\]\.some\(\(x\) => x != null && String\(x\) === d\.gia_tri\)/);
 });
 
 test("esc() phải chặn cả dấu nháy — giá trị đi thẳng vào thuộc tính HTML", () => {

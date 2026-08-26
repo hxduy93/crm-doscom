@@ -318,8 +318,8 @@ test("đổi WEBSITE thì dọn sạch kết quả cũ", () => {
   /* Giữ lại danh sách của web trước rồi bấm áp = ghi nhầm web. Từ 26/08/2026 trang chỉ
      còn một ô chọn (website) nên đây là chỗ duy nhất phải dọn. */
   assert.match(UI, /\$\("#site"\)\.onchange/);
-  assert.match(UI, /rows: \[\], info: "", loi: null, xong: \[\] \};\n  proposals = \[\];/,
-    "đổi web phải xoá cả danh sách chờ lẫn lịch sử đã xong của web trước");
+  assert.match(UI, /xong: \[\], hien: \[\] \};\n  daXuLy\.clear\(\); hienDaXuLy = false;/,
+    "đổi web phải xoá danh sách chờ, lịch sử đã xong VÀ sổ đã xử lý của web trước");
 });
 
 test("nội dung bổ sung cho bài ghi vào trường content, không phải description", () => {
@@ -612,7 +612,8 @@ test("giao diện đổi tên bằng nút THAY THẾ, gửi thẳng tiêu đề 
   assert.match(UI, /laTen \? \{ id: p\.id, name: p\.ten_chuan \} : \{ id: p\.id, title: p\.ten_chuan \}/,
     "phải gửi thẳng tên chuẩn từ hồ sơ, không qua AI — bài đổi `title`, sản phẩm đổi `name`");
   // Nút AI chỉ còn dành cho bài MẤT tiêu đề hẳn (không suy ra được từ hồ sơ).
-  assert.match(UI, /ST\.tieude\.rows\[i\] && ST\.tieude\.rows\[i\]\.tieu_de_rong/);
+  assert.match(UI, /ST\.tieude\.hien\[i\]\.tieu_de_rong/,
+    "phải bám danh sách ĐANG VẼ — bám `rows` là lệch chỉ số khi có mục bị ẩn");
 });
 
 // Bộ dữ liệu cho bốn test trên: 1 bài sai tên, 1 bài đã đúng, 1 bài Doscom.
