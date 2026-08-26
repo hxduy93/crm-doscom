@@ -525,12 +525,14 @@ test("tên sản phẩm lệch hồ sơ → dựng sẵn tiêu đề chuẩn, kh
     'tên chuẩn phải lấy NGUYÊN VĂN cột "Tên sản phẩm" của hồ sơ');
 });
 
-test("khác nhau mỗi dấu câu / hoa thường thì KHÔNG bắt lỗi", async () => {
-  // "NOMA 911: Dung dịch tẩy ố kính" vs hồ sơ "NOMA 911 - Dung dịch tẩy ố kính".
+test("khác dấu câu / hoa thường VẪN phải sửa — khớp từng ký tự với hồ sơ", async () => {
+  /* Chốt 25/08/2026: "thay thế đúng theo như tên đặt trong brandcore". Bỏ qua khác biệt
+     hoa/thường thì tên hiển thị vẫn lộn xộn, mà đó đúng là thứ khách nhìn thấy. */
   const d = await soatTieuDe();
-  const r = d.results.find((x) => x.id === 2);
-  assert.ok(!r || !r.van_de.some((v) => v.ma === "ten_sp"),
-    "bắt lỗi ở mức dấu câu là tạo việc vô ích cho người duyệt");
+  const r = d.results.find((x) => x.id === 2);   // "hướng dẫn sử dụng NOMA 911: …"
+  assert.ok(r, "tiêu đề lệch hoa/thường + dấu câu phải bị nêu");
+  assert.ok(r.van_de.some((v) => v.ma === "ten_sp"));
+  assert.equal(r.de_xuat, "Hướng dẫn sử dụng NOMA 911 - Dung dịch tẩy ố kính");
 });
 
 test("gắn nhầm mã sản phẩm → CHỈ BÁO, không tự sửa", async () => {
@@ -581,13 +583,12 @@ test("quét trả sẵn tiêu đề chuẩn dựng từ hồ sơ, không nhờ A
   assert.equal(r.ten_chuan, "Hướng dẫn sử dụng NOMA 890 - Dung dịch xịt phủ bóng, làm mới sơn xe",
     "phải là tên sản phẩm nguyên văn trong hồ sơ, không cắt gọt, không thêm đuôi");
   assert.equal(r.can_doi_ten, true);
-  assert.equal(d.doi_ten_count, 1);
 });
 
-test("bài đã đúng tên rồi thì KHÔNG rủ đổi nữa", async () => {
+test("bài ĐÃ KHỚP TỪNG KÝ TỰ với hồ sơ thì không rủ đổi nữa", async () => {
   const d = await soatQuet();
-  const r = d.items.find((x) => x.id === 2);
-  assert.equal(r.can_doi_ten, false, "khác nhau mỗi hoa/thường và dấu câu thì coi như đã đúng");
+  const r = d.items.find((x) => x.id === 5);
+  assert.equal(r.can_doi_ten, false, "đúng y hồ sơ rồi mà vẫn rủ đổi là bấm mãi không hết việc");
 });
 
 test("bài không dò ra mã NOMA thì không có tên chuẩn để thay", async () => {
@@ -616,6 +617,8 @@ function gaDoiTen() {
       title: { raw: "Hướng dẫn sử dụng máy dò Doscom D1" }, content: { raw: "<p>x</p>" } },
     { id: 4, link: "https://noma.vn/4/", status: "publish", categories: [37],
       title: { raw: "5 mẹo chăm sóc sơn xe mùa mưa" }, content: { raw: "<p>x</p>" } },
+    { id: 5, link: "https://noma.vn/5/", status: "publish", categories: [37],
+      title: { raw: "Hướng dẫn sử dụng NOMA 911 - Dung dịch tẩy ố kính" }, content: { raw: "<p>x</p>" } },
   ];
   return async (url) => {
     const u = new URL(String(url));

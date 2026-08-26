@@ -465,9 +465,16 @@ const tieuDeChuanHdsd = (code, specs) => {
   return t ? `Hướng dẫn sử dụng ${t}` : null;
 };
 
-// So tiêu đề theo CHỮ, bỏ dấu và bỏ mọi dấu câu: "NOMA 350 - X" và "NOMA 350: X" là một.
+/* KHỚP TỪNG KÝ TỰ với hồ sơ — hoa/thường và dấu câu đều tính.
+
+   Cố ý CHẶT (chốt 25/08/2026: "thay thế đúng theo như tên đặt trong brandcore"): tên
+   trên web đang mỗi nơi một kiểu chữ — "NOMA 922 – DUNG DỊCH PHỦ NANO KÍNH" viết hoa
+   toàn bộ với gạch dài, "NOMA 130  - …" thừa dấu cách. Bỏ qua mấy khác biệt đó thì tên
+   hiển thị vẫn lộn xộn, mà đây đúng là thứ khách nhìn thấy.
+   Chỉ chuẩn hoá Unicode NFC trước khi so: cùng một chữ gõ ở hai dạng tổ hợp trông y hệt
+   nhau, báo lệch là bắt người duyệt đi sửa thứ không ai nhìn ra. */
 const giongTieuDe = (a, b) =>
-  boDau(a).replace(/[^a-z0-9]+/g, " ").trim() === boDau(b).replace(/[^a-z0-9]+/g, " ").trim();
+  String(a || "").normalize("NFC").trim() === String(b || "").normalize("NFC").trim();
 
 /* Tiêu đề đang mô tả sản phẩm NÀO — để bắt bài gắn nhầm mã.
    Có thật trên noma.vn: "Hướng dẫn sử dụng bộ vệ sinh và dưỡng ghế da Noma 692" mang

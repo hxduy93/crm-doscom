@@ -24,6 +24,7 @@ const SP = [
   { id: 1, name: "Dung Dịch Tẩy Ố Kính Chuyên Sâu - Noma 911", permalink: "https://noma.vn/p1", status: "publish", description: "", short_description: "" },
   { id: 2, name: "NOMA 890 - DUNG DỊCH XỊT  BÓNG, LÀM MỚI SƠN XE", permalink: "https://noma.vn/p2", status: "publish", description: "", short_description: "" },
   { id: 3, name: "NOMA 350 - Dung dịch vệ sinh đĩa phanh", permalink: "https://noma.vn/p3", status: "publish", description: "", short_description: "" },
+  { id: 5, name: "NOMA 350 - Dung Dịch Vệ Sinh Đĩa Phanh", permalink: "https://noma.vn/p5", status: "publish", description: "", short_description: "" },
   { id: 4, name: "Combo chăm kính chuẩn chuyên gia", permalink: "https://noma.vn/p4", status: "publish", description: "Bộ đôi NOMA", short_description: "" },
 ];
 
@@ -75,10 +76,21 @@ test("tên đảo ngược / thêm đuôi / thiếu chữ đều bị bắt và 
   assert.equal(b.can_doi_ten, true, "tên đang thiếu chữ 'phủ' — phải đổi");
 });
 
-test("khác nhau mỗi hoa/thường thì KHÔNG rủ đổi", async () => {
+test("lệch hoa/thường so với hồ sơ VẪN phải đổi — khớp từng ký tự", async () => {
+  /* Tên sản phẩm là thứ khách đọc trên trang, trong giỏ hàng và trên hoá đơn. Chốt của
+     chủ dự án là "thay đúng theo tên đặt trong brandcore" nên hoa/thường cũng tính. */
   const d = await quetTen();
-  const c = d.items.find((x) => x.id === 3);
-  assert.equal(c.can_doi_ten, false, "đổi tên chỉ vì viết hoa là làm phiền người duyệt");
+  const c = d.items.find((x) => x.id === 3);   // "…vệ sinh đĩa phanh" thường
+  assert.equal(c.ten_chuan, "NOMA 350 - Dung Dịch Vệ Sinh Đĩa Phanh");
+  // Ở bộ dữ liệu này có tới hai bản ghi mã 350 nên cả hai bị chặn tự đổi — đúng thiết kế.
+  assert.equal(c.trung_ma, true);
+});
+
+test("tên đã khớp từng ký tự thì để yên", async () => {
+  const d = await quetTen();
+  const dung = d.items.find((x) => x.id === 5);
+  assert.equal(dung.can_doi_ten, false, "đúng y hồ sơ rồi mà vẫn rủ đổi là bấm mãi không hết việc");
+  assert.equal(dung.trung_ma, true, "hai sản phẩm cùng mã 350 — phải cảnh báo trùng mã");
 });
 
 test("combo không dò ra mã NOMA → bỏ qua, không đoán bừa", async () => {
@@ -87,7 +99,7 @@ test("combo không dò ra mã NOMA → bỏ qua, không đoán bừa", async () 
   assert.equal(combo.sku, null);
   assert.equal(combo.chua_co_ho_so, true);
   assert.equal(combo.can_doi_ten, false);
-  assert.equal(d.doi_ten_count, 2, "chỉ 2 sản phẩm cần đổi tên");
+  assert.equal(d.doi_ten_count, 2, "911 và 890 — hai bản ghi mã 350 bị loại vì trùng mã");
 });
 
 test("target product-name chỉ có mode list", async () => {
