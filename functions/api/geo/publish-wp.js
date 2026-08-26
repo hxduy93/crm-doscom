@@ -169,42 +169,47 @@ async function uploadMedia(siteConfig, { base64, filename, alt, caption, title }
   };
 }
 
+/* Danh mục cho bài GEO: LUÔN là "Tin tức", KHÔNG tự tạo danh mục mới.
+
+   Vì sao đổi (chốt 25/08/2026): bản cũ nhận tên danh mục do AI nghĩ ra, không tìm thấy
+   thì TỰ TẠO. Mỗi bài đẻ một danh mục riêng — noma.vn có 139 danh mục cho 111 bài,
+   trong đó 95 danh mục chỉ chứa đúng 1 bài và 5 danh mục rỗng. Cấu trúc site loãng,
+   menu Kiến thức lẫn lộn, và bộ soát brandcore phải đi dò xem danh mục nào là thật.
+
+   Nay: bài GEO vào đúng mục "Tin tức" (noma.vn id 42, doscom.vn id 1). Danh mục
+   "Hướng dẫn sử dụng" để dành cho bài hướng dẫn chính thức, không phải chỗ đổ bài SEO.
+   Tên danh mục AI đề xuất vẫn được dùng NẾU danh mục đó CÓ SẴN — nhưng không tạo mới. */
+const GEO_DANH_MUC_SLUG = "tin-tuc";
+
+async function timDanhMucTheoSlug(siteConfig, slug) {
+  const res = await fetch(
+    `${siteConfig.url}/wp-json/wp/v2/categories?slug=${encodeURIComponent(slug)}&per_page=1&_fields=id,slug`,
+    { headers: { "Authorization": authHeader(siteConfig.user, siteConfig.pwd) } }
+  );
+  if (!res.ok) return null;
+  const arr = await res.json().catch(() => []);
+  return Array.isArray(arr) && arr[0] ? arr[0].id : null;
+}
+
 async function resolveCategories(siteConfig, categoryNames) {
-  if (!categoryNames || !categoryNames.length) return [];
   const ids = [];
 
-  for (const name of categoryNames) {
-    // 1. Tìm category đã tồn tại
-    const searchRes = await fetch(
-      `${siteConfig.url}/wp-json/wp/v2/categories?search=${encodeURIComponent(name)}&per_page=10`,
+  // Danh mục AI đề xuất: chỉ nhận cái ĐÃ TỒN TẠI, tuyệt đối không tạo mới.
+  for (const name of categoryNames || []) {
+    const res = await fetch(
+      `${siteConfig.url}/wp-json/wp/v2/categories?search=${encodeURIComponent(name)}&per_page=10&_fields=id,name`,
       { headers: { "Authorization": authHeader(siteConfig.user, siteConfig.pwd) } }
     );
-
-    if (searchRes.ok) {
-      const found = await searchRes.json();
-      const exact = found.find(c => c.name.toLowerCase() === name.toLowerCase());
-      if (exact) {
-        ids.push(exact.id);
-        continue;
-      }
-    }
-
-    // 2. Tạo category mới nếu chưa có
-    const createRes = await fetch(`${siteConfig.url}/wp-json/wp/v2/categories`, {
-      method: "POST",
-      headers: {
-        "Authorization": authHeader(siteConfig.user, siteConfig.pwd),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name, slug: slugify(name) }),
-    });
-
-    if (createRes.ok) {
-      const created = await createRes.json();
-      ids.push(created.id);
-    }
-    // Nếu lỗi tạo (vd quyền) → skip silent, không break pipeline
+    if (!res.ok) continue;
+    const found = await res.json().catch(() => []);
+    const exact = Array.isArray(found) && found.find((c) => c.name.toLowerCase() === String(name).toLowerCase());
+    if (exact) ids.push(exact.id);
   }
+
+  // Luôn có "Tin tức" — kể cả khi trên đã khớp được danh mục nào đó.
+  const tinTuc = await timDanhMucTheoSlug(siteConfig, GEO_DANH_MUC_SLUG);
+  if (tinTuc && !ids.includes(tinTuc)) ids.push(tinTuc);
+
   return ids;
 }
 
@@ -403,6 +408,16 @@ export async function onRequestPost(context) {
   const finalMetaDesc = override.meta_description || article.meta_description;
   const wpCats        = override.wp_categories || JSON.parse(article.wp_categories || "[]");
   const wpTags        = override.wp_tags || JSON.parse(article.wp_tags || "[]");
+
+  /* Tiêu đề rỗng thì DỪNG, đừng đăng. WordPress nhận post_title = "" không một tiếng
+     kêu: bài lên web với <title> trống và <h1> trống, mất sạch SEO mà nhìn trong WP
+     vẫn thấy "bình thường". Đo 25/08/2026: 45/111 bài trên noma.vn đã dính đúng lỗi này. */
+  if (!String(finalTitle || "").trim()) {
+    await env.DB.prepare(
+      `UPDATE geo_content_queue SET status='failed', last_error=? WHERE id=?`
+    ).bind("tiêu đề rỗng — không đăng bài không có tiêu đề", articleId).run().catch(() => {});
+    return jsonResponse({ error: "Bài không có tiêu đề — từ chối đăng (xem publish-wp.js)" }, 400);
+  }
 
   await env.DB.prepare(
     `UPDATE geo_content_queue SET status='publishing', target_site=? WHERE id=?`

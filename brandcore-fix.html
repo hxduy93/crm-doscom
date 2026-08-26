@@ -70,13 +70,12 @@
      → tìm chỗ vi phạm Brand Core v3 → sửa đúng chỗ đó.</p>
 
   <div id="guideNote" class="note hide">
-    <b>Phạm vi:</b> đúng mục <b>Hướng dẫn sử dụng</b> trong menu Kiến thức của web
-    (noma.vn <code>/danh-muc/huong-dan-su-dung</code>, doscom.vn <code>/category/huong-dan-su-dung</code>) —
-    <b>bỏ qua bài SEO</b> ở các danh mục “chăm sóc xe / DIY / so sánh”.<br />
-    Trong mục đó, chỉ bài <b>hướng dẫn sử dụng chính thức</b> (tiêu đề dạng “Hướng dẫn sử dụng NOMA &lt;mã&gt;: …”)
-    mới bị đối chiếu đủ hồ sơ sản phẩm; bài khác lọt vào danh mục chỉ soát brand core và tiêu đề.
-    Bài <b>không nói về NOMA</b> (camera, máy dò Doscom) chỉ soát bằng luật quảng cáo chung —
-    <b>không</b> áp định danh/xuất xứ NOMA vào.
+    <b>Phạm vi:</b> mọi bài viết có <b>“hướng dẫn sử dụng” trong tiêu đề</b>, quét trên toàn web —
+    không kèm bài nào khác, không phụ thuộc danh mục.<br />
+    <b>Đổi tên:</b> tiêu đề chuẩn = “Hướng dẫn sử dụng ” + <b>nguyên văn tên sản phẩm trong hồ sơ</b>
+    (vd “Hướng dẫn sử dụng NOMA 890 - Dung dịch xịt phủ bóng, làm mới sơn xe”) — bỏ hết đuôi quảng cáo,
+    không dùng AI. Bài không dò ra mã NOMA (thiết bị Doscom) thì không có hồ sơ nên không đổi tên.
+    Bài <b>không nói về NOMA</b> chỉ soát bằng luật quảng cáo chung — <b>không</b> áp định danh/xuất xứ NOMA vào.
   </div>
 
   <div class="note">
@@ -139,7 +138,7 @@
     <div id="titleActions" class="row hide" style="margin-top:10px">
       <button id="btnTitlePickEmpty" class="sec">Chọn bài mất tiêu đề</button>
       <button id="btnTitlePickName" class="sec">Chọn bài sai tên sản phẩm</button>
-      <button id="btnTitleDraft">Đề xuất tiêu đề (AI)</button>
+      <button id="btnTitleDraft">Đặt tiêu đề cho bài MẤT tiêu đề (AI)</button>
       <button id="btnTitleApply" class="warn hide">Vá tiêu đề đã duyệt</button>
     </div>
   </div>
@@ -204,6 +203,7 @@
       <b id="scanTitle"></b>
       <div class="row">
         <button id="btnCheckAll" class="sec">Chọn tất cả có cờ</button>
+        <button id="btnRename" class="warn hide">Thay thế tiêu đề (đã chọn)</button>
         <button id="btnAudit">Rà bằng AI (đã chọn)</button>
       </div>
     </div>
@@ -281,10 +281,12 @@ $("#btnScan").onclick = async () => {
       // Nói rõ phần CHƯA soát tới: im lặng cắt bớt sẽ bị hiểu là "cả web đã sạch".
       if (d.con_bai_chua_quet) canhBao.push('<span class="err">còn bài chưa quét tới (chạm trần số trang)</span>');
       if (d.raw_ok === false) canhBao.push('<span class="err">có bài không đọc được nội dung gốc → sẽ không ghi được</span>');
+      if (d.trung_ma_count) canhBao.push(`${d.trung_ma_count} bài trùng mã sản phẩm — không tự đổi tên`);
       $("#scanInfo").innerHTML =
-        `Quét ${d.scanned} bài trong ${(d.guide_categories || []).length} danh mục hướng dẫn · ` +
-        `${d.noma_count} bài NOMA · ${d.flagged_count} bài có cờ vi phạm` +
+        `<b>${d.scanned}</b> bài có “hướng dẫn sử dụng” trong tiêu đề (trong ${d.tong_bai_tren_web} bài của web) · ` +
+        `${d.doi_ten_count} bài cần đổi tên theo hồ sơ · ${d.flagged_count} bài có cờ vi phạm` +
         (canhBao.length ? " · " + canhBao.join(" · ") : "");
+      $("#btnRename").classList.toggle("hide", !d.doi_ten_count);
     } else {
       $("#scanInfo").textContent = `Quét ${d.scanned} SP · ${d.noma_count} SP NOMA · ${d.flagged_count} SP có cờ vi phạm`;
     }
@@ -304,20 +306,30 @@ function renderList() {
     const flags = p.flags.length
       ? `<div class="flags">${p.flags.map(f => `<span class="flag">${esc(f.type)}</span>`).join("")}</div>`
       : `<span class="pill green">Chưa thấy vi phạm (regex)</span>`;
-    /* Bài Doscom nằm chung danh mục hướng dẫn với bài NOMA. Phải nói rõ bài nào đang
-       chịu bộ luật nào, không thì người duyệt tưởng brand core NOMA áp cho tất. */
+    /* Bài Doscom nằm chung phạm vi với bài NOMA. Phải nói rõ bài nào đang chịu bộ luật
+       nào, không thì người duyệt tưởng brand core NOMA áp cho tất. */
     const nhan = laBai()
       ? (p.la_noma ? `<span class="pill green">bài NOMA</span>` : `<span class="pill grey">bài Doscom — chỉ soát luật QC chung</span>`)
         + (p.sku ? ` <span class="pill grey">SKU ${esc(p.sku)}</span>` : "")
+        + (p.trung_ma ? ` <span class="pill red">trùng mã — gộp/xoá bớt trước rồi mới đổi tên</span>` : "")
         + (p.raw === false ? ` <span class="pill red">không đọc được bản gốc — không ghi được</span>` : "")
+      : "";
+    /* Tiêu đề chuẩn dựng thẳng từ hồ sơ sản phẩm: hiện luôn cả trước và sau để người
+       duyệt đọc bằng mắt, không phải tin suông rồi bấm. */
+    const doiTen = p.can_doi_ten
+      ? `<div class="cmp" style="margin-top:6px">
+           <div><div class="lab">Tiêu đề hiện tại</div><div class="box old" style="max-height:none">${esc(p.name)}</div></div>
+           <div><div class="lab">Đổi thành (nguyên văn tên trong hồ sơ)</div><div class="box new" style="max-height:none">${esc(p.tieu_de_chuan)}</div></div>
+         </div>`
       : "";
     return `<div class="prod">
       <label class="row" style="align-items:flex-start">
-        <input type="checkbox" class="pick" data-i="${i}" ${p.flags.length ? "checked" : ""} style="margin-top:3px" />
+        <input type="checkbox" class="pick" data-i="${i}" ${(p.flags.length || p.can_doi_ten) ? "checked" : ""} style="margin-top:3px" />
         <span style="flex:1">
           <h3>${esc(p.name)} <span class="muted">#${p.id}</span></h3>
           ${nhan}
           ${flags}
+          ${doiTen}
           <a href="${esc(p.permalink)}" target="_blank" class="muted">Mở trên web ↗</a>
         </span>
       </label></div>`;
@@ -326,6 +338,49 @@ function renderList() {
 
 $("#btnCheckAll").onclick = () => {
   document.querySelectorAll(".pick").forEach(cb => { cb.checked = scanned[+cb.dataset.i].flags.length > 0; });
+};
+
+/* ---------- THAY THẾ TIÊU ĐỀ THEO HỒ SƠ ----------------------------------------
+   Không có AI trong đường này: tiêu đề mới = "Hướng dẫn sử dụng " + nguyên văn tên sản
+   phẩm trong hồ sơ. Cùng một bài, chạy bao nhiêu lần cũng ra đúng một kết quả, và người
+   duyệt đọc được trước/sau ngay trên danh sách trước khi bấm. */
+$("#btnRename").onclick = async () => {
+  const picks = [...document.querySelectorAll(".pick:checked")]
+    .map((cb) => scanned[+cb.dataset.i])
+    .filter((p) => p && p.can_doi_ten && p.tieu_de_chuan);
+  if (!picks.length) {
+    return alert("Không có bài nào cần đổi tên trong nhóm đang chọn.\n\n" +
+      "Bài trùng mã sản phẩm bị loại khỏi đây — phải gộp/xoá bớt trước.");
+  }
+  // Hai bài cùng nhận một tiêu đề trong một lượt = tự tạo trùng lặp mới.
+  const dem = {};
+  for (const p of picks) dem[p.tieu_de_chuan] = (dem[p.tieu_de_chuan] || 0) + 1;
+  const trung = Object.keys(dem).filter((t) => dem[t] > 1);
+  if (trung.length) return alert("Nhiều bài đang nhận CÙNG một tiêu đề:\n\n" + trung.join("\n"));
+
+  if (!confirm(`Đổi tiêu đề ${picks.length} bài trên ${site()} theo đúng tên trong hồ sơ?\n(có sao lưu, hoàn tác được)`)) return;
+  const btn = $("#btnRename");
+  btn.disabled = true; btn.textContent = "Đang đổi tên...";
+  try {
+    const r = await fetch("/api/products/brandcore-apply", {
+      method: "POST", headers: headers(true), credentials: "same-origin",
+      body: JSON.stringify({ site: site(), target: loai(), fixes: picks.map((p) => ({ id: p.id, title: p.tieu_de_chuan })) }),
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || "lỗi đổi tên");
+    // Bài đã đổi xong thì cập nhật ngay trong danh sách — khỏi bấm lại lần hai.
+    for (const it of d.items || []) {
+      if (!it.applied) continue;
+      const row = scanned.find((x) => x.id === it.id);
+      if (row) { row.name = row.tieu_de_chuan; row.can_doi_ten = false; }
+    }
+    renderList();
+    $("#btnRename").classList.toggle("hide", !scanned.some((x) => x.can_doi_ten));
+    renderReport(d);
+    $("#reportCard").classList.remove("hide");
+    $("#reportCard").scrollIntoView({ behavior: "smooth" });
+  } catch (e) { alert(e.message); }
+  btn.disabled = false; btn.textContent = "Thay thế tiêu đề (đã chọn)";
 };
 
 // ---------- NẤC 1b: RÀ BẰNG AI (xem trước) ----------
@@ -918,8 +973,16 @@ document.getElementById("btnTitlePickName").onclick = () => {
 };
 
 document.getElementById("btnTitleDraft").onclick = async () => {
-  const chon = [...document.querySelectorAll(".tpick:checked")].map((cb) => +cb.dataset.i);
-  if (!chon.length) { alert("Chưa chọn bài nào."); return; }
+  /* AI chỉ dùng cho bài KHÔNG suy ra được tiêu đề: bài mất tiêu đề hẳn. Bài hướng dẫn
+     sai tên sản phẩm thì đã có tên chuẩn dựng từ hồ sơ — không nhờ AI nghĩ hộ. */
+  const chon = [...document.querySelectorAll(".tpick:checked")]
+    .map((cb) => +cb.dataset.i)
+    .filter((i) => titleRows[i] && titleRows[i].tieu_de_rong);
+  if (!chon.length) {
+    alert("Chưa chọn bài MẤT TIÊU ĐỀ nào.\n\nBài sai tên sản phẩm đã có sẵn tiêu đề chuẩn theo hồ sơ — " +
+          "chỉ cần bấm “Vá tiêu đề đã duyệt”, không cần AI.");
+    return;
+  }
   const btn = tEl("btnTitleDraft");
   btn.disabled = true;
   let cost = 0;

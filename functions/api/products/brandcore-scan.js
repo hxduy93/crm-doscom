@@ -54,7 +54,10 @@ import {
 import { findSkuCode, skuSpecText, loadSkuSpecs } from "../geo/_utils/noma-sku-specs.js";
 import { doiChieuSanPham, doiChieuBaiHdsd, boDau, boHtml as boHtmlNhe } from "./_gap.js";
 import { siteCreds, isConfigured, listProducts, getProduct, isNomaProduct } from "./_wc.js";
-import { listGuideCategories, listGuidePosts, listAllPosts, getPost, laBaiNoma, laBaiHdsdChinhThuc } from "./_wp-posts.js";
+import {
+  listGuideCategories, listAllPosts, listPostsByIds, getPost,
+  laBaiNoma, laBaiHdsdChinhThuc, laBaiHuongDanTheoTieuDe,
+} from "./_wp-posts.js";
 
 function json(o, s = 200) {
   return new Response(JSON.stringify(o), {
@@ -477,36 +480,59 @@ function khopTenNhat(tieuDe, specs) {
   return best;
 }
 
+/* Phạm vi quét: MỌI bài có "hướng dẫn sử dụng" trong TIÊU ĐỀ, trên toàn web.
+
+   Trước đây bám theo danh mục nên vừa sót (bài hướng dẫn nằm ngoài mục) vừa thừa (bài
+   SEO nằm trong mục). Chủ dự án chốt 25/08/2026: quét đúng bài có tiêu đề hướng dẫn sử
+   dụng, không kèm bài nào khác.
+   Hai bước: đọc TIÊU ĐỀ toàn site (nhẹ) → lọc → lấy nội dung của đúng số bài đó bằng
+   một lời gọi `include=`. */
 async function napBaiHuongDan(c) {
-  const cats = await listGuideCategories(c);
-  const { items, het, raw_ok } = await listGuidePosts(c, { catIds: cats.map((x) => x.id) });
-  return { cats, items, het, raw_ok };
+  const { items: tatCa, het } = await listAllPosts(c);
+  const ids = tatCa.filter((p) => laBaiHuongDanTheoTieuDe(p.tieu_de)).map((p) => p.id);
+  if (!ids.length) return { items: [], het, raw_ok: true, tong_bai: tatCa.length };
+  const { items, raw_ok } = await listPostsByIds(c, ids);
+  return { items, het, raw_ok, tong_bai: tatCa.length };
 }
 
 async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
   if (mode === "list") {
-    const { cats, items, het, raw_ok } = await napBaiHuongDan(c);
+    const { items, het, raw_ok, tong_bai } = await napBaiHuongDan(c);
+    // Hai bài cùng một mã thì không đề xuất đổi tên — đổi cả hai về một tiêu đề là trùng khít.
+    const demSku = new Map();
+    for (const p of items) {
+      const ma = findSkuCode(p.name, skuSpecs);
+      if (ma) demSku.set(ma, (demSku.get(ma) || 0) + 1);
+    }
     const ds = items.map((p) => {
       const laNoma = laBaiNoma(p);
       const { forbidden } = luatChoBai(site, laNoma);
+      /* Tiêu đề chuẩn = "Hướng dẫn sử dụng " + NGUYÊN VĂN tên sản phẩm trong hồ sơ.
+         Không cắt gọt, không thêm đuôi quảng cáo ("…ĐÚNG CÁCH TẠI NHÀ", "…CHUYÊN SÂU"),
+         không nhờ AI nghĩ hộ — hồ sơ là nguồn duy nhất. */
+      const ma = findSkuCode(p.name, skuSpecs);
+      const chuan = ma ? tieuDeChuanHdsd(ma, skuSpecs) : null;
+      const trungMa = ma ? (demSku.get(ma) || 0) > 1 : false;
       return {
         id: p.id, name: p.name, permalink: p.permalink, status: p.status,
         la_noma: laNoma, raw: p.raw,
         tieu_de_rong: p.tieu_de_rong,
-        // Bài HDSD chính thức mới bị đối chiếu hồ sơ; bài khác lọt vào danh mục thì
-        // chỉ soát brandcore + tiêu đề (xem laBaiHdsdChinhThuc).
-        loai_bai: laBaiHdsdChinhThuc(p.name) ? "hdsd" : "khac",
-        sku: skuCuaBai(p, skuSpecs),
+        sku: ma,
+        tieu_de_chuan: chuan,
+        // Có tên chuẩn, đang lệch, và không trùng mã → thay được ngay bằng một nút.
+        can_doi_ten: Boolean(chuan && !giongTieuDe(p.name, chuan) && !trungMa),
+        trung_ma: trungMa,
         flags: scanForbidden(`${p.name} ${p.content}`, forbidden),
       };
     });
     return json({
       ok: true, site, target: "guide",
       scanned: ds.length,
+      tong_bai_tren_web: tong_bai,
       noma_count: ds.filter((x) => x.la_noma).length,
-      hdsd_count: ds.filter((x) => x.loai_bai === "hdsd").length,
       flagged_count: ds.filter((x) => x.flags.length).length,
-      guide_categories: cats,
+      doi_ten_count: ds.filter((x) => x.can_doi_ten).length,
+      trung_ma_count: ds.filter((x) => x.trung_ma).length,
       con_bai_chua_quet: !het,   // chạm trần số trang → nói thẳng, không giấu phần chưa soát
       raw_ok,
       items: ds,
@@ -519,31 +545,19 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
     const { items } = await napBaiHuongDan(c);
     const chon = ids ? items.filter((p) => ids.includes(p.id)) : items;
 
-    /* CHỈ đối chiếu hồ sơ với BÀI HDSD CHÍNH THỨC.
-       Bài kiến thức/so sánh lọt vào danh mục ("Phủ kính chống nước top 3 năm 2026: NOMA
-       922, 3M, Soft9") không có nghĩa vụ chép đủ hướng dẫn, hạn dùng, PPE, sơ cứu —
-       đòi là tạo ra hàng trăm mục "thiếu" vô lý (đo thật 25/08/2026: 204/250 mục thiếu
-       đến từ nhóm bài này). Vẫn liệt kê chúng ra, chỉ ghi rõ là đã bỏ qua. */
+    /* Phạm vi đã lọc theo tiêu đề nên mọi bài ở đây đều là bài hướng dẫn sử dụng.
+       Bài nào không dò ra mã NOMA (bài hướng dẫn thiết bị Doscom) thì không có hồ sơ để
+       đối chiếu — nói rõ "chưa có hồ sơ", không báo thiếu bừa. */
     const results = [];
-    let chuaCoHoSo = 0, boQuaSeo = 0;
+    let chuaCoHoSo = 0;
     for (const p of chon) {
       const laNoma = laBaiNoma(p);
-      if (!laBaiHdsdChinhThuc(p.name)) {
-        boQuaSeo++;
-        results.push({
-          id: p.id, name: p.name, permalink: p.permalink, la_noma: laNoma,
-          loai_bai: "khac", co_ho_so: false, bo_qua: "khong_phai_bai_hdsd",
-          diem: null, thieu: [], khong_chac: [], so_co: 0,
-        });
-        continue;
-      }
       const code = laNoma ? skuCuaBai(p, skuSpecs) : null;
       const spec = code ? skuSpecs[code] : null;
       const kq = doiChieuBaiHdsd(p, spec);
       if (!kq.co_ho_so) chuaCoHoSo++;
       results.push({
         id: p.id, name: p.name, permalink: p.permalink, sku: code, la_noma: laNoma,
-        loai_bai: "hdsd",
         co_ho_so: kq.co_ho_so, diem: kq.diem,
         thieu: kq.thieu, khong_chac: kq.khong_chac, so_co: kq.co.length,
       });
@@ -556,8 +570,6 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
     return json({
       ok: true, site, target: "guide", mode: "gap",
       scanned: chon.length,
-      hdsd_count: chon.length - boQuaSeo,
-      bo_qua_khong_phai_hdsd: boQuaSeo,
       chua_co_ho_so: chuaCoHoSo,
       results,
     });
@@ -574,10 +586,6 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
     for (const id of ids) {
       const p = await getPost(c, id);
       const laNoma = laBaiNoma(p);
-      if (!laBaiHdsdChinhThuc(p.name)) {
-        results.push({ id, name: p.name, permalink: p.permalink, bo_qua: "khong_phai_bai_hdsd" });
-        continue;
-      }
       const code = laNoma ? skuCuaBai(p, skuSpecs) : null;
       const spec = code ? skuSpecs[code] : null;
       const kq = doiChieuBaiHdsd(p, spec);

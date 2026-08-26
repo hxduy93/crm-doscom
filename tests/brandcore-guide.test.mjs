@@ -171,7 +171,8 @@ function gaWordPress() {
     }
     if (u.pathname.endsWith("/wp-json/wp/v2/posts")) {
       assert.equal(u.searchParams.get("context"), "edit", "phải đọc context=edit để có content.raw");
-      assert.equal(u.searchParams.get("categories"), "1035", "chỉ được kéo bài trong danh mục hướng dẫn");
+      assert.equal(u.searchParams.get("categories"), null,
+        "phạm vi quét bám TIÊU ĐỀ, không được lọc theo danh mục nữa");
       return gia([
         {
           id: 32387, link: "https://doscom.vn/hdsd-noma-350/", status: "publish", categories: [1035],
@@ -215,12 +216,12 @@ test("quét bài hướng dẫn: mỗi bài chịu ĐÚNG bộ luật của nó"
   assert.equal(d.target, "guide");
   assert.equal(d.scanned, 2);
   assert.equal(d.noma_count, 1, "chỉ 1 trong 2 bài nói về NOMA");
-  assert.equal(d.guide_categories.length, 1, "danh mục Tin Tức và danh mục rỗng phải bị loại");
 
   const noma = d.items.find((x) => x.id === 32387);
   const doscom = d.items.find((x) => x.id === 25083);
 
   assert.ok(noma.la_noma && noma.sku === "350");
+  assert.ok(doscom.sku === null, "bài thiết bị Doscom không dò ra mã NOMA nên không có hồ sơ để đổi tên");
   const cnNoma = noma.flags.map((f) => f.type);
   assert.ok(cnNoma.includes("xuất xứ: Made in USA"));
   assert.ok(cnNoma.includes("claim: an toàn tuyệt đối"));
@@ -359,8 +360,9 @@ function gaNoma() {
       ]);
     }
     if (u.pathname.endsWith("/wp-json/wp/v2/posts")) {
-      const cats = u.searchParams.get("categories");
-      const ds = cats ? BAI.filter((b) => b.categories.includes(Number(cats))) : BAI;
+      // include= → lấy nội dung đúng những bài đã lọc theo tiêu đề; không có → đọc tiêu đề toàn web.
+      const inc = u.searchParams.get("include");
+      const ds = inc ? BAI.filter((b) => inc.split(",").map(Number).includes(b.id)) : BAI;
       return gia(ds, { "X-WP-TotalPages": "1", "X-WP-Total": String(ds.length) });
     }
     throw new Error("gọi nhầm endpoint: " + u.pathname);
@@ -383,33 +385,24 @@ async function goiNoma(body) {
   } finally { globalThis.fetch = goc; }
 }
 
-test("chỉ quét mục Hướng dẫn sử dụng — danh mục SEO không bị kéo về", async () => {
+test("quét theo TIÊU ĐỀ: chỉ bài có 'hướng dẫn sử dụng' trong tên", async () => {
+  /* Chủ dự án chốt 25/08/2026: "quét ra tất cả bài viết có tiêu đề hướng dẫn sử dụng,
+     đừng kèm bài viết khác". Bài SEO nằm CÙNG danh mục cũng phải bị loại; ngược lại bài
+     hướng dẫn nằm ngoài danh mục vẫn phải quét được. */
   const d = await goiNoma({ site: "noma", target: "guide", mode: "list" });
   assert.ok(d.ok, d.error);
-  assert.deepEqual(d.guide_categories.map((c) => c.id), [37],
-    'danh mục "Hướng dẫn chăm sóc xe" phải bị loại — đó là nơi chứa bài SEO');
-  assert.equal(d.scanned, 2);
-  assert.equal(d.hdsd_count, 1, "chỉ 1 trong 2 bài là hướng dẫn sử dụng chính thức");
+  assert.equal(d.scanned, 1, "chỉ 1 bài có 'hướng dẫn sử dụng' trong tiêu đề");
+  assert.equal(d.items[0].id, 32387);
+  assert.equal(d.tong_bai_tren_web, 4, "vẫn đọc tiêu đề toàn web rồi mới lọc");
+  assert.ok(!d.items.some((x) => x.id === 33355),
+    "bài SEO 'Hướng dẫn phủ kính…' cùng danh mục KHÔNG được kéo vào");
 });
 
-test("đối chiếu hồ sơ BỎ QUA bài không phải hướng dẫn sử dụng chính thức", async () => {
+test("đối chiếu hồ sơ chỉ chạy trên bài đã lọc theo tiêu đề", async () => {
   const d = await goiNoma({ site: "noma", target: "guide", mode: "gap" });
   assert.ok(d.ok, d.error);
-  assert.equal(d.bo_qua_khong_phai_hdsd, 1);
-  assert.equal(d.hdsd_count, 1);
-
-  const seo = d.results.find((r) => r.id === 33355);
-  assert.equal(seo.bo_qua, "khong_phai_bai_hdsd",
-    "bài SEO phải được ghi rõ là bỏ qua, KHÔNG báo thiếu 8 mục như trước");
-  assert.deepEqual(seo.thieu, []);
-
-  // Bài HDSD chính thức thì vẫn đối chiếu như thường.
-  const hdsd = d.results.find((r) => r.id === 32387);
-  assert.equal(hdsd.loai_bai, "hdsd");
-});
-
-test("soạn nội dung bổ sung cũng chặn bài SEO — không tiêu tiền AI vô ích", () => {
-  assert.match(SCAN, /if \(!laBaiHdsdChinhThuc\(p\.name\)\) \{\s*\n\s*results\.push\(\{ id, name: p\.name, permalink: p\.permalink, bo_qua: "khong_phai_bai_hdsd" \}\)/);
+  assert.equal(d.scanned, 1, "bài SEO không lọt vào đây nữa nên không sinh mục thiếu giả");
+  assert.equal(d.results[0].id, 32387);
 });
 
 test("soát tiêu đề: bắt bài mất tiêu đề, trùng tên và sai khuôn", async () => {
@@ -576,3 +569,80 @@ test("giao diện chặn vá cùng một tiêu đề cho nhiều bài trong mộ
   assert.match(UI, /const trungLo = Object\.keys\(dem\)\.filter\(\(t\) => dem\[t\] > 1\);/);
   assert.match(UI, /id="btnTitlePickName"/, "thiếu nút chọn nhanh nhóm sai tên sản phẩm");
 });
+
+/* ══ Đổi tên bài hướng dẫn theo hồ sơ — KHÔNG dùng AI ═════════════════════════
+   Chủ dự án chốt 25/08/2026: "chỉ cần nút thay thế thôi, không cần agent gen lại một
+   cái tiêu đề khác. Sử dụng luôn câu tiêu đề là tên sản phẩm trong file brandcore".
+   Tiêu đề mới = "Hướng dẫn sử dụng " + NGUYÊN VĂN tên sản phẩm, bỏ hết đuôi quảng cáo.
+   ═════════════════════════════════════════════════════════════════════════════ */
+test("quét trả sẵn tiêu đề chuẩn dựng từ hồ sơ, không nhờ AI", async () => {
+  const d = await soatQuet();
+  const r = d.items.find((x) => x.id === 1);
+  assert.equal(r.tieu_de_chuan, "Hướng dẫn sử dụng NOMA 890 - Dung dịch xịt phủ bóng, làm mới sơn xe",
+    "phải là tên sản phẩm nguyên văn trong hồ sơ, không cắt gọt, không thêm đuôi");
+  assert.equal(r.can_doi_ten, true);
+  assert.equal(d.doi_ten_count, 1);
+});
+
+test("bài đã đúng tên rồi thì KHÔNG rủ đổi nữa", async () => {
+  const d = await soatQuet();
+  const r = d.items.find((x) => x.id === 2);
+  assert.equal(r.can_doi_ten, false, "khác nhau mỗi hoa/thường và dấu câu thì coi như đã đúng");
+});
+
+test("bài không dò ra mã NOMA thì không có tên chuẩn để thay", async () => {
+  const d = await soatQuet();
+  const r = d.items.find((x) => x.id === 3);
+  assert.equal(r.tieu_de_chuan, null, "bài hướng dẫn thiết bị Doscom không có hồ sơ NOMA");
+  assert.equal(r.can_doi_ten, false);
+});
+
+test("giao diện đổi tên bằng nút THAY THẾ, gửi thẳng tiêu đề chuẩn", () => {
+  assert.match(UI, /id="btnRename"/, "thiếu nút thay thế tiêu đề");
+  assert.match(UI, /fixes: picks\.map\(\(p\) => \(\{ id: p\.id, title: p\.tieu_de_chuan \}\)\)/,
+    "phải gửi thẳng tiêu đề chuẩn từ hồ sơ, không qua AI");
+  // Nút AI chỉ còn dành cho bài MẤT tiêu đề hẳn (không suy ra được từ hồ sơ).
+  assert.match(UI, /\.filter\(\(i\) => titleRows\[i\] && titleRows\[i\]\.tieu_de_rong\)/);
+});
+
+// Bộ dữ liệu cho bốn test trên: 1 bài sai tên, 1 bài đã đúng, 1 bài Doscom.
+function gaDoiTen() {
+  const BAI = [
+    { id: 1, link: "https://noma.vn/1/", status: "publish", categories: [37],
+      title: { raw: "HƯỚNG DẪN SỬ DỤNG NOMA 890: XỊT BÓNG & LÀM MỚI SƠN XE TỨC THÌ" }, content: { raw: "<p>x</p>" } },
+    { id: 2, link: "https://noma.vn/2/", status: "publish", categories: [37],
+      title: { raw: "hướng dẫn sử dụng NOMA 911: Dung dịch tẩy ố kính" }, content: { raw: "<p>x</p>" } },
+    { id: 3, link: "https://noma.vn/3/", status: "publish", categories: [37],
+      title: { raw: "Hướng dẫn sử dụng máy dò Doscom D1" }, content: { raw: "<p>x</p>" } },
+    { id: 4, link: "https://noma.vn/4/", status: "publish", categories: [37],
+      title: { raw: "5 mẹo chăm sóc sơn xe mùa mưa" }, content: { raw: "<p>x</p>" } },
+  ];
+  return async (url) => {
+    const u = new URL(String(url));
+    if (u.pathname.endsWith("/wp-json/wp/v2/categories")) return gia([]);
+    const inc = u.searchParams.get("include");
+    const ds = inc ? BAI.filter((b) => inc.split(",").map(Number).includes(b.id)) : BAI;
+    return gia(ds, { "X-WP-TotalPages": "1" });
+  };
+}
+
+async function soatQuet() {
+  const goc = globalThis.fetch;
+  globalThis.fetch = gaDoiTen();
+  try {
+    const res = await scan({
+      request: new Request("https://crm.test/api/products/brandcore-scan", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ site: "noma", target: "guide", mode: "list" }),
+      }),
+      env: {
+        ...ENV_NOMA,
+        INVENTORY: { get: async (k) => (k === "noma_sku_specs:v2" ? JSON.stringify({ specs: {
+          "890": { ten: "NOMA 890 - Dung dịch xịt phủ bóng, làm mới sơn xe" },
+          "911": { ten: "NOMA 911 - Dung dịch tẩy ố kính" },
+        } }) : null) },
+      },
+    });
+    return await res.json();
+  } finally { globalThis.fetch = goc; }
+}

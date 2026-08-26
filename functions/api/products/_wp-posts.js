@@ -35,9 +35,17 @@ export function laDanhMucHuongDan(cat) {
   return DANH_MUC_HD.test(ten) || DANH_MUC_HD.test(slug);
 }
 
-/* Bài HDSD CHÍNH THỨC hay bài thường lọt vào danh mục.
-   Khuôn tiêu đề chuẩn: "HƯỚNG DẪN SỬ DỤNG NOMA <mã>: <công dụng>". Chỉ bài dạng này
-   mới bị đối chiếu đủ hồ sơ sản phẩm — bài khác chỉ soát brandcore và tiêu đề. */
+/* Bài hướng dẫn sử dụng = bài có CỤM ĐÓ TRONG TIÊU ĐỀ. Đây là phạm vi quét chính thức
+   (chốt 25/08/2026): "quét ra tất cả bài viết có tiêu đề hướng dẫn sử dụng, đừng kèm
+   bài viết khác". Bám tiêu đề chứ không bám danh mục vì danh mục trên hai web do agent
+   GEO tự đẻ ra hàng trăm cái, không tin được. */
+export function laBaiHuongDanTheoTieuDe(name) {
+  return /\bhuong dan su dung\b/.test(boDau(name));
+}
+
+/* Bài HDSD của một SẢN PHẨM NOMA có mã — chỉ bài này mới đối chiếu được hồ sơ và mới
+   dựng được tiêu đề chuẩn. Bài hướng dẫn thiết bị Doscom cũng nằm trong phạm vi quét
+   nhưng không có hồ sơ nên không đổi tên được. */
 export function laBaiHdsdChinhThuc(name) {
   const t = boDau(name);
   return /\bhuong dan su dung\b/.test(t) && /\bnoma\s?\d{2,4}\b/.test(t);
@@ -117,37 +125,29 @@ export async function listGuideCategories(c, { maxPages = 6, perPage = 100 } = {
   return out.sort((a, b) => b.count - a.count);
 }
 
-/* Liệt kê bài trong các danh mục hướng dẫn. WP lọc `categories=1,2,3` theo kiểu HOẶC và
-   mỗi bài chỉ trả 1 lần nên không phải tự dedupe.
-   Có TRẦN (maxPages) vì phải kéo cả nội dung bài về mới quét được từ cấm — không giới hạn
-   thì một web vài trăm bài đủ làm request quá hạn mà không ai hiểu vì sao. */
-export async function listGuidePosts(c, { catIds = [], perPage = 20, maxPages = 8 } = {}) {
-  if (!catIds.length) return { items: [], het: true, raw_ok: true };
+/* Lấy NHIỀU bài theo danh sách id trong MỘT lời gọi (WP hỗ trợ `include=`).
+   Vì sao không gọi getPost từng bài: doscom.vn có 67 bài hướng dẫn — 67 lời gọi phụ là
+   chạm trần subrequest của Cloudflare Functions, mà phần lớn thời gian chỉ để chờ mạng. */
+export async function listPostsByIds(c, ids, { perPage = 50 } = {}) {
   const items = [];
-  let het = true, rawOk = true;
-  for (let page = 1; page <= maxPages; page++) {
+  let rawOk = true;
+  for (let i = 0; i < ids.length; i += perPage) {
+    const lo = ids.slice(i, i + perPage);
     const r = await wpLay(c, "posts", {
-      categories: catIds.join(","),
-      status: "publish",
-      per_page: String(perPage),
-      page: String(page),
-      orderby: "modified",
+      include: lo.join(","),
+      per_page: String(lo.length),
+      orderby: "include",
       _fields: "id,title,link,status,content,categories",
     }, { timeout: 30000 });
-    if (r.status === 400) break;              // page vượt tổng số trang
     if (!r.ok) throw new Error(`WP posts ${r.status}: ${(await r.text()).slice(0, 200)}`);
     const arr = await r.json();
-    if (!Array.isArray(arr) || !arr.length) break;
-    for (const p of arr) {
+    for (const p of Array.isArray(arr) ? arr : []) {
       const bai = chuanHoaBai(p);
       if (!bai.raw) rawOk = false;
       items.push(bai);
     }
-    const tongTrang = Number(r.headers.get("X-WP-TotalPages") || 1);
-    if (page >= tongTrang) break;
-    if (page === maxPages) het = false;       // còn bài chưa quét tới → phải báo, không giấu
   }
-  return { items, het, raw_ok: rawOk };
+  return { items, raw_ok: rawOk };
 }
 
 export async function getPost(c, id) {
