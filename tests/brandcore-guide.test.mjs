@@ -243,7 +243,9 @@ test("target lạ bị chặn thay vì âm thầm quét sản phẩm", async () 
 const APPLY = readFileSync(new URL("../functions/api/products/brandcore-apply.js", import.meta.url), "utf8").split("\r\n").join("\n");
 const SCAN = readFileSync(new URL("../functions/api/products/brandcore-scan.js", import.meta.url), "utf8").split("\r\n").join("\n");
 const WP = readFileSync(new URL("../functions/api/products/_wp-posts.js", import.meta.url), "utf8").split("\r\n").join("\n");
-const UI = readFileSync(new URL("../brandcore-fix.html", import.meta.url), "utf8");
+/* Chuẩn hoá xuống dòng: repo checkout ra CRLF nên mẫu nhiều dòng sẽ trượt nếu không đổi. */
+const UI = readFileSync(new URL("../brandcore-fix.html", import.meta.url), "utf8")
+  .split("\r\n").join("\n");
 
 test("GHI NỘI DUNG mà không đọc được content.raw → TỪ CHỐI", () => {
   assert.match(APPLY, /if \(doiNoiDung && !orig\.raw\)/,
