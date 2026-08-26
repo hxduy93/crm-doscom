@@ -78,6 +78,13 @@
     Bài <b>không nói về NOMA</b> chỉ soát bằng luật quảng cáo chung — <b>không</b> áp định danh/xuất xứ NOMA vào.
   </div>
 
+  <div id="tenSpNote" class="note hide">
+    <b>Quét tên sản phẩm:</b> đọc toàn bộ sản phẩm NOMA trong danh mục bán hàng, đối chiếu với cột
+    <b>“Tên sản phẩm”</b> của hồ sơ rồi thay đúng nguyên văn — cùng một luật đặt tên với bài hướng dẫn.
+    Chỉ ghi trường <code>name</code>: <b>đường dẫn (slug), mô tả, giá, ảnh, danh mục giữ nguyên</b> nên link
+    và quảng cáo đang chạy không gãy. Combo hoặc tên không có mã NOMA thì không có hồ sơ → bỏ qua.
+  </div>
+
   <div class="note">
     Quy trình an toàn: <b>Quét</b> (không tốn AI) → <b>Rà bằng AI</b> để xem bản sửa trước → <b>Áp bản sửa</b> (backup gốc, giữ trạng thái đăng). Có nút Hoàn tác trong báo cáo.
   </div>
@@ -115,6 +122,7 @@
         <select id="loai">
           <option value="product">Sản phẩm (mô tả bán hàng)</option>
           <option value="guide">Bài hướng dẫn sử dụng (blog)</option>
+          <option value="product-name">Tên sản phẩm trong danh mục</option>
         </select>
       </label>
       <button id="btnScan">Quét sản phẩm NOMA</button>
@@ -204,6 +212,7 @@
       <div class="row">
         <button id="btnCheckAll" class="sec">Chọn tất cả có cờ</button>
         <button id="btnRename" class="warn hide">Thay thế tiêu đề (đã chọn)</button>
+        <span id="renameHint" class="muted hide"></span>
         <button id="btnAudit">Rà bằng AI (đã chọn)</button>
       </div>
     </div>
@@ -247,13 +256,21 @@ const site = () => $("#site").value;
    máy chủ mặc định về "product" và người dùng tưởng đã soát bài hướng dẫn mà thực ra chưa. */
 const loai = () => $("#loai").value;
 const laBai = () => loai() === "guide";
+const laTenSp = () => loai() === "product-name";
 const dvi = () => (laBai() ? "bài" : "sản phẩm");
 
 // Đổi loại nội dung → dọn sạch kết quả cũ. Để lại danh sách sản phẩm rồi bấm "Rà bằng AI"
 // là gửi id sản phẩm sang đường bài viết (hoặc ngược lại) — sai bài, sai cả bản sửa.
 $("#loai").onchange = () => {
-  $("#btnScan").textContent = laBai() ? "Quét bài hướng dẫn" : "Quét sản phẩm NOMA";
+  $("#btnScan").textContent = laBai() ? "Quét bài hướng dẫn"
+    : laTenSp() ? "Quét tên sản phẩm" : "Quét sản phẩm NOMA";
   $("#guideNote").classList.toggle("hide", !laBai());
+  $("#tenSpNote").classList.toggle("hide", !laTenSp());
+  /* Phần tên sản phẩm chỉ làm đúng một việc: đối chiếu tên với hồ sơ rồi thay.
+     Rà nội dung bằng AI và soát nội dung thiếu không thuộc đường này. */
+  $("#btnGap").classList.toggle("hide", laTenSp());
+  $("#btnAudit").classList.toggle("hide", laTenSp());
+  $("#btnRename").textContent = laTenSp() ? "Thay thế tên sản phẩm (đã chọn)" : "Thay thế tiêu đề (đã chọn)";
   // Soát tiêu đề chỉ có nghĩa với bài viết — sản phẩm WooCommerce không đi đường này.
   $("#titleCard").classList.toggle("hide", !laBai());
   $("#titleBody").innerHTML = ""; $("#titleInfo").textContent = "";
@@ -276,7 +293,15 @@ $("#btnScan").onclick = async () => {
     const d = await r.json();
     if (!d.ok) throw new Error(d.error || "lỗi quét");
     scanned = d.items || d.products || [];
-    if (laBai()) {
+    if (laTenSp()) {
+      const canhBao = [];
+      if (d.chua_co_ho_so_count) canhBao.push(`${d.chua_co_ho_so_count} SP không dò ra mã NOMA (combo…) — bỏ qua`);
+      if (d.trung_ma_count) canhBao.push(`${d.trung_ma_count} SP trùng mã — không tự đổi tên`);
+      $("#scanInfo").innerHTML =
+        `<b>${d.scanned}</b> sản phẩm NOMA · ${d.doi_ten_count} sản phẩm cần đổi tên theo hồ sơ` +
+        (canhBao.length ? " · " + canhBao.join(" · ") : "");
+      $("#btnRename").classList.toggle("hide", !d.doi_ten_count);
+    } else if (laBai()) {
       const canhBao = [];
       // Nói rõ phần CHƯA soát tới: im lặng cắt bớt sẽ bị hiểu là "cả web đã sạch".
       if (d.con_bai_chua_quet) canhBao.push('<span class="err">còn bài chưa quét tới (chạm trần số trang)</span>');
@@ -318,16 +343,21 @@ function renderList() {
        duyệt đọc bằng mắt, không phải tin suông rồi bấm. */
     const doiTen = p.can_doi_ten
       ? `<div class="cmp" style="margin-top:6px">
-           <div><div class="lab">Tiêu đề hiện tại</div><div class="box old" style="max-height:none">${esc(p.name)}</div></div>
-           <div><div class="lab">Đổi thành (nguyên văn tên trong hồ sơ)</div><div class="box new" style="max-height:none">${esc(p.tieu_de_chuan)}</div></div>
+           <div><div class="lab">${laTenSp() ? "Tên hiện tại" : "Tiêu đề hiện tại"}</div><div class="box old" style="max-height:none">${esc(p.name)}</div></div>
+           <div><div class="lab">Đổi thành (nguyên văn tên trong hồ sơ)</div><div class="box new" style="max-height:none">${esc(p.ten_chuan)}</div></div>
          </div>`
+      : "";
+    // Nhãn riêng cho phần tên sản phẩm: nói rõ vì sao một số dòng không đổi được.
+    const nhanTen = laTenSp()
+      ? (p.sku ? `<span class="pill grey">SKU ${esc(p.sku)}</span>` : `<span class="pill grey">không dò ra mã NOMA — bỏ qua</span>`)
+        + (p.trung_ma ? ` <span class="pill red">trùng mã — sửa tay</span>` : "")
       : "";
     return `<div class="prod">
       <label class="row" style="align-items:flex-start">
         <input type="checkbox" class="pick" data-i="${i}" ${(p.flags.length || p.can_doi_ten) ? "checked" : ""} style="margin-top:3px" />
         <span style="flex:1">
           <h3>${esc(p.name)} <span class="muted">#${p.id}</span></h3>
-          ${nhan}
+          ${nhan}${nhanTen}
           ${flags}
           ${doiTen}
           <a href="${esc(p.permalink)}" target="_blank" class="muted">Mở trên web ↗</a>
@@ -347,24 +377,29 @@ $("#btnCheckAll").onclick = () => {
 $("#btnRename").onclick = async () => {
   const picks = [...document.querySelectorAll(".pick:checked")]
     .map((cb) => scanned[+cb.dataset.i])
-    .filter((p) => p && p.can_doi_ten && p.tieu_de_chuan);
+    .filter((p) => p && p.can_doi_ten && p.ten_chuan);
   if (!picks.length) {
     return alert("Không có bài nào cần đổi tên trong nhóm đang chọn.\n\n" +
       "Bài trùng mã sản phẩm bị loại khỏi đây — phải gộp/xoá bớt trước.");
   }
   // Hai bài cùng nhận một tiêu đề trong một lượt = tự tạo trùng lặp mới.
   const dem = {};
-  for (const p of picks) dem[p.tieu_de_chuan] = (dem[p.tieu_de_chuan] || 0) + 1;
+  for (const p of picks) dem[p.ten_chuan] = (dem[p.ten_chuan] || 0) + 1;
   const trung = Object.keys(dem).filter((t) => dem[t] > 1);
   if (trung.length) return alert("Nhiều bài đang nhận CÙNG một tiêu đề:\n\n" + trung.join("\n"));
 
-  if (!confirm(`Đổi tiêu đề ${picks.length} bài trên ${site()} theo đúng tên trong hồ sơ?\n(có sao lưu, hoàn tác được)`)) return;
+  const dv = laTenSp() ? "sản phẩm" : "bài";
+  if (!confirm(`Đổi tên ${picks.length} ${dv} trên ${site()} theo đúng tên trong hồ sơ?\n(có sao lưu, hoàn tác được)`)) return;
   const btn = $("#btnRename");
   btn.disabled = true; btn.textContent = "Đang đổi tên...";
   try {
     const r = await fetch("/api/products/brandcore-apply", {
       method: "POST", headers: headers(true), credentials: "same-origin",
-      body: JSON.stringify({ site: site(), target: loai(), fixes: picks.map((p) => ({ id: p.id, title: p.tieu_de_chuan })) }),
+      /* Bài viết đổi `title`, sản phẩm WooCommerce đổi `name` — hai nguồn, hai trường. */
+      body: JSON.stringify({
+        site: site(), target: loai(),
+        fixes: picks.map((p) => (laTenSp() ? { id: p.id, name: p.ten_chuan } : { id: p.id, title: p.ten_chuan })),
+      }),
     });
     const d = await r.json();
     if (!d.ok) throw new Error(d.error || "lỗi đổi tên");
@@ -372,7 +407,7 @@ $("#btnRename").onclick = async () => {
     for (const it of d.items || []) {
       if (!it.applied) continue;
       const row = scanned.find((x) => x.id === it.id);
-      if (row) { row.name = row.tieu_de_chuan; row.can_doi_ten = false; }
+      if (row) { row.name = row.ten_chuan; row.can_doi_ten = false; }
     }
     renderList();
     $("#btnRename").classList.toggle("hide", !scanned.some((x) => x.can_doi_ten));
@@ -380,7 +415,7 @@ $("#btnRename").onclick = async () => {
     $("#reportCard").classList.remove("hide");
     $("#reportCard").scrollIntoView({ behavior: "smooth" });
   } catch (e) { alert(e.message); }
-  btn.disabled = false; btn.textContent = "Thay thế tiêu đề (đã chọn)";
+  btn.disabled = false; btn.textContent = laTenSp() ? "Thay thế tên sản phẩm (đã chọn)" : "Thay thế tiêu đề (đã chọn)";
 };
 
 // ---------- NẤC 1b: RÀ BẰNG AI (xem trước) ----------

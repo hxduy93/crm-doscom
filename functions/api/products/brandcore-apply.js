@@ -9,6 +9,9 @@
 //   Ghi `content` bị TỪ CHỐI nếu không đọc được `content.raw` của bài; vá `title` thì
 //   không cần raw vì không đụng nội dung (xem khối cuối file).
 //
+// Với target "product-name": mỗi phần tử fixes là { id, name } — đổi TÊN sản phẩm
+//   trong danh mục theo hồ sơ. KHÔNG đụng slug/đường dẫn, mô tả, giá, ảnh.
+//
 // Body (áp bản sửa) — HAI kiểu, mỗi phần tử fixes dùng MỘT trong hai:
 //   a) { id, violations: [{original, fixed}] }  → thay chuỗi nguyên văn (sửa từ cấm)
 //   b) { id, description, short_description? }  → ghi thẳng nội dung mới (bổ sung mục thiếu)
@@ -59,6 +62,8 @@ export async function onRequestPost(context) {
 
   // Bài hướng dẫn ghi qua WordPress REST — đường riêng ở cuối file.
   if (target === "guide") return await apDungBaiHuongDan({ env, c, site, body });
+  // Đổi TÊN sản phẩm trong danh mục — cũng ở cuối file.
+  if (target === "product-name") return await apDungTenSanPham({ env, c, site, body });
   if (target !== "product") return json({ ok: false, error: `target không hợp lệ: ${target}` }, 400);
 
   // ── Hoàn tác ──
@@ -344,6 +349,103 @@ async function apDungBaiHuongDan({ env, c, site, body }) {
   };
   if (env.INVENTORY) {
     await env.INVENTORY.put(KV_REPORT_POST(site, ts), JSON.stringify(report), { expirationTtl: 90 * 86400 }).catch(() => {});
+  }
+  return json(report);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ĐỔI TÊN SẢN PHẨM trong danh mục (target "product-name").
+
+   Chỉ gửi trường `name` → WooCommerce giữ nguyên slug, mô tả, giá, ảnh, danh mục.
+   Slug KHÔNG đổi theo tên (WC chỉ sinh slug lúc tạo mới), nên URL sản phẩm và mọi liên
+   kết/quảng cáo đang chạy không gãy. Sao lưu tên cũ để hoàn tác được như mọi đường ghi
+   khác trong menu này.
+   ══════════════════════════════════════════════════════════════════════════════ */
+const KV_BACKUP_TEN = (site, id, ts) => `bcbackup:${site}:ten:${id}:${ts}`;
+const KV_LATEST_TEN = (site, id) => `bcbackup_last:${site}:ten:${id}`;
+
+async function apDungTenSanPham({ env, c, site, body }) {
+  // ── Hoàn tác ──
+  if (String(body.mode) === "revert") {
+    const id = body.id;
+    if (!id) return json({ ok: false, error: "Thiếu id" }, 400);
+    if (!env.INVENTORY) return json({ ok: false, error: "Không có KV backup — không hoàn tác được" }, 400);
+    const key = body.backup_key || await env.INVENTORY.get(KV_LATEST_TEN(site, id)).catch(() => null);
+    if (!key) return json({ ok: false, error: "Không tìm thấy backup tên cho sản phẩm này" }, 404);
+    const raw = await env.INVENTORY.get(key).catch(() => null);
+    if (!raw) return json({ ok: false, error: "Backup đã hết hạn/không tồn tại" }, 404);
+    let bak;
+    try { bak = JSON.parse(raw); } catch { return json({ ok: false, error: "Backup hỏng" }, 500); }
+    if (typeof bak.name !== "string" || !bak.name) return json({ ok: false, error: "Backup không có tên cũ" }, 500);
+    try {
+      await updateProduct(c, id, { name: bak.name });
+      return json({ ok: true, reverted: true, id, restored_from: key });
+    } catch (e) {
+      return json({ ok: false, error: String(e.message || e) }, 502);
+    }
+  }
+
+  const fixes = Array.isArray(body.fixes) ? body.fixes.slice(0, 30) : [];
+  if (!fixes.length) return json({ ok: false, error: "Thiếu danh sách fixes" }, 400);
+
+  const ts = Date.now();
+  const items = [];
+  const summary = {};
+  let applied = 0, skipped = 0, failed = 0, fixedTotal = 0;
+
+  for (const fx of fixes) {
+    const id = fx.id;
+    const tenMoi = typeof fx.name === "string" ? fx.name.trim() : "";
+    if (!id || !tenMoi) {
+      skipped++; items.push({ id: id || null, applied: false, skipped: "thiếu id hoặc tên mới" }); continue;
+    }
+
+    let orig;
+    try { orig = await getProduct(c, id); }
+    catch (e) { failed++; items.push({ id, applied: false, error: `đọc SP lỗi: ${String(e.message || e)}` }); continue; }
+
+    if (tenMoi === (orig.name || "")) {
+      skipped++;
+      items.push({ id, name: orig.name, permalink: orig.permalink, applied: false, skipped: "tên không đổi" });
+      continue;
+    }
+
+    let backupKey = null;
+    if (env.INVENTORY) {
+      backupKey = KV_BACKUP_TEN(site, id, ts);
+      await env.INVENTORY.put(backupKey, JSON.stringify({ id, name: orig.name || "", savedAt: ts }),
+        { expirationTtl: 90 * 86400 }).catch(() => {});
+      await env.INVENTORY.put(KV_LATEST_TEN(site, id), backupKey, { expirationTtl: 90 * 86400 }).catch(() => {});
+    }
+
+    try {
+      // CHỈ gửi name → không đụng slug, mô tả, giá, ảnh, danh mục, trạng thái.
+      await updateProduct(c, id, { name: tenMoi });
+      applied++; fixedTotal++;
+      summary["Đổi tên theo hồ sơ"] = (summary["Đổi tên theo hồ sơ"] || 0) + 1;
+      items.push({
+        id, name: tenMoi, permalink: orig.permalink, applied: true,
+        ten_cu: orig.name,
+        violations_fixed: ["Đổi tên theo hồ sơ"],
+        residual_flags: scanForbidden(tenMoi, site === "nomaauto" ? NOMA_FORBIDDEN_EN : NOMA_FORBIDDEN),
+        backup_key: backupKey,
+      });
+    } catch (e) {
+      failed++;
+      items.push({ id, name: orig.name, permalink: orig.permalink, applied: false, error: String(e.message || e), backup_key: backupKey });
+    }
+  }
+
+  const report = {
+    ok: true, site, target: "product-name",
+    applied, skipped, failed,
+    fixed_total: fixedTotal,
+    summary_by_type: summary,
+    items,
+    generated_at: new Date(ts).toISOString(),
+  };
+  if (env.INVENTORY) {
+    await env.INVENTORY.put(KV_REPORT(site, ts), JSON.stringify(report), { expirationTtl: 90 * 86400 }).catch(() => {});
   }
   return json(report);
 }

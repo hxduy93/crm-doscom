@@ -578,7 +578,7 @@ test("giao diện chặn vá cùng một tiêu đề cho nhiều bài trong mộ
 test("quét trả sẵn tiêu đề chuẩn dựng từ hồ sơ, không nhờ AI", async () => {
   const d = await soatQuet();
   const r = d.items.find((x) => x.id === 1);
-  assert.equal(r.tieu_de_chuan, "Hướng dẫn sử dụng NOMA 890 - Dung dịch xịt phủ bóng, làm mới sơn xe",
+  assert.equal(r.ten_chuan, "Hướng dẫn sử dụng NOMA 890 - Dung dịch xịt phủ bóng, làm mới sơn xe",
     "phải là tên sản phẩm nguyên văn trong hồ sơ, không cắt gọt, không thêm đuôi");
   assert.equal(r.can_doi_ten, true);
   assert.equal(d.doi_ten_count, 1);
@@ -593,14 +593,14 @@ test("bài đã đúng tên rồi thì KHÔNG rủ đổi nữa", async () => {
 test("bài không dò ra mã NOMA thì không có tên chuẩn để thay", async () => {
   const d = await soatQuet();
   const r = d.items.find((x) => x.id === 3);
-  assert.equal(r.tieu_de_chuan, null, "bài hướng dẫn thiết bị Doscom không có hồ sơ NOMA");
+  assert.equal(r.ten_chuan, null, "bài hướng dẫn thiết bị Doscom không có hồ sơ NOMA");
   assert.equal(r.can_doi_ten, false);
 });
 
 test("giao diện đổi tên bằng nút THAY THẾ, gửi thẳng tiêu đề chuẩn", () => {
   assert.match(UI, /id="btnRename"/, "thiếu nút thay thế tiêu đề");
-  assert.match(UI, /fixes: picks\.map\(\(p\) => \(\{ id: p\.id, title: p\.tieu_de_chuan \}\)\)/,
-    "phải gửi thẳng tiêu đề chuẩn từ hồ sơ, không qua AI");
+  assert.match(UI, /laTenSp\(\) \? \{ id: p\.id, name: p\.ten_chuan \} : \{ id: p\.id, title: p\.ten_chuan \}/,
+    "phải gửi thẳng tên chuẩn từ hồ sơ, không qua AI — bài đổi `title`, sản phẩm đổi `name`");
   // Nút AI chỉ còn dành cho bài MẤT tiêu đề hẳn (không suy ra được từ hồ sơ).
   assert.match(UI, /\.filter\(\(i\) => titleRows\[i\] && titleRows\[i\]\.tieu_de_rong\)/);
 });

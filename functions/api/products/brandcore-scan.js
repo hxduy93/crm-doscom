@@ -4,7 +4,9 @@
 //
 // Body:
 //   { site, target } — `target` chọn LOẠI nội dung muốn soát (mặc định "product"):
-//     · "product" : sản phẩm WooCommerce (mô tả bán hàng)  → _wc.js
+//     · "product"      : sản phẩm WooCommerce (mô tả bán hàng)  → _wc.js
+//     · "product-name" : TÊN sản phẩm trong danh mục — đối chiếu với cột "Tên sản phẩm"
+//                        của hồ sơ rồi thay đúng nguyên văn. Chỉ có mode "list".
 //     · "guide"   : BÀI VIẾT WordPress → _wp-posts.js. Phạm vi = ĐÚNG mục "Hướng dẫn
 //                   sử dụng" của menu Kiến thức (noma.vn /danh-muc/huong-dan-su-dung,
 //                   doscom.vn /category/huong-dan-su-dung) — cố ý BỎ bài SEO ở các danh
@@ -179,6 +181,11 @@ export async function onRequestPost({ request, env }) {
   // Bài hướng dẫn đi đường riêng (WordPress posts) — xem khối cuối file.
   if (target === "guide") {
     try { return await soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }); }
+    catch (e) { return json({ ok: false, error: String(e.message || e) }, 502); }
+  }
+  // Soát TÊN sản phẩm trong danh mục — xem khối cuối file.
+  if (target === "product-name") {
+    try { return await soatTenSanPham({ c, site, mode, skuSpecs }); }
     catch (e) { return json({ ok: false, error: String(e.message || e) }, 502); }
   }
   if (target !== "product") return json({ ok: false, error: `target không hợp lệ: ${target}` }, 400);
@@ -518,7 +525,7 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
         la_noma: laNoma, raw: p.raw,
         tieu_de_rong: p.tieu_de_rong,
         sku: ma,
-        tieu_de_chuan: chuan,
+        ten_chuan: chuan,
         // Có tên chuẩn, đang lệch, và không trùng mã → thay được ngay bằng một nút.
         can_doi_ten: Boolean(chuan && !giongTieuDe(p.name, chuan) && !trungMa),
         trung_ma: trungMa,
@@ -932,4 +939,57 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs }) {
   }
 
   return json({ ok: false, error: `mode không hợp lệ: ${mode}` }, 400);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   SOÁT TÊN SẢN PHẨM trong danh mục bán hàng (target "product-name").
+
+   Cùng một luật đặt tên với bài hướng dẫn: nguồn duy nhất là cột "Tên sản phẩm" của hồ
+   sơ. Trên web tên đang mỗi nơi một kiểu — "Dung Dịch Tẩy Ố Kính Chuyên Sâu - Noma 911"
+   (đảo ngược), "NOMA 250 - … NGUYÊN BẢN" (thêm đuôi), "NOMA 890 - DUNG DỊCH XỊT  BÓNG"
+   (thiếu chữ "phủ", thừa dấu cách) — nên khách, quảng cáo và bài viết gọi ba tên khác
+   nhau cho một sản phẩm.
+
+   KHÔNG đụng slug/đường dẫn: WooCommerce giữ nguyên slug khi đổi tên, nên URL và mọi
+   liên kết đang chạy vẫn sống. Combo (không có mã NOMA trong tên) thì không có hồ sơ →
+   bỏ qua, không đoán bừa.
+   ══════════════════════════════════════════════════════════════════════════════ */
+async function soatTenSanPham({ c, site, mode, skuSpecs }) {
+  if (mode !== "list") return json({ ok: false, error: `target 'product-name' chỉ có mode "list"` }, 400);
+
+  const { products, scanned } = await listNomaProducts(c, site);
+
+  // Hai sản phẩm cùng mã thì không tự đổi — đổi cả hai về một tên là tạo trùng lặp mới.
+  const demSku = new Map();
+  for (const p of products) {
+    const ma = findSkuCode(p.name, skuSpecs);
+    if (ma) demSku.set(ma, (demSku.get(ma) || 0) + 1);
+  }
+
+  const items = products.map((p) => {
+    const ma = findSkuCode(p.name, skuSpecs);
+    const chuan = ma ? tenChuanSku(ma, skuSpecs) : null;
+    const trungMa = ma ? (demSku.get(ma) || 0) > 1 : false;
+    return {
+      id: p.id, name: p.name, permalink: p.permalink, status: p.status,
+      sku: ma,
+      ten_chuan: chuan,
+      can_doi_ten: Boolean(chuan && !giongTieuDe(p.name, chuan) && !trungMa),
+      trung_ma: trungMa,
+      // Không dò ra mã: combo, hoặc tên thiếu hẳn mã sản phẩm — nói rõ để còn sửa tay.
+      chua_co_ho_so: !ma,
+      flags: p.flags,
+    };
+  });
+
+  return json({
+    ok: true, site, target: "product-name",
+    scanned: items.length,
+    da_quet: scanned,
+    doi_ten_count: items.filter((x) => x.can_doi_ten).length,
+    trung_ma_count: items.filter((x) => x.trung_ma).length,
+    chua_co_ho_so_count: items.filter((x) => x.chua_co_ho_so).length,
+    flagged_count: items.filter((x) => x.flags.length).length,
+    items,
+  });
 }
