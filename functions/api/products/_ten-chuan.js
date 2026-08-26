@@ -69,6 +69,12 @@ export function chuanHoaHoaThuong(raw, { titleCase = false } = {}) {
   return out;
 }
 
+/* Dấu ngăn giữa mã và phần mô tả. ĐỔI MỘT CHỖ NÀY là đổi toàn bộ tên chuẩn.
+   Đang để gạch ngắn "-" theo hồ sơ (15/17 mã viết "-"). Web hiện dùng gạch dài "–" ở
+   CẢ 16 sản phẩm noma.vn lẫn 16 sản phẩm nomaauto.us, nên lần quét đầu sẽ rủ đổi hết —
+   phần lớn chỉ khác đúng ký tự này. Muốn giữ gạch dài thì sửa thành "–". */
+const GACH_NOI = "-";
+
 /* Tên chuẩn từ một tên thô bất kỳ (hồ sơ, hoặc tên đang có trên web).
    Khuôn: "NOMA <mã> - <mô tả>". Hồ sơ viết lẫn "Noma 620 -", "NOMA 998 –", "NOMA 130  -"
    nên phần đầu bị ép về một dạng trước, phần mô tả mới đem chuẩn hoá hoa/thường
@@ -79,7 +85,7 @@ export function chuanHoaTen(raw, { en = false } = {}) {
   const m = s.match(/^noma\s*(\d{2,4})\s*[-–—:]*\s*/i);
   if (!m) return chuanHoaHoaThuong(s, { titleCase: en });
   const duoi = chuanHoaHoaThuong(s.slice(m[0].length), { titleCase: en });
-  return duoi ? `NOMA ${m[1]} - ${duoi}` : `NOMA ${m[1]}`;
+  return duoi ? `NOMA ${m[1]} ${GACH_NOI} ${duoi}` : `NOMA ${m[1]}`;
 }
 
 // Tên chuẩn TIẾNG VIỆT của một mã SKU — cột "Tên sản phẩm" của hồ sơ, đã chuẩn hoá.
