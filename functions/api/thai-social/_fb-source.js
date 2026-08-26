@@ -12,7 +12,8 @@
 //
 // Token đọc: KHÁC token đăng bài của fanpage Thái.
 //   FB_PAGE_READ_TOKEN (nếu đặt) → FB_ACCESS_TOKEN (token quảng cáo đang có sẵn trong CRM).
-// Token phải là của người/hệ thống có quyền trên chính fanpage Việt đó.
+// Đây là token NGƯỜI DÙNG của một quản trị viên; từ nó lấy ra page token của từng fanpage
+// (xem khối ngay dưới — Facebook bắt buộc page token mới đọc được bài).
 
 const API = "v21.0";
 const GRAPH = `https://graph.facebook.com/${API}`;
@@ -23,6 +24,71 @@ const POST_FIELDS =
 
 export function readToken(env) {
   return (env && (env.FB_PAGE_READ_TOKEN || env.FB_ACCESS_TOKEN)) || "";
+}
+
+/* ĐỌC BÀI PHẢI DÙNG PAGE ACCESS TOKEN, KHÔNG PHẢI TOKEN NGƯỜI DÙNG.
+
+   Đo thật 26/08/2026 với token của quản trị viên có ĐỦ quyền (pages_read_engagement,
+   pages_read_user_content, pages_manage_posts): gọi /{page_id}/posts bằng token NGƯỜI DÙNG
+   trả 190 / subcode 2069032 — "Lệnh gọi này cần mã truy cập Trang đối với trải nghiệm Trang
+   mới". Đủ quyền vẫn không đọc được; Facebook bắt buộc token của chính Trang.
+
+   Nên đường đi là: token người dùng → /me/accounts lấy PAGE TOKEN của fanpage nguồn → mọi
+   lời gọi đọc bài dùng page token đó. Token người dùng chỉ còn dùng để lấy danh sách trang. */
+
+// Danh sách fanpage token này quản trị. KHÔNG trả access_token ra ngoài — xem sourcePages().
+async function fetchAccounts(token, withToken) {
+  const fields = withToken ? "id,name,category,access_token" : "id,name,category";
+  const out = [];
+  let url = `${GRAPH}/me/accounts?fields=${fields}&limit=100&access_token=${encodeURIComponent(token)}`;
+  for (let page = 0; page < 3 && url; page++) {
+    const res = await fetch(url, { signal: AbortSignal.timeout(25000) });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data || data.error) {
+      const e = (data && data.error) || {};
+      const err = new Error(e.message || `Graph API HTTP ${res.status}`);
+      err.kind = "graph";
+      throw err;
+    }
+    out.push(...(data.data || []));
+    url = (data.paging && data.paging.next) || null;
+  }
+  return out;
+}
+
+/* Danh sách fanpage cho ô chọn "fanpage nguồn". Không bao giờ kèm token.
+   Cache KV 6 giờ: danh sách gần như không đổi, mà mỗi lần mở trang gọi lại Facebook là phí. */
+export async function sourcePages(env) {
+  const token = readToken(env);
+  if (!token) {
+    throw Object.assign(new Error("Chưa có token đọc fanpage. Đặt secret FB_PAGE_READ_TOKEN."), { kind: "no_token" });
+  }
+  const KEY = "thai_repost:src_pages:v1";
+  if (env.INVENTORY) {
+    try {
+      const raw = await env.INVENTORY.get(KEY);
+      if (raw) return JSON.parse(raw);
+    } catch { /* cache hỏng thì hỏi thẳng Facebook */ }
+  }
+  const rows = (await fetchAccounts(token, false))
+    .map((p) => ({ id: String(p.id), name: p.name || String(p.id), category: p.category || "" }))
+    .sort((a, b) => a.name.localeCompare(b.name, "vi"));
+  if (env.INVENTORY) {
+    try { await env.INVENTORY.put(KEY, JSON.stringify(rows), { expirationTtl: 6 * 3600 }); } catch {}
+  }
+  return rows;
+}
+
+/* Page token của một fanpage nguồn. Trả null nếu token đang dùng vốn đã LÀ page token
+   (khi đó /me/accounts không gọi được) — chỗ gọi cứ dùng tiếp token gốc. */
+async function pageAccessToken(env, pageId) {
+  const token = readToken(env);
+  if (!token || !pageId) return null;
+  try {
+    const rows = await fetchAccounts(token, true);
+    const hit = rows.find((p) => String(p.id) === String(pageId));
+    return (hit && hit.access_token) || null;
+  } catch { return null; }
 }
 
 /* Bóc link thành mảnh nhận dạng được. KHÔNG gọi mạng — tách riêng để test được.
@@ -188,25 +254,33 @@ export async function fetchSourcePost(env, { url, srcPageId }) {
       { kind: "bad_url" });
   }
 
-  const pageId = srcPageId || await pageRefToId(parsed.pageRef, token);
+  /* Fanpage nguồn: người dùng chọn ở ô "Fanpage nguồn" là chắc nhất. Không chọn thì thử
+     đoán từ đường dẫn — id số thì lấy luôn, tên trang thì hỏi Graph (có thể không ra với
+     trải nghiệm Trang mới, nên đây chỉ là tiện thêm, không phải đường chính). */
+  const pageId = srcPageId || (/^\d+$/.test(parsed.pageRef || "") ? parsed.pageRef : null)
+                 || await pageRefToId(parsed.pageRef, token);
+
+  // Đây mới là token đọc được bài. Thiếu page token thì vẫn thử token gốc — nếu token đang
+  // dùng vốn đã là page token thì nó chạy, còn không Facebook sẽ nói rõ và ta dịch lại lỗi.
+  const tok = (await pageAccessToken(env, pageId)) || token;
 
   let node = null;
 
   if (parsed.fullId) {
-    node = await graphGet(parsed.fullId, { fields: POST_FIELDS }, token);
+    node = await graphGet(parsed.fullId, { fields: POST_FIELDS }, tok);
   } else if (parsed.postId) {
     // id bài đầy đủ là {page_id}_{post_id}; thiếu page_id thì thử luôn id trần.
     const candidates = pageId ? [`${pageId}_${parsed.postId}`, parsed.postId] : [parsed.postId];
     let lastErr = null;
     for (const id of candidates) {
-      try { node = await graphGet(id, { fields: POST_FIELDS }, token); break; }
+      try { node = await graphGet(id, { fields: POST_FIELDS }, tok); break; }
       catch (e) { lastErr = e; }
     }
     if (!node) throw wrapNotFound(lastErr);
   } else if (parsed.photoId) {
     // Node ảnh: caption nằm ở `name`, ảnh ở `images[0].source`.
     try {
-      const ph = await graphGet(parsed.photoId, { fields: "id,name,created_time,link,images,from{id,name}" }, token);
+      const ph = await graphGet(parsed.photoId, { fields: "id,name,created_time,link,images,from{id,name}" }, tok);
       node = {
         id: ph.id, message: ph.name || "", created_time: ph.created_time,
         permalink_url: ph.link, from: ph.from,
@@ -216,11 +290,11 @@ export async function fetchSourcePost(env, { url, srcPageId }) {
   } else if (parsed.pfbid) {
     if (!pageId) {
       throw Object.assign(
-        new Error("Link dạng pfbid không tra thẳng được. Điền thêm ID fanpage nguồn (hoặc dán link có "
-                + "tên fanpage trong đường dẫn) để hệ thống dò trong các bài gần đây."),
+        new Error("Link dạng pfbid không tra thẳng được. Chọn Fanpage nguồn ở ô bên trái để hệ thống "
+                + "dò trong các bài gần đây của đúng trang đó."),
         { kind: "need_page" });
     }
-    node = await findByPfbid(pageId, parsed.pfbid, token);
+    node = await findByPfbid(pageId, parsed.pfbid, tok);
     if (!node) {
       throw Object.assign(
         new Error("Không tìm thấy bài này trong 100 bài gần nhất của fanpage. Bài quá cũ, hoặc token "
@@ -245,6 +319,15 @@ export async function fetchSourcePost(env, { url, srcPageId }) {
 
 function wrapNotFound(e) {
   const msg = String((e && e.message) || "");
+  /* "cần mã truy cập Trang" (code 190 / subcode 2069032) không phải thiếu quyền: nghĩa là
+     lời gọi đang chạy bằng token NGƯỜI DÙNG, mà fanpage đó ở trải nghiệm Trang mới nên
+     Facebook chỉ chấp nhận page token. Xảy ra khi không biết fanpage nguồn là trang nào →
+     bảo người dùng chọn ở ô Fanpage nguồn, đừng bắt họ đi xin thêm quyền vô ích. */
+  if (/mã truy cập Trang|Page access token|2069032/i.test(msg)) {
+    return Object.assign(
+      new Error("Facebook đòi mã truy cập của chính Trang. Chọn đúng Fanpage nguồn ở ô bên trái rồi bấm lại."),
+      { kind: "need_page" });
+  }
   const denied = /permission|not have|OAuth|access token/i.test(msg);
   const err = new Error(denied
     ? `Token không có quyền đọc bài này (${msg}). Dùng token của người quản trị chính fanpage đó.`

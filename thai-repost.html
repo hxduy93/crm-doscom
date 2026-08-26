@@ -173,8 +173,9 @@
             </select>
             <span class="hint">Ảnh không có chữ thì luôn giữ nguyên, không đưa qua AI.</span>
           </label>
-          <label class="f">ID fanpage nguồn <span class="hint">chỉ cần khi link dạng pfbid…</span>
-            <input id="inSrcPage" placeholder="vd 1024587xxxxxxx"/>
+          <label class="f">Fanpage nguồn <span class="hint">trang đang chứa bài gốc</span>
+            <select id="selSrcPage"><option value="">— Tự nhận từ link —</option></select>
+            <span class="hint">Link dạng <b>pfbid…</b> thì bắt buộc chọn đúng trang ở đây.</span>
           </label>
           <button class="btn btn-p" id="btnGo">🌐 Dịch bài</button>
           <button class="btn btn-g btn-sm" id="btnForce">↻ Dịch lại <span class="hint">bỏ qua bản đã lưu</span></button>
@@ -249,7 +250,7 @@ const ERR = {
 };
 const errText = (e) => esc((ERR[e.message] || e.message) + (e.detail ? ` — ${e.detail}` : ""));
 
-let PAGES = [];
+let PAGES = [], SRC_PAGES = [];
 const POSTS = {};
 
 /* ── Nạp fanpage ─────────────────────────────────────────────── */
@@ -264,6 +265,20 @@ async function boot() {
   } catch (e) {
     banner("Không nạp được danh sách fanpage: " + errText(e), "bad");
   }
+
+  /* Danh sách fanpage NGUỒN hỏi thẳng Facebook bằng token đọc. Hỏng cái này thì phần dịch
+     vẫn chạy được với link có id số, nên chỉ ghi chú vào ô chọn chứ không chặn cả trang. */
+  try {
+    const d = await api("/api/thai-social/repost/source-pages");
+    SRC_PAGES = d.pages || [];
+    $("#selSrcPage").innerHTML = `<option value="">— Tự nhận từ link —</option>`
+      + SRC_PAGES.map((p) => `<option value="${esc(p.id)}">${esc(p.name)}${p.category ? " · " + esc(p.category) : ""}</option>`).join("");
+  } catch (e) {
+    $("#selSrcPage").innerHTML = `<option value="">— không lấy được danh sách trang —</option>`;
+    banner("Không lấy được danh sách fanpage nguồn: " + errText(e)
+      + " Kiểm secret FB_PAGE_READ_TOKEN.", "warn");
+  }
+
   loadQueue();
 }
 
@@ -283,7 +298,7 @@ async function run(force) {
       body: JSON.stringify({
         url, page_id: pageId,
         image_mode: $("#selMode").value,
-        src_page_id: $("#inSrcPage").value.trim() || null,
+        src_page_id: $("#selSrcPage").value || null,
         force: !!force,
       }),
     });
@@ -294,7 +309,8 @@ async function run(force) {
     else banner(`Đã dịch xong. Chi phí AI lần này: ${(d.cost_usd || 0).toFixed(4)} USD.`, "");
   } catch (e) {
     if (e.kind === "need_page") {
-      banner(errText(e) + " Điền ô <b>ID fanpage nguồn</b> rồi bấm lại.", "warn");
+      banner(errText(e) + " Chọn ở ô <b>Fanpage nguồn</b> rồi bấm lại.", "warn");
+      $("#selSrcPage").focus();
     } else {
       banner(errText(e), "bad");
     }

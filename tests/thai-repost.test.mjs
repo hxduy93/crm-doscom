@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { parseFbPostUrl, collectImages, readToken } from "../functions/api/thai-social/_fb-source.js";
+import { parseFbPostUrl, collectImages, readToken, sourcePages } from "../functions/api/thai-social/_fb-source.js";
 import {
   RSTATUS, RPUBLISHABLE, checkScheduledAt, imageIdentity, imageKey, publicRepost, fullMessage,
   SCHEDULE_MIN_LEAD,
@@ -67,6 +67,43 @@ test("gom ảnh: album lấy hết ảnh con, bài trơn rơi về full_picture"
   assert.deepEqual(collectImages(album), ["https://x/1.jpg", "https://x/2.jpg"]);
   assert.deepEqual(collectImages({ full_picture: "https://x/only.jpg" }), ["https://x/only.jpg"]);
   assert.deepEqual(collectImages({}), []);
+});
+
+/* ── 1b. Danh sách fanpage nguồn ────────────────────────────────────────────
+   Đo thật 26/08/2026: token NGƯỜI DÙNG có đủ quyền vẫn KHÔNG đọc được /{page}/posts
+   (190 / 2069032 "cần mã truy cập Trang" với trải nghiệm Trang mới). Nên phải đi qua
+   /me/accounts lấy page token. Danh sách trang đưa ra UI thì tuyệt đối không kèm token. */
+
+test("danh sách fanpage nguồn KHÔNG kèm access_token, và xếp theo tên", async () => {
+  const goc = globalThis.fetch;
+  let calledUrl = "";
+  globalThis.fetch = async (url) => {
+    calledUrl = String(url);
+    return new Response(JSON.stringify({ data: [
+      { id: "2", name: "Doscom Thailand", category: "Công nghệ", access_token: "PAGE-SECRET-2" },
+      { id: "1", name: "Camera 4G", category: "Camera", access_token: "PAGE-SECRET-1" },
+    ] }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  try {
+    const rows = await sourcePages({ FB_PAGE_READ_TOKEN: "user-token" });
+    assert.deepEqual(rows.map((r) => r.name), ["Camera 4G", "Doscom Thailand"]);
+    assert.doesNotMatch(JSON.stringify(rows), /PAGE-SECRET/, "page token lọt ra client là đăng bài hộ được");
+    assert.ok(!calledUrl.includes("access_token=user-token&") || !calledUrl.includes("fields=id,name,category,access_token"),
+      "lấy danh sách cho UI thì không xin luôn access_token");
+    assert.match(calledUrl, /fields=id,name,category&/, "chỉ xin đúng 3 trường");
+  } finally { globalThis.fetch = goc; }
+});
+
+test("thiếu token đọc thì nói rõ, không trả danh sách rỗng như thể không có trang nào", async () => {
+  await assert.rejects(() => sourcePages({}), (e) => e.kind === "no_token");
+});
+
+test("lỗi 'cần mã truy cập Trang' được dịch thành: chọn fanpage nguồn", () => {
+  const src = read("../functions/api/thai-social/_fb-source.js");
+  assert.match(src, /2069032/, "phải nhận ra đúng subcode này");
+  assert.match(src, /kind: "need_page"/);
+  // Và đường chính phải là lấy page token, không phải dùng thẳng token người dùng.
+  assert.match(src, /pageAccessToken\(env, pageId\)/);
 });
 
 /* ── 2. Giờ hẹn đăng ────────────────────────────────────────────────────────
@@ -272,6 +309,13 @@ test("menu mới được nối đủ 4 chỗ trong index.html", () => {
   assert.match(html, /id="view-thai-repost"/, "thiếu khung view");
   assert.match(html, /'thai-repost':'Dịch bài sang Thái'/, "thiếu tiêu đề");
   assert.match(html, /lazyFrame\('thai-repost','thai-repost-frame','\/thai-repost'\)/, "thiếu nạp iframe");
+});
+
+test("fanpage nguồn là ô CHỌN, không bắt người dùng tự gõ ID", () => {
+  const page = read("../thai-repost.html");
+  assert.match(page, /<select id="selSrcPage">/);
+  assert.match(page, /\/api\/thai-social\/repost\/source-pages/);
+  assert.doesNotMatch(page, /inSrcPage/, "ô nhập ID cũ phải bỏ hẳn");
 });
 
 test("trang thai-repost.html nằm trong danh sách copy khi deploy", () => {
