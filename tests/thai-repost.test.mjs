@@ -367,6 +367,19 @@ test("menu mới được nối đủ 4 chỗ trong index.html", () => {
   assert.match(html, /lazyFrame\('thai-repost','thai-repost-frame','\/thai-repost'\)/, "thiếu nạp iframe");
 });
 
+test("người duyệt sửa được caption VÀ hashtag trước khi đăng", () => {
+  const page = read("../thai-repost.html");
+  assert.match(page, /data-act="edit"/, "thiếu nút sửa caption");
+  assert.match(page, /data-act="edit-tags"/, "thiếu nút sửa hashtag");
+  // Bài đã đăng / đã hẹn giờ thì KHÔNG hiện nút sửa nào — chốt ở biến editable.
+  assert.match(page, /const editable = p\.status === "pending_review" \|\| p\.status === "edited"/);
+
+  // Backend nhận đúng hai trường đó, và mảng rỗng = bỏ hết hashtag (không phải "bỏ qua").
+  const api = read("../functions/api/thai-social/repost/queue/[id].js");
+  assert.match(api, /b\.caption_th/);
+  assert.match(api, /Array\.isArray\(b\.hashtags\)/);
+});
+
 test("fanpage nguồn là ô CHỌN, không bắt người dùng tự gõ ID", () => {
   const page = read("../thai-repost.html");
   assert.match(page, /<select id="selSrcPage">/);
@@ -385,4 +398,135 @@ test("có migration cho bảng bài dịch lại", () => {
   assert.match(sql, /scheduled_at/);
   // Dùng chung bảng fanpage của tính năng cũ, không nhân bản danh sách fanpage.
   assert.match(sql, /REFERENCES thai_pages\(page_id\)/);
+});
+
+/* ── 10. Bài dài không được làm mất trắng bản dịch ──────────────────────────
+   Sự cố thật 26/08/2026: bài gốc 1.918 ký tự → một lượt gọi phải trả CẢ bản Thái lẫn bản
+   dịch ngược, vượt max_tokens 3.000 → JSON cắt giữa chừng → "AI trả về không đúng khuôn"
+   và mất trắng cả bài. */
+
+import { tokenBudget, fixBrandNames, brandWarnings } from "../functions/api/thai-social/_repost-prompt.js";
+import { translateCaption, backTranslate } from "../functions/api/thai-social/_repost-translate.js";
+
+test("trần token nới theo độ dài bài, không còn cứng 3.000", () => {
+  assert.ok(tokenBudget("x".repeat(1918)) > 3000, "đúng độ dài bài đã làm hỏng hôm 26/08");
+  assert.equal(tokenBudget(""), 2000, "bài ngắn vẫn có sàn");
+  assert.ok(tokenBudget("x".repeat(50000)) <= 8000, "phải có trần, không xin vô hạn");
+});
+
+function stubAnthropic(replies) {
+  const goc = globalThis.fetch;
+  let i = 0;
+  globalThis.fetch = async () => {
+    const r = replies[Math.min(i++, replies.length - 1)];
+    if (r.status && r.status >= 400) return new Response("loi", { status: r.status });
+    return new Response(JSON.stringify({
+      content: [{ type: "text", text: r.text }],
+      usage: { input_tokens: 100, output_tokens: 200 },
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  return { restore: () => { globalThis.fetch = goc; }, count: () => i };
+}
+
+// KHÔNG có OPENAI_API_KEY: để callClaude không lặng lẽ rẽ sang nhà khác giữa bài kiểm.
+const AI_ENV = { ANTHROPIC_API_KEY: "k", CF_ACCOUNT_ID: "acc" };
+
+test("model trả thiếu caption_th → hỏi lại lượt nữa chứ không bỏ bài", async () => {
+  const st = stubAnthropic([
+    { text: '{"hashtags":[],"canh_bao":[]}' },
+    { text: '{"caption_th":"ข้อความไทย","hashtags":["รถยนต์"],"canh_bao":[]}' },
+  ]);
+  try {
+    const out = await translateCaption(AI_ENV, { message: "Bài gốc", pageName: "Noma" });
+    assert.equal(out.caption_th, "ข้อความไทย");
+    assert.equal(st.count(), 2, "phải thử đúng 2 lượt");
+  } finally { st.restore(); }
+});
+
+test("hai lượt đều hỏng → báo ai_bad_output kèm nguyên văn model trả về", async () => {
+  const st = stubAnthropic([{ text: "xin loi toi khong the" }]);
+  try {
+    await assert.rejects(
+      () => translateCaption(AI_ENV, { message: "Bài gốc", pageName: "Noma" }),
+      (e) => e.kind === "ai_bad_output" && /xin loi toi khong the/.test(e.detail || ""));
+  } finally { st.restore(); }
+});
+
+test("dịch ngược hỏng thì KHÔNG kéo cả bài chết theo", async () => {
+  const st = stubAnthropic([{ status: 500 }]);
+  try {
+    const back = await backTranslate(AI_ENV, "ข้อความไทย");
+    assert.equal(back.caption_vi_back, "");
+    assert.ok(back.canh_bao.length, "phải nói cho người duyệt biết là thiếu bản soát");
+  } finally { st.restore(); }
+});
+
+/* ── 11. NOMA và Doscom KHÔNG được phiên âm sang chữ Thái ────────────────────
+   Chủ dự án chốt 26/08/2026. Nhắc trong prompt là chưa đủ — model quên được, phép thay
+   chuỗi thì không. */
+
+test("tên thương hiệu bị phiên âm được sửa lại thành chữ Latin", () => {
+  const a = fixBrandNames("ผลิตภัณฑ์ โนม่า และ ดอสคอม ดีมาก");
+  assert.match(a.text, /NOMA/);
+  assert.match(a.text, /Doscom/);
+  assert.doesNotMatch(a.text, /โนม่า|ดอสคอม/);
+  assert.deepEqual(a.fixed, ["NOMA", "Doscom"]);
+});
+
+test("KHÔNG bắt nhầm chữ khác: ดอทคอม là 'dot com', không phải Doscom", () => {
+  const r = fixBrandNames("เว็บไซต์ ดอทคอม");
+  assert.equal(r.text, "เว็บไซต์ ดอทคอม");
+  assert.deepEqual(r.fixed, []);
+});
+
+test("thương hiệu biến mất khỏi bản dịch → cảnh báo cho người duyệt", () => {
+  assert.equal(brandWarnings("Dung dịch NOMA 350", "น้ำยา 350").length, 1);
+  assert.equal(brandWarnings("Dung dịch NOMA 350", "น้ำยา NOMA 350").length, 0);
+  assert.equal(brandWarnings("Không có thương hiệu nào", "ไม่มี").length, 0);
+});
+
+test("caption và hashtag đều được sửa tên thương hiệu, và người duyệt được báo", async () => {
+  const st = stubAnthropic([
+    { text: '{"caption_th":"โนม่า ดีที่สุด","hashtags":["โนม่า","รถ"],"canh_bao":[]}' },
+  ]);
+  try {
+    const out = await translateCaption(AI_ENV, { message: "NOMA tốt nhất", pageName: "Noma" });
+    assert.equal(out.caption_th, "NOMA ดีที่สุด");
+    assert.deepEqual(out.hashtags, ["NOMA", "รถ"]);
+    assert.ok(out.canh_bao.some((w) => w.includes("NOMA")), "phải nói máy đã phiên âm nhầm");
+  } finally { st.restore(); }
+});
+
+test("luật tên thương hiệu được nhắc ở CẢ prompt dịch chữ lẫn prompt vẽ lại ảnh", () => {
+  const prompt = read("../functions/api/thai-social/_repost-prompt.js");
+  assert.match(prompt, /BRAND_RULE/);
+  assert.match(prompt, /โนม่า/, "phải nêu thẳng dạng sai để model biết đường tránh");
+  const img = read("../functions/api/thai-social/_image-translate.js");
+  assert.match(img, /BRAND_RULE/, "prompt đọc chữ trên ảnh cũng phải có luật này");
+  assert.match(img, /KHÔNG phiên âm sang chữ Thái/, "prompt vẽ lại ảnh cũng vậy");
+});
+
+test("lượt đầu trả rác (không phải JSON) → vẫn hỏi lại chứ không bỏ bài", async () => {
+  const st = stubAnthropic([
+    { text: "Đây là bản dịch của bạn: ..." },   // không phải JSON → callClaude ném
+    { text: '{"caption_th":"ข้อความไทย","hashtags":[],"canh_bao":[]}' },
+  ]);
+  try {
+    const out = await translateCaption(AI_ENV, { message: "Bài gốc", pageName: "Noma" });
+    assert.equal(out.caption_th, "ข้อความไทย");
+    assert.equal(st.count(), 2);
+  } finally { st.restore(); }
+});
+
+test("người duyệt sửa được caption VÀ hashtag trước khi đăng", () => {
+  const page = read("../thai-repost.html");
+  assert.match(page, /data-act="edit"/, "thiếu nút sửa caption");
+  assert.match(page, /data-act="edit-tags"/, "thiếu nút sửa hashtag");
+  // Bài đã đăng / đã hẹn giờ thì KHÔNG hiện nút sửa nào — chốt ở biến editable.
+  assert.match(page, /const editable = p\.status === "pending_review" \|\| p\.status === "edited"/);
+
+  // Backend nhận đúng hai trường đó; mảng rỗng = bỏ hết hashtag, không phải "bỏ qua".
+  const api = read("../functions/api/thai-social/repost/queue/[id].js");
+  assert.match(api, /b\.caption_th/);
+  assert.match(api, /Array\.isArray\(b\.hashtags\)/);
 });

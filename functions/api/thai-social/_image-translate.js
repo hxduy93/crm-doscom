@@ -13,6 +13,7 @@
 
 import { anthropicBase, proxyHeaders } from "../../lib/ai-endpoint.js";
 import { logAIUsage } from "../geo/_utils/ai-usage.js";
+import { BRAND_RULE, fixBrandNames } from "./_repost-prompt.js";
 
 const VISION_MODEL = "claude-haiku-4-5";
 const VISION_PRICE = { in: 1, out: 5 };          // USD / 1M token
@@ -100,6 +101,7 @@ const VISION_SYSTEM =
 Chỉ quan tâm CHỮ ĐƯỢC IN/THIẾT KẾ trên ảnh (tiêu đề, khẩu hiệu, nhãn giá, dòng khuyến mãi).
 BỎ QUA chữ in sẵn trên bao bì sản phẩm và logo thương hiệu — đó là hàng thật, không dịch.
 KHÔNG đổi con số, không quy đổi tiền tệ.
+${BRAND_RULE}
 Trả DUY NHẤT một object JSON:
 {"co_chu": true|false, "cac_dong": [{"vi": "chữ trên ảnh", "th": "bản tiếng Thái"}]}
 Ảnh không có chữ thiết kế nào thì trả {"co_chu": false, "cac_dong": []}.`;
@@ -173,7 +175,9 @@ async function visionOpenAI(env, { b64, mime }) {
 export function normalizeVision(parsed) {
   const rows = Array.isArray(parsed && parsed.cac_dong) ? parsed.cac_dong : [];
   const blocks = rows
-    .map((r) => ({ vi: String((r && r.vi) || "").trim(), th: String((r && r.th) || "").trim() }))
+    // Sửa luôn tên thương hiệu bị phiên âm — chữ này sẽ được vẽ lên ảnh, sai là hiện rành rành.
+    .map((r) => ({ vi: String((r && r.vi) || "").trim(),
+                   th: fixBrandNames(String((r && r.th) || "").trim()).text }))
     .filter((r) => r.vi || r.th)
     .slice(0, 12);
   const hasText = parsed ? parsed.co_chu === true && blocks.length > 0 : false;
@@ -222,7 +226,8 @@ Yêu cầu bắt buộc:
 - Giữ NGUYÊN ảnh sản phẩm, bao bì, nhãn mác và logo thương hiệu — không vẽ lại, không đổi chữ trên bao bì.
 - Chữ tiếng Thái phải đúng chính tả, đủ dấu, nằm gọn trong đúng khối chữ cũ, cùng kiểu chữ và màu chữ.
 - Giữ nguyên mọi con số. Không thêm chữ mới, không thêm logo, không thêm watermark.
-- Không để sót chữ tiếng Việt nào trên ảnh.`;
+- Không để sót chữ tiếng Việt nào trên ảnh.
+- Tên thương hiệu NOMA và Doscom viết bằng chữ Latin y như ảnh gốc, KHÔNG phiên âm sang chữ Thái.`;
 }
 
 export async function redrawImageInThai(env, { bytes, mime, blocks }) {

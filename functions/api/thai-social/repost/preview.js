@@ -10,9 +10,9 @@
 // KHÔNG đăng gì lên Facebook — file này tuyệt đối không import _graph.js.
 
 import { ok, fail, requireToken, requireDB, nowSec, vnDate, clip } from "../_lib.js";
-import { callClaude, extractJson } from "../../geo/_utils/claude.js";
 import { fetchSourcePost, downloadImage } from "../_fb-source.js";
-import { buildSystemPrompt, buildUserPrompt, sniffWarnings, mergeWarnings } from "../_repost-prompt.js";
+import { translateCaption, backTranslate } from "../_repost-translate.js";
+import { sniffWarnings, mergeWarnings } from "../_repost-prompt.js";
 import { readImageText, redrawImageInThai, bytesToBase64 } from "../_image-translate.js";
 import { RSTATUS, publicRepost, imageKey, readImageCache, writeImageCache } from "../_repost-lib.js";
 
@@ -185,32 +185,28 @@ export async function onRequestPost({ request, env }) {
       // Bài chỉ có ảnh: không bịa caption. Để trống, người tự viết.
       gen = { caption_th: "", caption_vi_back: "", hashtags: [], canh_bao: ["Bài gốc không có phần chữ — tự viết caption tiếng Thái trước khi đăng."] };
     } else {
-      let res;
+      let out;
       try {
-        res = await callClaude(env, {
-          model: "haiku",
-          systemPrompt: buildSystemPrompt(),
-          userPrompt: buildUserPrompt({
-            message: src.message,
-            pageName: src.page_name,
-            imageTexts: images.filter((i) => i.text_th).map((i) => `${i.text_vi} → ${i.text_th}`),
-          }),
-          maxTokens: 3000,
-          jsonOutput: true,
+        out = await translateCaption(env, {
+          message: src.message,
+          pageName: src.page_name,
+          imageTexts: images.filter((i) => i.text_th).map((i) => `${i.text_vi} → ${i.text_th}`),
         });
       } catch (e) {
-        return fail("ai_failed", 502, { detail: String(e?.message || e) });
+        return fail(e.kind === "ai_bad_output" ? "ai_bad_output" : "ai_failed", 502,
+                    { detail: e.detail || String(e?.message || e) });
       }
-      const parsed = res.parsed || safeExtract(res.text);
-      if (!parsed || !parsed.caption_th) {
-        return fail("ai_bad_output", 502, { detail: "Model không trả JSON có caption_th" });
-      }
+
+      /* Dịch ngược đi lượt RIÊNG và được phép hỏng: bản tiếng Thái mới là thứ đăng lên,
+         mất bản soát tiếng Việt thì khó chịu chứ không mất bài. */
+      const back = await backTranslate(env, out.caption_th);
+
       gen = {
-        caption_th: String(parsed.caption_th).trim(),
-        caption_vi_back: String(parsed.caption_vi_back || "").trim(),
-        hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags.slice(0, 8).map((t) => String(t).replace(/^#/, "")) : [],
-        canh_bao: Array.isArray(parsed.canh_bao) ? parsed.canh_bao.map(String) : [],
-        cost_usd: Number(res.cost_usd || 0),
+        caption_th: out.caption_th,
+        caption_vi_back: back.caption_vi_back,
+        hashtags: out.hashtags,
+        canh_bao: [...out.canh_bao, ...back.canh_bao],
+        cost_usd: Number((out.cost_usd + back.cost_usd).toFixed(6)),
       };
       cost += gen.cost_usd || 0;
       if (env.INVENTORY) {
@@ -266,10 +262,6 @@ function publicSource(src) {
     post_id: src.post_id, page_id: src.page_id, page_name: src.page_name,
     permalink: src.permalink, created_time: src.created_time, image_count: src.images.length,
   };
-}
-
-function safeExtract(text) {
-  try { return extractJson(text || ""); } catch { return null; }
 }
 
 export async function onRequestOptions() {
