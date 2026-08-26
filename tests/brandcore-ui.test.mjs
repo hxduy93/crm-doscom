@@ -51,3 +51,44 @@ test("ba nấc dò → soạn → áp vẫn còn đủ nút", () => {
     assert.match(HTML, new RegExp(`id="${id}"`), `thiếu nút #${id}`);
   }
 });
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   LƯỢT GHI KHÔNG ĐƯỢC IM LẶNG.
+
+   Ca thật 27/08/2026: chủ dự án vá 16 tiêu đề ở tab "Bài hướng dẫn", rồi sang tab
+   "Tiêu đề bài viết" (danh sách quét từ trước, vẫn giữ tiêu đề CŨ) bấm "Vá tiêu đề đã
+   chọn". Máy chủ trả về "không có gì thay đổi" cho cả 16 bài — đúng, vì web đã mang
+   đúng tiêu đề đó rồi. Nhưng giao diện bỏ qua mọi dòng không applied: không dòng nào
+   biến mất, khối "đã xong" trống, không thông báo gì → nhìn hệt như nút hỏng.
+   ══════════════════════════════════════════════════════════════════════════════ */
+test("dòng BỊ BỎ QUA vẫn phải hiện ra, kèm lý do", () => {
+  assert.ok(!/if \(!it\.applied && !it\.error\) continue;/.test(HTML),
+    "không được loại dòng bỏ qua khỏi khối 'đã xong' — im lặng là người dùng tưởng nút hỏng");
+  assert.match(HTML, /bo_qua: it\.skipped \|\| null/, "phải giữ lý do máy chủ bỏ qua");
+  assert.match(HTML, /pill grey">bỏ qua/, "phải vẽ nhãn 'bỏ qua' trong bảng đã xong");
+});
+
+test("mỗi lượt ghi phải có tóm tắt ở chỗ luôn nhìn thấy", () => {
+  // Thanh trên cùng dính khi cuộn — đặt tóm tắt ở đó thì không phải cuộn đi tìm.
+  assert.match(HTML, /\$\("#tienDo"\)\.innerHTML = `\$\{viecLam\}: <b>\$\{ghi\}<\/b> đã ghi/);
+});
+
+test("sửa ở tab này thì tab khác cùng nguồn phải bỏ dòng đã cũ", () => {
+  /* Một bài viết nằm ở CẢ "Bài hướng dẫn" lẫn "Tiêu đề bài viết". Không dọn thì bấm
+     tiếp bên kia là gửi đúng cái web đang có → lượt ghi rỗng, không ai hiểu vì sao. */
+  assert.match(HTML, /function donDepTabKhac/);
+  assert.match(HTML, /guide: \["bai", "tieude"\]/, "hai tab này đọc chung một nguồn bài viết");
+  const goi = (HTML.match(/donDepTabKhac\(j, /g) || []).length;
+  assert.ok(goi >= 3, `phải dọn sau MỌI lượt ghi tên/tiêu đề/brandcore (thấy ${goi} chỗ gọi)`);
+});
+
+test("esc() phải chặn cả dấu nháy — giá trị đi thẳng vào thuộc tính HTML", () => {
+  /* Tiêu đề/tên sản phẩm được nhét vào value="…", href="…", data-id="…". Chỉ escape
+     &<> thì một dấu " trong tiêu đề là vỡ thẻ input: ô nhập mất nội dung phía sau và
+     phần còn lại biến thành thuộc tính rác. */
+  // Không cắt ở dấu chấm phẩy đầu tiên: chính chuỗi "&amp;" đã có một cái.
+  const m = HTML.match(/const esc = \(s\) =>[\s\S]{0,300}/);
+  assert.ok(m, "không tìm thấy hàm esc()");
+  assert.match(m[0], /&quot;/, "thiếu escape dấu nháy kép");
+  assert.match(m[0], /&#39;/, "thiếu escape dấu nháy đơn");
+});

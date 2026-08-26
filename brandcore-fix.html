@@ -202,7 +202,9 @@
 <script>
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
-const esc = (s) => String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const esc = (s) => String(s == null ? "" : s)
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 const stripHtml = (h) => String(h).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();
 
 window.addEventListener("error", (e) => {
@@ -411,14 +413,16 @@ function veXong() {
   if (!ds.length) return "";
   const ok = ds.filter((x) => x.applied).length;
   const rows = ds.map((x, i) => {
-    const st = x.applied ? `<span class="pill green">đã ghi</span>` : `<span class="pill red">lỗi</span>`;
+    const st = x.applied ? `<span class="pill green">đã ghi</span>`
+      : x.bo_qua ? `<span class="pill grey">bỏ qua</span>`
+      : `<span class="pill red">lỗi</span>`;
     const undo = x.applied && x.backup_key
       ? `<button class="sec" onclick="revert(${x.id},'${esc(x.backup_key)}','${esc(x.target)}',this)">Hoàn tác</button>` : "";
     const ten = x.permalink
       ? `<a href="${esc(x.permalink)}" target="_blank" rel="noopener">${esc(x.name)}</a>`
       : esc(x.name);
     return `<tr><td>${ten} <span class="muted">#${x.id}</span>${x.error ? `<div class="err" style="font-size:12px">${esc(x.error)}</div>` : ""}</td>
-      <td>${esc(x.viec_lam)}${x.chi_tiet ? `<div class="muted" style="font-size:12px">${esc(x.chi_tiet)}</div>` : ""}</td>
+      <td>${esc(x.viec_lam)}${x.chi_tiet || x.bo_qua ? `<div class="muted" style="font-size:12px">${esc(x.chi_tiet || x.bo_qua)}</div>` : ""}</td>
       <td>${st}</td><td>${undo}</td></tr>`;
   }).join("");
   return `<details class="xongCard" open style="margin-top:14px">
@@ -430,14 +434,38 @@ function veXong() {
    brandcore-apply: `ok` của phản hồi không đủ — từng dòng vẫn có thể hỏng riêng. */
 function ghiNhanXong(k, j, viecLam) {
   for (const it of j.items || []) {
-    if (!it.applied && !it.error) continue;      // bỏ qua dòng "không có gì đổi"
     ST[k].xong.unshift({
       id: it.id, name: it.name || `#${it.id}`, permalink: it.permalink,
-      applied: Boolean(it.applied), error: it.error || null,
+      applied: Boolean(it.applied), error: it.error || null, bo_qua: it.skipped || null,
       backup_key: it.backup_key || null, target: j.target || VIEC[k].target || "guide",
       viec_lam: viecLam,
       chi_tiet: (it.violations_fixed || []).join(", ") || (it.ten_cu ? `trước: ${it.ten_cu}` : ""),
     });
+  }
+  /* Tóm tắt lên thanh trên cùng — chỗ luôn nhìn thấy. Trước 27/08/2026 lượt ghi mà máy
+     chủ trả về TOÀN "không có gì thay đổi" thì giao diện im hoàn toàn: không dòng nào
+     biến mất, khối "đã xong" cũng trống, nhìn hệt như nút hỏng. */
+  const ghi = (j.items || []).filter((x) => x.applied).length;
+  const boQua = (j.items || []).filter((x) => !x.applied && x.skipped).length;
+  const loi = (j.items || []).filter((x) => x.error).length;
+  $("#tienDo").innerHTML = `${viecLam}: <b>${ghi}</b> đã ghi` +
+    (boQua ? ` · ${boQua} bỏ qua (nội dung trên web đã trùng với bản định ghi)` : "") +
+    (loi ? ` · <span class="err">${loi} lỗi</span>` : "");
+}
+
+/* Dọn dòng đã CŨ ở các tab khác cùng nguồn. Một bài viết nằm ở cả tab "Bài hướng dẫn"
+   lẫn "Tiêu đề bài viết"; vá tên ở tab này xong mà tab kia vẫn giữ tiêu đề cũ thì bấm
+   tiếp bên đó là gửi đúng cái web đang có → máy chủ trả "không có gì thay đổi" và
+   người dùng tưởng nút không chạy. Đã xử lý ở đâu thì bỏ khỏi mọi tab cùng nguồn. */
+function donDepTabKhac(j, tru) {
+  const xong = new Set((j.items || [])
+    .filter((x) => x.applied || x.skipped === "không có gì thay đổi")
+    .map((x) => x.id));
+  if (!xong.size) return;
+  const cungNguon = { guide: ["bai", "tieude"], product: ["mota"], "product-name": ["ten"] };
+  for (const k of cungNguon[j.target] || []) {
+    if (k === tru) continue;
+    ST[k].rows = ST[k].rows.filter((x) => !xong.has(x.id));
   }
 }
 
@@ -508,6 +536,8 @@ function veTieuDe(r, i) {
     : d.trung_voi ? `trùng tiêu đề bài #${d.trung_voi}`
     : d.trung_khuon ? `cướp khuôn bài hướng dẫn #${d.trung_khuon.id}` : "";
   const goiY = d.tieu_de_moi || r.de_xuat || "";
+  // Đề xuất trùng khít tiêu đề đang có → không có gì để vá, đừng tick sẵn.
+  const daDung = goiY && goiY === (r.tieu_de || "");
   const o = d.loi
     ? `<div class="err" style="font-size:12px">${esc(d.loi)}</div>`
     : goiY
@@ -515,8 +545,9 @@ function veTieuDe(r, i) {
          ${chan ? `<div class="err" style="font-size:12px">⛔ ${chan}</div>` : ""}`
       : `<span class="muted">cần AI đề xuất</span>`;
   const hienTai = r.tieu_de_rong ? `<span class="pill red">mất tiêu đề</span>` : esc(r.tieu_de);
-  return `<div class="it"><div class="hd">${oTick(i, Boolean(r.tieu_de_rong || r.de_xuat))}
-    <div style="flex:1"><div class="tt">${hienTai} <span class="muted">#${r.id}</span> ${link(r)}</div>
+  return `<div class="it"><div class="hd">${oTick(i, Boolean(!daDung && (r.tieu_de_rong || r.de_xuat)))}
+    <div style="flex:1"><div class="tt">${hienTai} <span class="muted">#${r.id}</span> ${link(r)}
+      ${daDung ? '<span class="pill green">đã đúng</span>' : ""}</div>
       <div class="meta">${vd}</div><div style="margin-top:4px">${o}</div></div></div></div>`;
 }
 
@@ -578,7 +609,8 @@ $("#btnRename").onclick = async () => {
     });
     const xong = new Set((j.items || []).filter((x) => x.applied).map((x) => x.id));
     ST[viec].rows = ST[viec].rows.filter((x) => !xong.has(x.id));
-    ghiNhanXong(viec, j, laTen ? "đổi tên sản phẩm" : "đổi tiêu đề bài");
+    ghiNhanXong(viec, j, laTen ? "Đổi tên sản phẩm" : "Đổi tiêu đề bài");
+    donDepTabKhac(j, viec);
     veTabs(); veBang();
   } catch (e) { alert(e.message); }
   btn.disabled = false; btn.textContent = laTen ? "Đổi tên đã chọn" : "Đổi tiêu đề đã chọn";
@@ -645,7 +677,8 @@ $("#btnApply").onclick = async () => {
     });
     const xong = new Set((j.items || []).filter((x) => x.applied).map((x) => x.id));
     ST[proposalViec].rows = ST[proposalViec].rows.filter((x) => !xong.has(x.id));
-    ghiNhanXong(proposalViec, j, "sửa brandcore");
+    ghiNhanXong(proposalViec, j, "Sửa brandcore");
+    donDepTabKhac(j, proposalViec);
     proposals = proposals.filter((x) => !xong.has(x.id));
     veProposals(proposals, chiPhiRa);
     veTabs(); veBang();
@@ -711,7 +744,8 @@ $("#btnTitleApply").onclick = async () => {
     const j = await goiApply({ site: site(), target: "guide", fixes });
     const xong = new Set((j.items || []).filter((x) => x.applied).map((x) => x.id));
     ST.tieude.rows = ST.tieude.rows.filter((x) => !xong.has(x.id));
-    ghiNhanXong("tieude", j, "vá tiêu đề");
+    ghiNhanXong("tieude", j, "Vá tiêu đề");
+    donDepTabKhac(j, "tieude");
     veTabs(); veBang();
   } catch (e) { alert(e.message); }
   btn.disabled = false; btn.textContent = "Vá tiêu đề đã chọn";
@@ -825,7 +859,7 @@ $d("duyetAp").onclick = async () => {
    sửa lại lần hai cùng một mục. */
 function chuyenSangDaSua(r, j) {
   ST.thieu.rows = ST.thieu.rows.filter((x) => !(x.id === r.id && x.target === r.target));
-  ghiNhanXong("thieu", { ...j, target: r.target }, "bổ sung nội dung thiếu");
+  ghiNhanXong("thieu", { ...j, target: r.target }, "Bổ sung nội dung thiếu");
   veTabs(); veBang();
 }
 
