@@ -42,6 +42,8 @@
   .tab.hetviec { opacity:.6; }
   .tab .n.xong { background:#e7f6ec; color:#16a34a; }
   .tab.on .n.xong { background:rgba(255,255,255,.3); color:#fff; }
+  .chan { background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:10px 12px;
+          font-size:13px; color:#92400e; margin-bottom:10px; }
   details.xongCard > summary { cursor:pointer; padding:6px 0; border-top:1px solid var(--line); }
 
   /* Thanh hành động — LUÔN nằm trên danh sách, dính lại khi cuộn. */
@@ -390,8 +392,14 @@ function veBang() {
     return demChon();
   }
   const ve = { ten: veTen, bai: veBai, tieude: veTieuDe, mota: veMota, thieu: veThieu }[viec];
-  $("#panelBody").innerHTML = s.rows.map(ve).join("") + veXong();
+  $("#panelBody").innerHTML = veChanTruoc() + s.rows.map(ve).join("") + veXong();
   $$(".pick").forEach((cb) => { cb.onchange = demChon; });
+  const mo = $("#btnMoNguon");
+  if (mo) mo.onclick = () => {
+    $("#nguonCard").open = true;
+    $("#nguonCard").scrollIntoView({ behavior: "smooth" });
+    enDraft(false);
+  };
   $("#pickAll").checked = $$(".pick").length > 0 && $$(".pick:not(:checked)").length === 0;
   demChon();
 }
@@ -431,6 +439,20 @@ function ghiNhanXong(k, j, viecLam) {
       chi_tiet: (it.violations_fixed || []).join(", ") || (it.ten_cu ? `trước: ${it.ten_cu}` : ""),
     });
   }
+}
+
+/* Việc đang bị CHẶN vì thiếu thứ phải làm trước. Trước 27/08/2026 chỉ có con số nhỏ
+   trong dòng thống kê, nên bấm "Đổi tiêu đề" ra thông báo "trùng mã" — sai lý do và
+   không nói phải làm gì tiếp. */
+function veChanTruoc() {
+  const n = ST[viec].rows.filter((x) => x.chua_co_ten_en).length;
+  if (!n) return "";
+  return `<div class="chan">
+    <b>${n} mục chưa có tên tiếng Anh nên chưa đổi được.</b>
+    Bảng tên tiếng Anh là nguồn tên chuẩn của nomaauto.us — không có nó thì công cụ sẽ
+    đem tên tiếng Việt đi đổi tên trên trang bán cho khách Mỹ, nên nó dừng lại.
+    <div style="margin-top:8px"><button id="btnMoNguon" class="sec">Soạn bảng tên tiếng Anh ngay</button></div>
+  </div>`;
 }
 
 const oTick = (i, tick) => `<input type="checkbox" class="pick" data-i="${i}" ${tick ? "checked" : ""} />`;
@@ -522,8 +544,23 @@ const dangChon = () => $$(".pick:checked").map((cb) => ST[viec].rows[+cb.dataset
 // Đổi tên sản phẩm / tiêu đề bài theo hồ sơ — không AI.
 $("#btnRename").onclick = async () => {
   const laTen = viec === "ten";
-  const picks = dangChon().filter((p) => p.can_doi_ten && p.ten_chuan);
-  if (!picks.length) return alert("Không có dòng nào đổi được trong nhóm đang chọn.\nDòng trùng mã bị loại — phải gộp/xoá bớt trước.");
+  const chon = dangChon();
+  const picks = chon.filter((p) => p.can_doi_ten && p.ten_chuan);
+  if (!picks.length) {
+    /* Nói ĐÚNG lý do của nhóm đang chọn. Trước đây câu nào cũng đổ cho "trùng mã" nên
+       người dùng đi gộp bài trong khi thật ra chỉ thiếu bảng tên tiếng Anh. */
+    const ly = [];
+    const enThieu = chon.filter((p) => p.chua_co_ten_en).length;
+    const trungMa = chon.filter((p) => p.trung_ma).length;
+    const khongMa = chon.filter((p) => !p.sku).length;
+    const dungRoi = chon.filter((p) => p.sku && !p.trung_ma && !p.chua_co_ten_en && !p.can_doi_ten).length;
+    if (enThieu) ly.push(`• ${enThieu} mục CHƯA CÓ TÊN TIẾNG ANH → mở "Nguồn tên chuẩn" ở trên, bấm "Soạn tên" rồi "Lưu bảng tên"`);
+    if (trungMa) ly.push(`• ${trungMa} mục TRÙNG MÃ sản phẩm → gộp/xoá bớt trên web trước, đổi cả hai về một tên chỉ làm trùng khít hơn`);
+    if (khongMa) ly.push(`• ${khongMa} mục KHÔNG DÒ RA MÃ NOMA (combo, bài thiết bị Doscom) → không có hồ sơ để đối chiếu`);
+    if (dungRoi) ly.push(`• ${dungRoi} mục ĐÃ ĐÚNG TÊN rồi`);
+    return alert(`Không có mục nào đổi được trong ${chon.length} mục đang chọn.\n\n` +
+      (ly.length ? ly.join("\n") : "Không mục nào có tên chuẩn để thay."));
+  }
   // Hai dòng cùng nhận một tên trong một lượt = tự tạo trùng lặp mới.
   const dem = {};
   for (const p of picks) dem[p.ten_chuan] = (dem[p.ten_chuan] || 0) + 1;
