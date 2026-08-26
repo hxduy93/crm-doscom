@@ -54,7 +54,7 @@ import {
   scanForbidden, applyFixes, deterministicFixes,
 } from "../geo/_utils/noma-brandcore.js";
 import { findSkuCode, skuSpecText, loadSkuSpecs } from "../geo/_utils/noma-sku-specs.js";
-import { doiChieuSanPham, doiChieuBaiHdsd, boDau, boHtml as boHtmlNhe } from "./_gap.js";
+import { doiChieuSanPham, doiChieuBaiHdsd, boDau, boHtml as boHtmlNhe, soatDungSanPham } from "./_gap.js";
 import { siteCreds, isConfigured, listProducts, getProduct, isNomaProduct } from "./_wc.js";
 import {
   listGuideCategories, listAllPosts, listPostsByIds, getPost,
@@ -468,9 +468,17 @@ const skuCuaBai = (bai, specs) => findSkuCode(bai.name, specs) || findSkuCode(ba
 // Bộ tra tên chuẩn cho MỘT lượt quét: chọn sẵn nguồn theo web đang soát.
 function boTenChuan({ site, skuSpecs, tenEn }) {
   const en = site === "nomaauto";
+  const ten = (code) => (en ? tenChuanSkuEN(code, tenEn) : tenChuanSku(code, skuSpecs));
+  // Bảng mã → tên chuẩn, dựng MỘT LẦN cho cả lượt quét (dò sai sản phẩm cần so mọi mã).
+  const bang = {};
+  for (const code of Object.keys(skuSpecs || {})) {
+    const t = ten(code);
+    if (t) bang[code] = t;
+  }
   return {
     en,
-    ten: (code) => (en ? tenChuanSkuEN(code, tenEn) : tenChuanSku(code, skuSpecs)),
+    ten,
+    bang,
     tieuDe: (code) => tieuDeChuanHdsd(code, { specs: skuSpecs, namesEn: tenEn, en }),
   };
 }
@@ -527,6 +535,17 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs, tenEn }) {
       const ma = findSkuCode(p.name, skuSpecs);
       const chuan = ma ? tc.tieuDe(ma) : null;
       const trungMa = ma ? (demSku.get(ma) || 0) > 1 : false;
+      /* SAI SẢN PHẨM — hai lớp, cố ý tách rời vì cách sửa khác nhau:
+           tiêu đề  : tên trong tiêu đề là tên của mã KHÁC (sửa được bằng đổi tên)
+           nội dung : cả bài viết về sản phẩm khác (phải viết lại/đổi mã — người quyết)
+         Trước 26/08/2026 hai cờ này chỉ có ở nút "Soát tiêu đề", nên bài #32792 của
+         noma.vn ("bộ vệ sinh và dưỡng ghế da Noma 692" — tên của 686, nội dung là ghế
+         nỉ) lọt qua danh sách quét chính: nó trùng mã với bài HDSD 692 thật nên bị
+         chặn đổi tên, mà không có cờ nào khác thì nhìn y như bài sạch. */
+      const khopTen = ma && !giongTieuDe(p.name, chuan) ? khopTenNhat(p.name, skuSpecs, tc) : null;
+      const saiTen = khopTen && khopTen.code !== ma && khopTen.diem >= 0.8
+        ? { ma: khopTen.code, ten: tc.ten(khopTen.code) } : null;
+      const dungSp = ma ? soatDungSanPham(`${p.name} ${p.content}`, ma, tc.bang) : { nghi_ngo: false };
       return {
         id: p.id, name: p.name, permalink: p.permalink, status: p.status,
         la_noma: laNoma, raw: p.raw,
@@ -539,6 +558,10 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs, tenEn }) {
         /* Bên nomaauto.us: dò ra mã nhưng bảng tên tiếng Anh chưa có mã đó — nói rõ,
            im lặng bỏ qua là người dùng tưởng bài đã đúng tên. */
         chua_co_ten_en: Boolean(tc.en && ma && !chuan),
+        sai_ten_sp: saiTen,
+        sai_sp_noi_dung: dungSp.nghi_ngo
+          ? { phu: dungSp.phu, ma_khop: dungSp.ma_khop, phu_khop: dungSp.phu_khop, moc_thieu: dungSp.moc_thieu }
+          : null,
         flags: scanForbidden(`${p.name} ${p.content}`, forbidden),
       };
     });
@@ -551,6 +574,7 @@ async function soatBaiHuongDan({ env, c, site, mode, body, skuSpecs, tenEn }) {
       doi_ten_count: ds.filter((x) => x.can_doi_ten).length,
       trung_ma_count: ds.filter((x) => x.trung_ma).length,
       chua_co_ten_en_count: ds.filter((x) => x.chua_co_ten_en).length,
+      sai_sp_count: ds.filter((x) => x.sai_ten_sp || x.sai_sp_noi_dung).length,
       con_bai_chua_quet: !het,   // chạm trần số trang → nói thẳng, không giấu phần chưa soát
       raw_ok,
       items: ds,

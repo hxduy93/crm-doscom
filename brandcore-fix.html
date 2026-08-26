@@ -337,6 +337,7 @@ $("#btnScan").onclick = async () => {
       if (d.con_bai_chua_quet) canhBao.push('<span class="err">còn bài chưa quét tới (chạm trần số trang)</span>');
       if (d.raw_ok === false) canhBao.push('<span class="err">có bài không đọc được nội dung gốc → sẽ không ghi được</span>');
       if (d.trung_ma_count) canhBao.push(`${d.trung_ma_count} bài trùng mã sản phẩm — không tự đổi tên`);
+      if (d.sai_sp_count) canhBao.push(`<span class="err">${d.sai_sp_count} bài NGHI VIẾT SAI SẢN PHẨM — xem đầu danh sách</span>`);
       if (d.chua_co_ten_en_count) canhBao.push(`<span class="err">${d.chua_co_ten_en_count} bài chưa có tên tiếng Anh trong bảng — soạn &amp; lưu bảng tên ở trên trước</span>`);
       $("#scanInfo").innerHTML =
         `<b>${d.scanned}</b> bài có “hướng dẫn sử dụng” trong tiêu đề (trong ${d.tong_bai_tren_web} bài của web) · ` +
@@ -357,7 +358,10 @@ $("#btnScan").onclick = async () => {
 
 function renderList() {
   $("#scanTitle").textContent = laBai() ? `${scanned.length} bài hướng dẫn` : `${scanned.length} sản phẩm NOMA`;
-  scanned.sort((a,b) => (b.flags.length - a.flags.length));
+  /* Sai sản phẩm xếp TRƯỚC cả bài có cờ vi phạm: viết nhầm sang sản phẩm khác là lỗi
+     nặng nhất ở đây — sửa vài chữ cấm trên một bài viết sai sản phẩm là vô nghĩa. */
+  const nang = (x) => (x.sai_ten_sp || x.sai_sp_noi_dung ? 1000 : 0) + (x.flags ? x.flags.length : 0);
+  scanned.sort((a,b) => nang(b) - nang(a));
   $("#list").innerHTML = scanned.map((p, i) => {
     const flags = p.flags.length
       ? `<div class="flags">${p.flags.map(f => `<span class="flag">${esc(f.type)}</span>`).join("")}</div>`
@@ -378,6 +382,17 @@ function renderList() {
            <div><div class="lab">Đổi thành (nguyên văn tên trong hồ sơ)</div><div class="box new" style="max-height:none">${esc(p.ten_chuan)}</div></div>
          </div>`
       : "";
+    /* SAI SẢN PHẨM — trước 26/08/2026 chỉ hiện ở nút "Soát tiêu đề" nên bài trùng mã
+       (bị chặn đổi tên) nhìn y như bài sạch ở màn hình này. */
+    const saiSp = (p.sai_ten_sp || p.sai_sp_noi_dung)
+      ? `<div class="note" style="margin:8px 0 0">
+           <b>Kiểm lại bài này viết về sản phẩm nào.</b>
+           ${p.sai_ten_sp ? `<br />· <b>Tiêu đề</b> đang mang tên sản phẩm của <b>NOMA ${esc(p.sai_ten_sp.ma)}</b> — “${esc(p.sai_ten_sp.ten)}”.` : ""}
+           ${p.sai_sp_noi_dung ? `<br />· <b>Nội dung</b> chỉ khớp ${p.sai_sp_noi_dung.phu}% tên sản phẩm của bài, trong khi khớp ${p.sai_sp_noi_dung.phu_khop}% với <b>NOMA ${esc(p.sai_sp_noi_dung.ma_khop)}</b> · không thấy: ${esc((p.sai_sp_noi_dung.moc_thieu || []).join(", "))}.` : ""}
+           <br /><span class="muted">Công cụ CỐ Ý không tự sửa: không biết sai ở mã, ở tiêu đề hay ở cả bài.</span>
+         </div>`
+      : "";
+
     // Nhãn riêng cho phần tên sản phẩm: nói rõ vì sao một số dòng không đổi được.
     const nhanTen = laTenSp()
       ? (p.sku ? `<span class="pill grey">SKU ${esc(p.sku)}</span>` : `<span class="pill grey">không dò ra mã NOMA — bỏ qua</span>`)
@@ -390,6 +405,7 @@ function renderList() {
           <h3>${esc(p.name)} <span class="muted">#${p.id}</span></h3>
           ${nhan}${nhanTen}
           ${flags}
+          ${saiSp}
           ${doiTen}
           <a href="${esc(p.permalink)}" target="_blank" class="muted">Mở trên web ↗</a>
         </span>

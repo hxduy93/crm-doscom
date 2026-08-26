@@ -184,3 +184,61 @@ export function doiChieuText(pageText, spec, fields = GAP_FIELDS) {
     diem: tong ? Math.round(((co.length + khongChac.length * 0.5) / tong) * 100) : null,
   };
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   BÀI NÀY CÓ ĐANG VIẾT ĐÚNG SẢN PHẨM KHÔNG?
+
+   Vì sao cần, dù đã có phần soát tiêu đề: chỗ đó chỉ đọc TIÊU ĐỀ. Có thật trên noma.vn
+   (26/08/2026) bài #32792 "Hướng dẫn sử dụng bộ vệ sinh và dưỡng ghế da Noma 692" —
+   tên trong tiêu đề là của NOMA 686, còn NỘI DUNG lại là quy trình làm sạch GHẾ NỈ
+   (đếm được 49 lần "ghế nỉ", 0 lần "trần xe"), trong khi NOMA 692 là dung dịch vệ sinh
+   nội thất và trần xe. Ba thứ nói ba sản phẩm khác nhau trên cùng một bài đang bán hàng.
+
+   Luật (không dùng AI — phải lặp lại được để còn đối chiếu giữa các lần quét):
+     · mốc nhận dạng của một mã = cụm 2 âm tiết rút từ PHẦN MÔ TẢ của tên chuẩn
+       ("dung dich", "sinh noi", "noi that", "that tran" cho 692).
+     · độ phủ = tỉ lệ mốc của mã đó tìm thấy trong (tiêu đề + nội dung).
+     · NGHI NGỜ khi: độ phủ của chính mã bài < 50% VÀ có mã khác phủ cao hơn.
+
+   Ngưỡng cố ý CHẶT ở vế đầu. Đo trên 19 bài hướng dẫn thật của noma.vn: chỉ bỏ vế
+   "< 50%" thôi là bài #30413 (HDSD NOMA 911) bị báo oan — nó nhắc NOMA 922 nhiều vì
+   hồ sơ 911 dặn "nên phủ 922 sau khi tẩy ố". Với ngưỡng này: 1 bài bị báo, đúng bài sai.
+
+   CỐ Ý chỉ báo, KHÔNG tự sửa: không biết sai ở mã, ở tiêu đề hay ở cả bài — phải người
+   đọc rồi quyết. Trả kèm bằng chứng (mốc thiếu, mã khớp hơn) để còn kiểm chứng.
+   ══════════════════════════════════════════════════════════════════════════════ */
+export function mocNhanDangSku(tenChuan) {
+  // Bỏ tiền tố "NOMA <mã> - " vì mã thì bài nào cũng có, không phân biệt được gì.
+  const duoi = String(tenChuan || "").replace(/^\s*NOMA\s*\d{2,4}\s*[-–—:]?\s*/i, "");
+  return mocNeo(duoi).tu;
+}
+
+export function soatDungSanPham(text, maBai, tenTheoMa) {
+  const t = boDau(text);
+  const phuCua = (ma) => {
+    const moc = mocNhanDangSku(tenTheoMa[ma]);
+    if (!moc.length) return null;
+    const thay = moc.filter((w) => t.includes(w));
+    return { ma, phu: thay.length / moc.length, moc, thieu: moc.filter((w) => !thay.includes(w)) };
+  };
+
+  const minh = maBai ? phuCua(maBai) : null;
+  if (!minh) return { do_duoc: false, nghi_ngo: false };
+
+  let khop = null;
+  for (const ma of Object.keys(tenTheoMa || {})) {
+    if (ma === maBai) continue;
+    const d = phuCua(ma);
+    if (d && (!khop || d.phu > khop.phu)) khop = d;
+  }
+
+  const nghiNgo = minh.phu < 0.5 && Boolean(khop) && khop.phu > minh.phu;
+  return {
+    do_duoc: true,
+    nghi_ngo: nghiNgo,
+    phu: Math.round(minh.phu * 100),
+    moc_thieu: minh.thieu.slice(0, 6),
+    ma_khop: nghiNgo ? khop.ma : null,
+    phu_khop: nghiNgo ? Math.round(khop.phu * 100) : null,
+  };
+}

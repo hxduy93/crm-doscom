@@ -118,6 +118,33 @@ async function wpLay(c, duong, params, { timeout = 25000 } = {}) {
   return r;
 }
 
+/* Lỗi WordPress → câu người đọc hiểu và sửa được.
+
+   Vì sao cần: WooCommerce dùng cặp CK/CS, còn bài viết dùng USERNAME + Application
+   Password — HAI credential khác nhau cho cùng một web. Nên có trạng thái rất dễ nhầm:
+   quét SẢN PHẨM chạy ngon mà quét BÀI VIẾT lại 401. Ném nguyên văn JSON của WP
+   ("invalid_username… Unknown username") thì người dùng không đoán được là phải sửa
+   biến môi trường nào. */
+function goiYCredential(site, status, body) {
+  const t = String(body || "");
+  const S = String(site || "").toUpperCase();
+  if (status === 401 && /invalid_username|Unknown username/i.test(t)) {
+    return `sai TÊN ĐĂNG NHẬP WordPress — kiểm biến WC_${S}_USER (phải là username hoặc email của một tài khoản có thật trên web đó)`;
+  }
+  if (status === 401 && /incorrect_password|invalid_application_password|Application Password/i.test(t)) {
+    return `sai/hết hạn APPLICATION PASSWORD — tạo lại trong WordPress (Users → Profile → Application Passwords) rồi cập nhật WC_${S}_APP_PWD`;
+  }
+  if (status === 401 || status === 403) {
+    return `tài khoản WC_${S}_USER không đủ quyền đọc/sửa bài viết trên web này`;
+  }
+  return null;
+}
+
+function nemLoiWp(nhan, site, status, body) {
+  const goi = goiYCredential(site, status, body);
+  throw new Error(`WP ${nhan} ${status}: ${goi ? goi + " · " : ""}${String(body).slice(0, 200)}`);
+}
+
 // Danh mục "hướng dẫn" của site. Trả [{id,name,slug,count}] — chỉ danh mục CÓ bài.
 export async function listGuideCategories(c, { maxPages = 6, perPage = 100, en = false } = {}) {
   const out = [];
@@ -126,7 +153,7 @@ export async function listGuideCategories(c, { maxPages = 6, perPage = 100, en =
       per_page: String(perPage), page: String(page), _fields: "id,name,slug,count",
     });
     if (r.status === 400) break;              // hết trang
-    if (!r.ok) throw new Error(`WP categories ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    if (!r.ok) nemLoiWp("categories", c.site, r.status, await r.text());
     const arr = await r.json();
     if (!Array.isArray(arr) || !arr.length) break;
     out.push(...arr.filter((x) => x.count > 0 && laDanhMucHuongDan(x, en))
@@ -150,7 +177,7 @@ export async function listPostsByIds(c, ids, { perPage = 50 } = {}) {
       orderby: "include",
       _fields: "id,title,link,status,content,categories",
     }, { timeout: 30000 });
-    if (!r.ok) throw new Error(`WP posts ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    if (!r.ok) nemLoiWp("posts", c.site, r.status, await r.text());
     const arr = await r.json();
     for (const p of Array.isArray(arr) ? arr : []) {
       const bai = chuanHoaBai(p);
@@ -164,7 +191,7 @@ export async function listPostsByIds(c, ids, { perPage = 50 } = {}) {
 export async function getPost(c, id) {
   const r = await wpLay(c, `posts/${id}`, { _fields: "id,title,link,status,content,categories" });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(`WP post ${r.status}: ${JSON.stringify(d).slice(0, 200)}`);
+  if (!r.ok) nemLoiWp("post", c.site, r.status, JSON.stringify(d));
   return chuanHoaBai(d);
 }
 
@@ -183,7 +210,7 @@ export async function updatePost(c, id, truong) {
     signal: AbortSignal.timeout(30000),
   });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(`WP update ${r.status}: ${JSON.stringify(d).slice(0, 300)}`);
+  if (!r.ok) nemLoiWp("update", c.site, r.status, JSON.stringify(d));
   return d;
 }
 
@@ -204,7 +231,7 @@ export async function listAllPosts(c, { perPage = 100, maxPages = 10 } = {}) {
       _fields: "id,title,link,status,categories",
     }, { timeout: 30000 });
     if (r.status === 400) break;
-    if (!r.ok) throw new Error(`WP posts ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    if (!r.ok) nemLoiWp("posts", c.site, r.status, await r.text());
     const arr = await r.json();
     if (!Array.isArray(arr) || !arr.length) break;
     for (const p of arr) items.push(chuanHoaBai(p));
