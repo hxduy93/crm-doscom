@@ -25,11 +25,19 @@ binding = "AI"
 #   - FB_EXPORT_TOKEN    (Bearer token cho /api/export/fb-ad-spend — đối tác facebook-data-sync kéo data)
 #   - LARK_APP_ID        (App ID custom app Lark — cho /api/lark/*)
 #   - LARK_APP_SECRET    (App Secret Lark)
-#   - THAI_SOCIAL_TOKEN  (mã ghi dữ liệu cho /api/thai-social/* — sinh bài + đăng fanpage Thái)
+#   - THAI_SOCIAL_TOKEN  (mã ghi dữ liệu cho /api/thai-social/* — sinh bài + đăng fanpage Thái
+#                         + menu "Dịch bài sang Thái" /api/thai-social/repost/*)
+#   - FB_PAGE_READ_TOKEN (TUỲ CHỌN — token ĐỌC bài gốc trên fanpage Việt cho menu "Dịch bài
+#                         sang Thái". Không đặt thì mượn FB_ACCESS_TOKEN; token phải thuộc
+#                         người quản trị chính fanpage đó, nếu không Graph trả "không có quyền")
 # Ảnh bài fanpage Thái (đều CÓ MẶC ĐỊNH, không đặt vẫn chạy):
 #   - THAI_IMAGE_QUALITY  low | medium (mặc định) | high — high nét hơn, đắt ~4 lần
 #   - THAI_IMAGE_SIZE     mặc định 1024x1024
 #   - THAI_IMAGE_MODEL    ép đúng một model gpt-image, bỏ qua chuỗi thử
+# Vẽ lại ảnh có chữ Việt sang chữ Thái (menu "Dịch bài sang Thái"):
+#   - THAI_IMAGE_EDIT_MODEL ép một model cho /images/edits, bỏ qua chuỗi thử
+#   - THAI_IMAGE_EDIT_SIZE  ép khung ảnh vẽ lại; mặc định tự chọn theo tỉ lệ ảnh gốc
+#   - OPENAI_VISION_MODEL   model đọc chữ trên ảnh khi phải rơi về OpenAI (mặc định gpt-4o-mini)
 #   - USE_OPENAI_IMAGE    "false" = tắt OpenAI, quay về Workers AI (kill switch)
 [vars]
 CF_ACCOUNT_ID = "cffb0c35f8c649872436b2087a64b7bc"

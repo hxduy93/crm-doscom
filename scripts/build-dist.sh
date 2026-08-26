@@ -47,7 +47,7 @@ rm -f dist/data/pancake-crm-contacts.json
 rm -rf dist/data/cost-source
 
 # Trang standalone (nhúng iframe trong CRM) — phải copy thủ công.
-PAGES="agent-geo-doscom.html ads-creator.html product-publisher.html brandcore-fix.html fix-images.html sync-us.html thai-social.html"
+PAGES="agent-geo-doscom.html ads-creator.html product-publisher.html brandcore-fix.html fix-images.html sync-us.html thai-social.html thai-repost.html"
 for page in $PAGES; do
   [ -f "$page" ] && cp "$page" dist/
 done

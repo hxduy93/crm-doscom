@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Dịch bài sang Thái — CRM Doscom</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+  /* Token bám theo index.html của CRM; trang này nhúng iframe nên tự lo theme,
+     dùng prefers-color-scheme giống thai-social.html. */
+  :root{
+    --primary:#3257E6;--primary-700:#2440C4;--accent:#F59E0B;--violet:#8B5CF6;
+    --bg:#F5F7FB;--surface:#FFFFFF;--surface-2:#FBFCFE;--muted:#EEF2FA;
+    --text:#111A2E;--text-2:#5A6478;--text-3:#8A93A6;--border:#E6ECF6;
+    --success:#16A34A;--success-bg:#E8F6EC;--success-bd:#B9E3C6;
+    --warn:#E08600;--warn-bg:#FFF5E3;--warn-bd:#F3D9A6;
+    --danger:#E5484D;--danger-bg:#FDECEC;--danger-bd:#F5C2C4;
+    --info-bg:#EEF4FF;--info-bd:#C7D8FF;--info-tx:#1F3D8F;
+    --radius:16px;--t:.2s cubic-bezier(.4,0,.2,1);
+    --shadow-sm:0 1px 2px rgba(16,26,46,.06);
+    --font:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;
+    --font-th:'Noto Sans Thai','Nunito',system-ui,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --primary:#5B8DEF;--primary-700:#3257E6;
+    --bg:#0A1020;--surface:#121A2E;--surface-2:#0F1626;--muted:#1A2440;
+    --text:#EAF0FB;--text-2:#94A2BF;--text-3:#6F7C99;--border:#243049;
+    --success:#4ADE80;--success-bg:#12281B;--success-bd:#1F4A2E;
+    --warn:#FBBF24;--warn-bg:#2C2008;--warn-bd:#5A4310;
+    --danger:#F87171;--danger-bg:#2E1416;--danger-bd:#5C2529;
+    --info-bg:#141F3A;--info-bd:#27385F;--info-tx:#B9CDF7;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+  }}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .tnum{font-variant-numeric:tabular-nums lining-nums}
+  .wrap{padding:20px;max-width:1200px;margin:0 auto}
+  .hide{display:none!important}
+
+  .phead{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+  .phead h1{margin:0;font-size:21px;font-weight:900;letter-spacing:-.02em}
+  .phead p{margin:4px 0 0;color:var(--text-2);font-size:13px;max-width:66ch}
+
+  .tabs{display:flex;gap:4px;background:var(--muted);padding:4px;border-radius:12px;margin:16px 0;width:fit-content;max-width:100%;overflow-x:auto}
+  .tabs button{border:0;background:none;font-family:var(--font);font-weight:800;font-size:13px;color:var(--text-2);padding:8px 15px;border-radius:9px;cursor:pointer;white-space:nowrap;transition:var(--t)}
+  .tabs button[aria-selected="true"]{background:var(--surface);color:var(--primary);box-shadow:var(--shadow-sm)}
+  button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
+  .cols{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;align-items:start}
+  @media(max-width:900px){.cols{grid-template-columns:1fr}}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm)}
+  .card-b{padding:15px 16px;display:flex;flex-direction:column;gap:12px}
+  .card-t{font-size:14px;font-weight:900;margin:0}
+  .card-d{font-size:12.4px;color:var(--text-2);margin:3px 0 0}
+
+  label.f{display:flex;flex-direction:column;gap:5px;font-size:11.6px;font-weight:800;color:var(--text-2);letter-spacing:.03em;text-transform:uppercase}
+  select,input,textarea{font-family:var(--font);font-size:13.6px;font-weight:600;color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:9px 11px;width:100%}
+  textarea{resize:vertical;line-height:1.75;font-family:var(--font-th);font-size:14.2px}
+  .hint{font-size:11.6px;color:var(--text-3);font-weight:600;text-transform:none;letter-spacing:0}
+
+  .btn{font-family:var(--font);font-weight:800;font-size:13.2px;border-radius:11px;cursor:pointer;padding:10px 15px;border:1px solid transparent;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:var(--t)}
+  .btn:active{transform:translateY(1px)}
+  .btn-p{background:var(--primary);color:#fff}
+  .btn-g{background:var(--surface);color:var(--text);border-color:var(--border)}
+  .btn-g:hover{background:var(--muted)}
+  .btn-ok{background:var(--success);color:#fff}
+  .btn-dg{background:var(--surface);color:var(--danger);border-color:var(--border)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed;transform:none}
+  .btn-sm{padding:7px 12px;font-size:12.4px;border-radius:9px}
+
+  .queue{display:flex;flex-direction:column;gap:14px}
+  .post{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden;border-left:4px solid var(--stripe,var(--border))}
+  .post[data-state="pending_review"]{--stripe:var(--warn)}
+  .post[data-state="edited"]{--stripe:var(--primary)}
+  .post[data-state="scheduled"]{--stripe:var(--violet)}
+  .post[data-state="published"]{--stripe:var(--success)}
+  .post[data-state="discarded"]{--stripe:var(--text-3);opacity:.6}
+  .post-b{padding:14px 16px;display:flex;flex-direction:column;gap:11px;min-width:0}
+  .post-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+  .page-name{font-size:13.2px;font-weight:900}
+  .page-name em{font-style:normal;color:var(--text-3);font-weight:700}
+
+  .pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3.5px 10px;font-size:11.2px;font-weight:800;border:1px solid}
+  .pill-warn{background:var(--warn-bg);border-color:var(--warn-bd);color:var(--warn)}
+  .pill-info{background:var(--info-bg);border-color:var(--info-bd);color:var(--info-tx)}
+  .pill-ok{background:var(--success-bg);border-color:var(--success-bd);color:var(--success)}
+  .pill-bad{background:var(--danger-bg);border-color:var(--danger-bd);color:var(--danger)}
+  .pill-sch{background:#F3EEFF;border-color:#DCCCFF;color:#6D28D9}
+  @media (prefers-color-scheme:dark){.pill-sch{background:#1E1633;border-color:#3B2A66;color:#C4B5FD}}
+
+  .th{font-family:var(--font-th);font-size:14.4px;line-height:1.9;white-space:pre-wrap;margin:0}
+  .vi{border-left:2px solid var(--border);padding-left:11px;margin:0;font-size:12.6px;line-height:1.7;color:var(--text-2);white-space:pre-wrap}
+  .vi b{color:var(--text-3);font-size:10.8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:3px}
+  details.src{border:1px dashed var(--border);border-radius:11px;padding:9px 12px}
+  details.src summary{cursor:pointer;font-size:11.6px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3)}
+  details.src .vi{border:0;padding:8px 0 0;margin:0}
+  .tagrow{display:flex;flex-wrap:wrap;gap:5px}
+  .tagrow span{font-family:var(--font-th);font-size:11.8px;font-weight:600;color:var(--primary);background:var(--info-bg);border-radius:6px;padding:2px 7px}
+
+  .imgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:11px}
+  .imgcard{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface-2);display:flex;flex-direction:column}
+  .imgcard img{width:100%;height:170px;object-fit:contain;background:var(--muted);display:block}
+  .imgcard .ib{padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+  .imgcard .tx{font-size:11.6px;color:var(--text-2);line-height:1.5}
+  .imgcard .tx .t{font-family:var(--font-th);color:var(--text)}
+  .imgcard .nt{font-size:11.2px;color:var(--text-3);line-height:1.5}
+  .imgcard .ia{display:flex;gap:6px;flex-wrap:wrap}
+
+  .acts{display:flex;flex-wrap:wrap;gap:7px;align-items:center;padding-top:2px;border-top:1px solid var(--border);margin-top:2px}
+  .acts .spacer{flex:1}
+  .why{font-size:11.8px;font-weight:700;color:var(--danger)}
+  .sched{display:flex;flex-wrap:wrap;gap:9px;align-items:center;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:9px 11px}
+  .sched .lb{font-size:11.4px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text-2)}
+  .sched input[type=datetime-local]{width:auto;min-width:210px}
+  .sched label{display:inline-flex;align-items:center;gap:5px;font-size:12.6px;font-weight:700}
+  .sched input[type=radio]{width:auto}
+
+  .note{background:var(--info-bg);border:1px solid var(--info-bd);color:var(--info-tx);border-radius:12px;padding:10px 13px;font-size:12.4px;line-height:1.65}
+  .note-warn{background:var(--warn-bg);border-color:var(--warn-bd);color:var(--text)}
+  .note-bad{background:var(--danger-bg);border-color:var(--danger-bd);color:var(--text)}
+  .note ul{margin:6px 0 0;padding-left:18px}
+  .note li{margin:2px 0}
+
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:14px}
+  .stat{background:var(--surface-2);border:1px solid var(--border);border-radius:13px;padding:12px 14px}
+  .stat .k{font-size:11.2px;font-weight:800;color:var(--text-2);letter-spacing:.04em;text-transform:uppercase}
+  .stat .v{font-size:21px;font-weight:900;letter-spacing:-.02em;margin-top:2px}
+
+  .skel{background:var(--muted);border-radius:7px;height:12px;animation:pulse 1.2s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.5}}
+  .empty{color:var(--text-2);font-size:13px;padding:26px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="phead">
+    <div>
+      <h1>🌐 Dịch bài sang Thái</h1>
+      <p>Dán link một bài đã đăng trên fanpage Việt. Máy đọc bài gốc, dịch chữ và chữ trên ảnh sang tiếng Thái, rồi xếp vào hàng chờ. Anh duyệt xong mới bấm đăng — hoặc hẹn giờ để Facebook đăng hộ.</p>
+    </div>
+    <button class="btn btn-g btn-sm" id="btnToken">🔑 Mã ghi dữ liệu</button>
+  </div>
+
+  <div id="banner"></div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="moi">Dịch bài mới</button>
+    <button role="tab" aria-selected="false" data-tab="cho">Hàng chờ <span id="cntReview" class="tnum"></span></button>
+  </div>
+
+  <!-- ══════════ DỊCH BÀI MỚI ══════════ -->
+  <section id="tab-moi">
+    <div class="cols">
+      <div class="card">
+        <div class="card-b">
+          <div>
+            <p class="card-t">Bài gốc &amp; nơi đăng</p>
+            <p class="card-d">Link bài trên fanpage Việt → fanpage Thái sẽ đăng.</p>
+          </div>
+          <label class="f">Link bài viết gốc
+            <input id="inUrl" placeholder="https://www.facebook.com/NomaVietnam/posts/..."/>
+            <span class="hint">Mở bài trên Facebook rồi copy link trên thanh địa chỉ.</span>
+          </label>
+          <label class="f">Đăng lên fanpage Thái<select id="selPage"></select></label>
+          <label class="f">Ảnh trong bài
+            <select id="selMode">
+              <option value="auto">Tự dịch chữ trên ảnh (khuyên dùng)</option>
+              <option value="keep">Giữ nguyên ảnh gốc</option>
+              <option value="text_only">Chỉ dịch chữ, không vẽ lại ảnh</option>
+            </select>
+            <span class="hint">Ảnh không có chữ thì luôn giữ nguyên, không đưa qua AI.</span>
+          </label>
+          <label class="f">ID fanpage nguồn <span class="hint">chỉ cần khi link dạng pfbid…</span>
+            <input id="inSrcPage" placeholder="vd 1024587xxxxxxx"/>
+          </label>
+          <button class="btn btn-p" id="btnGo">🌐 Dịch bài</button>
+          <button class="btn btn-g btn-sm" id="btnForce">↻ Dịch lại <span class="hint">bỏ qua bản đã lưu</span></button>
+          <div class="note">Cùng một bài gốc trong ngày sẽ trả lại bản đã dịch, không tốn thêm tiền AI. Ảnh đã vẽ lại được giữ 7 ngày.</div>
+        </div>
+      </div>
+      <div>
+        <div class="card hide" id="loading"><div class="card-b">
+          <div class="skel" style="width:42%"></div><div class="skel" style="width:92%"></div>
+          <div class="skel" style="width:86%"></div><div class="skel" style="width:60%"></div>
+          <p class="card-d">Đang đọc bài gốc, dịch chữ rồi vẽ lại ảnh… ảnh có chữ mất 20–40 giây mỗi tấm.</p>
+        </div></div>
+        <div class="queue" id="genResult"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ HÀNG CHỜ ══════════ -->
+  <section id="tab-cho" class="hide">
+    <div class="grid2" id="stats"></div>
+    <div class="queue" id="queueList"><div class="empty">Đang tải…</div></div>
+  </section>
+</div>
+
+<script type="module">
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+/* Mã ghi dữ liệu dùng CHUNG với menu "Đăng fanpage Thái" — cùng agent, cùng
+   THAI_SOCIAL_TOKEN. Nhập một lần là cả hai trang chạy. */
+const TKEY = "doscom_thai_token";
+const getTok = () => { try { return localStorage.getItem(TKEY) || ""; } catch { return ""; } };
+const setTok = (t) => { try { localStorage.setItem(TKEY, t); } catch {} };
+
+function banner(msg, kind) {
+  $("#banner").innerHTML = msg
+    ? `<div class="note ${kind === "bad" ? "note-bad" : kind === "warn" ? "note-warn" : ""}" style="margin-bottom:14px">${msg}</div>`
+    : "";
+}
+
+async function api(path, opts = {}) {
+  const o = { headers: { "Content-Type": "application/json" }, ...opts };
+  if (opts.method && opts.method !== "GET") o.headers["X-Thai-Token"] = getTok();
+  const res = await fetch(path, o);
+  let body = null;
+  try { body = await res.json(); } catch {}
+  if (!res.ok || !body || body.ok !== true) {
+    const err = new Error((body && body.error) || `HTTP ${res.status}`);
+    err.detail = body && body.detail;
+    err.kind = body && body.kind;
+    throw err;
+  }
+  return body.data;
+}
+
+const ERR = {
+  unauthorized: "Sai mã ghi dữ liệu. Bấm “Mã ghi dữ liệu” để nhập lại.",
+  missing_url: "Chưa dán link bài gốc.",
+  khong_doc_duoc_bai_goc: "Không đọc được bài gốc.",
+  bai_goc_rong: "Bài gốc không có chữ lẫn ảnh nào để dịch.",
+  ai_failed: "Không gọi được AI dịch bài.",
+  ai_bad_output: "AI trả về không đúng khuôn, bấm Dịch lại.",
+  already_published: "Bài này đã đăng rồi.",
+  already_scheduled: "Bài này đã hẹn giờ trên Facebook rồi. Muốn sửa thì vào Meta Business Suite huỷ lịch trước.",
+  gio_hen_qua_gan: "Giờ hẹn quá gần.",
+  gio_hen_qua_xa: "Giờ hẹn quá xa.",
+  gio_hen_khong_hop_le: "Giờ hẹn không hợp lệ.",
+  empty_caption: "Bài chưa có caption tiếng Thái.",
+  anh_het_han: "Ảnh vẽ lại đã hết hạn lưu tạm.",
+  page_token_missing: "Fanpage Thái chưa có Page Access Token.",
+  page_token_expired: "Page Access Token của fanpage Thái đã hết hạn.",
+};
+const errText = (e) => esc((ERR[e.message] || e.message) + (e.detail ? ` — ${e.detail}` : ""));
+
+let PAGES = [];
+const POSTS = {};
+
+/* ── Nạp fanpage ─────────────────────────────────────────────── */
+async function boot() {
+  try {
+    PAGES = await api("/api/thai-social/pages");
+    $("#selPage").innerHTML = PAGES.map((p) => `<option value="${esc(p.page_id)}">${esc(p.name)}</option>`).join("")
+      || `<option value="">— chưa có fanpage nào —</option>`;
+    if (!PAGES.length) {
+      banner("Chưa có fanpage Thái nào. Sang menu <b>Đăng fanpage Thái</b> → tab Fanpage để thêm và nhập Page Access Token.", "warn");
+    }
+  } catch (e) {
+    banner("Không nạp được danh sách fanpage: " + errText(e), "bad");
+  }
+  loadQueue();
+}
+
+/* ── Dịch bài ─────────────────────────────────────────────────── */
+async function run(force) {
+  const url = $("#inUrl").value.trim();
+  if (!url) return banner("Chưa dán link bài gốc.", "warn");
+  const pageId = $("#selPage").value;
+  if (!pageId) return banner("Chưa chọn fanpage Thái để đăng.", "warn");
+
+  $("#loading").classList.remove("hide");
+  $("#genResult").innerHTML = "";
+  banner("");
+  try {
+    const d = await api("/api/thai-social/repost/preview", {
+      method: "POST",
+      body: JSON.stringify({
+        url, page_id: pageId,
+        image_mode: $("#selMode").value,
+        src_page_id: $("#inSrcPage").value.trim() || null,
+        force: !!force,
+      }),
+    });
+    POSTS[d.post.id] = d.post;
+    $("#genResult").innerHTML = postCard(d.post);
+    if (d.duplicate) banner(esc(d.note), "warn");
+    else if (d.cached_text) banner("Dùng lại bản dịch đã lưu trong ngày — không tốn thêm tiền AI.", "");
+    else banner(`Đã dịch xong. Chi phí AI lần này: ${(d.cost_usd || 0).toFixed(4)} USD.`, "");
+  } catch (e) {
+    if (e.kind === "need_page") {
+      banner(errText(e) + " Điền ô <b>ID fanpage nguồn</b> rồi bấm lại.", "warn");
+    } else {
+      banner(errText(e), "bad");
+    }
+  } finally {
+    $("#loading").classList.add("hide");
+  }
+}
+$("#btnGo").addEventListener("click", () => run(false));
+$("#btnForce").addEventListener("click", () => run(true));
+$("#inUrl").addEventListener("keydown", (e) => { if (e.key === "Enter") run(false); });
+
+/* ── Thẻ bài ──────────────────────────────────────────────────── */
+const STATE_PILL = {
+  pending_review: '<span class="pill pill-warn">● Chờ duyệt</span>',
+  edited: '<span class="pill pill-info">✎ Đã sửa, sẵn sàng đăng</span>',
+  scheduled: '<span class="pill pill-sch">🕒 Đã hẹn giờ</span>',
+  published: '<span class="pill pill-ok">✓ Đã đăng</span>',
+  discarded: '<span class="pill pill-bad">Đã bỏ</span>',
+};
+
+const fmtTime = (sec) => {
+  if (!sec) return "";
+  try {
+    return new Date(sec * 1000).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour12: false });
+  } catch { return String(sec); }
+};
+
+/* Giá trị mặc định cho ô hẹn giờ: 1 tiếng nữa. Dựng bằng giờ ĐỊA PHƯƠNG của máy chứ không
+   phải toISOString() — input datetime-local hiểu chuỗi là giờ địa phương, đưa chuỗi UTC vào
+   là lệch đúng 7 tiếng mà nhìn không ra. */
+function defaultSchedule() {
+  const d = new Date(Date.now() + 3600 * 1000);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function imgCard(p, im) {
+  const badge = im.translated
+    ? '<span class="pill pill-ok">✓ Đã vẽ lại tiếng Thái</span>'
+    : im.has_text
+      ? '<span class="pill pill-warn">⚠ Còn chữ Việt</span>'
+      : '<span class="pill pill-info">Ảnh gốc</span>';
+  const editable = p.status === "pending_review" || p.status === "edited";
+  return `<div class="imgcard" data-img="${im.idx}">
+    <img src="${esc(im.preview)}" alt="Ảnh ${im.idx + 1} của bài" loading="lazy"/>
+    <div class="ib">
+      ${badge}
+      ${im.text_vi || im.text_th ? `<div class="tx">🇻🇳 ${esc(im.text_vi || "—")}<br/>🇹🇭 <span class="t">${esc(im.text_th || "—")}</span></div>` : ""}
+      ${im.note ? `<div class="nt">${esc(im.note)}</div>` : ""}
+      ${editable ? `<div class="ia">
+        ${im.translated ? `<button class="btn btn-g btn-sm" data-act="use-orig" data-idx="${im.idx}">Dùng ảnh gốc</button>` : ""}
+        <button class="btn btn-dg btn-sm" data-act="drop-img" data-idx="${im.idx}">Bỏ ảnh</button>
+      </div>` : ""}
+    </div>
+  </div>`;
+}
+
+function postCard(p) {
+  const page = PAGES.find((x) => x.page_id === p.page_id) || { name: p.page_id, token_status: "missing" };
+  const editable = p.status === "pending_review" || p.status === "edited";
+  const done = p.status === "published" || p.status === "scheduled";
+  const canPublish = editable && page.token_status === "ok";
+  const why = editable && page.token_status !== "ok"
+    ? `<span class="why">⚠ ${page.token_status === "missing" ? "Fanpage chưa có Page Access Token" : "Token đã hết hạn"}</span>` : "";
+
+  return `<article class="post" data-state="${esc(p.status)}" data-id="${p.id}">
+    <div class="post-b">
+      <div class="post-top">
+        <span class="page-name">→ ${esc(page.name)}
+          <em>· ${esc(p.vn_date)} · từ ${esc(p.src_page_name || p.src_page_id || "fanpage Việt")}</em></span>
+        ${STATE_PILL[p.status] || ""}
+      </div>
+
+      <p class="th" data-th>${esc(p.caption_th) || '<span style="color:var(--text-3)">(chưa có caption — bấm “Sửa chữ” để viết)</span>'}</p>
+      ${p.caption_vi_back ? `<p class="vi"><b>Dịch ngược để duyệt</b>${esc(p.caption_vi_back)}</p>` : ""}
+      ${p.hashtags && p.hashtags.length ? `<div class="tagrow">${p.hashtags.map((t) => `<span>#${esc(t)}</span>`).join("")}</div>` : ""}
+
+      ${p.caption_vi ? `<details class="src"><summary>Bài gốc tiếng Việt · <a href="${esc(p.src_url)}" target="_blank" rel="noopener">mở trên Facebook</a></summary><p class="vi">${esc(p.caption_vi)}</p></details>` : ""}
+
+      ${p.warnings && p.warnings.length ? `<div class="note note-warn"><b>Phải tự soát trước khi đăng:</b><ul>${p.warnings.map((w) => `<li>${esc(w)}</li>`).join("")}</ul></div>` : ""}
+      ${p.last_error ? `<div class="note note-bad">${esc(p.last_error)}</div>` : ""}
+
+      ${p.images && p.images.length ? `<div class="imgs">${p.images.map((im) => imgCard(p, im)).join("")}</div>` : `<div class="note">Bài này không có ảnh.</div>`}
+
+      ${p.status === "scheduled" ? `<div class="note">🕒 Facebook sẽ đăng lúc <b>${esc(fmtTime(p.scheduled_at))}</b> (giờ VN/Thái). Muốn đổi hoặc huỷ thì vào Meta Business Suite — CRM không sửa được bài đã giao cho Facebook.</div>` : ""}
+
+      ${editable ? `<div class="sched">
+        <span class="lb">Thời điểm đăng</span>
+        <label><input type="radio" name="when-${p.id}" value="now" checked data-when/> Đăng ngay</label>
+        <label><input type="radio" name="when-${p.id}" value="later" data-when/> Hẹn giờ</label>
+        <input type="datetime-local" data-at value="${defaultSchedule()}" disabled/>
+        <span class="hint">Giờ Việt Nam, cũng là giờ Thái Lan. Cách hiện tại ít nhất 10 phút.</span>
+      </div>` : ""}
+
+      <div class="acts">
+        ${done
+          ? `<span class="hint tnum">fb_post_id · ${esc(p.fb_post_id || "")}</span>`
+          : `<button class="btn btn-g btn-sm" data-act="edit">✎ Sửa chữ</button>
+             <button class="btn btn-g btn-sm" data-act="regen">↻ Dịch lại</button>
+             <button class="btn btn-dg btn-sm" data-act="drop">Bỏ bài</button>`}
+        <span class="spacer"></span>
+        ${why}
+        ${done ? "" : `<button class="btn btn-ok btn-sm" data-act="publish" ${canPublish ? "" : "disabled"}>Đăng lên ${esc(page.name)}</button>`}
+      </div>
+    </div>
+  </article>`;
+}
+
+function replaceCard(id, post) {
+  POSTS[id] = post;
+  const art = document.querySelector(`.post[data-id="${id}"]`);
+  if (art) art.outerHTML = postCard(post);
+}
+
+/* Uỷ quyền sự kiện ở body: thẻ bài được vẽ lại liên tục, gắn listener từng nút sẽ rò. */
+document.body.addEventListener("change", (ev) => {
+  const r = ev.target.closest("[data-when]");
+  if (!r) return;
+  const box = r.closest(".sched");
+  box.querySelector("[data-at]").disabled = box.querySelector("[data-when]:checked").value !== "later";
+});
+
+document.body.addEventListener("click", async (ev) => {
+  const btn = ev.target.closest("[data-act]");
+  if (!btn) return;
+  const art = btn.closest(".post");
+  const id = Number(art.dataset.id);
+  const act = btn.dataset.act;
+  try {
+    if (act === "edit") {
+      const el = art.querySelector("[data-th]");
+      const ta = document.createElement("textarea");
+      ta.value = (POSTS[id] || {}).caption_th || "";
+      ta.rows = 10;
+      el.replaceWith(ta);
+      btn.textContent = "💾 Lưu";
+      btn.dataset.act = "save";
+      return;
+    }
+    if (act === "save") {
+      const ta = art.querySelector("textarea");
+      const d = await api(`/api/thai-social/repost/queue/${id}`, {
+        method: "PATCH", body: JSON.stringify({ caption_th: ta.value }),
+      });
+      replaceCard(id, d);
+      banner("Đã lưu, bài chuyển sang “Đã sửa”.", "");
+      return;
+    }
+    if (act === "use-orig" || act === "drop-img") {
+      const idx = Number(btn.dataset.idx);
+      const body = act === "use-orig" ? { use_original: [idx] } : { remove_image: [idx] };
+      const d = await api(`/api/thai-social/repost/queue/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+      replaceCard(id, d);
+      return;
+    }
+    if (act === "drop") {
+      if (!confirm("Bỏ bài này?")) return;
+      await api(`/api/thai-social/repost/queue/${id}`, { method: "DELETE" });
+      art.remove();
+      return;
+    }
+    if (act === "regen") {
+      const p = POSTS[id] || {};
+      btn.disabled = true; btn.textContent = "Đang dịch lại…";
+      const d = await api("/api/thai-social/repost/preview", {
+        method: "POST",
+        body: JSON.stringify({ url: p.src_url, page_id: p.page_id, post_id: id,
+                               image_mode: p.image_mode, force: true }),
+      });
+      replaceCard(id, d.post);
+      return;
+    }
+    if (act === "publish") {
+      const box = art.querySelector(".sched");
+      const later = box && box.querySelector("[data-when]:checked").value === "later";
+      let at = null;
+      if (later) {
+        const v = box.querySelector("[data-at]").value;
+        if (!v) return banner("Chưa chọn giờ hẹn đăng.", "warn");
+        at = Math.floor(new Date(v).getTime() / 1000);
+        if (!at) return banner("Giờ hẹn không đọc được.", "warn");
+      }
+      const page = PAGES.find((x) => x.page_id === (POSTS[id] || {}).page_id) || {};
+      const hoi = later
+        ? `Giao bài cho Facebook đăng lúc ${fmtTime(at)} lên "${page.name}"?`
+        : `Đăng NGAY bài này lên fanpage thật "${page.name}"?`;
+      if (!confirm(hoi)) return;
+
+      btn.disabled = true; btn.textContent = later ? "Đang đặt lịch…" : "Đang đăng…";
+      const d = await api("/api/thai-social/repost/publish", {
+        method: "POST", body: JSON.stringify({ post_id: id, scheduled_at: at }),
+      });
+      replaceCard(id, d.post);
+      banner(d.scheduled
+        ? `Đã giao cho Facebook. Bài sẽ tự lên lúc ${esc(fmtTime(d.post.scheduled_at))}.`
+        : "Đã đăng lên fanpage.", "");
+      loadQueue();
+    }
+  } catch (e) {
+    banner(errText(e), "bad");
+    btn.disabled = false;
+  }
+});
+
+/* ── Hàng chờ ─────────────────────────────────────────────────── */
+async function loadQueue() {
+  try {
+    const d = await api("/api/thai-social/repost/queue?days=30");
+    const c = d.counts;
+    const cho = c.pending_review + c.edited;
+    $("#cntReview").textContent = cho ? `(${cho})` : "";
+    $("#stats").innerHTML = [
+      ["Chờ duyệt", c.pending_review + c.edited],
+      ["Đã hẹn giờ", c.scheduled],
+      ["Đã đăng (30 ngày)", c.published],
+      ["Tiền AI (30 ngày)", "$" + (d.cost_usd || 0).toFixed(2)],
+    ].map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v tnum">${v}</div></div>`).join("");
+    d.posts.forEach((p) => { POSTS[p.id] = p; });
+    $("#queueList").innerHTML = d.posts.length
+      ? d.posts.map(postCard).join("")
+      : `<div class="empty">Chưa có bài nào trong 30 ngày qua.</div>`;
+  } catch (e) {
+    $("#queueList").innerHTML = `<div class="empty">Không tải được hàng chờ: ${errText(e)}</div>`;
+  }
+}
+
+/* ── Tab + mã ghi dữ liệu ─────────────────────────────────────── */
+document.querySelectorAll(".tabs button").forEach((b) =>
+  b.addEventListener("click", () => {
+    document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
+    document.querySelectorAll("section[id^=tab-]").forEach((s) => s.classList.add("hide"));
+    $("#tab-" + b.dataset.tab).classList.remove("hide");
+    if (b.dataset.tab === "cho") loadQueue();
+  }));
+
+$("#btnToken").addEventListener("click", () => {
+  const t = prompt("Mã ghi dữ liệu (THAI_SOCIAL_TOKEN) — dùng chung với menu Đăng fanpage Thái:", getTok());
+  if (t !== null) { setTok(t.trim()); banner("Đã lưu mã vào trình duyệt này.", ""); }
+});
+
+boot();
+</script>
+</body>
+</html>

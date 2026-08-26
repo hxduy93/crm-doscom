@@ -109,3 +109,71 @@ export function base64ToBytes(b64) {
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
   return out;
 }
+
+/* ══════════ BÀI NHIỀU ẢNH + HẸN GIỜ ══════════════════════════════════════════
+   Dùng cho menu "Dịch bài sang Thái": bài gốc thường có nhiều ảnh, và người duyệt muốn
+   chọn giờ đăng.
+
+   Đường đi bắt buộc của Facebook cho cả hai việc:
+     1. Từng ảnh → POST /{page}/photos với published=false  → trả về photo id (chưa lên tường)
+     2. POST /{page}/feed với attached_media[i]={"media_fbid":id}
+        · đăng ngay   → không gửi gì thêm
+        · hẹn giờ     → published=false + scheduled_publish_time=<epoch giây>
+
+   HẸN GIỜ LÀ VIỆC CỦA FACEBOOK, KHÔNG PHẢI CỦA CRM. Không có cron nào của mình đứng chờ tới
+   giờ rồi đăng: người duyệt bấm MỘT lần, bài nằm trong mục "Bài đã lên lịch" của Meta
+   Business Suite. Nhờ vậy vẫn giữ nguyên luật cũ của tính năng — CRM không bao giờ tự đăng —
+   mà lịch vẫn chạy kể cả khi Pages/Worker chết. */
+
+// Đẩy MỘT ảnh lên dạng chưa đăng. Trả photo id để ghép vào bài.
+export async function uploadUnpublishedPhoto({ pageId, pageToken, bytes, imageType, imageUrl }) {
+  if (bytes) {
+    const form = new FormData();
+    form.set("published", "false");
+    form.set("access_token", pageToken);
+    const type = imageType || "image/png";
+    const ext = type.includes("jpeg") ? "jpg" : type.includes("webp") ? "webp" : "png";
+    form.set("source", new Blob([bytes], { type }), `anh.${ext}`);
+    const res = await fetch(`https://graph.facebook.com/${API}/${pageId}/photos`, { method: "POST", body: form });
+    let data = null;
+    try { data = await res.json(); } catch { data = null; }
+    if (!res.ok || !data || data.error || !data.id) {
+      const e = (data && data.error) || {};
+      const err = new Error(e.message || `Graph API HTTP ${res.status} khi tải ảnh lên`);
+      err.kind = classifyGraphError(e);
+      err.fbCode = e.code || null;
+      throw err;
+    }
+    return String(data.id);
+  }
+  const r = await graphPost(`${pageId}/photos`, { published: "false", url: imageUrl, access_token: pageToken });
+  if (!r || !r.id) throw Object.assign(new Error("Facebook không trả về id ảnh"), { kind: "other" });
+  return String(r.id);
+}
+
+/* Đăng bài lên tường (hoặc xếp lịch). images: [{ bytes, imageType } | { imageUrl }].
+   scheduledAt: epoch GIÂY, để trống = đăng ngay.
+   Trả { fb_post_id, scheduled }. */
+export async function postArticleToPage({ pageId, pageToken, message, images = [], scheduledAt = null }) {
+  if (!pageId) throw Object.assign(new Error("thiếu page_id"), { kind: "config" });
+  if (!pageToken) throw Object.assign(new Error("fanpage chưa có Page Access Token"), { kind: "token" });
+
+  const mediaIds = [];
+  for (const im of images) {
+    if (!im) continue;
+    mediaIds.push(await uploadUnpublishedPhoto({
+      pageId, pageToken,
+      bytes: im.bytes || null, imageType: im.imageType || null, imageUrl: im.imageUrl || null,
+    }));
+  }
+
+  const payload = { message, access_token: pageToken };
+  mediaIds.forEach((id, i) => { payload[`attached_media[${i}]`] = JSON.stringify({ media_fbid: id }); });
+  if (scheduledAt) {
+    payload.published = "false";
+    payload.scheduled_publish_time = String(Math.floor(scheduledAt));
+  }
+
+  const r = await graphPost(`${pageId}/feed`, payload);
+  return { fb_post_id: r.id || null, scheduled: !!scheduledAt, photo_ids: mediaIds };
+}
