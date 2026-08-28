@@ -7,16 +7,21 @@
 //
 // Cách chữa: giữ nguyên web_search (nó CHÍNH LÀ phép đo — gemini không có web
 // grounding nên brand_url_cited luôn 0), nhưng đổi NHỊP quét theo tín hiệu:
-//   A — kết quả từng thay đổi   → 2 ngày/lần
+//   A — kết quả từng thay đổi   → hàng ngày
 //   B — luôn được nhắc          → 7 ngày/lần
 //   C — chưa bao giờ được nhắc  → 14 ngày/lần
 //
-// NGÂN SÁCH (chốt 28/08/2026): chủ dự án đặt trần ~$5/tháng cho chatgpt.
-//   8 câu tầng A / 2 + 1 câu tầng B / 7 + 35 câu tầng C / 14 = 6,64 lượt/ngày
-//   → 6,64 × 30,4 × $0,025 ≈ $5,05/tháng.
-// Nhịp tầng chỉ là ƯỚC LƯỢNG: mỗi lần một câu đổi kết quả là nó nhảy lên tầng A,
-// nên số câu tầng A tự lớn dần và chi phí trôi theo. Vì vậy có thêm TRẦN CỨNG
-// COSTLY_JOBS_PER_DAY — nhịp tầng quyết định thứ tự ưu tiên, trần quyết định tiền.
+// NGÂN SÁCH (chốt 28/08/2026): chủ dự án chấp nhận 10 lượt chatgpt/ngày
+//   → 10 × 30,4 × $0,025 = $7,60/tháng (~195.000đ).
+//
+// TRẦN COSTLY_JOBS_PER_DAY chính là thứ giữ đúng mức đó, KHÔNG phải nhịp tầng.
+// Nhịp tầng cho ra 8/1 + 1/7 + 35/14 = 10,64 lượt/ngày — nhỉnh hơn trần một chút,
+// nên trần cắt ~0,6 lượt mỗi ngày và tầng C trên thực tế giãn thành ~15 ngày/lần
+// thay vì 14. Cố ý để vậy: trần là con số DUY NHẤT quyết định tiền, muốn đổi ngân
+// sách thì sửa mỗi nó. Nhịp tầng chỉ xếp ai được ưu tiên trong hạn mức.
+//
+// Lý do phải có trần chứ không tin vào nhịp tầng: mỗi lần một câu đổi kết quả là nó
+// nhảy lên tầng A, nên số câu tầng A tự lớn dần và chi phí trôi theo mà không ai thấy.
 // Engine rẻ (gemini, $0,00037/lượt) vẫn chạy hàng ngày cho TẤT CẢ câu hỏi và làm
 // chuông báo: gemini đổi kết quả cũng đủ kéo câu hỏi lên tầng A, nên tầng C không
 // thành điểm mù dù 14 ngày mới tốn một lượt chatgpt.
@@ -27,14 +32,15 @@ const DAY = 86400;
 export const COSTLY_ENGINES = new Set(["chatgpt"]);
 
 /** Số ngày giữa hai lượt chạy engine đắt, theo tầng. */
-export const TIER_INTERVAL_DAYS = { A: 2, B: 7, C: 14 };
+export const TIER_INTERVAL_DAYS = { A: 1, B: 7, C: 14 };
 
 /**
- * Trần cứng số lượt engine đắt được tạo MỖI NGÀY. 7 × 30,4 × $0,025 ≈ $5,32/tháng.
+ * Trần cứng số lượt engine đắt được tạo MỖI NGÀY. 10 × 30,4 × $0,025 = $7,60/tháng
+ * (~195.000đ) — mức chủ dự án chốt 28/08/2026.
  * Chỉnh qua env GEO_COSTLY_JOBS_PER_DAY. Đây là thứ THẬT SỰ chặn tiền — nhịp tầng
  * chỉ xếp thứ tự ai được ưu tiên trong hạn mức đó.
  */
-export const COSTLY_JOBS_PER_DAY = 7;
+export const COSTLY_JOBS_PER_DAY = 10;
 
 /** Giữ ở tầng A bao lâu sau khi kết quả thay đổi. */
 export const PROMOTE_DAYS = 30;

@@ -19,11 +19,11 @@ const NOW = 1_800_000_000;
 
 // ---------------------------------------------------------------- nhịp theo tầng
 
-test("nhịp quét: A 2 ngày, B 7 ngày, C 14 ngày; tầng lạ rơi về C", () => {
-  assert.equal(tierIntervalDays("A"), 2);
+test("nhịp quét: A hàng ngày, B 7 ngày, C 14 ngày; tầng lạ rơi về C", () => {
+  assert.equal(tierIntervalDays("A"), 1);
   assert.equal(tierIntervalDays("B"), 7);
   assert.equal(tierIntervalDays("C"), 14);
-  assert.equal(tierIntervalDays("a"), 2);        // không phân biệt hoa thường
+  assert.equal(tierIntervalDays("a"), 1);        // không phân biệt hoa thường
   assert.equal(tierIntervalDays(null), 14);      // thiếu tier = quét thưa nhất, KHÔNG phải dày nhất
   assert.equal(tierIntervalDays("Z"), 14);
 });
@@ -36,7 +36,7 @@ test("chỉ chatgpt bị xếp tầng — gemini rẻ nên chạy hàng ngày ch
 });
 
 test("nextRunAt cộng đúng số ngày của tầng", () => {
-  assert.equal(nextRunAt("A", NOW), NOW + 2 * DAY);
+  assert.equal(nextRunAt("A", NOW), NOW + 1 * DAY);
   assert.equal(nextRunAt("C", NOW), NOW + 14 * DAY);
 });
 
@@ -184,7 +184,7 @@ test("query tới hạn được dời lịch theo ĐÚNG tầng của nó", () 
   ];
   const { reschedule } = buildJobPlan(queries, ENGINES, 1, NOW);
   const map = Object.fromEntries(reschedule.map(r => [r.query_id, r.next_run_at]));
-  assert.equal(map.qa, NOW + 2 * DAY);
+  assert.equal(map.qa, NOW + 1 * DAY);
   assert.equal(map.qb, NOW + 7 * DAY);
   assert.equal(map.qc, NOW + 14 * DAY);
 });
@@ -212,16 +212,24 @@ test("chỉ có engine rẻ thì không đụng tới lịch tầng", () => {
 
 // ---------------------------------------------------------------- tiết kiệm thật
 
-test("ngân sách: nhịp tầng cho ra ~$5/tháng như chủ dự án chốt", () => {
+test("ngân sách: TRẦN giữ đúng 10 lượt/ngày = $7,60/tháng như chủ dự án chốt", () => {
+  // Trần là con số DUY NHẤT quyết định tiền. Đây là test canh ngân sách:
+  // đổi COSTLY_JOBS_PER_DAY mà quên báo chủ dự án là test này đỏ.
+  assert.equal(COSTLY_JOBS_PER_DAY, 10);
+  const tranThang = COSTLY_JOBS_PER_DAY * 30.4 * 0.025;
+  assert.ok(tranThang > 7.3 && tranThang < 7.9, `trần $${tranThang.toFixed(2)}/tháng`);
+
   // Phân bổ đo thật trên geo_runs 28/08/2026: A=8, B=1, C=35.
   const perDay = 8 / tierIntervalDays("A") + 1 / tierIntervalDays("B") + 35 / tierIntervalDays("C");
-  const moiThang = perDay * 30.4 * 0.025;
-  assert.ok(moiThang > 4.5 && moiThang < 5.5, `dự phóng $${moiThang.toFixed(2)}/tháng`);
 
-  // Trần ngày phải ĐỦ RỘNG để nhịp tầng chạy bình thường, nhưng vẫn chặn được
-  // khi nhiều câu cùng thăng tầng A. Trần quá chặt là bóp nghẹt nhịp mỗi ngày.
-  assert.ok(COSTLY_JOBS_PER_DAY >= Math.ceil(perDay), "trần chặt hơn nhịp thường ngày");
-  assert.ok(COSTLY_JOBS_PER_DAY * 30.4 * 0.025 < 6, "trần vẫn giữ dưới $6/tháng");
+  // Nhịp tầng nhỉnh hơn trần một chút → trần cắt ~0,6 lượt/ngày, tầng C thực tế
+  // giãn thành ~15 ngày/lần. CỐ Ý: tiền do trần quyết, không do nhịp.
+  assert.ok(perDay > COSTLY_JOBS_PER_DAY, "nhịp tầng phải chạm trần thì trần mới là thứ quyết tiền");
+  assert.ok(perDay - COSTLY_JOBS_PER_DAY < 1.5, `trần cắt quá nhiều: ${(perDay - COSTLY_JOBS_PER_DAY).toFixed(2)} lượt/ngày`);
+
+  // Tiền thật = mức thấp hơn giữa nhịp và trần.
+  const thucTe = Math.min(perDay, COSTLY_JOBS_PER_DAY) * 30.4 * 0.025;
+  assert.ok(thucTe > 7.3 && thucTe < 7.9, `dự phóng $${thucTe.toFixed(2)}/tháng`);
 });
 
 test("trần ngày cắt đúng số lượt đắt, engine rẻ KHÔNG bị cắt", () => {
