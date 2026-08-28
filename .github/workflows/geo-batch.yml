@@ -4,60 +4,111 @@ name: GEO Monitor — batch processor (CRM)
 # _middleware) → không cần X-Test-Token. Cần các secret GEO trên Cloudflare Pages
 # (OPENAI_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY…) thì run-batch mới query được.
 #
-# CHI PHÍ (đo thật trên geo_runs, 28/08/2026): gemini $0,00037/lượt — coi như miễn phí;
-# chatgpt $0,025/lượt vì tool web_search tính tiền cố định theo LƯỢT. Từ 28/08 chatgpt
-# chạy theo TẦNG (migration 0023 + _utils/query-tier.js) nên mỗi ngày chỉ còn ~11 job
-# chatgpt thay vì 44 → ~$7,9/tháng thay vì ~$17,5.
+# ─── TIỀN NẰM Ở ĐÂU ──────────────────────────────────────────────────────────
+# KHÔNG phải ở workflow này. `/api/geo/jobs` quyết định mỗi ngày hỏi bao nhiêu câu
+# (có khoá idempotent — gọi bao nhiêu lần trong ngày cũng chỉ tạo MỘT đợt);
+# `/api/geo/run-batch` chỉ tiêu thụ đống việc đã tạo sẵn. Nên chạy workflow này dày
+# hay thưa KHÔNG đổi hoá đơn, chỉ đổi việc hàng đợi có tiêu kịp hay không.
+#
+# Ngân sách chốt 28/08/2026: trần 10 lượt chatgpt/ngày = $7,60/tháng (~195.000đ),
+# đặt ở var GEO_COSTLY_JOBS_PER_DAY trong wrangler.toml. Gemini ~$0,00037/lượt,
+# chạy đủ 44 câu/ngày, coi như miễn phí.
+#
+# ─── VÌ SAO 2 LƯỢT/NGÀY MÀ 6 ĐỢT MỖI LƯỢT ────────────────────────────────────
+# Mỗi ngày sinh ra ~54 job (44 gemini + tối đa 10 chatgpt). Một lời gọi run-batch
+# chỉ xử 6 job — đó là mức vừa với timeout của Pages Functions khi cả 6 đều là
+# chatgpt web_search, KHÔNG nên tăng. Nên muốn 2 lượt cron/ngày mà vẫn hết việc thì
+# mỗi lượt phải gọi run-batch NHIỀU LẦN: 6 đợt × 6 job × 2 lượt = 72 job/ngày.
+# Mỗi lời gọi là một request riêng nên vẫn giữ nguyên mức an toàn về timeout.
+#
+# LỊCH SỬ (đừng quay lại): trước 28/08 cron chạy 6 lượt/ngày × 1 đợt = 36 job/ngày
+# trong khi mỗi ngày tạo 88 job → hàng đợi tồn 1.297 job, cái cũ nhất 3 tuần, tức
+# số GEO trên giao diện đo thế giới của 3 tuần trước mà ngoài mặt không dấu hiệu gì.
+# Sau này đổi số câu hỏi hoặc số engine thì KIỂM LẠI công suất ở đây, đừng để tạo
+# nhiều hơn xử.
 on:
   schedule:
-    # 2026-08-17 — GIẢM TỪ 48 → 6 lượt/ngày (xem ghi chú ở fetch-pancake.yml).
-    # 2026-08-28 — TĂNG LẠI 6 → 12 lượt/ngày. Lý do: 6 tick × 6 job = 36 job/ngày mà
-    # mỗi ngày tạo ra 44 gemini + ~11 chatgpt ≈ 55 job → hàng đợi phình (đã tồn 1.297
-    # job, cái cũ nhất 3 tuần, tức số GEO trên giao diện đang đo thế giới của 3 tuần
-    # trước). 12 tick × 6 = 72 job/ngày mới theo kịp và tiêu hết tồn.
-    # KHÔNG tăng batch size thay cho tần suất: 6 job/lượt là mức vừa với timeout 30s
-    # của Pages Functions khi cả 6 đều là chatgpt web_search.
-    - cron: '0 */2 * * *'    # 2 giờ/tick, idempotent
+    # 09:30 và 21:30 giờ VN. Tránh khung 0–1h và 6–7h UTC vốn đã dày workflow
+    # lấy dữ liệu (fetch-pancake, fetch-fb-ads, fetch-google-ads…).
+    - cron: '30 2,14 * * *'
   workflow_dispatch:
 
 concurrency:
   group: geo-batch
   cancel-in-progress: false
 
+env:
+  BASE: https://crm-doscom.pages.dev
+  SO_DOT: 6          # số lần gọi run-batch trong một lượt cron
+  JOB_MOI_DOT: 6     # số job mỗi lần gọi — ĐỪNG tăng, xem ghi chú timeout ở trên
+
 jobs:
   batch:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 20
     steps:
-      - name: Create daily jobs (idempotent)
+      - name: Tạo job trong ngày (idempotent)
         run: |
-          echo "::group::Create daily jobs"
-          HTTP_CODE=$(curl -s -o /tmp/jobs.json -w "%{http_code}" \
-            -X POST 'https://crm-doscom.pages.dev/api/geo/jobs' \
+          echo "::group::Tạo job"
+          HTTP_CODE=$(curl -s -o /tmp/jobs.json -w "%{http_code}" --max-time 120 \
+            -X POST "$BASE/api/geo/jobs" \
             -H "Content-Type: application/json" \
             -d '{"runs_per_query": 1}')
           echo "HTTP $HTTP_CODE"; cat /tmp/jobs.json; echo ""
-          if [ "$HTTP_CODE" -ge 400 ]; then echo "::error::jobs failed (HTTP $HTTP_CODE)"; exit 1; fi
+          if [ "$HTTP_CODE" -ge 400 ]; then echo "::error::jobs lỗi (HTTP $HTTP_CODE)"; exit 1; fi
           echo "::endgroup::"
 
-      - name: Process batch (6 jobs)
+      - name: Chạy các đợt
         run: |
-          echo "::group::Process batch"
-          HTTP_CODE=$(curl -s -o /tmp/batch.json -w "%{http_code}" \
-            -X POST 'https://crm-doscom.pages.dev/api/geo/run-batch' \
-            -H "Content-Type: application/json" \
-            -d '{"limit": 6}')
-          echo "HTTP $HTTP_CODE"; cat /tmp/batch.json; echo ""
-          if [ "$HTTP_CODE" -ge 400 ]; then echo "::error::batch failed (HTTP $HTTP_CODE)"; exit 1; fi
-          echo "::endgroup::"
+          TONG_JOB=0
+          TONG_TIEN=0
+          DOT_CHAY=0
+          for i in $(seq 1 "$SO_DOT"); do
+            echo "::group::Đợt $i/$SO_DOT"
+            HTTP_CODE=$(curl -s -o /tmp/batch.json -w "%{http_code}" --max-time 180 \
+              -X POST "$BASE/api/geo/run-batch" \
+              -H "Content-Type: application/json" \
+              -d "{\"limit\": $JOB_MOI_DOT}")
+            echo "HTTP $HTTP_CODE"; cat /tmp/batch.json; echo ""
+            if [ "$HTTP_CODE" -ge 400 ]; then
+              echo "::error::đợt $i lỗi (HTTP $HTTP_CODE)"; exit 1
+            fi
 
-      - name: Summary
+            XU_LY=$(jq -r '.processed // 0' /tmp/batch.json)
+            TIEN=$(jq -r '.summary.total_cost_usd // 0' /tmp/batch.json)
+            TONG_JOB=$((TONG_JOB + XU_LY))
+            TONG_TIEN=$(awk "BEGIN{printf \"%.6f\", $TONG_TIEN + $TIEN}")
+            DOT_CHAY=$i
+            echo "::endgroup::"
+
+            # Hết việc thì dừng sớm — gọi tiếp chỉ tốn thời gian, không tốn tiền.
+            if [ "$XU_LY" -eq 0 ]; then
+              echo "Hàng đợi rỗng, dừng ở đợt $i"
+              break
+            fi
+            sleep 10
+          done
+
+          echo "TONG_JOB=$TONG_JOB"     >> $GITHUB_ENV
+          echo "TONG_TIEN=$TONG_TIEN"   >> $GITHUB_ENV
+          echo "DOT_CHAY=$DOT_CHAY"     >> $GITHUB_ENV
+
+      - name: Tổng kết
         if: always()
         run: |
-          echo "## GEO Monitor batch summary" >> $GITHUB_STEP_SUMMARY
-          echo '```json' >> $GITHUB_STEP_SUMMARY
-          cat /tmp/jobs.json 2>/dev/null || echo "no jobs output" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo '```json' >> $GITHUB_STEP_SUMMARY
-          cat /tmp/batch.json 2>/dev/null || echo "no batch output" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## GEO Monitor — lượt chạy"
+            echo ""
+            echo "- Đã chạy **${DOT_CHAY:-0}/${SO_DOT}** đợt"
+            echo "- Xử lý **${TONG_JOB:-0}** job"
+            echo "- Chi phí lượt này: **\$${TONG_TIEN:-0}**"
+            echo ""
+            echo "### Job tạo trong ngày"
+            echo '```json'
+            cat /tmp/jobs.json 2>/dev/null || echo "không có output"
+            echo '```'
+            echo "### Đợt cuối"
+            echo '```json'
+            cat /tmp/batch.json 2>/dev/null || echo "không có output"
+            echo '```'
+          } >> $GITHUB_STEP_SUMMARY
