@@ -43,6 +43,31 @@ Endpoint `/api/geo/jobs` (`POST` tạo job, `GET` test) SHALL nạp các cặp q
 - **WHEN** một job fail lần thứ 3
 - **THEN** agent mark job đó `failed` thay vì retry tiếp
 
+### Requirement: Lịch quét theo tầng cho engine tính tiền theo lượt
+
+`/api/geo/jobs` SHALL phân biệt engine RẺ và engine ĐẮT khi nạp job. Engine rẻ (gemini) SHALL được nạp job cho MỌI câu hỏi active mỗi ngày. Engine đắt (chatgpt — tool `web_search` tính $0,025 cố định mỗi lượt) SHALL chỉ được nạp job cho câu hỏi đã tới hạn theo cột `geo_queries.next_run_at`, và sau khi nạp SHALL dời `next_run_at` theo tầng: A = 1 ngày, B = 7 ngày, C = 14 ngày. Response SHALL báo số job bị hoãn (`skipped_costly`, `skipped_by_tier`) — không im lặng cắt bớt.
+
+`/api/geo/run-batch` SHALL so vân tay kết quả (`doscom_mentioned | noma_mentioned | brand_url_cited`) của lượt vừa chạy với lượt trước của ĐÚNG cặp query×engine, rồi cập nhật tầng: đổi vân tay → tầng A giữ 30 ngày; tầng A hết hạn mà không đổi → hạ về B (nếu đang được nhắc) hoặc C. Tín hiệu từ engine rẻ CŨNG được tính, để tầng C không thành điểm mù.
+
+`/api/geo/publish-wp` SHALL kéo `geo_content_queue.query_id` lên tầng A trong 14 ngày khi bài được đăng — đó là lúc kết quả AI có lý do đổi, và cũng là cách đo tác dụng của bài viết.
+
+Logic thuần nằm ở `functions/api/geo/_utils/query-tier.js`; cột tầng thêm ở `migrations/0023_geo_query_tier.sql`.
+
+#### Scenario: Câu hỏi tầng C chưa tới hạn
+
+- **WHEN** cron gọi `POST /api/geo/jobs` mà câu hỏi tầng C còn 9 ngày nữa mới tới hạn
+- **THEN** agent nạp job gemini cho câu đó nhưng KHÔNG nạp job chatgpt, và đếm nó vào `skipped_by_tier.C`
+
+#### Scenario: Kết quả thay đổi
+
+- **WHEN** một lượt chạy cho ra vân tay khác lượt trước của cùng cặp query×engine
+- **THEN** agent đặt câu hỏi đó về tầng A, `tier_until` = hiện tại + 30 ngày, và `next_run_at` = hiện tại + 1 ngày
+
+#### Scenario: Đăng bài GEO nhắm vào một câu hỏi
+
+- **WHEN** `POST /api/geo/publish-wp` đăng thành công một bài có `query_id`
+- **THEN** agent đặt câu hỏi đó về tầng A trong 14 ngày và `next_run_at` = hiện tại
+
 ### Requirement: Báo cáo kết quả GEO
 
 Các endpoint `GET /api/geo/queue`, `GET /api/geo/runs`, `GET /api/geo/sov`, `GET /api/geo/ai-usage` SHALL trả số liệu tổng hợp: trạng thái hàng đợi, lịch sử runs, Share of Voice theo khoảng ngày, và chi phí AI đã dùng.

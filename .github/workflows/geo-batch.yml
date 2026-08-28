@@ -3,12 +3,21 @@ name: GEO Monitor — batch processor (CRM)
 # Port từ facebookadsallinone. Endpoint /api/geo/* của CRM đang MỞ (không có
 # _middleware) → không cần X-Test-Token. Cần các secret GEO trên Cloudflare Pages
 # (OPENAI_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY…) thì run-batch mới query được.
-# Cost ~ 30 query × 3 engine × 1 run/ngày × ~$0.0135 ≈ $1.2/ngày.
+#
+# CHI PHÍ (đo thật trên geo_runs, 28/08/2026): gemini $0,00037/lượt — coi như miễn phí;
+# chatgpt $0,025/lượt vì tool web_search tính tiền cố định theo LƯỢT. Từ 28/08 chatgpt
+# chạy theo TẦNG (migration 0023 + _utils/query-tier.js) nên mỗi ngày chỉ còn ~11 job
+# chatgpt thay vì 44 → ~$7,9/tháng thay vì ~$17,5.
 on:
   schedule:
     # 2026-08-17 — GIẢM TỪ 48 → 6 lượt/ngày (xem ghi chú ở fetch-pancake.yml).
-    # 6 job/tick × 6 tick = 36 job/ngày, vẫn dư so với ~30 query/ngày.
-    - cron: '0 */4 * * *'    # 4 giờ/tick, idempotent
+    # 2026-08-28 — TĂNG LẠI 6 → 12 lượt/ngày. Lý do: 6 tick × 6 job = 36 job/ngày mà
+    # mỗi ngày tạo ra 44 gemini + ~11 chatgpt ≈ 55 job → hàng đợi phình (đã tồn 1.297
+    # job, cái cũ nhất 3 tuần, tức số GEO trên giao diện đang đo thế giới của 3 tuần
+    # trước). 12 tick × 6 = 72 job/ngày mới theo kịp và tiêu hết tồn.
+    # KHÔNG tăng batch size thay cho tần suất: 6 job/lượt là mức vừa với timeout 30s
+    # của Pages Functions khi cả 6 đều là chatgpt web_search.
+    - cron: '0 */2 * * *'    # 2 giờ/tick, idempotent
   workflow_dispatch:
 
 concurrency:

@@ -1,12 +1,20 @@
 // Endpoint: POST /api/geo/jobs (cũng support GET cho manual test)
 //
-// Tạo daily batch jobs cho geo_job_queue: mọi active query × 3 engine × runs_per_query.
+// Tạo daily batch jobs cho geo_job_queue.
+//
+// Engine RẺ (gemini): mọi active query, như cũ.
+// Engine ĐẮT (chatgpt, $0,025/lượt vì tool web_search): CHỈ query đã tới hạn theo
+// TẦNG — A hàng ngày, B 7 ngày/lần, C 14 ngày/lần. Xem _utils/query-tier.js để biết
+// vì sao (28/08/2026: 35/44 query chưa bao giờ được nhắc qua ~45 lượt mỗi câu, tiền
+// đổ vào chỗ đứng yên). Tạo job đắt xong là dời next_run_at của query đó.
+//
 // Idempotent — skip nếu hôm nay (UTC 00:00) đã có jobs created, trừ khi {force: true}.
 //
 // Được GitHub Actions cron gọi mỗi 30 phút (cùng workflow với run-batch). Bypass auth
 // qua X-Test-Token (_middleware.js whitelist). Manual trigger qua browser cũng OK.
 
 import { ENGINES } from "./_utils/ai-engines/index.js";
+import { buildJobPlan } from "./_utils/query-tier.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -42,7 +50,7 @@ async function handle(env, opts = {}) {
   }
 
   const { results: queries } = await env.DB.prepare(
-    `SELECT id FROM geo_queries WHERE active = 1`
+    `SELECT id, tier, next_run_at FROM geo_queries WHERE active = 1`
   ).all();
 
   if (queries.length === 0) {
@@ -50,25 +58,35 @@ async function handle(env, opts = {}) {
   }
 
   const now = Math.floor(Date.now() / 1000);
-  const stmts = [];
-  for (const q of queries) {
-    for (const engine of ENGINES) {
-      for (let seq = 1; seq <= runsPerQuery; seq++) {
-        stmts.push(
-          env.DB.prepare(
-            `INSERT INTO geo_job_queue (id, query_id, engine, run_seq, status, created_at)
-             VALUES (?, ?, ?, ?, 'pending', ?)`
-          ).bind(crypto.randomUUID(), q.id, engine, seq, now)
-        );
-      }
-    }
+  const plan = buildJobPlan(queries, ENGINES, runsPerQuery, now);
+
+  const stmts = plan.jobs.map(j =>
+    env.DB.prepare(
+      `INSERT INTO geo_job_queue (id, query_id, engine, run_seq, status, created_at)
+       VALUES (?, ?, ?, ?, 'pending', ?)`
+    ).bind(crypto.randomUUID(), j.query_id, j.engine, j.run_seq, now)
+  );
+
+  // Dời lịch cho các query vừa được cấp job engine đắt. Phải nằm CÙNG mẻ với
+  // INSERT: dời trước mà insert lỗi thì query bị bỏ qua nguyên một chu kỳ.
+  for (const r of plan.reschedule) {
+    stmts.push(
+      env.DB.prepare(
+        `UPDATE geo_queries SET next_run_at = ?, updated_at = ? WHERE id = ?`
+      ).bind(r.next_run_at, now, r.query_id)
+    );
   }
 
-  // D1 batch limit ~1000 statements. 30 queries × 3 engines × 3 runs = 270 statements.
-  // Chia chunk để an toàn nếu sau này scale up queries.
+  // D1 batch limit ~1000 statements. Chia chunk để an toàn khi scale up queries.
   const CHUNK = 50;
   for (let i = 0; i < stmts.length; i += CHUNK) {
     await env.DB.batch(stmts.slice(i, i + CHUNK));
+  }
+
+  // Đếm số job bị hoãn theo tầng — KHÔNG im lặng cắt bớt.
+  const skippedByTier = {};
+  for (const s of plan.skipped) {
+    skippedByTier[s.tier] = (skippedByTier[s.tier] || 0) + 1;
   }
 
   return jsonResponse({
@@ -76,7 +94,10 @@ async function handle(env, opts = {}) {
     queries: queries.length,
     engines: ENGINES.length,
     runs_per_query: runsPerQuery,
-    total_jobs: stmts.length,
+    total_jobs: plan.jobs.length,
+    rescheduled: plan.reschedule.length,
+    skipped_costly: plan.skipped.length,
+    skipped_by_tier: skippedByTier,
   });
 }
 

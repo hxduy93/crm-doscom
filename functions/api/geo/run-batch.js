@@ -12,6 +12,7 @@
 
 import { queryEngine } from "./_utils/ai-engines/index.js";
 import { detectMentions } from "./_utils/brand-detect.js";
+import { decideTier, nextRunAt, runSignature } from "./_utils/query-tier.js";
 
 const BATCH_SIZE  = 6;
 const MAX_RETRIES = 3;
@@ -43,9 +44,18 @@ async function processJob(job, env) {
 
   try {
     const q = await env.DB.prepare(
-      `SELECT text FROM geo_queries WHERE id = ?`
+      `SELECT text, tier, tier_until FROM geo_queries WHERE id = ?`
     ).bind(job.query_id).first();
     if (!q) throw new Error(`Query not found: ${job.query_id}`);
+
+    // Vân tay lượt TRƯỚC của đúng cặp query×engine — phải đọc trước khi ghi lượt mới,
+    // ghi xong rồi mới đọc là so chính nó với chính nó, không bao giờ thấy thay đổi.
+    const prevRun = await env.DB.prepare(
+      `SELECT doscom_mentioned, noma_mentioned, brand_url_cited
+         FROM geo_runs
+        WHERE query_id = ? AND engine = ? AND (error IS NULL OR error = '')
+        ORDER BY timestamp DESC LIMIT 1`
+    ).bind(job.query_id, job.engine).first();
 
     const response = await queryEngine(job.engine, q.text, env);
     if (response.error) throw new Error(response.error);
@@ -101,6 +111,25 @@ async function processJob(job, env) {
       `UPDATE geo_job_queue SET status = 'done', finished_at = ? WHERE id = ?`
     ).bind(Math.floor(Date.now() / 1000), job.id).run();
 
+    // Thăng/giáng tầng theo kết quả vừa đo. Tín hiệu từ engine RẺ cũng được tính —
+    // đó là cách tầng C (14 ngày/lần chatgpt) không thành điểm mù.
+    const decision = decideTier({
+      tier: q.tier,
+      tierUntil: q.tier_until,
+      prevSignature: prevRun ? runSignature(prevRun) : null,
+      newSignature: runSignature(mentions),
+      nowSec: now,
+    });
+    if (decision.changed) {
+      await env.DB.prepare(
+        `UPDATE geo_queries SET tier = ?, tier_until = ?, tier_reason = ?, next_run_at = ?, updated_at = ?
+          WHERE id = ?`
+      ).bind(
+        decision.tier, decision.tier_until, decision.tier_reason,
+        nextRunAt(decision.tier, now), now, job.query_id
+      ).run();
+    }
+
     return {
       job_id: job.id,
       status: "done",
@@ -108,6 +137,8 @@ async function processJob(job, env) {
       engine: job.engine,
       cost_usd: response.cost_usd || 0,
       tokens: response.tokens_output || 0,
+      tier: decision.tier,
+      tier_changed: decision.changed,
     };
 
   } catch (err) {

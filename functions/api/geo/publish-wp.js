@@ -28,6 +28,7 @@
 
 import { submitUrlToGoogle } from "./_utils/google-indexing.js";
 import { submitUrlToIndexNow } from "./_utils/indexnow.js";
+import { ARTICLE_PROMOTE_DAYS } from "./_utils/query-tier.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -552,6 +553,21 @@ export async function onRequestPost(context) {
       targetSite,
       articleId
     ).run();
+
+    // 5b. Kéo câu hỏi gốc lên tầng A: vừa đăng bài nhắm vào nó thì đây là lúc DUY NHẤT
+    // kết quả AI có lý do đổi, và cũng là cách đo xem bài viết có tác dụng thật không.
+    if (article.query_id) {
+      await env.DB.prepare(
+        `UPDATE geo_queries SET tier = 'A', tier_until = ?, tier_reason = ?, next_run_at = ?, updated_at = ?
+          WHERE id = ?`
+      ).bind(
+        now + ARTICLE_PROMOTE_DAYS * 86400,
+        "vừa đăng bài GEO nhắm vào câu hỏi này",
+        now,
+        now,
+        article.query_id
+      ).run();
+    }
 
     // 6. Fire-and-forget: notify search engines (Google Indexing API + IndexNow)
     // Chỉ trigger khi post thực sự publish public — draft/pending không cần index.
