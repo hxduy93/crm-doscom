@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   ARTICLE_PROMOTE_DAYS,
+  COSTLY_JOBS_PER_DAY,
   PROMOTE_DAYS,
   buildJobPlan,
   decideTier,
@@ -18,11 +19,11 @@ const NOW = 1_800_000_000;
 
 // ---------------------------------------------------------------- nhịp theo tầng
 
-test("nhịp quét: A hàng ngày, B 7 ngày, C 14 ngày; tầng lạ rơi về C", () => {
-  assert.equal(tierIntervalDays("A"), 1);
+test("nhịp quét: A 2 ngày, B 7 ngày, C 14 ngày; tầng lạ rơi về C", () => {
+  assert.equal(tierIntervalDays("A"), 2);
   assert.equal(tierIntervalDays("B"), 7);
   assert.equal(tierIntervalDays("C"), 14);
-  assert.equal(tierIntervalDays("a"), 1);        // không phân biệt hoa thường
+  assert.equal(tierIntervalDays("a"), 2);        // không phân biệt hoa thường
   assert.equal(tierIntervalDays(null), 14);      // thiếu tier = quét thưa nhất, KHÔNG phải dày nhất
   assert.equal(tierIntervalDays("Z"), 14);
 });
@@ -35,7 +36,7 @@ test("chỉ chatgpt bị xếp tầng — gemini rẻ nên chạy hàng ngày ch
 });
 
 test("nextRunAt cộng đúng số ngày của tầng", () => {
-  assert.equal(nextRunAt("A", NOW), NOW + 1 * DAY);
+  assert.equal(nextRunAt("A", NOW), NOW + 2 * DAY);
   assert.equal(nextRunAt("C", NOW), NOW + 14 * DAY);
 });
 
@@ -183,7 +184,7 @@ test("query tới hạn được dời lịch theo ĐÚNG tầng của nó", () 
   ];
   const { reschedule } = buildJobPlan(queries, ENGINES, 1, NOW);
   const map = Object.fromEntries(reschedule.map(r => [r.query_id, r.next_run_at]));
-  assert.equal(map.qa, NOW + 1 * DAY);
+  assert.equal(map.qa, NOW + 2 * DAY);
   assert.equal(map.qb, NOW + 7 * DAY);
   assert.equal(map.qc, NOW + 14 * DAY);
 });
@@ -211,16 +212,54 @@ test("chỉ có engine rẻ thì không đụng tới lịch tầng", () => {
 
 // ---------------------------------------------------------------- tiết kiệm thật
 
-test("phân bổ 44 câu hỏi hiện tại: mỗi ngày ~11 job chatgpt thay vì 44", () => {
-  // Đo thật trên geo_runs 28/08/2026: A=8, B=1, C=35.
-  const perDay = 8 / 1 + 1 / 7 + 35 / 14;
-  assert.ok(perDay > 10 && perDay < 11.5, `thực tế ${perDay}`);
+test("ngân sách: nhịp tầng cho ra ~$5/tháng như chủ dự án chốt", () => {
+  // Phân bổ đo thật trên geo_runs 28/08/2026: A=8, B=1, C=35.
+  const perDay = 8 / tierIntervalDays("A") + 1 / tierIntervalDays("B") + 35 / tierIntervalDays("C");
+  const moiThang = perDay * 30.4 * 0.025;
+  assert.ok(moiThang > 4.5 && moiThang < 5.5, `dự phóng $${moiThang.toFixed(2)}/tháng`);
 
-  // $0,025/lượt × 30 ngày — phải rẻ hơn hẳn mức 44 câu/ngày cũ.
-  const moiThang = perDay * 30 * 0.025;
-  const cuMoiNgay = 44 * 30 * 0.025;
-  assert.ok(moiThang < 8.5, `dự phóng $${moiThang.toFixed(2)}/tháng`);
-  assert.ok(moiThang < cuMoiNgay / 3);
+  // Trần ngày phải ĐỦ RỘNG để nhịp tầng chạy bình thường, nhưng vẫn chặn được
+  // khi nhiều câu cùng thăng tầng A. Trần quá chặt là bóp nghẹt nhịp mỗi ngày.
+  assert.ok(COSTLY_JOBS_PER_DAY >= Math.ceil(perDay), "trần chặt hơn nhịp thường ngày");
+  assert.ok(COSTLY_JOBS_PER_DAY * 30.4 * 0.025 < 6, "trần vẫn giữ dưới $6/tháng");
+});
+
+test("trần ngày cắt đúng số lượt đắt, engine rẻ KHÔNG bị cắt", () => {
+  const queries = Array.from({ length: 20 }, (_, i) => ({
+    id: `q${i}`, tier: "A", next_run_at: NOW - (20 - i) * 3600,
+  }));
+  const { jobs, capped, skipped } = buildJobPlan(queries, ENGINES, 1, NOW, 7);
+
+  assert.equal(jobs.filter(j => j.engine === "chatgpt").length, 7);   // đắt: cắt theo trần
+  assert.equal(jobs.filter(j => j.engine === "gemini").length, 20);   // rẻ: đủ cả 20
+  assert.equal(capped, 13);
+  assert.equal(skipped.filter(x => x.reason === "vượt trần ngày").length, 13);
+});
+
+test("trần ưu tiên câu QUÁ HẠN LÂU NHẤT — không câu nào bị bỏ quên vĩnh viễn", () => {
+  const queries = [
+    { id: "moi",     tier: "C", next_run_at: NOW - 60 },
+    { id: "cu-nhat", tier: "C", next_run_at: NOW - 30 * DAY },
+    { id: "cu-vua",  tier: "C", next_run_at: NOW - 5 * DAY },
+  ];
+  const { jobs } = buildJobPlan(queries, ["chatgpt"], 1, NOW, 2);
+  assert.deepEqual(jobs.map(j => j.query_id), ["cu-nhat", "cu-vua"]);
+});
+
+test("câu bị trần cắt KHÔNG được dời lịch — mai vẫn quá hạn, được ưu tiên", () => {
+  const queries = [
+    { id: "q1", tier: "C", next_run_at: NOW - 2 * DAY },
+    { id: "q2", tier: "C", next_run_at: NOW - 1 * DAY },
+  ];
+  const { reschedule } = buildJobPlan(queries, ["chatgpt"], 1, NOW, 1);
+  assert.equal(reschedule.length, 1);
+  assert.equal(reschedule[0].query_id, "q1");   // chỉ câu ĐƯỢC chạy mới dời lịch
+});
+
+test("trần 0 hoặc không hợp lệ → coi như không có trần, đừng chặn sạch", () => {
+  const queries = [{ id: "q1", tier: "A", next_run_at: 0 }];
+  assert.equal(buildJobPlan(queries, ["chatgpt"], 1, NOW, 0).jobs.length, 1);
+  assert.equal(buildJobPlan(queries, ["chatgpt"], 1, NOW, NaN).jobs.length, 1);
 });
 
 test("bài GEO mới đăng kéo câu hỏi lên tầng A đủ lâu để đo tác dụng", () => {

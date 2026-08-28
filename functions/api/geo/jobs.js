@@ -4,7 +4,8 @@
 //
 // Engine RẺ (gemini): mọi active query, như cũ.
 // Engine ĐẮT (chatgpt, $0,025/lượt vì tool web_search): CHỈ query đã tới hạn theo
-// TẦNG — A hàng ngày, B 7 ngày/lần, C 14 ngày/lần. Xem _utils/query-tier.js để biết
+// TẦNG — A 2 ngày/lần, B 7 ngày/lần, C 14 ngày/lần — và không quá TRẦN NGÀY
+// (env GEO_COSTLY_JOBS_PER_DAY, mặc định 7 → ~$5,3/tháng). Xem _utils/query-tier.js để biết
 // vì sao (28/08/2026: 35/44 query chưa bao giờ được nhắc qua ~45 lượt mỗi câu, tiền
 // đổ vào chỗ đứng yên). Tạo job đắt xong là dời next_run_at của query đó.
 //
@@ -14,7 +15,7 @@
 // qua X-Test-Token (_middleware.js whitelist). Manual trigger qua browser cũng OK.
 
 import { ENGINES } from "./_utils/ai-engines/index.js";
-import { buildJobPlan } from "./_utils/query-tier.js";
+import { COSTLY_JOBS_PER_DAY, buildJobPlan } from "./_utils/query-tier.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -50,7 +51,8 @@ async function handle(env, opts = {}) {
   }
 
   const { results: queries } = await env.DB.prepare(
-    `SELECT id, tier, next_run_at FROM geo_queries WHERE active = 1`
+    `SELECT id, tier, next_run_at FROM geo_queries WHERE active = 1
+      ORDER BY next_run_at IS NULL DESC, next_run_at ASC`
   ).all();
 
   if (queries.length === 0) {
@@ -58,7 +60,10 @@ async function handle(env, opts = {}) {
   }
 
   const now = Math.floor(Date.now() / 1000);
-  const plan = buildJobPlan(queries, ENGINES, runsPerQuery, now);
+  const costlyCap = Number(env.GEO_COSTLY_JOBS_PER_DAY) > 0
+    ? Number(env.GEO_COSTLY_JOBS_PER_DAY)
+    : COSTLY_JOBS_PER_DAY;
+  const plan = buildJobPlan(queries, ENGINES, runsPerQuery, now, costlyCap);
 
   const stmts = plan.jobs.map(j =>
     env.DB.prepare(
@@ -83,11 +88,15 @@ async function handle(env, opts = {}) {
     await env.DB.batch(stmts.slice(i, i + CHUNK));
   }
 
-  // Đếm số job bị hoãn theo tầng — KHÔNG im lặng cắt bớt.
+  // Đếm số job bị hoãn theo tầng và theo LÝ DO — KHÔNG im lặng cắt bớt.
   const skippedByTier = {};
+  const skippedByReason = {};
   for (const s of plan.skipped) {
     skippedByTier[s.tier] = (skippedByTier[s.tier] || 0) + 1;
+    skippedByReason[s.reason] = (skippedByReason[s.reason] || 0) + 1;
   }
+
+  const costlyJobs = plan.jobs.filter(j => j.engine === "chatgpt").length;
 
   return jsonResponse({
     message: "Daily jobs created",
@@ -95,9 +104,14 @@ async function handle(env, opts = {}) {
     engines: ENGINES.length,
     runs_per_query: runsPerQuery,
     total_jobs: plan.jobs.length,
+    costly_jobs: costlyJobs,
+    costly_cap: costlyCap,
+    capped: plan.capped,
+    est_cost_usd: Number((costlyJobs * 0.025).toFixed(4)),
     rescheduled: plan.reschedule.length,
     skipped_costly: plan.skipped.length,
     skipped_by_tier: skippedByTier,
+    skipped_by_reason: skippedByReason,
   });
 }
 

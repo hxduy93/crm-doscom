@@ -45,7 +45,9 @@ Endpoint `/api/geo/jobs` (`POST` tạo job, `GET` test) SHALL nạp các cặp q
 
 ### Requirement: Lịch quét theo tầng cho engine tính tiền theo lượt
 
-`/api/geo/jobs` SHALL phân biệt engine RẺ và engine ĐẮT khi nạp job. Engine rẻ (gemini) SHALL được nạp job cho MỌI câu hỏi active mỗi ngày. Engine đắt (chatgpt — tool `web_search` tính $0,025 cố định mỗi lượt) SHALL chỉ được nạp job cho câu hỏi đã tới hạn theo cột `geo_queries.next_run_at`, và sau khi nạp SHALL dời `next_run_at` theo tầng: A = 1 ngày, B = 7 ngày, C = 14 ngày. Response SHALL báo số job bị hoãn (`skipped_costly`, `skipped_by_tier`) — không im lặng cắt bớt.
+`/api/geo/jobs` SHALL phân biệt engine RẺ và engine ĐẮT khi nạp job. Engine rẻ (gemini) SHALL được nạp job cho MỌI câu hỏi active mỗi ngày. Engine đắt (chatgpt — tool `web_search` tính $0,025 cố định mỗi lượt) SHALL chỉ được nạp job cho câu hỏi đã tới hạn theo cột `geo_queries.next_run_at`, và sau khi nạp SHALL dời `next_run_at` theo tầng: A = 2 ngày, B = 7 ngày, C = 14 ngày.
+
+Số job engine đắt tạo mỗi ngày SHALL không vượt TRẦN `GEO_COSTLY_JOBS_PER_DAY` (mặc định 7 ≈ $5,3/tháng) — đây là thứ chặn chi phí thật, nhịp tầng chỉ xếp thứ tự ưu tiên. Khi vượt trần, agent SHALL ưu tiên câu hỏi QUÁ HẠN LÂU NHẤT và SHALL KHÔNG dời `next_run_at` của câu bị cắt, để hôm sau chúng vẫn quá hạn và được lên đầu. Response SHALL báo `costly_jobs`, `costly_cap`, `capped`, `est_cost_usd`, `skipped_by_tier`, `skipped_by_reason` — không im lặng cắt bớt.
 
 `/api/geo/run-batch` SHALL so vân tay kết quả (`doscom_mentioned | noma_mentioned | brand_url_cited`) của lượt vừa chạy với lượt trước của ĐÚNG cặp query×engine, rồi cập nhật tầng: đổi vân tay → tầng A giữ 30 ngày; tầng A hết hạn mà không đổi → hạ về B (nếu đang được nhắc) hoặc C. Tín hiệu từ engine rẻ CŨNG được tính, để tầng C không thành điểm mù.
 

@@ -41,6 +41,11 @@ binding = "AI"
 #   - USE_OPENAI_IMAGE    "false" = tắt OpenAI, quay về Workers AI (kill switch)
 [vars]
 CF_ACCOUNT_ID = "cffb0c35f8c649872436b2087a64b7bc"
+# TRẦN chi phí GEO Monitor: số lượt engine ĐẮT (chatgpt + tool web_search, $0,025/lượt
+# cố định) được tạo mỗi ngày. 7 × 30,4 ngày × $0,025 ≈ $5,3/tháng — mức chủ dự án chốt
+# 28/08/2026. Đây là thứ THẬT SỰ chặn tiền; nhịp tầng trong _utils/query-tier.js chỉ
+# quyết định câu nào được ưu tiên trong hạn mức. Muốn đổi ngân sách thì sửa SỐ NÀY.
+GEO_COSTLY_JOBS_PER_DAY = "7"
 # Model OpenAI dùng khi Claude không gọi được (xem functions/api/geo/_utils/openai-chat.js).
 # ĐO THẬT 19/08/2026, cùng prompt yêu cầu 2000 từ:
 #   claude-haiku-4-5  ~1.872 từ/bài (158 bài)  ~$0,03

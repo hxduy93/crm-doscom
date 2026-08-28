@@ -7,9 +7,16 @@
 //
 // Cách chữa: giữ nguyên web_search (nó CHÍNH LÀ phép đo — gemini không có web
 // grounding nên brand_url_cited luôn 0), nhưng đổi NHỊP quét theo tín hiệu:
-//   A — kết quả từng thay đổi   → hàng ngày
+//   A — kết quả từng thay đổi   → 2 ngày/lần
 //   B — luôn được nhắc          → 7 ngày/lần
 //   C — chưa bao giờ được nhắc  → 14 ngày/lần
+//
+// NGÂN SÁCH (chốt 28/08/2026): chủ dự án đặt trần ~$5/tháng cho chatgpt.
+//   8 câu tầng A / 2 + 1 câu tầng B / 7 + 35 câu tầng C / 14 = 6,64 lượt/ngày
+//   → 6,64 × 30,4 × $0,025 ≈ $5,05/tháng.
+// Nhịp tầng chỉ là ƯỚC LƯỢNG: mỗi lần một câu đổi kết quả là nó nhảy lên tầng A,
+// nên số câu tầng A tự lớn dần và chi phí trôi theo. Vì vậy có thêm TRẦN CỨNG
+// COSTLY_JOBS_PER_DAY — nhịp tầng quyết định thứ tự ưu tiên, trần quyết định tiền.
 // Engine rẻ (gemini, $0,00037/lượt) vẫn chạy hàng ngày cho TẤT CẢ câu hỏi và làm
 // chuông báo: gemini đổi kết quả cũng đủ kéo câu hỏi lên tầng A, nên tầng C không
 // thành điểm mù dù 14 ngày mới tốn một lượt chatgpt.
@@ -20,7 +27,14 @@ const DAY = 86400;
 export const COSTLY_ENGINES = new Set(["chatgpt"]);
 
 /** Số ngày giữa hai lượt chạy engine đắt, theo tầng. */
-export const TIER_INTERVAL_DAYS = { A: 1, B: 7, C: 14 };
+export const TIER_INTERVAL_DAYS = { A: 2, B: 7, C: 14 };
+
+/**
+ * Trần cứng số lượt engine đắt được tạo MỖI NGÀY. 7 × 30,4 × $0,025 ≈ $5,32/tháng.
+ * Chỉnh qua env GEO_COSTLY_JOBS_PER_DAY. Đây là thứ THẬT SỰ chặn tiền — nhịp tầng
+ * chỉ xếp thứ tự ai được ưu tiên trong hạn mức đó.
+ */
+export const COSTLY_JOBS_PER_DAY = 7;
 
 /** Giữ ở tầng A bao lâu sau khi kết quả thay đổi. */
 export const PROMOTE_DAYS = 30;
@@ -132,29 +146,58 @@ export function decideTier({ tier, tierUntil, prevSignature, newSignature, nowSe
  * Trả kèm `skipped` để endpoint báo ra — bỏ bớt việc mà im lặng thì lần sau
  * người đọc log tưởng đã quét đủ.
  */
-export function buildJobPlan(queries, engines, runsPerQuery, nowSec) {
+export function buildJobPlan(queries, engines, runsPerQuery, nowSec, costlyCap = COSTLY_JOBS_PER_DAY) {
   const jobs = [];
   const reschedule = [];
   const skipped = [];
-  const hasCostly = engines.some(isCostlyEngine);
 
+  const cheapEngines  = engines.filter(e => !isCostlyEngine(e));
+  const costlyEngines = engines.filter(isCostlyEngine);
+
+  // Engine rẻ: mọi câu hỏi, không xếp tầng, không đụng trần.
   for (const q of queries) {
-    const due = isDue(q, nowSec);
-
-    for (const engine of engines) {
-      if (isCostlyEngine(engine) && !due) {
-        skipped.push({ query_id: q.id, engine, tier: q.tier || "C", next_run_at: q.next_run_at ?? null });
-        continue;
-      }
+    for (const engine of cheapEngines) {
       for (let seq = 1; seq <= runsPerQuery; seq++) {
         jobs.push({ query_id: q.id, engine, run_seq: seq });
       }
     }
+  }
 
-    if (hasCostly && due) {
-      reschedule.push({ query_id: q.id, next_run_at: nextRunAt(q.tier, nowSec) });
+  if (costlyEngines.length === 0) return { jobs, reschedule, skipped, capped: 0 };
+
+  // Engine đắt: lọc câu tới hạn, xếp CÂU QUÁ HẠN LÂU NHẤT LÊN TRƯỚC rồi cắt theo trần.
+  // Không sắp xếp thì trần cắt theo thứ tự ngẫu nhiên của D1 và một số câu có thể
+  // bị bỏ qua vĩnh viễn — đúng kiểu hỏng âm thầm mà không ai thấy.
+  const due = queries
+    .filter(q => isDue(q, nowSec))
+    .sort((a, b) => (Number(a.next_run_at ?? 0) - Number(b.next_run_at ?? 0)));
+
+  const cap = Number.isFinite(costlyCap) && costlyCap > 0 ? Math.floor(costlyCap) : due.length;
+  const chosen = due.slice(0, cap);
+  const overCap = due.slice(cap);
+
+  for (const q of chosen) {
+    for (const engine of costlyEngines) {
+      for (let seq = 1; seq <= runsPerQuery; seq++) {
+        jobs.push({ query_id: q.id, engine, run_seq: seq });
+      }
+    }
+    reschedule.push({ query_id: q.id, next_run_at: nextRunAt(q.tier, nowSec) });
+  }
+
+  // Câu chưa tới hạn → hoãn theo tầng. Câu tới hạn nhưng vượt trần → KHÔNG dời lịch,
+  // để mai chúng vẫn quá hạn và được ưu tiên lên đầu.
+  for (const q of queries) {
+    if (isDue(q, nowSec)) continue;
+    for (const engine of costlyEngines) {
+      skipped.push({ query_id: q.id, engine, tier: q.tier || "C", reason: "chưa tới hạn", next_run_at: q.next_run_at ?? null });
+    }
+  }
+  for (const q of overCap) {
+    for (const engine of costlyEngines) {
+      skipped.push({ query_id: q.id, engine, tier: q.tier || "C", reason: "vượt trần ngày", next_run_at: q.next_run_at ?? null });
     }
   }
 
-  return { jobs, reschedule, skipped };
+  return { jobs, reschedule, skipped, capped: overCap.length };
 }
