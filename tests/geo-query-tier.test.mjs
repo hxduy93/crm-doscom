@@ -99,6 +99,20 @@ test("tầng A còn hạn thì giữ nguyên, không ghi D1 thừa", () => {
   assert.equal(d.changed, false);
 });
 
+test("tầng A THIẾU hạn giữ → cấp hạn, KHÔNG hạ tầng ngay lượt đầu", () => {
+  // Bẫy thật 28/08/2026: migration backfill đặt tier='A' nhưng tier_until=NULL.
+  // Coi "thiếu hạn" là "hết hạn" thì 8 câu tầng A tụt xuống C ngay mẻ chạy đầu tiên,
+  // vứt sạch phần phân loại vừa tính từ lịch sử geo_runs.
+  const d = decideTier({
+    tier: "A", tierUntil: null,
+    prevSignature: "0|0|0", newSignature: "0|0|0",
+    nowSec: NOW,
+  });
+  assert.equal(d.tier, "A");
+  assert.equal(d.tier_until, NOW + PROMOTE_DAYS * DAY);
+  assert.equal(d.changed, true);
+});
+
 test("tầng A hết hạn mà vẫn đứng yên → hạ về C nếu chưa từng được nhắc", () => {
   const d = decideTier({
     tier: "A", tierUntil: NOW - 1,

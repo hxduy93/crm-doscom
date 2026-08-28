@@ -85,7 +85,19 @@ export function decideTier({ tier, tierUntil, prevSignature, newSignature, nowSe
 
   // 2) Đang ở tầng A: còn hạn thì giữ nguyên, hết hạn mà vẫn đứng yên thì hạ tầng.
   if (cur === "A") {
-    if (tierUntil && Number(tierUntil) > nowSec) {
+    // Tầng A mà THIẾU hạn giữ (backfill từ migration, hoặc ai đó sửa tay) → cấp hạn
+    // chuẩn, KHÔNG hạ tầng. Coi "thiếu hạn" là "hết hạn" thì mọi câu hỏi vừa được xếp
+    // tầng A sẽ rơi xuống C ngay lượt chạy đầu tiên, vứt đúng phần phân loại vừa tính.
+    // (Đã xảy ra thật 28/08/2026: 8 câu tầng A tụt còn 7 sau mẻ chạy đầu.)
+    if (!tierUntil) {
+      return {
+        tier: "A",
+        tier_until: nowSec + PROMOTE_DAYS * DAY,
+        tier_reason: "cấp hạn giữ tầng A",
+        changed: true,
+      };
+    }
+    if (Number(tierUntil) > nowSec) {
       return { tier: "A", tier_until: Number(tierUntil), tier_reason: null, changed: false };
     }
     const t = hasBrandSignal(newSignature) ? "B" : "C";
