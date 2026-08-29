@@ -1460,7 +1460,10 @@ function AdsCreatorPanel() {
       const acct = String(autoAccount).replace(/^act_/, "")
       const r = await fetch(`/api/fb-test-page?account=${acct}&page=${autoPage}`, { credentials: "same-origin" })
       const d = await r.json()
-      if (!d.ok) throw new Error(d.error || "Không kiểm tra được")
+      // `goi_y` là bản dịch ra tiếng người của lỗi Meta (vd quyền chỉ-xem trên tkqc).
+      // Ưu tiên hiện nó — câu gốc "Object with ID ... does not exist" làm người chạy
+      // tưởng tkqc bị xoá và đi tìm nhầm chỗ.
+      if (!d.ok) throw new Error(d.goi_y ? `${d.goi_y}\n(Meta: ${d.error || ""})` : (d.error || "Không kiểm tra được"))
       const kq = (d.results || [])[0]
       if (!kq) throw new Error(d.note || "Meta không trả kết quả nào")
       setTestPageMsg(kq.ok ? "✓ CHẠY ĐƯỢC — tạo thử creative thành công (đã xoá)" : `✗ ${kq.verdict}: ${kq.error || ""}`)
@@ -1777,7 +1780,8 @@ function AdsCreatorPanel() {
                     className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50">
                     {testPageBusy ? "Đang kiểm tra…" : "🔍 Kiểm tra trang này chạy được không"}
                   </button>
-                  {testPageMsg && <span className={"text-[11px] " + (testPageMsg.startsWith("✓") ? "text-green-600" : "text-red-600")}>{testPageMsg}</span>}
+                  {/* whitespace-pre-line: gợi ý và câu gốc của Meta nằm hai dòng riêng. */}
+                  {testPageMsg && <span className={"text-[11px] whitespace-pre-line " + (testPageMsg.startsWith("✓") ? "text-green-600" : "text-red-600")}>{testPageMsg}</span>}
                 </div>
               </div>
               <div>

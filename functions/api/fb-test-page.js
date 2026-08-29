@@ -102,6 +102,31 @@ export async function onRequestGet(context) {
   try { token_owner = await fbGet("/me", { fields: "id,name" }, token); }
   catch (e) { token_owner = { error: String(e.message || e) }; }
 
+  // Cách 1b: QUYỀN của token TRÊN CHÍNH TKQC NÀY.
+  // 29/08/2026: bấm Kiểm tra trên tkqc CÔNG TY CP DOSCOM trả về "Object with ID
+  // 'act_1254151326914021' does not exist, cannot be loaded due to missing permissions"
+  // ở bước POST /adimages — trong khi GET danh sách tkqc vẫn thấy nó. Đó là chữ ký của
+  // quyền CHỈ ĐỌC: token đọc được tkqc nhưng không được tạo gì trên đó. Không hỏi
+  // `user_tasks` thì người chạy đọc câu lỗi của Meta sẽ tưởng tkqc không tồn tại.
+  //
+  // Hỏi trong try/catch RIÊNG: Meta bỏ field này ở một số phiên bản/loại token, mà
+  // hỏng chỗ chẩn đoán thì không được phép làm hỏng luôn phép thử chính.
+  let quyen = null;
+  try {
+    const a = await fbGet(`/act_${acct}`, { fields: "account_id,name,account_status,user_tasks" }, token);
+    quyen = {
+      name: a.name || null,
+      account_status: a.account_status ?? null,
+      tasks: Array.isArray(a.user_tasks) ? a.user_tasks : null,
+      // MANAGE/ADVERTISE = tạo được quảng cáo. ANALYZE/DRAFT = chỉ xem, POST sẽ hỏng.
+      co_quyen_chay: Array.isArray(a.user_tasks)
+        ? a.user_tasks.some((t) => /MANAGE|ADVERTISE/i.test(String(t)))
+        : null,
+    };
+  } catch (e) {
+    quyen = { error: String(e.message || e).slice(0, 200) };
+  }
+
   // Danh sách page cần test
   let pages;
   try {
@@ -111,7 +136,7 @@ export async function onRequestGet(context) {
       const a = await fbGet(`/act_${acct}`, { fields: "promote_pages.limit(50){id,name}" }, token);
       pages = ((a.promote_pages && a.promote_pages.data) || []).map((p) => ({ id: p.id, name: p.name }));
       if (pages.length === 0) {
-        return json({ ok: true, token_owner, account: acct, note: "Tkqc không có promote_pages — truyền &page=<id> để test trực tiếp.", results: [] });
+        return json({ ok: true, token_owner, account: acct, quyen, note: "Tkqc không có promote_pages — truyền &page=<id> để test trực tiếp.", results: [] });
       }
     }
   } catch (e) {
@@ -126,9 +151,28 @@ export async function onRequestGet(context) {
     const first = imgs[Object.keys(imgs)[0]];
     testHash = first && first.hash;
   } catch (e) {
-    return json({ ok: false, token_owner, account: acct, error: "Không tạo được ảnh test (adimages): " + String(e.message || e) }, 502);
+    // Lỗi ở ĐÚNG bước ghi đầu tiên → gần như luôn là quyền trên TKQC, không phải ảnh.
+    // Dịch câu "Object with ID ... does not exist" của Meta ra tiếng người, vì đọc
+    // nguyên văn thì tưởng tkqc bị xoá.
+    const raw = String(e.message || e);
+    const chiDoc = quyen && quyen.co_quyen_chay === false;
+    const nghiQuyen = chiDoc || /does not exist|missing permissions|permission/i.test(raw);
+    const goiY = chiDoc
+      ? `Token của CRM CHỈ ĐƯỢC XEM tkqc này (quyền Meta cấp: ${(quyen.tasks || []).join(", ") || "không có"}). `
+        + "Vào Business Settings → Tài khoản quảng cáo → thêm người dùng của token với quyền "
+        + "\"Quản lý chiến dịch\" (ADVERTISE) thì mới tạo được quảng cáo."
+      : nghiQuyen
+        ? "Token đọc được tkqc nhưng KHÔNG ghi được — thường do quyền chỉ-xem trên tkqc, "
+          + "hoặc token thiếu scope ads_management. Câu \"Object with ID ... does not exist\" "
+          + "của Meta KHÔNG có nghĩa là tkqc bị xoá."
+        : "";
+    return json({
+      ok: false, token_owner, account: acct, quyen,
+      error: "Không tạo được ảnh test (adimages): " + raw,
+      goi_y: goiY || undefined,
+    }, 502);
   }
-  if (!testHash) return json({ ok: false, token_owner, account: acct, error: "adimages không trả image_hash" }, 502);
+  if (!testHash) return json({ ok: false, token_owner, account: acct, quyen, error: "adimages không trả image_hash" }, 502);
 
   // Cách 2: thử tạo creative rồi xoá
   const results = [];
@@ -154,5 +198,5 @@ export async function onRequestGet(context) {
     }
   }
 
-  return json({ ok: true, token_owner, account: acct, results });
+  return json({ ok: true, token_owner, account: acct, quyen, results });
 }
