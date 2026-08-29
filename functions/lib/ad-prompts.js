@@ -268,6 +268,19 @@ trong USP ở trên. TUYỆT ĐỐI không tự chế thêm thông số kỹ thu
 ${product.usage.map((u, i) => `${i + 1}. ${u}`).join("\n")}`
     : "";
 
+  // Thời gian hiệu quả — có trong catalog từ lâu nhưng TRƯỚC 29/08/2026 không hề được
+  // đưa vào prompt, nên AI tự đặt ra độ bền ("bảo vệ cả năm"). Có số thật thì khoá lại.
+  const durationSection = (product.effectDuration && String(product.effectDuration).trim())
+    ? `\nTHỜI GIAN HIỆU QUẢ (dùng ĐÚNG mốc này, không nới rộng): ${product.effectDuration}`
+    : `\nTHỜI GIAN HIỆU QUẢ: KHÔNG CÓ SỐ XÁC MINH → tuyệt đối không hứa sản phẩm bền bao lâu.`;
+
+  // Giới hạn / điều kiện dùng. Với hàng như NOMA 998 (vá lốp tạm thời) hay NOMA 880
+  // (phải chờ 12 giờ), viết thiếu phần này là khách làm hỏng rồi khiếu nại thật.
+  const limitsSection = (product.limits && product.limits.length)
+    ? `\n⛔ GIỚI HẠN & ĐIỀU KIỆN DÙNG (BẮT BUỘC tôn trọng; bài nào chạm tới công dụng liên quan thì phải nêu, KHÔNG được lờ đi để bán cho dễ):
+${product.limits.map((l) => `• ${l}`).join("\n")}`
+    : "";
+
   const promoSection = (promotion && promotion.trim())
     ? `\nKHUYẾN MÃI KÈM THEO (NGƯỜI DÙNG CUNG CẤP — chỉ dùng đúng thông tin này, không bịa thêm):
 ${promotion.trim()}
@@ -302,7 +315,7 @@ ${product.painPoints.map((p, i) => `${i + 1}. ${p}`).join("\n")}
 
 ĐỐI TƯỢNG MỤC TIÊU: ${product.targetAudience}
 TONE PHÙ HỢP: ${product.tonePreferred}
-LƯU Ý POLICY CHO SP NÀY: ${product.fbPolicyNotes}${avoidSection}${specsSection}${guaranteeSection}${usageSection}${provenAnglesSection}
+LƯU Ý POLICY CHO SP NÀY: ${product.fbPolicyNotes}${avoidSection}${specsSection}${guaranteeSection}${usageSection}${durationSection}${limitsSection}${provenAnglesSection}
 
 CAMPAIGN FORMAT: ${formatLabel}
 CTA BUTTON: ${cta}${promoSection}

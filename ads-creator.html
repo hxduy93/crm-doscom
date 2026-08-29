@@ -250,6 +250,17 @@ function AdsCreatorPanel() {
     // lựa chọn của sản phẩm vừa xem trước đó. Xác nhận được thì điền vào đây.
     "Noma 120":  { pixel: "1028891276586190", page: "", account: "", pixelName: "NOMA 120",
                    link: "https://noma120.asia/d", linkPn: "https://noma120.asia/tpn" },
+    // Ba SKU landing mới (thêm 29/08/2026). Pixel + hai link lấy THẲNG từ landing đang
+    // chạy (n880d/n998d/n130d.html + README của từng repo). `page`/`account` để rỗng
+    // giống Noma 120: chưa ai chốt chạy trên tkqc/trang nào, mà điền sai chỗ này là
+    // tiền chạy sang tài khoản khác — để rỗng thì buộc người chạy tự chọn.
+    // ⚠ NOMA 880 chưa có tên miền riêng nên CHƯA xác minh được với Meta.
+    "Noma 880":  { pixel: "2267972717349779", page: "", account: "", pixelName: "NOMA 880",
+                   link: "https://noma880-lp.pages.dev/n880d", linkPn: "https://noma880-lp.pages.dev/n880tpn" },
+    "Noma 998":  { pixel: "2153138088949626", page: "", account: "", pixelName: "NOMA 998",
+                   link: "https://noma998.io.vn/n998d", linkPn: "https://noma998.io.vn/n998tpn" },
+    "Noma 130":  { pixel: "927121283250832", page: "", account: "", pixelName: "NOMA 130",
+                   link: "https://noma130.io.vn/n130d", linkPn: "https://noma130.io.vn/n130tpn" },
     // DA8.1 Pro đã ngừng bán (2026-07-22) → bỏ khỏi danh sách chọn để không tạo
     // camp mới. Pixel của nó vẫn giữ ở PIXELS bên dưới cho camp cũ đọc tên đúng.
   }
@@ -316,6 +327,9 @@ function AdsCreatorPanel() {
     "1281580350573958":  "NOMA 680",
     "2082661435656423":  "NOMA 230",
     "1028891276586190":  "NOMA 120",
+    "2267972717349779":  "NOMA 880",
+    "2153138088949626":  "NOMA 998",
+    "927121283250832":   "NOMA 130",
   }
 
   // ── Mục tiêu chiến dịch (6 ODAX objectives) — Text y hệt FB Ads Manager tiếng Việt ──

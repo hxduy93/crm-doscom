@@ -187,3 +187,23 @@ test("đọc link hỏng giữa chừng thì GIỮ phần đã đọc, không tr
   assert.ok(!codeLines.includes("return {}"), "vẫn còn nhánh vứt sạch kết quả đã đọc");
   assert.match(fn, /giữ \{len\(found\)\} campaign đã đọc được/, "mất log cho biết đã đọc được bao nhiêu");
 });
+
+test("ba landing mới 880/998/130 gán đúng sản phẩm ngay từ khi mở bán", { skip }, () => {
+  /* Landing mở mà quên khai ở đây thì chi phí quảng cáo của nó rơi vào rổ sai — đúng
+     lỗi đã làm 29,9tr của 230/350/680/120 chui vào bucket Noma 911 hồi 01→18/08/2026.
+     NOMA 880 chưa có tên miền riêng nên chỉ có đường *.pages.dev. */
+  assert.deepEqual(
+    call("_product_from_link", [
+      "https://noma998.io.vn/n998d", "https://www.noma998.io.vn/n998tpn?fbclid=x",
+      "https://noma130.io.vn/n130d", "https://www.noma130.io.vn/n130tpn",
+      "https://noma880-lp.pages.dev/n880d", "https://noma880-lp.pages.dev/n880tpn",
+      "https://noma998-lp.pages.dev/n998d", "https://noma130-lp.pages.dev/n130tpn",
+    ]),
+    ["Noma 998", "Noma 998", "Noma 130", "Noma 130",
+     "Noma 880", "Noma 880", "Noma 998", "Noma 130"],
+  );
+  const src = readFileSync(SCRIPT, "utf8");
+  for (const path of ["noma998.io.vn/n998d", "noma130.io.vn/n130d", "noma880-lp.pages.dev/n880d"]) {
+    assert.ok(src.includes(`"${path}"`), `phải khai tường minh path ${path}, đừng chỉ dựa vào luật tên miền`);
+  }
+});

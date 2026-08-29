@@ -329,6 +329,14 @@ LANDING_TO_PRODUCT = {
     # "noma120.asia" ở LANDING_HOST_TO_PRODUCT, KHÔNG gỡ hai dòng dưới đây.
     "noma120.asia/d":               "Noma 120",
     "noma120.asia/tpn":             "Noma 120",
+    # Ba landing mới (29/08/2026) — khai NGAY khi mở bán, không đợi chạy quảng cáo:
+    # landing thiếu ở bảng này là chi phí rơi vào rổ sai, đúng lỗi 29,9tr của 01→18/08.
+    "noma998.io.vn/n998d":          "Noma 998",
+    "noma998.io.vn/n998tpn":        "Noma 998",
+    "noma130.io.vn/n130d":          "Noma 130",
+    "noma130.io.vn/n130tpn":        "Noma 130",
+    "noma880-lp.pages.dev/n880d":   "Noma 880",
+    "noma880-lp.pages.dev/n880tpn": "Noma 880",
 }
 
 # Domain chỉ bán MỘT sản phẩm → mọi path trên domain đó (kể cả biến thể theo nhân
@@ -343,6 +351,12 @@ LANDING_HOST_TO_PRODUCT = {
     "nomaautocares.cloud":        "Noma 680",   # NOMA 680 bọt tuyết 650ml
     "noma680-landing.pages.dev":  "Noma 680",
     "noma120-landing.pages.dev":  "Noma 120",   # NOMA 120 súc rửa kim phun
+    "noma998.io.vn":              "Noma 998",   # NOMA 998 vá & bơm lốp khẩn cấp
+    "noma998-lp.pages.dev":       "Noma 998",
+    "noma130.io.vn":              "Noma 130",   # NOMA 130 bôi trơn kính, dưỡng ron
+    "noma130-lp.pages.dev":       "Noma 130",
+    # NOMA 880 CHƯA có tên miền riêng — chỉ chạy trên *.pages.dev (xem README landing).
+    "noma880-lp.pages.dev":       "Noma 880",   # NOMA 880 phủ tinh thể bảo vệ sơn
     # Bản *.pages.dev của các landing ở trên (ad thường dán link pages.dev lúc test)
     "noma-landings.pages.dev":       "Noma 911",
     "noma911.pages.dev":             "Noma 911",

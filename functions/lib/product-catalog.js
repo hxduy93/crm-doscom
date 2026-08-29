@@ -304,6 +304,177 @@ export const PRODUCTS = {
       "giữ chữ 'tới', không viết thành cam kết. Không hứa chữa được lỗi cơ khí.",
   },
 
+  // ── Ba SKU Noma landing mới (thêm 29/08/2026) ──────────────────────────────
+  // NGUỒN: công dụng + HDSD + thời gian lấy NGUYÊN từ noma-sku-specs.js (tài liệu 17
+  // SKU); giá + quà lấy từ PRICING trong <landing>/functions/api/order.js; usps và
+  // painPoints diễn lại theo đúng nội dung landing đang chạy. KHÔNG thêm số nào ngoài
+  // ba nguồn đó — luật "không bịa số liệu" ở openspec/config.yaml.
+
+  "Noma 880": {
+    name: "Noma 880",
+    brand: "NOMA",
+    fullName: "Dung dịch phủ tinh thể bảo vệ sơn xe Noma 880 — hộp 50ml kèm pad chà",
+    priceRange: "390.000đ / hộp 50ml (2 hộp 780.000đ) — combo cộng thẳng giá lẻ, ưu đãi nằm ở quà: 1 hộp tặng NOMA 250 (99.000đ), 2 hộp tặng NOMA 692 (289.000đ)",
+    category: "Chăm sóc ô tô — bảo vệ sơn (phủ tinh thể)",
+    source: "noma-sku-specs.js mã 880 + PRICING landing noma880 (đối chiếu 2026-08-29)",
+    guarantee: null,
+    usps: [
+      "Phủ lên sơn gốc một lớp tinh thể cứng — thứ hứng nắng, hứng nước và hứng bụi là lớp phủ chứ không còn là nước sơn của xe",
+      "Bề mặt kỵ nước: giọt nước co tròn và lăn đi kéo theo bụi, ít đọng thành vệt ố cặn khoáng",
+      "Lấp vào những rãnh xước li ti nên ánh sáng không tán ra thành mạng nhện — màu sơn nhìn sâu và trong trở lại",
+      "Thành phần theo chuẩn detailing: nhựa silicone hữu cơ 95-98%, isopropyl titanate 1-2%, perfluorodecyltriethoxysilane 1-3% — không phải xi đánh bóng dạng sáp",
+      "Hộp có sẵn pad chà chuyên dụng, tự làm tại nhà, không cần máy đánh bóng hay phòng kín",
+      "Một hộp 50ml dùng được 2-3 lần cho toàn xe",
+    ],
+    painPoints: [
+      "Đỗ nắng nhìn chéo mặt capo là thấy cả mảng xước xoáy như mạng nhện quanh mỗi điểm sáng",
+      "Mỗi lần rửa xe bằng khăn không sạch là thêm một lớp xước mảnh",
+      "Sơn bị tia UV và bụi mài nhám dần nên màu trông bạc và phẳng lì, mất độ sâu",
+      "Nước mưa bám thành giọt, phơi nắng bay hơi để lại cặn khoáng — vệt ố lâu ngày ăn vào lớp sơn bóng",
+      "Phân chim, nhựa cây bám dai; cạy ra thì dễ kéo theo một vết xước mới",
+      "Phủ ceramic ngoài tiệm tính bằng tiền triệu và mất cả ngày gửi xe nên cứ hoãn mãi",
+      "Sơn bạc và xước xoáy bị trừ tiền thẳng vào giá bán lại xe",
+    ],
+    // Bốn bước lấy NGUYÊN văn tài liệu 17 SKU — chi tiết riêng của landing (vùng
+    // 30x30cm, giữ xe khô ráo trong 12 giờ đó) nằm ở `limits` bên dưới.
+    usage: [
+      "Rửa sạch xe, xử lý vết bẩn trên sơn và lau khô hoàn toàn",
+      "Nhỏ lượng NOMA 880 vừa đủ lên miếng bọt biển phủ chuyên dụng",
+      "Phủ từng khu vực nhỏ, thao tác ngang rồi dọc để lớp phủ dàn đều",
+      "Để bề mặt ổn định trong 12 GIỜ (1 chai 50ml dùng 2-3 lần cho toàn xe)",
+    ],
+    effectDuration: "Cần để bề mặt ổn định 12 giờ sau khi phủ",
+    // Điều kiện dùng KHÔNG phải chi tiết phụ: phủ sai điều kiện là lớp phủ khô thành
+    // vệt loang ngay trên chỗ dễ nhìn nhất của xe, và đó là khiếu nại thật.
+    limits: [
+      "KHÔNG phủ khi sơn còn bẩn hoặc còn ướt (khoá vết bẩn lại bên dưới lớp phủ)",
+      "KHÔNG phủ lúc nắng gắt / bề mặt nóng (dung dịch se lại trước khi kịp dàn đều)",
+      "KHÔNG phủ khi sắp mưa hoặc phải chạy xe ngay — chưa đủ 12 giờ mà gặp nước là phải làm lại",
+      "Chỉ che lấp xước rất nhỏ, KHÔNG vá được xước sâu tới lớp màu",
+      "Chỉ dùng cho bề mặt SƠN BÓNG của thân vỏ. Nhựa nhám là việc của NOMA 250, ron cao su là việc của NOMA 130",
+      "Landing hướng dẫn phủ từng vùng 30x30cm và không đổ nhiều cho nhanh — dư dung dịch chỉ làm lớp phủ loang",
+    ],
+    targetAudience: "Chủ ô tô tự chăm xe tại nhà (DIY) đã quen quy trình detailing cơ bản, người ngại chi tiền triệu phủ ceramic ngoài tiệm; thêm tệp gara/tiệm detailing",
+    tonePreferred: "Giọng 'người anh biết xe' — giải thích cơ chế trước rồi mới bán, nói thẳng cả giới hạn và điều kiện dùng",
+    avoidWords: [
+      "rẻ", "siêu rẻ", "hàng xịn", "số 1", "tốt nhất", "đỉnh", "vượt trội", "đột phá",
+      "100%", "tuyệt đối", "hoàn toàn", "xoá hoàn toàn", "như mới 100%",
+      "Made in USA", "chính hãng Mỹ", "công nghệ Mỹ", "sản xuất tại Mỹ", "nhập khẩu từ Mỹ",
+    ],
+    fbPolicyNotes:
+      "BẮT BUỘC nêu phải chờ 12 giờ khô ráo sau khi phủ — bỏ qua là khách làm hỏng và khiếu nại. " +
+      "KHÔNG hứa xoá được xước (chỉ che lấp xước rất nhỏ), không gọi là 'phủ ceramic 9H' hay so sánh " +
+      "với gói phủ ở tiệm bằng con số. Không khẳng định độ bền theo tháng vì tài liệu hãng không nêu.",
+  },
+
+  "Noma 998": {
+    name: "Noma 998",
+    brand: "NOMA",
+    fullName: "Dung dịch vá và bơm lốp khẩn cấp Noma 998 — chai 500ml, dùng cho lốp không săm",
+    priceRange: "119.000đ / chai 500ml — combo cộng thẳng giá lẻ (2 chai 238.000đ, 3 chai 357.000đ, 4 chai 476.000đ); ưu đãi là quà: 2 chai tặng khăn microfiber, 3 chai tặng NOMA 250, 4 chai tặng NOMA 692",
+    category: "Chăm sóc ô tô & xe máy — cứu hộ khẩn cấp",
+    source: "noma-sku-specs.js mã 998 + PRICING landing noma998 (đối chiếu 2026-08-29)",
+    guarantee: null,
+    usps: [
+      "Vá và bơm trong cùng một lần xịt: hạt latex trám kín vết thủng, khí đẩy trong chai làm lốp căng trở lại",
+      "Không tháo bánh, không kích xe, không cần dụng cụ gì ngoài chính cái chai",
+      "Khoảng năm phút là đi tiếp được, không phải chờ cứu hộ",
+      "Người chưa từng thay lốp bao giờ vẫn tự xử lý được theo hướng dẫn trên chai",
+      "Một chai 500ml nằm gọn trong cốp ô tô hay cốp xe tay ga, không cần bảo dưỡng, không cần sạc",
+      "Có bảng dữ liệu an toàn hoá chất (MSDS)",
+    ],
+    painPoints: [
+      "Xì lốp ban đêm, tiệm sửa xe đóng cửa hết",
+      "Xì lốp trên cao tốc — dừng ở làn khẩn cấp là tình huống nguy hiểm thật sự",
+      "Đường vắng, sóng yếu, xe cứu hộ cách hàng chục cây số mà phí kéo xe lại cao",
+      "Có lốp dự phòng trong cốp cũng vô ích nếu chưa từng kích xe và tháo bánh bao giờ",
+      "Bánh ô tô nặng, ốc siết chặt — biết cách vẫn có thể không đủ sức làm một mình",
+      "Xe máy không mang theo bánh dự phòng nào cả, lốp xẹp là dắt bộ tới khi gặp tiệm vá",
+    ],
+    // Bảy bước lấy NGUYÊN văn tài liệu 17 SKU. Nhắc "để nguyên cái đinh" (sai lầm hay
+    // gặp nhất theo landing) nằm ở `limits`, không chèn vào giữa các bước chuẩn.
+    usage: [
+      "Dừng xe an toàn, kiểm tra lỗ thủng ≤6mm trên mặt lốp",
+      "Xoay bánh để lỗ thủng hướng xuống dưới",
+      "Xả hết hơi còn lại trong lốp",
+      "Lắc kỹ chai",
+      "Kết nối vòi chai vào van lốp",
+      "Bấm xịt toàn bộ dung dịch vào lốp",
+      "Chạy 10-15 km/h để dung dịch phân bố đều",
+    ],
+    effectDuration: "GIẢI PHÁP TẠM THỜI — phải tới tiệm vá lốp chuyên nghiệp sau đó",
+    limits: [
+      "Chỉ dùng cho LỐP KHÔNG SĂM (tubeless)",
+      "Lỗ thủng phải nằm trên MẶT LỐP (phần tiếp xúc mặt đường) và không quá 6mm, do đinh hoặc vật nhọn",
+      "KHÔNG dùng khi thủng ở thành lốp, khi lốp rách, khi vành cong/biến dạng, hoặc khi lốp đã bung khỏi vành",
+      "Một chai chỉ đủ cho MỘT lốp — bốn bánh là bốn chai",
+      "ĐỂ NGUYÊN cái đinh trong lốp trước khi xịt — rút ra là lỗ mở rộng thêm và hơi thoát nhanh hơn (sai lầm hay gặp nhất)",
+      "Sau khi xịt phải chạy chậm 10-15 km/h; landing nhắc kiểm tra lại áp suất sau 2km đầu",
+    ],
+    targetAudience: "Chủ ô tô, xe máy và xe điện dùng lốp không săm; người hay chạy đêm, chạy cao tốc hoặc đường vắng; người không biết/không đủ sức tự thay lốp",
+    tonePreferred: "Giọng bình tĩnh xử lý tình huống — mô tả đúng cảnh kẹt giữa đường rồi đưa cách xử lý, KHÔNG hù dọa tai nạn",
+    avoidWords: [
+      "rẻ", "siêu rẻ", "số 1", "tốt nhất", "đỉnh", "vượt trội", "đột phá",
+      "100%", "tuyệt đối", "hoàn toàn", "vá vĩnh viễn", "thay thế tiệm vá",
+      "Made in USA", "chính hãng Mỹ", "công nghệ Mỹ", "sản xuất tại Mỹ", "nhập khẩu từ Mỹ",
+    ],
+    fbPolicyNotes:
+      "BẮT BUỘC nói rõ đây là GIẢI PHÁP TẠM THỜI, sau đó vẫn phải tới tiệm vá lốp — hứa 'vá vĩnh viễn' " +
+      "là sai sự thật và là rủi ro an toàn. Phải nêu điều kiện dùng được (lốp không săm, lỗ ≤6mm trên mặt lốp). " +
+      "KHÔNG dựng nội dung hù dọa tai nạn/thương tật để bán hàng.",
+  },
+
+  "Noma 130": {
+    name: "Noma 130",
+    brand: "NOMA",
+    fullName: "Dung dịch bôi trơn kính và làm mềm ron cao su Noma 130 — dầu silicone tinh khiết",
+    priceRange: "179.000đ / chai — combo cộng thẳng giá lẻ (2 chai 358.000đ, 3 chai 537.000đ); ưu đãi là quà: 2 chai tặng NOMA 250, 3 chai tặng NOMA 692",
+    category: "Chăm sóc ô tô — dưỡng cao su, gioăng và khe kính",
+    source: "noma-sku-specs.js mã 130 + PRICING landing noma130 (đối chiếu 2026-08-29)",
+    guarantee: null,
+    usps: [
+      "Dầu silicone (Polydimethylsiloxane) phân tử nhỏ, thấm VÀO TRONG cao su bù lại phần dầu tự nhiên đã bay hơi — không chỉ phủ bóng bên ngoài",
+      "Tạo màng trơn ở khe dẫn hướng kính: kính lên xuống êm, giảm tải cho mô-tơ nâng kính",
+      "Lớp màng kỵ nước giúp gioăng chống thấm và hạn chế dính cứng khi trời lạnh",
+      "Không pha dung môi bay hơi nhanh nên dầu nằm lại trong cao su — theo hãng, hiệu quả gấp 2-3 lần dầu bôi ron thông thường",
+      "Một chai cho mọi loại ron: ron cửa, ron kính, ron cốp, ron nóc, ron cabin",
+      "Xịt lớp mỏng rồi lau lại thì bề mặt khô ráo, không dính nhớp và không hút bụi",
+    ],
+    painPoints: [
+      "Kính lên xuống rít, đi chậm dần, có lúc khựng lại giữa chừng rồi mới bò tiếp",
+      "Ma sát tăng làm mô-tơ nâng kính phải gồng mỗi lần bấm — chi tiết thay không hề rẻ",
+      "Ron cửa khô cứng, co ngót, nứt chân chim",
+      "Đi mưa nước rịn vào cabin vì ron không còn ép khít vào khung cửa, lâu ngày ẩm mốc thảm sàn",
+      "Cửa đóng kêu cạch, đóng nhẹ thì không khít mà đóng mạnh thì kêu",
+      "Mùa lạnh miền Bắc, ẩm đọng trên gioăng khô có thể đóng băng làm cửa kẹt cứng",
+    ],
+    usage: [
+      "Xác định khu vực xử lý (ron cửa/cốp/kính, cao su, nhựa, rãnh trượt)",
+      "Làm sạch bụi và lau khô bề mặt",
+      "Lắc kỹ bình, gắn vòi dẫn nếu xịt khe hẹp",
+      "Xịt lớp mỏng đều, cách 10-15cm",
+      "Chờ 2-3 phút cho thẩm thấu",
+      "Lau lại bằng khăn sạch",
+      "Để khô tự nhiên",
+    ],
+    effectDuration: "Ron mềm ngay sau 2-3 phút; theo landing hiệu quả duy trì 3-6 tháng",
+    limits: [
+      "Ron đã NỨT chân chim là quá giai đoạn dưỡng lại được",
+      "Không sửa được mô-tơ nâng kính hay hỏng hóc cơ khí",
+    ],
+    targetAudience: "Chủ ô tô tự chăm xe tại nhà, xe đã dùng vài năm bắt đầu rít kính / kêu cửa / rịn nước; đặc biệt xe ở miền Bắc mùa lạnh",
+    tonePreferred: "Giọng 'người anh biết xe' — chỉ ra triệu chứng quen thuộc, giải thích gốc là cao su mất dầu, rồi mới tới sản phẩm",
+    avoidWords: [
+      "rẻ", "siêu rẻ", "số 1", "tốt nhất", "đỉnh", "vượt trội", "đột phá",
+      "100%", "tuyệt đối", "hoàn toàn", "như mới 100%",
+      "Made in USA", "chính hãng Mỹ", "công nghệ Mỹ", "sản xuất tại Mỹ", "nhập khẩu từ Mỹ",
+    ],
+    fbPolicyNotes:
+      "Ron đã NỨT chân chim là quá giai đoạn dưỡng lại được — không hứa phục hồi ron đã nứt. " +
+      "Con số 3-6 tháng và 'gấp 2-3 lần dầu thông thường' phải ghi theo hãng, không viết thành cam kết. " +
+      "Không hứa sửa được mô-tơ nâng kính hay lỗi cơ khí.",
+  },
+
   "DA8.1": {
     name: "Camera DA8.1",
     brand: "DOSCOM",
