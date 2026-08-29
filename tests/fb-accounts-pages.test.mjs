@@ -53,7 +53,7 @@ test("token User: /me/adaccounts chạy được → source=me, không gọi bat
   assert.equal(d.count, 1);
   assert.equal(d.accounts[0].id, "764394829882083");
   assert.equal(d.accounts[0].can_use, true);
-  assert.equal(calls.length, 1, "chỉ 1 call, không rơi xuống batch");
+  assert.equal(calls.filter((c) => c.method === "POST").length, 0, "không rơi xuống batch");
 });
 
 test("token System User: /me lỗi → batch act_{id} cứu được danh sách", async () => {
@@ -74,8 +74,8 @@ test("token System User: /me lỗi → batch act_{id} cứu được danh sách"
   assert.equal(d.source, "batch");
   assert.equal(d.count, ACTIVE_COUNT, "đủ số tài khoản active trong lib/access.js");
   assert.match(d.note, /Object with ID 'me'/, "giữ lý do rẽ nhánh để chẩn đoán token");
-  assert.equal(calls.length, 2, "1 call /me hỏng + 1 call batch");
-  assert.equal(calls[1].method, "POST");
+  assert.equal(calls.filter((c) => c.method === "POST").length, 1, "đúng 1 call batch act_{id}");
+  assert.equal(calls[1].method, "POST", "batch chạy ngay sau khi /me hỏng");
 });
 
 test("batch: tài khoản lỗi bị bỏ qua, phần còn lại vẫn trả về", async () => {
@@ -127,4 +127,78 @@ test("thiếu FB_ACCESS_TOKEN → 500, không gọi Meta", async () => {
   const r = await onRequestGet({ env: {}, request: new Request("https://x/api/fb-accounts-pages") });
   assert.equal(r.status, 500);
   assert.equal(calls.length, 0);
+});
+
+// ── MỞ HẾT TRANG (29/08/2026) ────────────────────────────────────────────────
+// Tkqc CÔNG TY CP DOSCOM trả promote_pages RỖNG (token không có vai trò trên trang)
+// → dropdown Page trống trơn, không chọn nổi trang tích xanh dù tkqc chạy được nó.
+// Nay gom thêm trang của BM (owned + client) và trang token quản lý, ghi rõ `nguon`.
+
+// Tài khoản có khai BM + tuỳ biến được promote_pages.
+const acctBiz = (id, name, promotePages, bizId = "1418124406240173") => ({
+  account_id: id,
+  name,
+  account_status: 1,
+  business: { id: bizId, name: "Yoday Media Retail" },
+  promote_pages: { data: promotePages },
+  adspixels: { data: [{ id: "811464414891137", name: "WINKI A100" }] },
+});
+
+// Stub đủ 3 nguồn: /me/adaccounts · batch BM · /me/accounts
+const stubBaNguon = ({ promotePages, owned = [], client = [], mePages = [], bizLoi = false }) =>
+  stubFetch((url, call) => {
+    if (url.includes("/me/adaccounts")) {
+      return { json: { data: [acctBiz("1254151326914021", "CÔNG TY CP DOSCOM", promotePages)] } };
+    }
+    if (url.includes("/me/accounts")) return { json: { data: mePages } };
+    // Còn lại là batch BM (POST /)
+    if (bizLoi) return { status: 400, json: { error: { message: "requires business_management permission" } } };
+    const reqs = JSON.parse(call.body.batch);
+    return {
+      json: reqs.map((r) => ({
+        code: 200,
+        body: JSON.stringify({
+          id: r.relative_url.split("?")[0],
+          owned_pages: { data: owned },
+          client_pages: { data: client },
+        }),
+      })),
+    };
+  });
+
+const TICH_XANH = { id: "1101583133049069", name: "Noma Việt Nam" };
+
+test("promote_pages rỗng → vẫn thấy trang của BM, đánh dấu nguồn business", async () => {
+  stubBaNguon({ promotePages: [], owned: [TICH_XANH], client: [{ id: "681202051750505", name: "Noma Việt Nam" }] });
+
+  const d = await (await get()).json();
+  const acc = d.accounts[0];
+  assert.equal(acc.promote_count, 0);
+  assert.equal(acc.can_use, false, "Meta chưa xác nhận trang nào → không tô 'dùng được'");
+  assert.deepEqual(acc.pages.map((p) => p.id), ["1101583133049069", "681202051750505"]);
+  assert.equal(acc.pages.every((p) => p.nguon === "business" && p.promote === false), true);
+});
+
+test("trang promote đứng TRƯỚC và được đánh dấu promote=true, không trùng lặp", async () => {
+  stubBaNguon({
+    promotePages: [TICH_XANH],
+    owned: [TICH_XANH, { id: "110312205647152", name: "Doscom" }],
+    mePages: [TICH_XANH, { id: "106867030884191", name: "Noma USA" }],
+  });
+
+  const d = await (await get()).json();
+  const acc = d.accounts[0];
+  assert.deepEqual(acc.pages.map((p) => p.id), ["1101583133049069", "110312205647152", "106867030884191"]);
+  assert.deepEqual(acc.pages.map((p) => p.nguon), ["promote", "business", "token"]);
+  assert.equal(acc.promote_count, 1);
+  assert.equal(acc.can_use, true);
+});
+
+test("token thiếu quyền đọc BM → vẫn trả trang promote + trang token, kèm note lý do", async () => {
+  stubBaNguon({ promotePages: [TICH_XANH], mePages: [{ id: "110312205647152", name: "Doscom" }], bizLoi: true });
+
+  const d = await (await get()).json();
+  assert.equal(d.ok, true, "BM hỏng KHÔNG được làm sập cả danh sách");
+  assert.deepEqual(d.accounts[0].pages.map((p) => p.nguon), ["promote", "token"]);
+  assert.match(d.note, /Không đọc được trang của BM/);
 });

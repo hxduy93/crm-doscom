@@ -207,6 +207,9 @@ function AdsCreatorPanel() {
   const [fbRes, setFbRes] = useState(null)        // { accounts:[{id,name,status,pages,pixels}] }
   const [fbResErr, setFbResErr] = useState("")
   const [fbResLoading, setFbResLoading] = useState(false)
+  // Kiểm tra thật cặp (tkqc, trang) — /api/fb-test-page tạo thử 1 creative rồi xoá ngay.
+  const [testPageBusy, setTestPageBusy] = useState(false)
+  const [testPageMsg, setTestPageMsg] = useState("")
 
   // ══════════ CHẾ ĐỘ TỐI ƯU & BẢO VỆ (đa-tài-khoản, phân quyền theo người đăng nhập) ══════════
   const [optAccountList, setOptAccountList] = useState([]) // tài khoản được xem
@@ -1434,6 +1437,25 @@ function AdsCreatorPanel() {
     } catch (e) { setFbResErr(e.message || String(e)) }
     finally { setFbResLoading(false) }
   }
+  // Kiểm tra THẬT cặp (tkqc, trang): server tạo thử 1 adcreative rồi xoá ngay — cách duy
+  // nhất biết chắc trang chạy được, vì promote_pages có thể rỗng mà trang vẫn dùng được.
+  const kiemTraTrang = async () => {
+    if (!autoAccount || !autoPage || testPageBusy) return
+    setTestPageBusy(true); setTestPageMsg("")
+    try {
+      const acct = String(autoAccount).replace(/^act_/, "")
+      const r = await fetch(`/api/fb-test-page?account=${acct}&page=${autoPage}`, { credentials: "same-origin" })
+      const d = await r.json()
+      if (!d.ok) throw new Error(d.error || "Không kiểm tra được")
+      const kq = (d.results || [])[0]
+      if (!kq) throw new Error(d.note || "Meta không trả kết quả nào")
+      setTestPageMsg(kq.ok ? "✓ CHẠY ĐƯỢC — tạo thử creative thành công (đã xoá)" : `✗ ${kq.verdict}: ${kq.error || ""}`)
+    } catch (e) { setTestPageMsg("✗ " + (e.message || String(e))) }
+    finally { setTestPageBusy(false) }
+  }
+  // Xoá kết quả cũ khi đổi tkqc/trang — tránh đọc nhầm kết quả của cặp trước đó.
+  React.useEffect(() => { setTestPageMsg("") }, [autoAccount, autoPage])
+
   // Đổi TKQC → set Page + Pixel của tài khoản đó.
   // Page: ƯU TIÊN trang mặc định trong ACCOUNT_PAGE (vd CP DOSCOM → trang tích xanh);
   // chỉ khi tkqc không còn quyền chạy trang đó mới rơi về trang đầu danh sách.
@@ -1445,7 +1467,10 @@ function AdsCreatorPanel() {
       if (pages.length) {
         const uuTien = ACCOUNT_PAGE[val]
         const co = uuTien && pages.some(p => String(p.id) === uuTien)
-        setAutoPage(co ? uuTien : pages[0].id)
+        // Không có trang mặc định → ưu tiên trang Meta ĐÃ xác nhận chạy được (nguon
+        // "promote") hơn là trang BM/token chưa xác minh nằm đầu danh sách.
+        const dauTien = (pages.find(p => p.promote) || pages[0]).id
+        setAutoPage(co ? uuTien : dauTien)
       } else if (ACCOUNT_PAGE[val]) {
         // Chưa tải được promote_pages → vẫn đặt đúng trang mặc định còn hơn giữ
         // trang của tài khoản trước đó.
@@ -1542,9 +1567,13 @@ function AdsCreatorPanel() {
     ? liveAccs.map(a => ({ value: "act_" + a.id, label: a.name + (a.status !== "ACTIVE" ? ` ⚠${a.status}` : "") }))
     : Object.entries(ACCOUNTS).map(([id, name]) => ({ value: id, label: name }))
   const curAcc = liveAccs.find(a => ("act_" + a.id) === autoAccount)
+  // Nhãn ghi rõ nguồn trang (xem /api/fb-accounts-pages): trang "promote" là Meta đã xác
+  // nhận tkqc chạy được; trang BM / trang của token thì phải bấm "Kiểm tra" mới chắc.
+  const NHAN_NGUON = { business: " · trang BM (chưa xác minh)", token: " · trang token quản lý (chưa xác minh)" }
   let pageOptions = curAcc
-    ? curAcc.pages.map(p => ({ value: p.id, label: tenPage(p.id, p.name) }))
+    ? curAcc.pages.map(p => ({ value: p.id, label: tenPage(p.id, p.name) + (p.promote ? "" : (NHAN_NGUON[p.nguon] || " · chưa xác minh")) }))
     : Object.entries(PAGES).map(([id, name]) => ({ value: id, label: tenPage(id, name) }))
+  const trangDangChon = curAcc ? curAcc.pages.find(p => String(p.id) === autoPage) : null
   let pixelOptions = (curAcc && curAcc.pixels && curAcc.pixels.length)
     ? curAcc.pixels.map(p => ({ value: p.id, label: p.name }))
     : Object.entries(PIXELS).map(([id, name]) => ({ value: id, label: name }))
@@ -1704,9 +1733,23 @@ function AdsCreatorPanel() {
                 )}
                 {curAcc && ACCOUNT_PAGE[autoAccount] && !curAcc.pages.some(p => String(p.id) === ACCOUNT_PAGE[autoAccount]) && (
                   <p className="text-[11px] text-red-600 mt-1">
-                    ⛔ Tkqc này KHÔNG còn quyền chạy {tenPage(ACCOUNT_PAGE[autoAccount], ACCOUNT_PAGE[autoAccount])} (không nằm trong promote_pages) — vào Business Settings gán lại trang cho tài khoản.
+                    ⛔ Không thấy {tenPage(ACCOUNT_PAGE[autoAccount], ACCOUNT_PAGE[autoAccount])} trong bất kỳ nguồn nào của tkqc này (promote_pages, trang BM, trang token quản lý) — vào Business Settings gán trang cho tài khoản.
                   </p>
                 )}
+                {/* Trang chưa được Meta xác nhận → cho bấm KIỂM TRA THẬT: tạo thử 1 creative
+                    rồi xoá ngay (/api/fb-test-page), không tạo campaign, không tốn tiền. */}
+                {trangDangChon && !trangDangChon.promote && (
+                  <p className="text-[11px] text-amber-600 mt-1">
+                    ⚠ Trang này chưa nằm trong promote_pages (nguồn: {trangDangChon.nguon === "business" ? "BM của tkqc" : "token quản lý"}) — bấm Kiểm tra trước khi chạy.
+                  </p>
+                )}
+                <div className="flex items-center gap-2 mt-1.5">
+                  <button type="button" onClick={kiemTraTrang} disabled={!autoAccount || !autoPage || testPageBusy}
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50">
+                    {testPageBusy ? "Đang kiểm tra…" : "🔍 Kiểm tra trang này chạy được không"}
+                  </button>
+                  {testPageMsg && <span className={"text-[11px] " + (testPageMsg.startsWith("✓") ? "text-green-600" : "text-red-600")}>{testPageMsg}</span>}
+                </div>
               </div>
               <div>
                 <label className={labelClass}>Pixel</label>

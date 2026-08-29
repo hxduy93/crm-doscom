@@ -113,7 +113,9 @@ test("hai trang trùng tên phải có nhãn phân biệt theo ID", () => {
 });
 
 test("nhãn đè áp cho CẢ danh sách live lẫn danh sách tĩnh", () => {
-  assert.match(html, /curAcc\.pages\.map\(p => \(\{ value: p\.id, label: tenPage\(p\.id, p\.name\) \}\)\)/,
+  // Nhãn live được nối thêm hậu tố nguồn trang ("· trang BM (chưa xác minh)"…) từ
+  // 29/08/2026 — phần tên vẫn phải đi qua tenPage để hai trang trùng tên phân biệt được.
+  assert.match(html, /curAcc\.pages\.map\(p => \(\{ value: p\.id, label: tenPage\(p\.id, p\.name\)/,
     "dropdown live (từ token) phải đổi nhãn");
   assert.match(html, /Object\.entries\(PAGES\)\.map\(\(\[id, name\]\) => \(\{ value: id, label: tenPage\(id, name\) \}\)\)/,
     "dropdown fallback phải đổi nhãn");

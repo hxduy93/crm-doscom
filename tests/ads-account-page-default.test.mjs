@@ -90,3 +90,17 @@ return ACCOUNT_PAGE`)();
     assert.equal(mongMuon, cfg.page, `${ten}: PRODUCTS chạy ${cfg.account} trên trang ${cfg.page} nhưng ACCOUNT_PAGE lại mặc định ${mongMuon}`);
   }
 });
+
+test("tkqc chưa khai mặc định → chọn trang Meta ĐÃ xác nhận (promote), không lấy trang BM chưa xác minh", () => {
+  const fbRes = {
+    accounts: [{
+      id: "999999999999999",
+      pages: [
+        { id: "356111140921028", name: "Camera 4G", nguon: "business", promote: false },
+        { id: "110312205647152", name: "Doscom", nguon: "promote", promote: true },
+      ],
+      pixels: [],
+    }],
+  };
+  assert.equal(doiTaiKhoan("act_999999999999999", fbRes).page, "110312205647152");
+});
