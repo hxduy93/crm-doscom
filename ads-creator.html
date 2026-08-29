@@ -284,6 +284,21 @@ function AdsCreatorPanel() {
   }
   const tenPage = (id, name) => PAGE_LABEL[id] || name || id
 
+  // Trang MẶC ĐỊNH của từng tkqc — đổi tài khoản là nhảy về ĐÚNG trang này.
+  // Trước đây đổi tkqc thì lấy bừa `promote_pages[0]` (trang đầu Meta trả về, xếp
+  // theo bảng chữ cái). Tkqc CÔNG TY CP DOSCOM có tới 14 promote_pages, trang đầu là
+  // "Camera 4G Không Dây Chuyên Dụng" còn "Noma Việt Nam tích xanh" nằm CUỐI danh
+  // sách → chọn tkqc đó là văng khỏi trang tích xanh mà nhìn dropdown không ai để ý
+  // (hai trang trùng tên "Noma Việt Nam"). Cặp tkqc↔trang dưới đây khớp PRODUCTS.
+  const ACCOUNT_PAGE = {
+    "act_1254151326914021": "1101583133049069", // CÔNG TY CP DOSCOM → Noma Việt Nam TÍCH XANH
+    "act_1655506672244826": "681202051750505",  // DOSCOM HOLDINGS - Noma Việt Nam → Noma Việt Nam (10K)
+    "act_764394829882083":  "681202051750505",  // Doscom - Noma.vn → Noma Việt Nam (10K)
+    // CỐ Ý KHÔNG khai act_927390616363424: tkqc đó chạy NHIỀU trang tuỳ sản phẩm
+    // (D1/DR1 → Doscom Việt Nam, DA8.1 → Doscom - Công Nghệ An Ninh) nên không có
+    // "trang mặc định" đúng cho mọi trường hợp — giữ nguyên cách cũ (trang đầu tkqc).
+  }
+
   // PIXELS — tên chuẩn theo Trình quản lý sự kiện (Events Manager)
   const PIXELS = {
     "283066540825683":   "D1 CHUẨN",
@@ -1419,13 +1434,26 @@ function AdsCreatorPanel() {
     } catch (e) { setFbResErr(e.message || String(e)) }
     finally { setFbResLoading(false) }
   }
-  // Đổi TKQC → set Page + Pixel về cái hợp lệ đầu tiên của tài khoản đó.
+  // Đổi TKQC → set Page + Pixel của tài khoản đó.
+  // Page: ƯU TIÊN trang mặc định trong ACCOUNT_PAGE (vd CP DOSCOM → trang tích xanh);
+  // chỉ khi tkqc không còn quyền chạy trang đó mới rơi về trang đầu danh sách.
   const onAutoAccountChange = (val) => {
     setAutoAccount(val)
     const acc = (fbRes && fbRes.accounts || []).find(a => ("act_" + a.id) === val)
     if (acc) {
-      if (acc.pages && acc.pages.length) setAutoPage(acc.pages[0].id)
+      const pages = acc.pages || []
+      if (pages.length) {
+        const uuTien = ACCOUNT_PAGE[val]
+        const co = uuTien && pages.some(p => String(p.id) === uuTien)
+        setAutoPage(co ? uuTien : pages[0].id)
+      } else if (ACCOUNT_PAGE[val]) {
+        // Chưa tải được promote_pages → vẫn đặt đúng trang mặc định còn hơn giữ
+        // trang của tài khoản trước đó.
+        setAutoPage(ACCOUNT_PAGE[val])
+      }
       if (acc.pixels && acc.pixels.length) setAutoPixel(acc.pixels[0].id)
+    } else if (ACCOUNT_PAGE[val]) {
+      setAutoPage(ACCOUNT_PAGE[val])
     }
   }
 
@@ -1667,6 +1695,18 @@ function AdsCreatorPanel() {
                 <select className={selectClass} value={autoPage} onChange={e => setAutoPage(e.target.value)}>
                   {pageOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
+                {ACCOUNT_PAGE[autoAccount] && ACCOUNT_PAGE[autoAccount] !== autoPage
+                  && (!curAcc || curAcc.pages.some(p => String(p.id) === ACCOUNT_PAGE[autoAccount])) && (
+                  <button type="button" onClick={() => setAutoPage(ACCOUNT_PAGE[autoAccount])}
+                    className="text-[11px] text-blue-600 hover:underline mt-1 text-left">
+                    ⚠ Trang đang chọn khác trang mặc định của tkqc này — bấm để dùng {tenPage(ACCOUNT_PAGE[autoAccount], ACCOUNT_PAGE[autoAccount])}
+                  </button>
+                )}
+                {curAcc && ACCOUNT_PAGE[autoAccount] && !curAcc.pages.some(p => String(p.id) === ACCOUNT_PAGE[autoAccount]) && (
+                  <p className="text-[11px] text-red-600 mt-1">
+                    ⛔ Tkqc này KHÔNG còn quyền chạy {tenPage(ACCOUNT_PAGE[autoAccount], ACCOUNT_PAGE[autoAccount])} (không nằm trong promote_pages) — vào Business Settings gán lại trang cho tài khoản.
+                  </p>
+                )}
               </div>
               <div>
                 <label className={labelClass}>Pixel</label>
