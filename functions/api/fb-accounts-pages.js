@@ -157,11 +157,14 @@ export async function onRequestGet(context) {
       }
     }
     let tokenPages = [];
+    let tokenPagesErr = "";
     try {
       const mine = await fbGet("/me/accounts", { fields: "id,name", limit: "200" }, token);
       tokenPages = (mine.data || []).map((p) => ({ id: String(p.id), name: p.name }));
+      if (!tokenPages.length) tokenPagesErr = "/me/accounts trả 0 trang (token không có vai trò trên trang nào, hoặc thiếu scope pages_show_list)";
     } catch (e) {
       // Token System User không có ngữ cảnh "me" → bỏ qua, hai nguồn kia vẫn đủ dùng.
+      tokenPagesErr = `/me/accounts: ${String(e?.message || e).slice(0, 120)}`;
     }
 
     let accounts = raw.map((a) => {
@@ -175,8 +178,9 @@ export async function onRequestGet(context) {
           pages.push({ id: String(p.id), name: p.name || String(p.id), nguon, promote: nguon === "promote" });
         }
       };
+      const bizList = (a.business && bizPages[a.business.id]) || [];
       them(promote, "promote");
-      them((a.business && bizPages[a.business.id]) || [], "business");
+      them(bizList, "business");
       them(tokenPages, "token");
 
       const pixels = ((a.adspixels && a.adspixels.data) || []).map((px) => ({ id: px.id, name: px.name || px.id }));
@@ -189,6 +193,10 @@ export async function onRequestGet(context) {
         // can_use giữ nguyên nghĩa cũ: Meta XÁC NHẬN chạy được ít nhất 1 trang.
         can_use: status === "ACTIVE" && promote.length > 0,
         promote_count: promote.length,
+        // Đếm theo TỪNG nguồn — tkqc ra 0 trang thì nhìn đây biết ngay tắc ở đâu
+        // (promote_pages rỗng vì token không có vai trò trên trang? BM không đọc
+        // được vì thiếu business_management? token không quản lý trang nào?).
+        page_sources: { promote: promote.length, business: bizList.length, token: tokenPages.length },
         pages,
         pixels,
       };
@@ -203,6 +211,7 @@ export async function onRequestGet(context) {
       note: [
         source === "batch" && meErr ? `Bỏ qua /me: ${meErr.slice(0, 200)}` : "",
         pagesNote,
+        tokenPagesErr,
       ].filter(Boolean).join(" · ") || undefined,
       count: accounts.length, accounts,
     });

@@ -202,3 +202,29 @@ test("token thiếu quyền đọc BM → vẫn trả trang promote + trang toke
   assert.deepEqual(d.accounts[0].pages.map((p) => p.nguon), ["promote", "token"]);
   assert.match(d.note, /Không đọc được trang của BM/);
 });
+
+test("tkqc ra 0 trang → trả về đếm theo TỪNG nguồn + note nói rõ tắc ở đâu", async () => {
+  // Đúng cảnh chụp màn hình 29/08/2026: dropdown Page trống trơn. Không có ba con số
+  // này thì không biết tắc ở promote_pages, ở BM hay ở token — phải đoán mò.
+  stubBaNguon({ promotePages: [], mePages: [], bizLoi: true });
+
+  const d = await (await get()).json();
+  const acc = d.accounts[0];
+  assert.deepEqual(acc.pages, []);
+  assert.deepEqual(acc.page_sources, { promote: 0, business: 0, token: 0 });
+  assert.match(d.note, /Không đọc được trang của BM/);
+  assert.match(d.note, /me\/accounts trả 0 trang/);
+});
+
+test("đếm nguồn khớp số trang thật của từng nguồn", async () => {
+  stubBaNguon({
+    promotePages: [TICH_XANH],
+    owned: [{ id: "110312205647152", name: "Doscom" }],
+    client: [{ id: "107655065621691", name: "Doscom Asia" }],
+    mePages: [{ id: "106867030884191", name: "Noma USA" }],
+  });
+
+  const acc = (await (await get()).json()).accounts[0];
+  assert.deepEqual(acc.page_sources, { promote: 1, business: 2, token: 1 });
+  assert.equal(acc.pages.length, 4);
+});

@@ -1745,10 +1745,25 @@ function AdsCreatorPanel() {
                     ⚠ Trang đang chọn khác trang mặc định của tkqc này — bấm để dùng {tenPage(ACCOUNT_PAGE[autoAccount], ACCOUNT_PAGE[autoAccount])}
                   </button>
                 )}
-                {curAcc && ACCOUNT_PAGE[autoAccount] && !curAcc.pages.some(p => String(p.id) === ACCOUNT_PAGE[autoAccount]) && (
+                {/* Tkqc ra 0 trang = TOKEN của CRM không ĐỌC được danh sách, KHÔNG có
+                    nghĩa là tkqc không chạy được trang đó. Hai chuyện khác hẳn nhau:
+                    quyền tạo quảng cáo chỉ biết chắc bằng nút Kiểm tra bên dưới. Bản đầu
+                    (29/08/2026) viết thẳng "vào Business Settings gán trang" là đổ lỗi
+                    sai chỗ — người chạy đi sửa BM trong khi trang vẫn dùng được. */}
+                {curAcc && curAcc.pages.length === 0 && (
                   <p className="text-[11px] text-red-600 mt-1">
-                    ⛔ Không thấy {tenPage(ACCOUNT_PAGE[autoAccount], ACCOUNT_PAGE[autoAccount])} trong bất kỳ nguồn nào của tkqc này (promote_pages, trang BM, trang token quản lý) — vào Business Settings gán trang cho tài khoản.
+                    ⛔ Meta không trả về trang nào cho tkqc này (promote_pages {(curAcc.page_sources || {}).promote ?? 0} · trang BM {(curAcc.page_sources || {}).business ?? 0} · trang token quản lý {(curAcc.page_sources || {}).token ?? 0}).
+                    Thường là do TOKEN của CRM chưa có vai trò trên trang / thiếu scope, KHÔNG chắc là tkqc mất quyền chạy trang.
+                    👉 Bấm <b>Kiểm tra</b> bên dưới để biết trang đang chọn có chạy được thật không.
                   </p>
+                )}
+                {curAcc && curAcc.pages.length > 0 && ACCOUNT_PAGE[autoAccount] && !curAcc.pages.some(p => String(p.id) === ACCOUNT_PAGE[autoAccount]) && (
+                  <p className="text-[11px] text-red-600 mt-1">
+                    ⛔ Không thấy {tenPage(ACCOUNT_PAGE[autoAccount], ACCOUNT_PAGE[autoAccount])} trong bất kỳ nguồn nào của tkqc này, dù tkqc vẫn có {curAcc.pages.length} trang khác — bấm Kiểm tra để xác minh, nếu báo lỗi quyền thì vào Business Settings gán trang cho tài khoản.
+                  </p>
+                )}
+                {fbRes && fbRes.note && (
+                  <p className="text-[11px] text-gray-400 mt-1">Chẩn đoán từ Meta: {fbRes.note}</p>
                 )}
                 {/* Trang chưa được Meta xác nhận → cho bấm KIỂM TRA THẬT: tạo thử 1 creative
                     rồi xoá ngay (/api/fb-test-page), không tạo campaign, không tốn tiền. */}
