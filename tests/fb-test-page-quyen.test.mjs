@@ -92,3 +92,78 @@ test("hỏi quyền mà lỗi thì KHÔNG làm hỏng phép thử chính", async
   assert.match(d.quyen.error, /user_tasks/, "giữ lý do hỏi quyền hỏng để chẩn đoán");
   assert.equal(creativeDaXoa, true, "creative test phải được xoá ngay");
 });
+
+// ── Ảnh cho creative test (29/08/2026) ───────────────────────────────────────
+// Sau khi thay token đủ quyền, phép thử VẪN hỏng: Meta trả "Chúng tôi không xử lý được
+// hình ảnh bạn đã tải lên" — chê tấm PNG 320x320 đặc một màu. Phép thử sinh ra để kiểm
+// QUYỀN TRANG, không được chết vì chuyện phụ như ảnh → mượn ảnh có sẵn của tkqc trước.
+
+test("có ảnh sẵn trong tkqc → MƯỢN, không upload ảnh test (không vứt rác vào thư viện)", async () => {
+  let daUpload = false;
+  stubFetch((url, method) => {
+    if (url.includes("/me?")) return { json: { id: "1", name: "Token owner" } };
+    if (url.includes("user_tasks")) return { json: { account_id: ACCT, user_tasks: ["ADVERTISE"] } };
+    if (method === "GET" && url.includes("adimages")) return { json: { data: [{ hash: "hash_co_san" }] } };
+    if (method === "POST" && url.includes("adimages")) { daUpload = true; return { json: { images: { a: { hash: "h_moi" } } } }; }
+    if (method === "POST" && url.includes("adcreatives")) {
+      assert.match(decodeURIComponent(url), /adcreatives/);
+      return { json: { id: "cr1" } };
+    }
+    return { json: {} };
+  });
+
+  const d = await (await get()).json();
+  assert.equal(d.ok, true);
+  assert.equal(d.results[0].verdict, "CHẠY ĐƯỢC");
+  assert.equal(daUpload, false, "đã có ảnh sẵn thì KHÔNG được upload thêm");
+  assert.match(d.anh_nguon, /có sẵn/);
+});
+
+test("tkqc chưa có ảnh nào → mới upload ảnh test", async () => {
+  let daUpload = false;
+  stubFetch((url, method) => {
+    if (url.includes("/me?")) return { json: { id: "1", name: "Token owner" } };
+    if (url.includes("user_tasks")) return { json: { account_id: ACCT, user_tasks: ["ADVERTISE"] } };
+    if (method === "GET" && url.includes("adimages")) return { json: { data: [] } };
+    if (method === "POST" && url.includes("adimages")) { daUpload = true; return { json: { images: { a: { hash: "h_moi" } } } }; }
+    if (method === "POST" && url.includes("adcreatives")) return { json: { id: "cr1" } };
+    return { json: {} };
+  });
+
+  const d = await (await get()).json();
+  assert.equal(d.ok, true);
+  assert.equal(daUpload, true);
+  assert.match(d.anh_nguon, /vừa upload/);
+});
+
+test("Meta chê ảnh upload → nói rõ là lỗi ẢNH, KHÔNG đổ cho quyền", async () => {
+  stubFetch((url, method) => {
+    if (url.includes("/me?")) return { json: { id: "1", name: "Token owner" } };
+    if (url.includes("user_tasks")) return { json: { account_id: ACCT, user_tasks: ["ADVERTISE"] } };
+    if (method === "GET" && url.includes("adimages")) return { json: { data: [] } };
+    if (method === "POST" && url.includes("adimages")) {
+      return { status: 400, json: { error: { error_user_msg: "Chúng tôi không xử lý được hình ảnh bạn đã tải lên. Vui lòng thử lại hoặc tải hình ảnh khác lên." } } };
+    }
+    return { json: {} };
+  });
+
+  const d = await (await get()).json();
+  assert.equal(d.ok, false);
+  assert.match(d.goi_y, /CHÊ TẤM ẢNH/);
+  assert.doesNotMatch(d.goi_y, /CHỈ ĐƯỢC XEM|không ghi được/, "đừng đổ cho quyền khi lỗi là ảnh");
+});
+
+test("đọc thư viện ảnh hỏng → vẫn rơi xuống đường upload, không sập phép thử", async () => {
+  stubFetch((url, method) => {
+    if (url.includes("/me?")) return { json: { id: "1", name: "Token owner" } };
+    if (url.includes("user_tasks")) return { json: { account_id: ACCT, user_tasks: ["ADVERTISE"] } };
+    if (method === "GET" && url.includes("adimages")) return { status: 400, json: { error: { message: "temporary" } } };
+    if (method === "POST" && url.includes("adimages")) return { json: { images: { a: { hash: "h_moi" } } } };
+    if (method === "POST" && url.includes("adcreatives")) return { json: { id: "cr1" } };
+    return { json: {} };
+  });
+
+  const d = await (await get()).json();
+  assert.equal(d.ok, true);
+  assert.equal(d.results[0].verdict, "CHẠY ĐƯỢC");
+});

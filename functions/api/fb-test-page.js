@@ -143,13 +143,31 @@ export async function onRequestGet(context) {
     return json({ ok: false, token_owner, error: String(e.message || e) }, 502);
   }
 
-  // Upload 1 ảnh test (bytes) → image_hash, dùng chung cho mọi page của tkqc này.
+  // Ảnh cho creative test. ƯU TIÊN DÙNG LẠI ảnh CÓ SẴN trong tkqc, chỉ upload khi tkqc
+  // chưa có ảnh nào.
+  //
+  // Vì sao đổi (29/08/2026): sau khi thay token đủ quyền, phép thử vẫn hỏng ở bước upload
+  // với "Chúng tôi không xử lý được hình ảnh bạn đã tải lên" — Meta chê tấm PNG 320x320
+  // đặc một màu, không liên quan gì tới quyền chạy trang. Phép thử này sinh ra để kiểm
+  // QUYỀN TRANG nên không được chết vì một chuyện phụ như ảnh. Dùng lại ảnh có sẵn còn
+  // tránh việc mỗi lần bấm Kiểm tra lại vứt thêm rác vào thư viện ảnh của tkqc.
   let testHash = null;
+  let anhNguon = "";
   try {
-    const img = await fbPost(`/act_${acct}/adimages`, { bytes: TEST_IMG_B64 }, token);
-    const imgs = img.images || {};
-    const first = imgs[Object.keys(imgs)[0]];
-    testHash = first && first.hash;
+    const co = await fbGet(`/act_${acct}/adimages`, { fields: "hash", limit: "1" }, token);
+    const first = (co.data || [])[0];
+    if (first && first.hash) { testHash = first.hash; anhNguon = "ảnh có sẵn trong tkqc"; }
+  } catch (e) {
+    // Không đọc được thư viện ảnh → rơi xuống đường upload bên dưới.
+  }
+  try {
+    if (!testHash) {
+      const img = await fbPost(`/act_${acct}/adimages`, { bytes: TEST_IMG_B64 }, token);
+      const imgs = img.images || {};
+      const first = imgs[Object.keys(imgs)[0]];
+      testHash = first && first.hash;
+      anhNguon = "ảnh test vừa upload";
+    }
   } catch (e) {
     // Lỗi ở ĐÚNG bước ghi đầu tiên → gần như luôn là quyền trên TKQC, không phải ảnh.
     // Dịch câu "Object with ID ... does not exist" của Meta ra tiếng người, vì đọc
@@ -161,6 +179,10 @@ export async function onRequestGet(context) {
       ? `Token của CRM CHỈ ĐƯỢC XEM tkqc này (quyền Meta cấp: ${(quyen.tasks || []).join(", ") || "không có"}). `
         + "Vào Business Settings → Tài khoản quảng cáo → thêm người dùng của token với quyền "
         + "\"Quản lý chiến dịch\" (ADVERTISE) thì mới tạo được quảng cáo."
+      : /hình ảnh|image|process the image/i.test(raw)
+        ? "Meta CHÊ TẤM ẢNH test, KHÔNG phải chê quyền — tkqc này chưa có ảnh nào để mượn "
+          + "nên phép thử phải tự upload ảnh. Cứ tạo quảng cáo bình thường bằng ảnh/video "
+          + "thật; đây chỉ là công cụ chẩn đoán."
       : nghiQuyen
         ? "Token đọc được tkqc nhưng KHÔNG ghi được — thường do quyền chỉ-xem trên tkqc, "
           + "hoặc token thiếu scope ads_management. Câu \"Object with ID ... does not exist\" "
@@ -198,5 +220,5 @@ export async function onRequestGet(context) {
     }
   }
 
-  return json({ ok: true, token_owner, account: acct, quyen, results });
+  return json({ ok: true, token_owner, account: acct, quyen, anh_nguon: anhNguon || undefined, results });
 }
