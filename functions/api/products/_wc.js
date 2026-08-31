@@ -363,3 +363,70 @@ export async function createProduct(c, payload) {
   if (!r.ok) nemLoiWc("product", c.site, r.status, JSON.stringify(d));
   return d;
 }
+
+/* ---------- Biến thể (variable product) ----------
+
+   WooCommerce KHÔNG nhận biến thể trong cùng payload tạo sản phẩm: phải tạo sản phẩm cha
+   (type "variable" + attributes có variation:true) rồi POST tiếp vào
+   /products/<id>/variations. Ở đây dùng endpoint batch để 1 request tạo cả loạt.
+
+   Bẫy của batch: WooCommerce trả HTTP 200 kể cả khi từng dòng lỗi — lỗi nằm trong
+   phần tử { error: {...} } của mảng create. Không soi từng phần tử thì một biến thể
+   trùng SKU sẽ "biến mất" trong im lặng, sản phẩm lên web thiếu lựa chọn mà không ai biết. */
+
+export const MAX_VARIANTS = 100;  // trần WooCommerce cho 1 lần batch (mặc định 100)
+
+// Chuẩn hoá danh sách biến thể người dùng nhập: bỏ dòng trống, gộp trùng nhãn, cắt trần.
+// Nhãn trùng nhau là hỏng thật: WooCommerce gắn 2 biến thể vào cùng 1 option, cái sau đè cái trước.
+export function chuanHoaBienThe(list) {
+  const out = [], seen = new Set();
+  for (const v of Array.isArray(list) ? list : []) {
+    const option = String(v?.option ?? "").trim();
+    if (!option) continue;
+    const key = option.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      option,
+      price: v.price,
+      old_price: v.old_price,
+      sku: String(v?.sku ?? "").trim(),
+      stock: v.stock,
+    });
+    if (out.length >= MAX_VARIANTS) break;
+  }
+  return out;
+}
+
+// Dựng payload 1 biến thể. priceFn = priceFields (VND) hoặc hàm quy đổi USD cho nomaauto.
+export function variationPayload(attrName, v, priceFn) {
+  const qty = Number(String(v.stock ?? "").replace(/[^\d]/g, ""));
+  return {
+    ...priceFn(v.price, v.old_price),
+    ...(v.sku ? { sku: v.sku } : {}),
+    attributes: [{ name: attrName, option: v.option }],
+    ...(Number.isFinite(qty) && qty > 0
+      ? { manage_stock: true, stock_quantity: qty, stock_status: "instock" }
+      : {}),
+  };
+}
+
+export async function createVariations(c, productId, variations) {
+  const r = await fetch(`${c.url}/wp-json/wc/v3/products/${productId}/variations/batch`, {
+    method: "POST",
+    headers: { Authorization: wcAuth(c.ck, c.cs), "Content-Type": "application/json" },
+    body: JSON.stringify({ create: variations }),
+    signal: AbortSignal.timeout(45000),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) nemLoiWc("variations", c.site, r.status, JSON.stringify(d));
+
+  // HTTP 200 vẫn có thể chứa lỗi từng dòng — soi để không nuốt lỗi.
+  const created = Array.isArray(d.create) ? d.create : [];
+  const loi = created
+    .map((x, i) => (x && x.error ? `#${i + 1} "${variations[i]?.attributes?.[0]?.option ?? "?"}": ${x.error.message || x.error.code}` : null))
+    .filter(Boolean);
+  if (loi.length) throw new Error(`${loi.length}/${variations.length} biến thể lỗi — ${loi.join(" · ")}`);
+
+  return created.map((x) => ({ id: x.id, option: x.attributes?.[0]?.option || "" }));
+}

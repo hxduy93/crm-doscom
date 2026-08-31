@@ -18,8 +18,9 @@
 import { getIdentity } from "../../lib/access.js";
 import { translateToEN } from "./_translate.js";
 import {
-  siteCreds, isConfigured, uploadMedia, createProduct,
+  siteCreds, isConfigured, uploadMedia, createProduct, updateProduct,
   productSlug, b64ToBytes, priceFields, usdPriceFields, injectFigure, injectByPosition, deriveKeyword,
+  chuanHoaBienThe, variationPayload, createVariations,
 } from "./_wc.js";
 
 function json(o, s = 200) {
@@ -36,21 +37,33 @@ async function publishToSite(site, env, data) {
   const images = Array.isArray(data.images) ? data.images.slice(0, 20) : [];
   if (!images.length) throw new Error("Chưa có ảnh sản phẩm");
 
+  // Biến thể: lọc sạch TRƯỚC khi dịch, để bản EN dịch đúng danh sách thật sẽ đăng.
+  let bienThe = chuanHoaBienThe(data.variants);
+  const coBienThe = bienThe.length > 0;
+  let tenThuocTinh = String(data.variant_attribute || "").trim() || "Phân loại";
+
   // nomaauto.us = bản tiếng Anh: dịch nội dung + đổi giá VND→USD.
   const isEN = site === "nomaauto";
-  let content, pf;
+  let content, giaFn;
   if (isEN) {
     const en = await translateToEN(env, {
       name: data.name, seo_title: data.seo_title, short_description: data.short_description,
       long_html: data.long_html, meta_description: data.meta_description,
       tags: data.tags, primary_keyword: data.primary_keyword,
+      ...(coBienThe ? { variant_attribute: tenThuocTinh, variant_options: bienThe.map((v) => v.option) } : {}),
     });
     content = { ...data, ...en };
-    pf = usdPriceFields(data.price, data.old_price, env.VND_USD_RATE);
+    if (coBienThe) {
+      tenThuocTinh = en.variant_attribute || tenThuocTinh;
+      // translateToEN đã bảo đảm cùng độ dài/thứ tự, lệch thì nó trả lại bản tiếng Việt.
+      bienThe = bienThe.map((v, i) => ({ ...v, option: en.variant_options[i] || v.option }));
+    }
+    giaFn = (p, o) => usdPriceFields(p, o, env.VND_USD_RATE);
   } else {
     content = data;
-    pf = priceFields(data.price, data.old_price);
+    giaFn = priceFields;
   }
+  const pf = giaFn(data.price, data.old_price);
 
   const kw = String(content.primary_keyword || "").trim() || deriveKeyword(content.name);
   // URL sản phẩm (cả 3 web): tên SP + công dụng. Bản EN dùng name/keyword đã dịch.
@@ -95,18 +108,25 @@ async function publishToSite(site, env, data) {
   const seoTitle = content.seo_title || content.name;
   const stockQty = Number(String(data.stock ?? "").replace(/[^\d]/g, ""));
   const soldQty = Number(String(data.sold ?? "").replace(/[^\d]/g, ""));
+  /* Sản phẩm cha của hàng có biến thể KHÔNG mang giá và tồn kho: WooCommerce lấy hai
+     thứ đó từ từng biến thể. Gửi kèm regular_price ở cha thì trang sản phẩm hiện một
+     mức giá cứng không đổi theo lựa chọn của khách, còn tồn kho ở cha chặn luôn biến
+     thể còn hàng. Nên khi có biến thể thì bỏ cả pf lẫn khối manage_stock bên dưới. */
   const payload = {
     name: content.name,
     slug,
-    type: "simple",
+    type: coBienThe ? "variable" : "simple",
     status: data.status === "publish" ? "publish" : "draft",
-    ...pf,
+    ...(coBienThe ? {} : pf),
+    ...(coBienThe
+      ? { attributes: [{ name: tenThuocTinh, position: 0, visible: true, variation: true, options: bienThe.map((v) => v.option) }] }
+      : {}),
     description: html,
     short_description: content.short_description || "",
     categories: catId ? [{ id: catId }] : [],
     images: ordered.map((u) => ({ id: u.id })),
     tags: (Array.isArray(content.tags) ? content.tags : []).filter(Boolean).map((t) => ({ name: String(t).slice(0, 50) })),
-    ...(Number.isFinite(stockQty) && stockQty > 0
+    ...(!coBienThe && Number.isFinite(stockQty) && stockQty > 0
       ? { manage_stock: true, stock_quantity: stockQty, stock_status: "instock" }
       : {}),
     meta_data: [
@@ -121,7 +141,33 @@ async function publishToSite(site, env, data) {
   };
 
   const p = await createProduct(c, payload);
-  return { site, id: p.id, url: p.permalink || p.link || "", status: p.status };
+  if (!coBienThe) return { site, id: p.id, url: p.permalink || p.link || "", status: p.status };
+
+  /* Tạo biến thể ở request thứ hai (WooCommerce không nhận chung với sản phẩm).
+
+     Hỏng ở bước này là trạng thái tệ nhất: sản phẩm cha type "variable" mà không có
+     biến thể nào thì trang web hiện nút "Đọc tiếp" thay vì "Thêm vào giỏ" — khách vào
+     xem được nhưng KHÔNG mua được, và nhìn trong wp-admin vẫn thấy sản phẩm bình thường.
+     Nên nếu đang định đăng công khai thì hạ về nháp trước khi báo lỗi, đừng để hàng
+     chết nằm ngoài web. */
+  try {
+    const created = await createVariations(c, p.id, bienThe.map((v) => variationPayload(tenThuocTinh, v, giaFn)));
+    return {
+      site, id: p.id, url: p.permalink || p.link || "", status: p.status,
+      variants: created.length, variant_attribute: tenThuocTinh,
+    };
+  } catch (e) {
+    let haNhap = "";
+    if (payload.status === "publish") {
+      try {
+        await updateProduct(c, p.id, { status: "draft" });
+        haNhap = " — đã hạ sản phẩm về NHÁP để không có hàng không mua được nằm ngoài web";
+      } catch {
+        haNhap = ` — CẢNH BÁO: hạ về nháp cũng thất bại, vào wp-admin ẩn sản phẩm #${p.id} ngay`;
+      }
+    }
+    throw new Error(`Tạo sản phẩm #${p.id} xong nhưng biến thể lỗi: ${e.message}${haNhap}`);
+  }
 }
 
 export async function onRequestPost(context) {

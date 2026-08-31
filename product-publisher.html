@@ -47,6 +47,13 @@
   .row3{display:grid;grid-template-columns:1fr 92px 1fr;gap:12px}
   @media (max-width:560px){.row3{grid-template-columns:1fr 84px}}
   .hint{font-size:11px;color:var(--text-2);margin-top:5px;font-weight:600}
+  /* Biến thể: nhãn · giá bán · giá gốc · mã SKU · tồn · nút xoá */
+  .vrow{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 74px 30px;gap:8px;align-items:center;margin-bottom:8px}
+  .vrow .inp{padding:9px 10px;font-size:13px}
+  .vhead{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 74px 30px;gap:8px;font-size:11px;font-weight:800;color:var(--text-2);margin-bottom:6px}
+  .vdel{border:0;background:transparent;color:var(--red);font-size:20px;font-weight:800;cursor:pointer;line-height:1;padding:0}
+  .vdel:hover{opacity:.65}
+  @media (max-width:760px){.vhead{display:none}.vrow{grid-template-columns:1fr 1fr;gap:6px;padding:10px;border:1px solid var(--line);border-radius:10px}}
   .price-wrap{position:relative}.price-wrap .cur{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:800;color:var(--text-2)}
   .inp.money{font-variant-numeric:tabular-nums;padding-right:34px}
   .dz{border:2px dashed var(--border);border-radius:13px;padding:16px;text-align:center;cursor:pointer;transition:var(--t);background:var(--surface-2)}
@@ -215,6 +222,25 @@
         <div class="row2">
           <div class="field"><label class="lab">Tồn kho</label><input class="inp money" id="stockInp" value="100" placeholder="100"/></div>
           <div class="field"><label class="lab">Đã bán <span style="color:var(--text-2);font-weight:700">(vd 15000)</span></label><input class="inp money" id="soldInp" placeholder="15000"/></div>
+        </div>
+        <div class="field">
+          <label class="lab" style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none">
+            <input type="checkbox" id="varOn" style="width:15px;height:15px;accent-color:var(--brand);margin:0"/>
+            Sản phẩm có biến thể
+            <span style="color:var(--text-2);font-weight:700;text-transform:none">— nhiều dung tích / màu / phiên bản, mỗi loại một giá riêng</span>
+          </label>
+        </div>
+        <div id="varBox" style="display:none;margin-bottom:14px">
+          <div class="field">
+            <label class="lab">Tên nhóm lựa chọn <span class="req">*</span></label>
+            <input class="inp" id="varAttr" value="Phân loại" placeholder="VD: Dung tích, Màu sắc, Phiên bản"/>
+            <div class="hint">Chữ này hiện ngay trên ô chọn hàng ngoài web, phía trên các nút lựa chọn.</div>
+          </div>
+          <label class="lab">Các biến thể <span class="req">*</span></label>
+          <div class="vhead"><span>Tên lựa chọn</span><span>Giá bán ₫</span><span>Giá gốc ₫ (gạch)</span><span>Mã SKU</span><span>Tồn</span><span></span></div>
+          <div id="varRows"></div>
+          <button class="btn" id="varAdd" type="button" style="padding:9px 14px">+ Thêm biến thể</button>
+          <div class="hint">Bỏ trống <b>Giá gốc</b> thì tự tính từ ô <b>Giảm giá %</b> ở trên. Khi có biến thể, ba ô giá và ô tồn kho phía trên không còn dùng — giá và tồn lấy theo từng biến thể.</div>
         </div>
         <div class="field">
           <label class="lab">Ảnh nền trắng (ảnh đại diện) <span style="color:var(--text-2);font-weight:700">— up ảnh sản phẩm đã tách nền trắng</span></label>
@@ -447,7 +473,7 @@ function renderResult(){
   $('metaDesc').textContent=g.meta_description||'';
   // product card
   $('pcName').textContent=$('nameInp').value||'';
-  $('pcNow').textContent=money($('priceInp').value)+'₫'; $('pcOld').textContent=$('oldInp').value?money($('oldInp').value)+'₫':'';
+  renderCardPrice();
   $('pcImg').src=featuredUrl(); $('pcCat').textContent=catName(); $('catBadge').textContent='Danh mục: '+catName();
   // banner đa web / tiếng Anh
   const banner=$('dualBanner');
@@ -462,6 +488,81 @@ function renderResult(){
   $('pvResult').classList.add('show'); $('pubbar').style.display='flex'; updatePubLabel();
 }
 
+/* Giá trên thẻ xem trước: hàng có biến thể hiện KHOẢNG giá (thấp nhất – cao nhất),
+   đúng như WooCommerce hiển thị ngoài web, chứ không phải ô giá đơn đang bị khoá. */
+function renderCardPrice(){
+  const vs = varsOn() ? collectVariants() : [];
+  if(vs.length){
+    const ns = vs.map(v=>PD.parseMoney(v.price)).sort((a,b)=>a-b);
+    const lo = ns[0], hi = ns[ns.length-1];
+    $('pcNow').textContent = (lo===hi ? money(String(lo)) : money(String(lo))+' – '+money(String(hi)))+'₫';
+    $('pcOld').textContent = '';
+    return;
+  }
+  $('pcNow').textContent = money($('priceInp').value)+'₫';
+  $('pcOld').textContent = $('oldInp').value ? money($('oldInp').value)+'₫' : '';
+}
+
+// ---------- biến thể ----------
+// Dòng biến thể giữ thẳng trong DOM (không state riêng) — đọc lại lúc đăng bằng collectVariants().
+function addVarRow(){
+  $('varRows').insertAdjacentHTML('beforeend',
+    '<div class="vrow">'
+    + '<input class="inp v-opt" placeholder="VD: Zoom 5x"/>'
+    + '<input class="inp money v-price" placeholder="850.000" inputmode="numeric"/>'
+    + '<input class="inp money v-old" placeholder="tự tính từ %" inputmode="numeric"/>'
+    + '<input class="inp v-sku" placeholder="tuỳ chọn"/>'
+    + '<input class="inp money v-stock" placeholder="100" inputmode="numeric"/>'
+    + '<button class="vdel" type="button" title="Xoá dòng">&times;</button>'
+    + '</div>');
+}
+function varsOn(){ return $('varOn').checked; }
+function collectVariants(){
+  return [...$('varRows').querySelectorAll('.vrow')].map(r=>({
+    option:    r.querySelector('.v-opt').value.trim(),
+    price:     r.querySelector('.v-price').value,
+    old_price: r.querySelector('.v-old').value,
+    sku:       r.querySelector('.v-sku').value.trim(),
+    stock:     r.querySelector('.v-stock').value,
+  })).filter(v=>v.option && PD.parseMoney(v.price));
+}
+/* Giá gốc của từng biến thể tính ngược từ ô "Giảm giá %" chung — bán 850.000 ở mức giảm 30%
+   thì giá gạch là 1.214.000. Ô nào người dùng tự gõ thì KHÔNG đụng vào (đánh dấu data-auto). */
+function autoOld(row){
+  const price=row.querySelector('.v-price'), old=row.querySelector('.v-old');
+  if(old.value.trim() && old.dataset.auto!=='1') return;
+  const o=PD.oldFromSale(price.value, $('discInp').value);
+  if(o){ old.value=PD.formatMoney(o); old.dataset.auto='1'; }
+  else if(old.dataset.auto==='1'){ old.value=''; delete old.dataset.auto; }
+}
+function autoOldAll(){ [...$('varRows').querySelectorAll('.vrow')].forEach(autoOld); }
+function toggleVars(){
+  const on=varsOn();
+  $('varBox').style.display = on?'block':'none';
+  // Ba ô giá + tồn kho ở trên vô nghĩa với hàng có biến thể — làm mờ để không ai gõ nhầm vào đó.
+  ['priceInp','oldInp','stockInp'].forEach(id=>{ $(id).disabled=on; $(id).style.opacity=on?.45:1; });
+  if(on && !$('varRows').children.length){ addVarRow(); addVarRow(); }
+  if($('pvResult').classList.contains('show')) renderCardPrice();
+}
+$('varOn').addEventListener('change', toggleVars);
+$('varAdd').addEventListener('click', addVarRow);
+$('varRows').addEventListener('click', e=>{
+  const b=e.target.closest('.vdel'); if(!b) return;
+  b.closest('.vrow').remove();
+  if(!$('varRows').children.length) addVarRow();
+});
+$('varRows').addEventListener('input', e=>{
+  const row=e.target.closest('.vrow'); if(!row) return;
+  if(e.target.classList.contains('v-price')) autoOld(row);
+  if(e.target.classList.contains('v-old')) delete e.target.dataset.auto;  // gõ tay → chốt, thôi tự tính
+  if($('pvResult').classList.contains('show')) renderCardPrice();
+});
+$('varRows').addEventListener('blur', e=>{
+  if(e.target.classList && e.target.classList.contains('money') && e.target.value.trim())
+    e.target.value = money(e.target.value);
+}, true);
+$('discInp').addEventListener('input', ()=>{ if(varsOn()) autoOldAll(); });
+
 // ---------- publish ----------
 function updatePubLabel(){ const v=state.pubStatus==='draft'?'Lưu nháp':'Đăng ngay'; const suf = state.site==='all'?' · 3 web' : state.site==='nomaauto'?' · nomaauto.us' : ''; $('pubLabel').textContent = v+suf; }
 function siteLabel(s){ return s==='nomaauto'?'nomaauto.us':s+'.vn'; }
@@ -470,7 +571,8 @@ function renderPubResult(results, verb){
   let h='<div class="pr-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>'+verb+' — '+oks.length+'/'+results.length+' web thành công</div>';
   oks.forEach(r=>{
     const st = r.status==='publish' ? '<span class="pr-status" style="color:var(--green)">Đã xuất bản</span>' : '<span class="pr-status" style="color:var(--accent)">Nháp</span>';
-    h+='<div class="pr-link"><span class="pr-site">'+siteLabel(r.site)+'</span><span class="pr-url">'+esc(r.url)+' &nbsp;'+st+'</span><a class="pr-view" href="'+esc(r.url)+'" target="_blank" rel="noopener">Xem bài ↗</a></div>';
+    const vr = r.variants ? ' &nbsp;<span style="color:var(--text-2)">· '+r.variants+' biến thể ('+esc(r.variant_attribute||'')+')</span>' : '';
+    h+='<div class="pr-link"><span class="pr-site">'+siteLabel(r.site)+'</span><span class="pr-url">'+esc(r.url)+' &nbsp;'+st+vr+'</span><a class="pr-view" href="'+esc(r.url)+'" target="_blank" rel="noopener">Xem bài ↗</a></div>';
   });
   bad.forEach(r=>{ h+='<div class="pr-bad">✕ '+siteLabel(r.site)+': '+esc(r.error)+'</div>'; });
   const el=$('pubResult'); el.innerHTML=h; el.style.display='block'; el.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -504,7 +606,16 @@ async function publish(){
   if(!state.gen){ toast('Chưa có bài viết',true); return; }
   const catId=$('catSel').value; if(!catId){ toast('Chọn danh mục',true); return; }
   if(state.site==='all' && (!$('catSel2').value || !$('catSel3').value)){ toast('Chọn danh mục cho cả 3 web',true); return; }
+  // Bật biến thể mà chưa điền dòng nào hợp lệ → dừng. Đăng tiếp sẽ ra sản phẩm "variable"
+  // không có lựa chọn nào: ngoài web hiện nút "Đọc tiếp", khách KHÔNG bấm mua được.
+  const variants = varsOn() ? collectVariants() : [];
+  if(varsOn()){
+    if(!variants.length){ toast('Bật biến thể thì phải có ít nhất 1 dòng đủ <b>tên lựa chọn</b> và <b>giá bán</b>',true); return; }
+    if(!$('varAttr').value.trim()){ toast('Điền tên nhóm lựa chọn (VD: Dung tích)',true); return; }
+  } else if(!PD.parseMoney($('priceInp').value)){ toast('Chưa có giá bán',true); return; }
+
   const body={ site:state.site, name:$('nameInp').value.trim(), price:$('priceInp').value, old_price:$('oldInp').value,
+    ...(variants.length ? { variant_attribute:$('varAttr').value.trim(), variants } : {}),
     stock:$('stockInp').value, sold:$('soldInp').value, primary_keyword:$('focusKw').textContent.trim(),
     status:state.pubStatus, seo_title:$('seoTitle').textContent.trim(), short_description:$('shortDesc').innerHTML.trim(),
     long_html:cleanHtml(), meta_description:$('metaDesc').textContent.trim(), tags:collectTags(), images:await buildImages() };
@@ -665,7 +776,7 @@ $('genBtn').onclick=()=>generate(false); $('regenBtn').onclick=()=>generate(true
 $('statusChoice').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; [...$('statusChoice').children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); state.pubStatus=b.dataset.st; updatePubLabel(); });
 $('tagChips').addEventListener('click',e=>{ const x=e.target.closest('.x'); if(x) x.parentElement.remove(); });
 $('pubBtn').onclick=publish; $('keyBtn').onclick=askToken;
-['nameInp','priceInp','oldInp'].forEach(id=>$(id).addEventListener('input',()=>{ if(!$('pvResult').classList.contains('show'))return; $('pcName').textContent=$('nameInp').value; $('pcNow').textContent=money($('priceInp').value)+'₫'; $('pcOld').textContent=$('oldInp').value?money($('oldInp').value)+'₫':''; }));
+['nameInp','priceInp','oldInp'].forEach(id=>$(id).addEventListener('input',()=>{ if(!$('pvResult').classList.contains('show'))return; $('pcName').textContent=$('nameInp').value; renderCardPrice(); }));
 
 // ---------- giá bán ↔ % giảm ↔ giá gốc ----------
 // Điền 2 trong 3 ô, ô còn lại tự tính. Công thức nằm ở functions/lib/price-discount.js

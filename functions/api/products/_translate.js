@@ -18,7 +18,15 @@ export async function translateToEN(env, vn, opts = {}) {
   const keep = isPost
     ? " Keep every src attribute EXACTLY as-is (values like __NOMA_IMG_0__ are image placeholders — never translate, rename or drop them)."
     : "";
-  const user = `Translate this ${what} content to English. Return JSON with EXACTLY these keys: name, seo_title, short_description, long_html, meta_description, tags (array of strings), primary_keyword.${keep}\n\nVietnamese content (JSON):\n${JSON.stringify(vn)}`;
+  // Biến thể: nhãn thuộc tính ("Dung tích") và các lựa chọn ("Đỏ", "Loại 2 vòi") hiện
+  // ngay trên nút chọn hàng của nomaauto.us — để nguyên tiếng Việt là khách Mỹ không hiểu.
+  // Chỉ xin thêm 2 key này KHI có biến thể, để sync-us.js (không có biến thể) không đổi hành vi.
+  const coBienThe = !!vn.variant_attribute && Array.isArray(vn.variant_options) && vn.variant_options.length;
+  const kBienThe = coBienThe
+    ? ` Also translate variant_attribute (the option label) and variant_options — return variant_options as an array of the SAME LENGTH and SAME ORDER as the input; keep numbers and units (300ml, 1L, 5kg) unchanged.`
+    : "";
+  const keysBienThe = coBienThe ? ", variant_attribute, variant_options (array of strings)" : "";
+  const user = `Translate this ${what} content to English. Return JSON with EXACTLY these keys: name, seo_title, short_description, long_html, meta_description, tags (array of strings), primary_keyword${keysBienThe}.${keep}${kBienThe}\n\nVietnamese content (JSON):\n${JSON.stringify(vn)}`;
   const maxTokens = Number(opts.maxTokens) || (isPost ? 16000 : 8000);
   const call = () => callClaude(env, { model: "haiku", systemPrompt: TRANSLATE_SYS, userPrompt: user, maxTokens, jsonOutput: true });
   let res;
@@ -32,6 +40,15 @@ export async function translateToEN(env, vn, opts = {}) {
     meta_description: t.meta_description || vn.meta_description,
     tags: Array.isArray(t.tags) ? t.tags : [],
     primary_keyword: t.primary_keyword || "",
+    // Lệch số lượng/thứ tự thì KHÔNG dùng bản dịch: gán nhầm nhãn cho biến thể nghĩa là
+    // khách bấm "500ml" nhưng mua phải chai 300ml. Thà để tiếng Việt còn hơn sai hàng.
+    variant_attribute: t.variant_attribute || vn.variant_attribute || "",
+    variant_options:
+      Array.isArray(t.variant_options) && Array.isArray(vn.variant_options)
+        && t.variant_options.length === vn.variant_options.length
+        && t.variant_options.every((s) => String(s || "").trim())
+        ? t.variant_options.map((s) => String(s).trim())
+        : (vn.variant_options || []),
     cost_usd: res.cost_usd || 0,
   };
 }
