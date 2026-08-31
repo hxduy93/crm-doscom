@@ -24,6 +24,16 @@ param(
 )
 
 $ErrorActionPreference = "Continue"
+
+# -- Ep UTF-8 cho moi script Python -------------------------------------------
+# BAY (dinh 22/08 buoc 1/13, dinh lai 31/08 buoc 7/13): PowerShell bat stdout cua python
+# bang "| Out-String" -> stdout KHONG con la console, Python roi ve locale cp1252, gap
+# dau tieng Viet trong print la UnicodeEncodeError -> exit 1 -> dung ca pipeline.
+# Tung script co chot chan sys.stdout.reconfigure rieng; 2 dong nay la lop chan chung
+# de script moi quen dat chot van chay duoc. OutputEncoding de log khong bi mojibake.
+$env:PYTHONUTF8       = "1"
+$env:PYTHONIOENCODING = "utf-8"
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 $RUNNER_VERSION = "1.0"
 
 # -- Duong dan ----------------------------------------------------------------

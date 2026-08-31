@@ -10,6 +10,16 @@ instruction v2 (docs/google-ads-analyst-agent.md): scoring 10 dim, 3x kill rule,
 evidence-based, read-only.
 """
 import os, json
+import sys
+
+# Console Windows mac dinh cp1252 -> print chuoi co "→" hay dau tieng Viet la
+# UnicodeEncodeError, script chet giua chung. Ep stdout/stderr ve UTF-8 ngay tu dau.
+# (31/08/2026: dung dung loi nay o buoc 7/13 "Google Ads - context AI", ky tu "ẩ".)
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
 from datetime import datetime, timezone, timedelta
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))

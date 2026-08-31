@@ -17,6 +17,15 @@ import re
 import json
 import sys
 
+# Console Windows mac dinh cp1252 -> print chuoi co "→" hay dau tieng Viet la
+# UnicodeEncodeError, script chet giua chung. Ep stdout/stderr ve UTF-8 ngay tu dau.
+# (31/08/2026: dung dung loi nay o buoc 7/13 "Google Ads - context AI", ky tu "ẩ".)
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 try:
     import openpyxl
 except ImportError:
