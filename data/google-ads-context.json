@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-01 12:44",
+  "generated_at": "2026-09-01 19:06",
   "source_data_date_range": {
     "start_7d": "2026-08-25",
     "end": "2026-08-31",
@@ -60,12 +60,12 @@
     "orders_30d": 117,
     "by_status": {
       "delivered": {
-        "revenue": 191918600.0,
-        "orders": 86
+        "revenue": 197111600.0,
+        "orders": 89
       },
       "returning": {
-        "revenue": 11837000.0,
-        "orders": 7
+        "revenue": 16227000.0,
+        "orders": 9
       },
       "returned": {
         "revenue": 7000000.0,
@@ -76,8 +76,8 @@
         "orders": 6
       },
       "other": {
-        "revenue": 43442000.0,
-        "orders": 14
+        "revenue": 33859000.0,
+        "orders": 9
       }
     },
     "by_source": {
@@ -1479,6 +1479,19 @@
         ]
       },
       {
+        "search_term": "máy phát hiện nghe lén tốt nhất",
+        "spend_30d": 46198.0,
+        "clicks_30d": 3,
+        "conversions_30d": 2.0,
+        "ctr_30d": 0.3,
+        "match_types": [
+          "NEAR_PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
         "search_term": "doscom",
         "spend_30d": 59796.0,
         "clicks_30d": 52,
@@ -1490,19 +1503,6 @@
         ],
         "statuses": [
           "ADDED",
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "máy phát hiện nghe lén tốt nhất",
-        "spend_30d": 46198.0,
-        "clicks_30d": 3,
-        "conversions_30d": 2.0,
-        "ctr_30d": 0.3,
-        "match_types": [
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
           "NONE"
         ]
       },
@@ -2120,17 +2120,17 @@
         "conversions_30d": 3.0,
         "term_count": 51
       },
-      "BROAD": {
-        "spend_30d": 13106243.0,
-        "clicks_30d": 1482,
-        "conversions_30d": 21.83,
-        "term_count": 2300
-      },
       "PHRASE": {
         "spend_30d": 9876948.0,
         "clicks_30d": 1027,
         "conversions_30d": 19.33,
         "term_count": 862
+      },
+      "BROAD": {
+        "spend_30d": 13106243.0,
+        "clicks_30d": 1482,
+        "conversions_30d": 21.83,
+        "term_count": 2300
       },
       "NEAR_PHRASE": {
         "spend_30d": 9141827.0,
@@ -2148,7 +2148,7 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 8596,
+      "total_unique_placements": 8600,
       "total_spend_30d": 10170891.0
     },
     "network_breakdown": {
@@ -2173,9 +2173,9 @@
       "WEBSITE": {
         "spend_30d": 10170891.0,
         "clicks_30d": 3225,
-        "impressions_30d": 288236,
+        "impressions_30d": 288275,
         "ctr_30d": 0.0112,
-        "placement_count": 8596
+        "placement_count": 8600
       }
     },
     "top_waste_placements": [],
