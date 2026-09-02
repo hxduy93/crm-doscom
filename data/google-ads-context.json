@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-02 12:08",
+  "generated_at": "2026-09-02 18:45",
   "source_data_date_range": {
     "start_7d": "2026-08-25",
     "end": "2026-08-31",
@@ -1479,19 +1479,6 @@
         ]
       },
       {
-        "search_term": "máy dò thiết bị nghe lén",
-        "spend_30d": 213778.0,
-        "clicks_30d": 16,
-        "conversions_30d": 2.0,
-        "ctr_30d": 0.3478,
-        "match_types": [
-          "PHRASE"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
         "search_term": "doscom",
         "spend_30d": 59612.0,
         "clicks_30d": 50,
@@ -1504,6 +1491,19 @@
         "statuses": [
           "ADDED",
           "NONE"
+        ]
+      },
+      {
+        "search_term": "máy dò thiết bị nghe lén",
+        "spend_30d": 213778.0,
+        "clicks_30d": 16,
+        "conversions_30d": 2.0,
+        "ctr_30d": 0.3478,
+        "match_types": [
+          "PHRASE"
+        ],
+        "statuses": [
+          "ADDED"
         ]
       },
       {
@@ -1527,19 +1527,6 @@
         "clicks_30d": 3,
         "conversions_30d": 2.0,
         "ctr_30d": 0.375,
-        "match_types": [
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "máy rà camera",
-        "spend_30d": 126941.0,
-        "clicks_30d": 4,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.2353,
         "match_types": [
           "NEAR_PHRASE"
         ],
@@ -1591,12 +1578,26 @@
         ]
       },
       {
-        "search_term": "máy dò camera ghi âm",
-        "spend_30d": 255514.0,
-        "clicks_30d": 17,
+        "search_term": "máy rà camera",
+        "spend_30d": 126941.0,
+        "clicks_30d": 4,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.2833,
+        "ctr_30d": 0.2353,
         "match_types": [
+          "NEAR_PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera năng lượng",
+        "spend_30d": 52621.0,
+        "clicks_30d": 9,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1059,
+        "match_types": [
+          "BROAD",
           "NEAR_PHRASE"
         ],
         "statuses": [
@@ -2113,17 +2114,11 @@
       }
     ],
     "match_type_breakdown": {
-      "EXACT": {
-        "spend_30d": 3552052.0,
-        "clicks_30d": 422,
-        "conversions_30d": 3.0,
-        "term_count": 51
-      },
-      "NEAR_PHRASE": {
-        "spend_30d": 8854204.0,
-        "clicks_30d": 853,
-        "conversions_30d": 8.5,
-        "term_count": 1296
+      "BROAD": {
+        "spend_30d": 12710144.0,
+        "clicks_30d": 1428,
+        "conversions_30d": 21.83,
+        "term_count": 2249
       },
       "PHRASE": {
         "spend_30d": 9688211.0,
@@ -2131,11 +2126,17 @@
         "conversions_30d": 19.33,
         "term_count": 855
       },
-      "BROAD": {
-        "spend_30d": 12710144.0,
-        "clicks_30d": 1428,
-        "conversions_30d": 21.83,
-        "term_count": 2249
+      "NEAR_PHRASE": {
+        "spend_30d": 8854204.0,
+        "clicks_30d": 853,
+        "conversions_30d": 8.5,
+        "term_count": 1296
+      },
+      "EXACT": {
+        "spend_30d": 3552052.0,
+        "clicks_30d": 422,
+        "conversions_30d": 3.0,
+        "term_count": 51
       },
       "NEAR_EXACT": {
         "spend_30d": 534856.0,
