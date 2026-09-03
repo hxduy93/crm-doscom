@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-03 12:12",
+  "generated_at": "2026-09-03 18:45",
   "source_data_date_range": {
     "start_7d": "2026-08-25",
     "end": "2026-08-31",
@@ -60,8 +60,8 @@
     "orders_30d": 117,
     "by_status": {
       "delivered": {
-        "revenue": 197111600.0,
-        "orders": 89
+        "revenue": 225421600.0,
+        "orders": 93
       },
       "returning": {
         "revenue": 16227000.0,
@@ -76,8 +76,8 @@
         "orders": 6
       },
       "other": {
-        "revenue": 33859000.0,
-        "orders": 9
+        "revenue": 5549000.0,
+        "orders": 5
       }
     },
     "by_source": {
@@ -1535,19 +1535,6 @@
         ]
       },
       {
-        "search_term": "máy dò camera ghi âm",
-        "spend_30d": 255514.0,
-        "clicks_30d": 17,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.2833,
-        "match_types": [
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
         "search_term": "máy ghi âm mua ở đâu",
         "spend_30d": 33090.0,
         "clicks_30d": 7,
@@ -1596,6 +1583,20 @@
         "ctr_30d": 0.25,
         "match_types": [
           "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera năng lượng",
+        "spend_30d": 52621.0,
+        "clicks_30d": 9,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1059,
+        "match_types": [
+          "BROAD",
+          "NEAR_PHRASE"
         ],
         "statuses": [
           "NONE"
@@ -2111,6 +2112,12 @@
       }
     ],
     "match_type_breakdown": {
+      "EXACT": {
+        "spend_30d": 3425808.0,
+        "clicks_30d": 410,
+        "conversions_30d": 3.0,
+        "term_count": 51
+      },
       "BROAD": {
         "spend_30d": 12381864.0,
         "clicks_30d": 1379,
@@ -2128,12 +2135,6 @@
         "clicks_30d": 802,
         "conversions_30d": 8.5,
         "term_count": 1280
-      },
-      "EXACT": {
-        "spend_30d": 3425808.0,
-        "clicks_30d": 410,
-        "conversions_30d": 3.0,
-        "term_count": 51
       },
       "NEAR_EXACT": {
         "spend_30d": 531461.0,
