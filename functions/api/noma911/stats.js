@@ -42,7 +42,7 @@ export async function onRequestGet(context) {
 
     const STAFF_LABEL = { duy: "Duy", pn: "Phương Nam" };
     const byStaffLabeled = (byStaff.results || []).map(r => ({ ...r, staff_label: STAFF_LABEL[r.staff] || r.staff }));
-    const GIFT_LABEL = { noma250: "NOMA 250", noma692: "NOMA 692" };
+    const GIFT_LABEL = { noma250: "NOMA 250", noma120: "NOMA 120", noma692: "NOMA 692" };
     const byGiftLabeled = (byGift.results || []).map(r => ({ gift: r.gift_key, gift_label: GIFT_LABEL[r.gift_key] || r.gift_key, orders: r.orders }));
 
     return json({
