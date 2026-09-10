@@ -23,6 +23,8 @@ const STAFF_LABEL = { duy: "Duy", pn: "Phương Nam" };
 // Landing 350 chỉ tặng NOMA 250 (mọi gói từ 2 sản phẩm trở lên). Giữ nguyên bảng tra để
 // thêm quà khác về sau không phải sửa dashboard — thiếu nhãn thì dashboard hiện mã thô.
 const GIFT_LABEL = {
+  noma350: "NOMA 350",
+  noma680: "NOMA 680",
   noma230: "NOMA 230",
   noma250: "NOMA 250",
   "khan-microfiber": "Khăn microfiber",   // quà cũ của gói 2 chai, trước 09/09/2026

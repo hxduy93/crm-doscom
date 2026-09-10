@@ -12,6 +12,8 @@ const COMBO_META = {
   "le-230":        { label: "1 chai NOMA 230 xịt dưỡng nhựa nhám",   amount:  99000 },
   "combo-2x230":   { label: "2 chai NOMA 230 xịt dưỡng nhựa nhám",   amount: 198000 },
   "combo-230-911": { label: "NOMA 230 + NOMA 911 tẩy ố kính",        amount: 318000 },
+  // Gói 230+680 đã GỠ khỏi landing 10/09/2026. Giữ dòng này để đơn cũ tra ra
+  // đúng tên gói; landing không còn gửi mã này nữa (order.js bên đó đã bỏ).
   "combo-230-680": { label: "NOMA 230 + NOMA 680 bọt tuyết đa năng", amount: 198000 },
 };
 
