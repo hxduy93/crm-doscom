@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-10 12:22",
+  "generated_at": "2026-09-10 18:52",
   "source_data_date_range": {
     "start_7d": "2026-09-03",
     "end": "2026-09-09",
@@ -60,8 +60,8 @@
     "orders_30d": 114,
     "by_status": {
       "delivered": {
-        "revenue": 170321600.0,
-        "orders": 83
+        "revenue": 174794600.0,
+        "orders": 88
       },
       "returning": {
         "revenue": 5924000.0,
@@ -76,8 +76,8 @@
         "orders": 4
       },
       "other": {
-        "revenue": 33828000.0,
-        "orders": 21
+        "revenue": 29355000.0,
+        "orders": 16
       }
     },
     "by_source": {
@@ -1516,26 +1516,53 @@
         ]
       },
       {
+        "search_term": "cam năng lượng mặt trời",
+        "spend_30d": 23142.0,
+        "clicks_30d": 3,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.0588,
+        "match_types": [
+          "BROAD",
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera không cần wifi",
+        "spend_30d": 9114.0,
+        "clicks_30d": 5,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.0595,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera năng lượng",
+        "spend_30d": 61823.0,
+        "clicks_30d": 9,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1,
+        "match_types": [
+          "BROAD",
+          "NEAR_PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
         "search_term": "máy dò thiết bị nghe lén",
         "spend_30d": 140066.0,
         "clicks_30d": 13,
         "conversions_30d": 1.0,
         "ctr_30d": 0.3023,
         "match_types": [
-          "PHRASE"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
-        "search_term": "thiết bị dò định vị trên xe ô tô",
-        "spend_30d": 208682.0,
-        "clicks_30d": 11,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.5,
-        "match_types": [
-          "NEAR_PHRASE",
           "PHRASE"
         ],
         "statuses": [
@@ -1567,33 +1594,6 @@
         ],
         "statuses": [
           "ADDED",
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "cam năng lượng mặt trời",
-        "spend_30d": 23142.0,
-        "clicks_30d": 3,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0588,
-        "match_types": [
-          "BROAD",
-          "PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera không cần wifi",
-        "spend_30d": 9114.0,
-        "clicks_30d": 5,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0595,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
           "NONE"
         ]
       }
@@ -2106,6 +2106,24 @@
       }
     ],
     "match_type_breakdown": {
+      "BROAD": {
+        "spend_30d": 11901710.0,
+        "clicks_30d": 1368,
+        "conversions_30d": 21.5,
+        "term_count": 2204
+      },
+      "PHRASE": {
+        "spend_30d": 10029771.0,
+        "clicks_30d": 984,
+        "conversions_30d": 18.0,
+        "term_count": 867
+      },
+      "NEAR_PHRASE": {
+        "spend_30d": 7663754.0,
+        "clicks_30d": 771,
+        "conversions_30d": 9.5,
+        "term_count": 1443
+      },
       "EXACT": {
         "spend_30d": 3592156.0,
         "clicks_30d": 419,
@@ -2117,39 +2135,21 @@
         "clicks_30d": 92,
         "conversions_30d": 3.0,
         "term_count": 39
-      },
-      "PHRASE": {
-        "spend_30d": 10029771.0,
-        "clicks_30d": 984,
-        "conversions_30d": 18.0,
-        "term_count": 867
-      },
-      "BROAD": {
-        "spend_30d": 11901710.0,
-        "clicks_30d": 1368,
-        "conversions_30d": 21.5,
-        "term_count": 2204
-      },
-      "NEAR_PHRASE": {
-        "spend_30d": 7663754.0,
-        "clicks_30d": 771,
-        "conversions_30d": 9.5,
-        "term_count": 1443
       }
     }
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 8812,
-      "total_spend_30d": 10242394.0
+      "total_unique_placements": 8818,
+      "total_spend_30d": 10238772.0
     },
     "network_breakdown": {
       "CONTENT": {
-        "spend_30d": 10242367.0,
-        "clicks_30d": 3032,
-        "impressions_30d": 302183,
+        "spend_30d": 10238745.0,
+        "clicks_30d": 3030,
+        "impressions_30d": 302178,
         "ctr_30d": 0.01,
-        "cpc_30d": 3378.0,
+        "cpc_30d": 3379.0,
         "campaign_count": 5
       },
       "SEARCH": {
@@ -2163,11 +2163,11 @@
     },
     "placement_type_breakdown": {
       "WEBSITE": {
-        "spend_30d": 10242394.0,
-        "clicks_30d": 3032,
-        "impressions_30d": 283991,
+        "spend_30d": 10238772.0,
+        "clicks_30d": 3030,
+        "impressions_30d": 284087,
         "ctr_30d": 0.0107,
-        "placement_count": 8812
+        "placement_count": 8818
       }
     },
     "top_waste_placements": [],
