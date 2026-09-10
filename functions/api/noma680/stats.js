@@ -23,6 +23,7 @@ const STAFF_LABEL = { duy: "Duy", pn: "Phương Nam" };
 // 680 + sản phẩm kính tặng NOMA 250. Thiếu nhãn ở đây thì dashboard hiện mã thô.
 const GIFT_LABEL = {
   noma680: "NOMA 680",
+  noma120: "NOMA 120",
   noma230: "NOMA 230",
   noma250: "NOMA 250",
   noma692: "NOMA 692",
