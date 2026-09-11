@@ -12,7 +12,7 @@ const COMBO_META = {
   "le-230":        { label: "1 chai NOMA 230 xịt dưỡng nhựa nhám",              amount:  99000 },
   "combo-2x230":   { label: "2 chai NOMA 230 xịt dưỡng nhựa nhám",              amount: 198000 },
   // Bộ gói đôi chốt 11/09/2026, tất cả tặng NOMA 680. Giá = 99k (giá lẻ 230)
-  // cộng giá lẻ của sản phẩm kèm: 350 = 119k · 110 = 169k · 130 = 179k · 120 = 189k.
+  // cộng giá lẻ của sản phẩm kèm: 350 = 119k · 110 = 169k · 130 = 179k · 120 = 149k.
   //
   // ⚠ Gói 230+350 SỬA GIÁ 258.000đ -> 218.000đ ngay trong ngày 11/09/2026: bản đầu
   //   cộng nhầm giá lẻ 350 là 159k, trong khi 350 đã hạ về 119k (xem PRICING của
@@ -21,7 +21,9 @@ const COMBO_META = {
   "combo-230-350": { label: "NOMA 230 + NOMA 350 vệ sinh phanh đĩa",            amount: 218000 },
   "combo-230-110": { label: "NOMA 230 + NOMA 110 chống rỉ và bôi trơn đa năng", amount: 268000 },
   "combo-230-130": { label: "NOMA 230 + NOMA 130 bôi trơn kính, dưỡng ron",     amount: 278000 },
-  "combo-230-120": { label: "NOMA 230 + NOMA 120 vệ sinh kim phun",             amount: 288000 },
+  // 288.000đ -> 248.000đ (11/09/2026): giá lẻ NOMA 120 chốt lại là 149k (theo
+  // doscom.vn) chứ không phải 189k. Đơn cũ giữ 288.000đ trong D1.
+  "combo-230-120": { label: "NOMA 230 + NOMA 120 vệ sinh kim phun",             amount: 248000 },
   // Hai gói dưới đây đã GỠ khỏi landing (680 ngày 10/09/2026, 911 ngày
   // 11/09/2026). Giữ lại để đơn CŨ tra ra đúng tên gói; landing không còn gửi
   // hai mã này nữa (PRICING bên đó đã bỏ).

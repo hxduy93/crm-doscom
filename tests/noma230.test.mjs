@@ -30,7 +30,9 @@ const GIA_COMBO = {
   "combo-230-350": [218000, 258000],
   "combo-230-110": 268000,
   "combo-230-130": 278000,
-  "combo-230-120": 288000,
+  // Sửa 288.000đ -> 248.000đ ngày 11/09/2026 (giá lẻ NOMA 120 là 149k, không
+  // phải 189k). Giữ cả hai vì đơn đặt trước lúc sửa vẫn lưu 288.000đ.
+  "combo-230-120": [248000, 288000],
   // Hai gói đã gỡ khỏi landing nhưng còn đơn cũ trong D1 — vẫn phải có giá ở đây,
   // nếu không TEST 2 báo đỏ vì gặp combo "lạ".
   "combo-230-911": 318000,
