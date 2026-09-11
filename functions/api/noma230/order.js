@@ -9,12 +9,19 @@
 // thứ hai (lớp đầu ở Function của landing); cố ý, để kênh khác gọi thẳng vẫn đúng tiền.
 
 const COMBO_META = {
-  "le-230":        { label: "1 chai NOMA 230 xịt dưỡng nhựa nhám",   amount:  99000 },
-  "combo-2x230":   { label: "2 chai NOMA 230 xịt dưỡng nhựa nhám",   amount: 198000 },
-  "combo-230-911": { label: "NOMA 230 + NOMA 911 tẩy ố kính",        amount: 318000 },
-  // Gói 230+680 đã GỠ khỏi landing 10/09/2026. Giữ dòng này để đơn cũ tra ra
-  // đúng tên gói; landing không còn gửi mã này nữa (order.js bên đó đã bỏ).
-  "combo-230-680": { label: "NOMA 230 + NOMA 680 bọt tuyết đa năng", amount: 198000 },
+  "le-230":        { label: "1 chai NOMA 230 xịt dưỡng nhựa nhám",              amount:  99000 },
+  "combo-2x230":   { label: "2 chai NOMA 230 xịt dưỡng nhựa nhám",              amount: 198000 },
+  // Bộ gói đôi chốt 11/09/2026, tất cả tặng NOMA 680. Giá = 99k (giá lẻ 230)
+  // cộng giá lẻ của sản phẩm kèm: 350 = 159k · 110 = 169k · 130 = 179k · 120 = 189k.
+  "combo-230-350": { label: "NOMA 230 + NOMA 350 vệ sinh phanh đĩa",            amount: 258000 },
+  "combo-230-110": { label: "NOMA 230 + NOMA 110 chống rỉ và bôi trơn đa năng", amount: 268000 },
+  "combo-230-130": { label: "NOMA 230 + NOMA 130 bôi trơn kính, dưỡng ron",     amount: 278000 },
+  "combo-230-120": { label: "NOMA 230 + NOMA 120 vệ sinh kim phun",             amount: 288000 },
+  // Hai gói dưới đây đã GỠ khỏi landing (680 ngày 10/09/2026, 911 ngày
+  // 11/09/2026). Giữ lại để đơn CŨ tra ra đúng tên gói; landing không còn gửi
+  // hai mã này nữa (PRICING bên đó đã bỏ).
+  "combo-230-680": { label: "NOMA 230 + NOMA 680 bọt tuyết đa năng",            amount: 198000 },
+  "combo-230-911": { label: "NOMA 230 + NOMA 911 tẩy ố kính",                   amount: 318000 },
 };
 
 function json(obj, status = 200) {

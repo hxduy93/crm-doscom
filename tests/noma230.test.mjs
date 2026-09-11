@@ -21,6 +21,12 @@ const BASE_URL = process.env.BASE_URL || "https://crm-doscom.pages.dev";
 const GIA_COMBO = {
   "le-230": 99000,
   "combo-2x230": 198000,
+  "combo-230-350": 258000,
+  "combo-230-110": 268000,
+  "combo-230-130": 278000,
+  "combo-230-120": 288000,
+  // Hai gói đã gỡ khỏi landing nhưng còn đơn cũ trong D1 — vẫn phải có giá ở đây,
+  // nếu không TEST 2 báo đỏ vì gặp combo "lạ".
   "combo-230-911": 318000,
   "combo-230-680": 198000,
 };
