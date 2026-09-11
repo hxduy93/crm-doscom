@@ -428,9 +428,9 @@ export const PRODUCTS = {
     name: "Noma 130",
     brand: "NOMA",
     fullName: "Dung dịch bôi trơn kính và làm mềm ron cao su Noma 130 — dầu silicone tinh khiết",
-    priceRange: "179.000đ / chai — combo cộng thẳng giá lẻ (2 chai 358.000đ, 3 chai 537.000đ); ưu đãi là quà: 2 chai tặng NOMA 250, 3 chai tặng NOMA 692",
+    priceRange: "179.000đ / chai — giá gói cộng thẳng giá lẻ, ưu đãi nằm ở quà: 2 chai 358.000đ tặng thêm 1 chai NOMA 130 (mua 2 tặng 1); gói ghép 130+680 278.000đ, 130+350 298.000đ, 130+110 348.000đ, 130+120 368.000đ, mỗi gói ghép tặng 1 chai NOMA 230",
     category: "Chăm sóc ô tô — dưỡng cao su, gioăng và khe kính",
-    source: "noma-sku-specs.js mã 130 + PRICING landing noma130 (đối chiếu 2026-08-29)",
+    source: "noma-sku-specs.js mã 130 + PRICING landing noma130 (đối chiếu 2026-09-11)",
     guarantee: null,
     usps: [
       "Dầu silicone (Polydimethylsiloxane) phân tử nhỏ, thấm VÀO TRONG cao su bù lại phần dầu tự nhiên đã bay hơi — không chỉ phủ bóng bên ngoài",
