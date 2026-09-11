@@ -39,7 +39,9 @@ test("giá khớp PRICING của landing đang chạy", () => {
   assert.match(PRODUCTS["Noma 998"].priceRange, /119\.000đ \/ chai 500ml/);
   assert.match(PRODUCTS["Noma 998"].priceRange, /4 chai 476\.000đ/);
   assert.match(PRODUCTS["Noma 130"].priceRange, /179\.000đ \/ chai/);
-  assert.match(PRODUCTS["Noma 130"].priceRange, /3 chai 537\.000đ/);
+  // 130 đổi sang "mua 2 tặng 1" ngày 11/09/2026: gói 2 chai vẫn 358.000đ nhưng
+  // khách nhận 3 chai, nên KHÔNG còn dòng "3 chai 537.000đ" nữa.
+  assert.match(PRODUCTS["Noma 130"].priceRange, /2 chai 358\.000đ tặng thêm 1 chai NOMA 130/);
 });
 
 test("giữ nguyên luật Brand Core: cấm từ tuyệt đối và claim xuất xứ Mỹ", () => {

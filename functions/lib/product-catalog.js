@@ -219,9 +219,9 @@ export const PRODUCTS = {
     name: "Noma 230",
     brand: "NOMA",
     fullName: "Xịt dưỡng & đánh bóng nhựa nhám Noma 230 — chai 450ml",
-    priceRange: "99.000đ / chai 450ml (2 chai 198.000đ tặng khăn microfiber)",
+    priceRange: "99.000đ / chai 450ml — giá gói cộng thẳng giá lẻ, ưu đãi nằm ở quà: 2 chai 198.000đ tặng thêm 1 chai NOMA 230 (mua 2 tặng 1); gói ghép 230+350 258.000đ, 230+110 268.000đ, 230+130 278.000đ, 230+120 288.000đ, mỗi gói ghép tặng 1 chai NOMA 680",
     category: "Chăm sóc ô tô — phục hồi nhựa nhám nội & ngoại thất",
-    source: "noma-sku-specs.js mã 230 + PRICING landing noma230 (đối chiếu 2026-08-06)",
+    source: "noma-sku-specs.js mã 230 + PRICING landing noma230 (đối chiếu 2026-09-11)",
     guarantee: null,
     usps: [
       "Bù lại lớp dầu đã mất trong nhựa — thứ quyết định màu, chứ không chỉ rửa sạch bụi",
