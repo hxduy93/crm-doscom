@@ -18,10 +18,16 @@ import assert from "node:assert/strict";
 const BASE_URL = process.env.BASE_URL || "https://crm-doscom.pages.dev";
 
 // Giá cố định từng combo (lấy đúng từ COMBO_META trong functions/api/noma230/order.js)
+// Một SỐ = gói chỉ từng có đúng một giá -> doanh thu phải khớp tuyệt đối.
+// Một MẢNG = gói đã đổi giá; đơn cũ giữ giá cũ, đơn mới mang giá mới, nên doanh
+// thu chỉ có thể nằm trong khoảng [số đơn × giá thấp nhất, số đơn × giá cao nhất].
+// Vẫn bắt được lỗi tính tiền sai cỡ lớn, mà không bắt lỗi oan khi đổi giá.
 const GIA_COMBO = {
   "le-230": 99000,
   "combo-2x230": 198000,
-  "combo-230-350": 258000,
+  // Sửa 258.000đ -> 218.000đ ngày 11/09/2026 (cộng nhầm giá lẻ 350: 159k thay vì
+  // 119k). Giữ cả hai vì đơn đặt trước lúc sửa vẫn lưu 258.000đ.
+  "combo-230-350": [218000, 258000],
   "combo-230-110": 268000,
   "combo-230-130": 278000,
   "combo-230-120": 288000,
@@ -65,14 +71,25 @@ test("doanh thu mỗi combo = số đơn × đúng giá combo", async (t) => {
   if (!kq) return t.skip(CHUA_DEPLOY);
 
   for (const dong of kq.by_combo) {
-    const giaDung = GIA_COMBO[dong.combo];
-    if (giaDung === undefined) continue; // combo lạ thì bỏ qua
+    const gia = GIA_COMBO[dong.combo];
+    if (gia === undefined) continue; // combo lạ thì bỏ qua
 
-    const mongDoi = dong.orders * giaDung;
+    if (Array.isArray(gia)) {
+      const thap = Math.min(...gia) * dong.orders;
+      const cao = Math.max(...gia) * dong.orders;
+      assert.ok(
+        dong.revenue >= thap && dong.revenue <= cao,
+        `Combo "${dong.combo}" (đã đổi giá): ${dong.orders} đơn thì doanh thu phải ` +
+          `nằm trong ${thap}đ..${cao}đ, nhưng API trả ${dong.revenue}đ → TÍNH SAI TIỀN!`
+      );
+      continue;
+    }
+
+    const mongDoi = dong.orders * gia;
     assert.equal(
       dong.revenue,
       mongDoi,
-      `Combo "${dong.combo}": ${dong.orders} đơn × ${giaDung}đ phải = ${mongDoi}đ, ` +
+      `Combo "${dong.combo}": ${dong.orders} đơn × ${gia}đ phải = ${mongDoi}đ, ` +
         `nhưng API trả ${dong.revenue}đ → TÍNH SAI TIỀN!`
     );
   }
