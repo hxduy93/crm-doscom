@@ -11,9 +11,11 @@
 const COMBO_META = {
   "le-680":        { label: "1 chai NOMA 680 650ml",                  amount:  99000 },
   "combo-2x680":   { label: "2 chai NOMA 680 650ml",                  amount: 198000 },
+  "combo-680-130": { label: "NOMA 680 + NOMA 130 bôi trơn kính, dưỡng ron cao su", amount: 278000 },
+  // Hai gói dưới đã bị THAY trên landing (680+310 -> 680+686 ngày 10/09/2026,
+  // rồi 680+686 -> 680+130 ngày 12/09/2026). Giữ lại để đơn CŨ tra ra đúng tên
+  // gói và đúng số tiền; landing không còn gửi hai mã này nữa.
   "combo-680-686": { label: "NOMA 680 + NOMA 686 bộ vệ sinh dưỡng ghế da", amount: 498000 },
-  // Gói 680+310 đã THAY bằng 680+686 trên landing 10/09/2026. Giữ dòng dưới
-  // để đơn cũ tra ra đúng tên gói; landing không còn gửi mã này nữa.
   "combo-680-310": { label: "NOMA 680 + NOMA 310 chống hấp hơi kính", amount: 298000 },
   "combo-680-911": { label: "NOMA 680 + NOMA 911 tẩy ố kính",         amount: 318000 },
   "combo-680-922": { label: "NOMA 680 + NOMA 922 phủ nano kính",      amount: 318000 },
