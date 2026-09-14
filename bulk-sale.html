@@ -97,19 +97,12 @@
           <label class="f">% giảm chung
             <input id="pct" type="text" value="20" style="width:80px" />
           </label>
-          <label class="f">Gắn danh mục
-            <select id="cat"></select>
-          </label>
-          <label class="f" id="newCatWrap">Tên danh mục mới
-            <input id="newCat" type="text" value="Giảm giá" maxlength="60" style="width:150px" />
-          </label>
         </div>
         <div class="note">
           <ul>
             <li>Tool <b>chỉ đặt giá sale</b>, không sửa giá gốc. Giá sale làm tròn tới 1.000đ.</li>
-            <li>SP đang có giá sale riêng: tool lưu lại, kết thúc đợt sẽ trả về đúng giá đó.</li>
+            <li>SP đang có giá sale riêng: tool lưu lại, bấm "Kết thúc đợt" sẽ trả về đúng giá đó (hết hạn tự nhiên thì web về giá gốc).</li>
             <li>WordPress đổi giá theo lịch lúc <b>0h theo giờ cài trong web</b>, web ít truy cập có thể trễ vài phút. Sáng ngày sale nên mở web kiểm tra; web có plugin cache thì xoá cache sau 0h.</li>
-            <li>Danh mục chỉ bị gỡ khi bấm "Kết thúc đợt" ở tab 2 (WooCommerce không tự gỡ danh mục khi hết hạn).</li>
           </ul>
         </div>
       </div>
@@ -143,7 +136,7 @@
     <section id="tab-running" class="hide">
       <div class="card">
         <h2>Đợt đang theo dõi</h2>
-        <p class="muted">"Kết thúc đợt" = trả giá sale về như trước khi áp + gỡ danh mục tool đã gắn. Đợt đã hết hạn thì web đã tự về giá cũ — vẫn nên bấm để gỡ danh mục và trả lại giá sale riêng (nếu SP từng có).</p>
+        <p class="muted">"Kết thúc đợt" = trả giá sale về như trước khi áp (kết thúc sớm được). Đợt đã hết hạn thì web đã tự về giá gốc — vẫn nên bấm nếu SP từng có giá sale riêng trước đợt, để lấy lại giá đó.</p>
         <div class="row">
           <label class="f">Đợt
             <select id="campFilter"><option value="">Tất cả</option></select>
@@ -153,7 +146,7 @@
         </div>
         <div class="tablewrap" style="margin-top:10px">
           <table>
-            <thead><tr><th></th><th></th><th>Sản phẩm</th><th>Đợt</th><th>Thời gian</th><th>Giảm</th><th>Danh mục</th><th>Trạng thái</th></tr></thead>
+            <thead><tr><th></th><th></th><th>Sản phẩm</th><th>Đợt</th><th>Thời gian</th><th>Giảm</th><th>Trạng thái</th></tr></thead>
             <tbody id="campRows"></tbody>
           </table>
         </div>
@@ -225,7 +218,7 @@ $("#site").addEventListener("change", () => { S.sel.clear(); S.rows.clear(); S.v
 async function load() {
   S.site = $("#site").value;
   $("#btnLoad").disabled = true;
-  $("#loadInfo").textContent = "Đang tải sản phẩm và danh mục…";
+  $("#loadInfo").textContent = "Đang tải sản phẩm…";
   try {
     const d = await post({ mode: "list" }, false);
     S.products = d.products.sort((a, b) => a.name.localeCompare(b.name, "vi"));
@@ -243,16 +236,12 @@ async function load() {
     $("#loadInfo").innerHTML = `${S.products.length} sản phẩm đang bán trên <b>${siteName()}</b> · <b>${S.products.filter((p) => p.camp).length}</b> SP trong đợt do tool đặt${tzHtml}`
       + (orphan ? ` · <span class="pill amber">${orphan} SP trong đợt đã bị ẩn/xoá (ID ${d.orphan_camp_ids.join(", ")})</span>` : "");
 
+    // Danh mục chỉ dùng để LỌC danh sách — tool không gắn/gỡ danh mục (chủ dự án chốt 14/09/2026).
     const catOpts = [...S.cats.values()].sort((a, b) => a.name.localeCompare(b.name, "vi"))
       .map((c) => `<option value="${c.id}">${esc(c.name)} (${c.count})</option>`).join("");
-    const prevCat = $("#cat").value;
-    $("#cat").innerHTML = `<option value="">— Không gắn danh mục —</option><option value="__new">+ Tạo danh mục mới</option>` + catOpts;
-    const saleCat = [...S.cats.values()].find((c) => /giảm giá|khuyến mãi|sale/i.test(c.name));
-    $("#cat").value = prevCat && [...$("#cat").options].some((o) => o.value === prevCat) ? prevCat : (saleCat ? String(saleCat.id) : "__new");
     const prevFilter = $("#filterCat").value;
     $("#filterCat").innerHTML = `<option value="">Mọi danh mục</option>` + catOpts;
     $("#filterCat").value = prevFilter && S.cats.has(Number(prevFilter)) ? prevFilter : "";
-    toggleNewCat();
 
     $("#main").classList.remove("hide");
     renderRows();
@@ -263,9 +252,6 @@ async function load() {
   }
   $("#btnLoad").disabled = S.busy;
 }
-
-function toggleNewCat() { $("#newCatWrap").classList.toggle("hide", $("#cat").value !== "__new"); }
-$("#cat").addEventListener("change", toggleNewCat);
 
 // ───────── Tính giá từng dòng ─────────
 function evaluate(p) {
@@ -419,28 +405,13 @@ $("#btnApply").addEventListener("click", async () => {
   const warn = ready.filter((p) => { const e = evaluate(p); return e.kind === "simple" ? e.plan.warnings.length : e.plans.some((x) => x.plan.warnings.length); }).length;
   const inCamp = ready.filter((p) => p.camp).length;
 
-  let catId = null, catLabel = "không gắn danh mục";
-  if ($("#cat").value === "__new") {
-    const name = $("#newCat").value.trim();
-    if (!name) return alert("Nhập tên danh mục mới, hoặc chọn \"Không gắn danh mục\".");
-    catLabel = `danh mục mới "${name}"`;
-  } else if ($("#cat").value) {
-    catId = Number($("#cat").value); catLabel = `danh mục "${(S.cats.get(catId) || {}).name || catId}"`;
-  }
-
   if (!confirm(`Đặt giá sale "${campaign}" cho ${ready.length} SP trên ${siteName()}\n`
-    + `Từ 0h ${fmtDate($("#from").value)} đến 23h59 ${fmtDate($("#to").value)} · ${catLabel}.`
+    + `Từ 0h ${fmtDate($("#from").value)} đến 23h59 ${fmtDate($("#to").value)}.`
     + (warn ? `\n\n⚠ ${warn} SP giảm trên 50%.` : "")
     + (inCamp ? `\n${inCamp} SP đang trong đợt khác — sẽ bị thay bằng đợt này (giá cũ ban đầu vẫn được giữ).` : ""))) return;
 
-  if ($("#cat").value === "__new") {
-    try {
-      const d = await post({ mode: "create_category", name: $("#newCat").value.trim() }, true);
-      catId = d.category.id;
-    } catch (e) { return alert("Không tạo được danh mục: " + e.message); }
-  }
-
-  const body = { mode: "apply", campaign, from: $("#from").value, to: $("#to").value, category_id: catId };
+  // Không gửi category_id → server không gắn danh mục nào.
+  const body = { mode: "apply", campaign, from: $("#from").value, to: $("#to").value };
   await runJobs(`Đặt giá sale "${campaign}"`, ready.map((p) => p.id), async (id) => {
     const r = S.rows.get(id) || {};
     const p = S.byId.get(id);
@@ -452,11 +423,9 @@ $("#btnApply").addEventListener("click", async () => {
 const fmtDate = (s) => (s ? s.split("-").reverse().join("/") : "");
 
 function applyDetail(res) {
-  const parts = [];
-  if (res.type === "variable") parts.push(`${res.variations_set} biến thể${res.pct ? " -" + formatPercent(res.pct) + "%" : ""}`);
-  else parts.push(`${money(res.regular)} → <b>${money(res.sale_price)}</b> (-${formatPercent(res.pct)}%)`);
-  if (res.category_added) parts.push("đã gắn danh mục");
-  let html = parts.join(" · ");
+  let html = res.type === "variable"
+    ? `${res.variations_set} biến thể${res.pct ? " -" + formatPercent(res.pct) + "%" : ""}`
+    : `${money(res.regular)} → <b>${money(res.sale_price)}</b> (-${formatPercent(res.pct)}%)`;
   if (res.variations_skipped && res.variations_skipped.length) html += `<div class="muted" style="font-size:12px">Bỏ qua biến thể: ${esc(res.variations_skipped.join("; "))}</div>`;
   return html + warnHtml(res.warnings);
 }
@@ -465,7 +434,7 @@ function applyDetail(res) {
 const STATUS = {
   pending: `<span class="pill grey">Chờ tới ngày</span>`,
   running: `<span class="pill green">Đang giảm</span>`,
-  expired: `<span class="pill amber">Đã hết hạn — bấm kết thúc để gỡ danh mục</span>`,
+  expired: `<span class="pill amber">Đã hết hạn — web đã về giá gốc</span>`,
 };
 function campList() {
   const f = $("#campFilter").value;
@@ -484,7 +453,6 @@ function renderCamps() {
   $("#campEmpty").classList.toggle("hide", !!list.length);
   $("#campRows").innerHTML = list.map((p) => {
     const c = p.camp;
-    const cat = c.category_id ? (S.cats.get(Number(c.category_id)) || {}).name || `#${c.category_id}` : "";
     return `<tr>
       <td><input type="checkbox" data-end="${p.id}" ${S.endSel.has(p.id) ? "checked" : ""} /></td>
       <td>${p.thumb ? `<img class="th" src="${esc(p.thumb)}" alt="" loading="lazy" />` : ""}</td>
@@ -492,7 +460,6 @@ function renderCamps() {
       <td>${esc(c.campaign)}</td>
       <td class="money">${esc(fmtDate(c.from))} → ${esc(fmtDate(c.to))}</td>
       <td>${c.pct != null ? "-" + esc(c.pct) + "%" : `<span class="muted">giá riêng</span>`}</td>
-      <td>${cat ? esc(cat) + (c.category_added ? "" : ` <span class="muted">(vốn có sẵn)</span>`) : `<span class="muted">—</span>`}</td>
       <td>${STATUS[B.campStatus(c)] || ""}</td>
     </tr>`;
   }).join("");
@@ -510,12 +477,10 @@ $("#campRows").addEventListener("change", (e) => {
 
 $("#btnEnd").addEventListener("click", async () => {
   const ids = [...S.endSel];
-  if (!confirm(`Kết thúc đợt cho ${ids.length} SP trên ${siteName()}?\n\nGiá sale trả về như trước khi áp đợt (SP không có sale thì về giá gốc) và gỡ danh mục tool đã gắn. Giá nào đã bị sửa tay sẽ giữ nguyên.`)) return;
+  if (!confirm(`Kết thúc đợt cho ${ids.length} SP trên ${siteName()}?\n\nGiá sale trả về như trước khi áp đợt (SP không có sale thì về giá gốc). Giá nào đã bị sửa tay sẽ giữ nguyên.`)) return;
   await runJobs("Kết thúc đợt", ids, async (id) => (await post({ mode: "end", ids: [id] }, true)).items[0], (res) => {
-    const parts = [];
-    parts.push(res.restored ? `đã trả giá cũ${res.type === "variable" ? ` (${res.restored} biến thể)` : ""}` : "không cần đổi giá");
-    if (res.category_removed) parts.push("đã gỡ danh mục");
-    return esc(parts.join(" · ")) + (res.note ? `<div><span class="pill amber">${esc(res.note)}</span></div>` : "");
+    const text = res.restored ? `đã trả giá cũ${res.type === "variable" ? ` (${res.restored} biến thể)` : ""}` : "không cần đổi giá";
+    return esc(text) + (res.note ? `<div><span class="pill amber">${esc(res.note)}</span></div>` : "");
   });
 });
 
