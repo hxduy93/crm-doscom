@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Ảnh đại diện sale</title>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Be+Vietnam+Pro:wght@700;800;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Be+Vietnam+Pro:wght@700;800;900&display=swap" rel="stylesheet"/>
 <style>
   :root { --bg:#f6f7fb; --card:#fff; --ink:#1f2430; --mut:#6b7280; --line:#e6e8ef;
           --blue:#2563eb; --red:#dc2626; --green:#16a34a; --amber:#d97706; }
@@ -17,7 +17,7 @@
   .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
   .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
   label.f { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--mut); font-weight:700; }
-  select, input[type=text], input[type=search] { padding:9px 11px; border:1px solid var(--line); border-radius:10px; font:inherit; background:#fff; color:var(--ink); }
+  select, input[type=text], input[type=search] { padding:9px 11px; border:1px solid var(--line); border-radius:10px; font:inherit; background:#fff; color:var(--ink); min-width:0; }
   input[type=color] { width:44px; height:36px; border:1px solid var(--line); border-radius:8px; padding:2px; background:#fff; }
   button { padding:9px 15px; border:0; border-radius:10px; font:inherit; font-weight:700; cursor:pointer; background:var(--blue); color:#fff; }
   button.sec { background:#eef1f8; color:var(--ink); }
@@ -33,24 +33,27 @@
   .err { color:var(--red); font-weight:700; }
   .hide { display:none !important; }
   .note { background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:10px 12px; font-size:13px; color:#92400e; margin-bottom:12px; }
+  .bad { background:#fde8e8; border:1px solid #fecaca; border-radius:10px; padding:10px 12px; font-size:13px; color:var(--red); font-weight:700; }
   a { color:var(--blue); }
 
   .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
   .tab { background:#eef1f8; color:var(--ink); }
   .tab.on { background:var(--ink); color:#fff; }
 
-  .grid2 { display:grid; grid-template-columns: 340px 1fr; gap:14px; align-items:start; }
+  .grid2 { display:grid; grid-template-columns: 360px 1fr; gap:14px; align-items:start; }
   @media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
   .stack { display:flex; flex-direction:column; gap:10px; }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .chk { display:flex; gap:6px; align-items:center; font-size:13px; }
 
-  .plist { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:10px; max-height:520px; overflow:auto; padding:2px; }
+  .plist { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:10px; max-height:560px; overflow:auto; padding:2px; }
   .pc { border:1px solid var(--line); border-radius:12px; padding:8px; cursor:pointer; background:#fff; position:relative; }
   .pc.sel { border-color:var(--blue); box-shadow:0 0 0 2px var(--blue) inset; }
   .pc img, .pc canvas { width:100%; aspect-ratio:1; object-fit:contain; border-radius:8px; background:#fafafa; display:block; }
   .pc .nm { font-size:12px; font-weight:700; margin-top:6px; line-height:1.3; max-height:3.9em; overflow:hidden; }
   .pc .tg { position:absolute; top:12px; left:12px; }
   .pc input { position:absolute; top:12px; right:12px; width:18px; height:18px; }
+  .pc [data-warn] .pill { white-space:normal; margin-top:4px; }
 
   table { width:100%; border-collapse:collapse; }
   th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); font-size:13px; vertical-align:middle; }
@@ -70,10 +73,10 @@
 <body>
 <div class="wrap">
   <h1>Ảnh đại diện sale</h1>
-  <p class="sub">Đổi ảnh đại diện sản phẩm theo đợt sale của tháng — tạo ảnh có tem/khung sale, thay bằng ảnh thiết kế sẵn, hoặc gỡ để trả lại ảnh cũ. Áp dụng cho doscom.vn và noma.vn.</p>
+  <p class="sub">Đổi ảnh đại diện sản phẩm theo đợt sale của tháng — tạo ảnh có khung sale, thay bằng ảnh thiết kế sẵn, hoặc gỡ để trả lại ảnh cũ. Áp dụng cho doscom.vn và noma.vn.</p>
 
   <div class="card">
-    <div class="row">
+    <div class="row" style="align-items:flex-end">
       <label class="f">Website
         <select id="site">
           <option value="doscom">doscom.vn</option>
@@ -81,10 +84,10 @@
         </select>
       </label>
       <label class="f">Tên đợt sale
-        <input id="campaign" type="text" placeholder="VD: SALE 10.10" maxlength="60" style="width:180px" />
+        <input id="campaign" type="text" placeholder="VD: SALE 15.9" maxlength="60" style="width:180px" />
       </label>
-      <button id="btnLoad" style="align-self:flex-end">Tải sản phẩm</button>
-      <input id="token" type="text" placeholder="X-Products-Token (nếu Access tắt)" style="flex:1;min-width:180px;align-self:flex-end" />
+      <button id="btnLoad">Tải sản phẩm</button>
+      <input id="token" type="text" placeholder="X-Products-Token (nếu Access tắt)" style="flex:1;min-width:180px" />
     </div>
     <div id="loadInfo" class="muted" style="margin-top:8px"></div>
   </div>
@@ -100,40 +103,91 @@
     <section id="tab-make">
       <div class="grid2">
         <div class="card stack">
-          <h2>Mẫu ảnh</h2>
-          <label class="f">Chữ trên dải băng góc trái
-            <input id="ribbonText" type="text" placeholder="Để trống = dùng tên đợt sale" />
+          <h2>Mẫu khung</h2>
+          <label class="f">Kiểu khung
+            <select id="tpl">
+              <option value="doscom">Khung sale DOSCOM (sửa được ngày)</option>
+              <option value="basic">Tem cơ bản (viền + băng góc + tem %)</option>
+            </select>
           </label>
-          <label class="f">Tem giảm giá — <span style="font-weight:400">{pct} = % giảm tự tính từ giá gạch/giá bán trên web</span>
-            <input id="badgeTpl" type="text" value="-{pct}%" />
-          </label>
-          <label class="f">Chữ tem khi SP không có giá sale
-            <input id="badgeFallback" type="text" value="SALE" />
-          </label>
-          <label class="f">Dải chữ dưới cùng
-            <input id="bandText" type="text" placeholder="VD: Giá sốc chỉ ngày 10/10" />
-          </label>
-          <div class="row">
-            <label class="f">Màu
-              <select id="theme"></select>
+
+          <!-- Khung DOSCOM: vẽ lại theo HUONG-DAN-KHUNG-SALE.md, mọi chữ sửa được -->
+          <div class="stack tpl-doscom">
+            <div class="pair">
+              <label class="f">Ngày sale (badge)
+                <input id="dDate" type="text" maxlength="12" />
+              </label>
+              <label class="f">Chữ trên badge
+                <input id="dBadgeLabel" type="text" maxlength="16" />
+              </label>
+            </div>
+            <label class="f">Dòng chữ thanh đáy
+              <input id="dBarText" type="text" maxlength="40" />
             </label>
-            <label class="f">Chính <input id="cMain" type="color" /></label>
-            <label class="f">Nhấn <input id="cAccent" type="color" /></label>
+            <div class="pair">
+              <label class="f">Tag — dòng trên
+                <input id="dTagTop" type="text" maxlength="16" />
+              </label>
+              <label class="f">Tag — mức giảm
+                <input id="dTagTpl" type="text" maxlength="12" />
+              </label>
+            </div>
+            <p class="muted" style="margin:0">Để <b>{pct}</b> = tool tự ghi % giảm THẬT của từng SP (tính từ giá gạch/giá bán trên web); SP chưa có giá sale thì ẩn tag. Gõ số cố định (VD -30%) thì tool báo SP nào lệch giá thật.</p>
+            <label class="f">Chip góc phải (để trống = tên web)
+              <input id="dChip" type="text" maxlength="24" placeholder="doscom.vn" />
+            </label>
+            <label class="f">Cách đặt ảnh sản phẩm
+              <select id="dFit">
+                <option value="safe">Thu vào vùng an toàn — thanh đáy không che SP</option>
+                <option value="cover">Phủ kín khung (như file hướng dẫn)</option>
+              </select>
+            </label>
+            <div class="row">
+              <label class="chk"><input type="checkbox" id="dShapes" /> Tool vẽ nền khung</label>
+              <label class="chk"><input type="checkbox" id="dTexts" /> Tool vẽ chữ</label>
+            </div>
+            <div class="row"><button class="sec" id="dReset" type="button">Về mặc định theo hướng dẫn</button>
+              <span class="muted">Cài đặt được nhớ lại — đợt sau chỉ cần sửa ngày.</span></div>
           </div>
-          <div class="row">
-            <label class="chk"><input type="checkbox" id="showBorder" checked /> Viền</label>
-            <label class="chk"><input type="checkbox" id="showRibbon" checked /> Băng góc</label>
-            <label class="chk"><input type="checkbox" id="showBadge" checked /> Tem %</label>
-            <label class="chk"><input type="checkbox" id="showBand" checked /> Dải dưới</label>
+
+          <!-- Tem cơ bản -->
+          <div class="stack tpl-basic hide">
+            <label class="f">Chữ trên dải băng góc trái
+              <input id="ribbonText" type="text" placeholder="Để trống = dùng tên đợt sale" />
+            </label>
+            <label class="f">Tem giảm giá — <span style="font-weight:400">{pct} = % giảm tự tính từ giá web</span>
+              <input id="badgeTpl" type="text" value="-{pct}%" />
+            </label>
+            <label class="f">Chữ tem khi SP không có giá sale
+              <input id="badgeFallback" type="text" value="SALE" />
+            </label>
+            <label class="f">Dải chữ dưới cùng
+              <input id="bandText" type="text" placeholder="VD: Chỉ trong ngày 15/9" />
+            </label>
+            <div class="row">
+              <label class="f">Màu
+                <select id="theme"></select>
+              </label>
+              <label class="f">Chính <input id="cMain" type="color" /></label>
+              <label class="f">Nhấn <input id="cAccent" type="color" /></label>
+            </div>
+            <div class="row">
+              <label class="chk"><input type="checkbox" id="showBorder" checked /> Viền</label>
+              <label class="chk"><input type="checkbox" id="showRibbon" checked /> Băng góc</label>
+              <label class="chk"><input type="checkbox" id="showBadge" checked /> Tem %</label>
+              <label class="chk"><input type="checkbox" id="showBand" checked /> Dải dưới</label>
+            </div>
           </div>
-          <label class="f">Cỡ ảnh sản phẩm: <span id="zoomVal">90%</span>
-            <input id="zoom" type="range" min="55" max="100" value="90" />
+
+          <label class="f">Cỡ ảnh sản phẩm: <span id="zoomVal">100%</span>
+            <input id="zoom" type="range" min="55" max="100" value="100" />
           </label>
-          <label class="f">Khung PNG của bạn (tuỳ chọn, vuông, giữa trong suốt)
+          <label class="f">Khung PNG của designer (tuỳ chọn, vuông, trong suốt)
             <input id="frameFile" type="file" accept="image/png,image/webp" />
           </label>
-          <div class="row"><button class="sec" id="btnFrameClear" type="button">Bỏ khung</button>
-            <span class="muted" id="frameInfo">Khung vẽ đè lên ảnh SP — nếu khung đã có chữ thì tắt bớt tem/băng.</span></div>
+          <div class="row"><button class="sec" id="btnFrameClear" type="button">Bỏ khung PNG</button>
+            <span class="muted" id="frameInfo">Không bắt buộc — tool đã tự vẽ khung. Dùng PNG "trắng ngày" thì tắt "Tool vẽ nền khung".</span></div>
+          <div id="brandWarn"></div>
         </div>
 
         <div class="card">
@@ -184,12 +238,12 @@
       <div class="card">
         <h2>Gỡ ảnh sale — trả lại ảnh đại diện cũ</h2>
         <div class="note">Gỡ = đặt lại đúng ảnh đại diện trước khi gắn sale, rồi <b>xoá vĩnh viễn file ảnh sale</b> khỏi thư viện Media của web. Sản phẩm bị ai đó đổi ảnh tay sau khi gắn sale sẽ <b>không bị đụng</b>.</div>
-        <div class="row">
+        <div class="row" style="align-items:flex-end">
           <label class="f">Đợt sale
             <select id="restoreCampaign"><option value="">Tất cả</option></select>
           </label>
-          <button class="sec" id="restoreAll" type="button" style="align-self:flex-end">Chọn tất cả</button>
-          <button class="sec" id="restoreNone" type="button" style="align-self:flex-end">Bỏ chọn</button>
+          <button class="sec" id="restoreAll" type="button">Chọn tất cả</button>
+          <button class="sec" id="restoreNone" type="button">Bỏ chọn</button>
         </div>
         <div class="tablewrap">
           <table id="restoreTable" style="margin-top:10px">
@@ -219,7 +273,9 @@
 </div>
 
 <script type="module">
-import { SALE_THEMES, matchFileToProduct, discountText } from "./js/sale-images.js";
+import {
+  SALE_THEMES, DOSCOM_FRAME, matchFileToProduct, discountText, brandWordViolations, tagPercentMismatch,
+} from "./js/sale-images.js";
 
 window.addEventListener("error", (e) => { try { $("#loadInfo").innerHTML = '<span class="err">Lỗi JS: ' + esc(e.message || e) + '</span>'; } catch (_) {} });
 const $ = (s) => document.querySelector(s);
@@ -239,6 +295,7 @@ const S = {
   frame: null,        // HTMLImageElement
   busy: false,
 };
+const siteHost = () => ($("#site").value === "noma" ? "noma.vn" : "doscom.vn");
 
 try { $("#token").value = localStorage.getItem(TK) || ""; } catch (_) {}
 $("#token").addEventListener("change", () => { try { localStorage.setItem(TK, $("#token").value.trim()); } catch (_) {} });
@@ -291,9 +348,56 @@ async function load() {
   }
   $("#btnLoad").disabled = false;
 }
-$("#site").addEventListener("change", () => { if (S.products.length) load(); });
+$("#site").addEventListener("change", () => { $("#dChip").placeholder = siteHost(); schedulePreview(); if (S.products.length) load(); });
 
-// ───────── Vẽ ảnh sale ─────────
+// ───────── Cài đặt khung ─────────
+// Mặc định lấy đúng chữ của khung mẫu trong HUONG-DAN-KHUNG-SALE.md. Lưu localStorage để
+// đợt sau mở ra còn nguyên, người dùng chỉ sửa ngày.
+const DOSCOM_DEFAULT = {
+  dDate: "15.9", dBadgeLabel: "SALE", dBarText: "SALE GIỮA THÁNG", dTagTop: "GIẢM TỚI",
+  dTagTpl: "-{pct}%", dChip: "", dFit: "safe", dShapes: true, dTexts: true,
+};
+const LS_FRAME = "sale_frame_doscom_v1";
+const LS_TPL = "sale_frame_tpl";
+
+function applyFrameSettings(v) {
+  for (const [k, val] of Object.entries(v)) {
+    const el = $("#" + k); if (!el) continue;
+    if (el.type === "checkbox") el.checked = !!val; else el.value = val;
+  }
+}
+function saveFrameSettings() {
+  const v = {};
+  for (const k of Object.keys(DOSCOM_DEFAULT)) { const el = $("#" + k); v[k] = el.type === "checkbox" ? el.checked : el.value; }
+  try { localStorage.setItem(LS_FRAME, JSON.stringify(v)); localStorage.setItem(LS_TPL, $("#tpl").value); } catch (_) {}
+}
+function showTpl() {
+  const t = $("#tpl").value;
+  document.querySelectorAll(".tpl-doscom").forEach((el) => el.classList.toggle("hide", t !== "doscom"));
+  document.querySelectorAll(".tpl-basic").forEach((el) => el.classList.toggle("hide", t !== "basic"));
+}
+(function initFrameSettings() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(LS_FRAME) || "{}"); } catch (_) {}
+  applyFrameSettings({ ...DOSCOM_DEFAULT, ...saved });
+  try { const t = localStorage.getItem(LS_TPL); if (t === "basic" || t === "doscom") $("#tpl").value = t; } catch (_) {}
+  $("#zoom").value = $("#tpl").value === "doscom" ? 100 : 90;
+  $("#zoomVal").textContent = $("#zoom").value + "%";
+  $("#dChip").placeholder = siteHost();
+  showTpl();
+})();
+$("#tpl").addEventListener("change", () => {
+  showTpl();
+  $("#zoom").value = $("#tpl").value === "doscom" ? 100 : 90;
+  $("#zoomVal").textContent = $("#zoom").value + "%";
+  saveFrameSettings(); schedulePreview();
+});
+for (const k of Object.keys(DOSCOM_DEFAULT)) {
+  $("#" + k).addEventListener("input", () => { saveFrameSettings(); schedulePreview(); });
+  $("#" + k).addEventListener("change", () => { saveFrameSettings(); schedulePreview(); });
+}
+$("#dReset").addEventListener("click", () => { applyFrameSettings(DOSCOM_DEFAULT); saveFrameSettings(); schedulePreview(); });
+
 for (const [k, t] of Object.entries(SALE_THEMES)) $("#theme").insertAdjacentHTML("beforeend", `<option value="${k}">${esc(t.label)}</option>`);
 function applyTheme() { const t = SALE_THEMES[$("#theme").value]; $("#cMain").value = t.main; $("#cAccent").value = t.accent; }
 $("#theme").addEventListener("change", () => { applyTheme(); schedulePreview(); });
@@ -301,16 +405,36 @@ applyTheme();
 
 function cfg() {
   return {
+    tpl: $("#tpl").value,
+    zoom: Number($("#zoom").value) / 100,
+    // Tem cơ bản
     ribbon: $("#showRibbon").checked ? ($("#ribbonText").value.trim() || $("#campaign").value.trim()) : "",
     badgeTpl: $("#badgeTpl").value, badgeFallback: $("#badgeFallback").value.trim(),
     showBadge: $("#showBadge").checked,
     band: $("#showBand").checked ? $("#bandText").value.trim() : "",
     border: $("#showBorder").checked,
     main: $("#cMain").value, accent: $("#cAccent").value,
-    zoom: Number($("#zoom").value) / 100,
+    // Khung DOSCOM
+    dDate: $("#dDate").value.trim(), dBadgeLabel: $("#dBadgeLabel").value.trim(),
+    dBarText: $("#dBarText").value.trim(), dTagTop: $("#dTagTop").value.trim(),
+    dTagTpl: $("#dTagTpl").value.trim(), dChip: $("#dChip").value.trim() || siteHost(),
+    dFit: $("#dFit").value, dShapes: $("#dShapes").checked, dTexts: $("#dTexts").checked,
   };
 }
 
+// Chữ mức giảm sẽ in lên ảnh của 1 SP (rỗng = không in tag).
+function tagText(p, c) {
+  if (c.tpl === "doscom") return c.dTexts && c.dTagTpl ? discountText(c.dTagTpl, p, "") : "";
+  return c.showBadge ? discountText(c.badgeTpl, p, c.badgeFallback) : "";
+}
+// Mọi chữ người dùng gõ lên khung — để soát từ brand cấm.
+function textsOf(c) {
+  return c.tpl === "doscom"
+    ? [c.dDate, c.dBadgeLabel, c.dBarText, c.dTagTop, c.dTagTpl, c.dChip]
+    : [c.ribbon, c.badgeTpl, c.badgeFallback, c.band];
+}
+
+// ───────── Vẽ ─────────
 const imgCache = new Map();
 function loadImg(src) {
   if (imgCache.has(src)) return imgCache.get(src);
@@ -326,20 +450,112 @@ function loadImg(src) {
 }
 
 // Chữ co lại cho vừa bề ngang, không bao giờ tràn khung.
-function fitFont(ctx, text, maxW, maxPx, weight = 800) {
+function fitFont(ctx, text, maxW, maxPx, weight = 800, family = FONT) {
   let px = maxPx;
-  do { ctx.font = `${weight} ${px}px ${FONT}`; if (ctx.measureText(text).width <= maxW) break; px -= 2; } while (px > 12);
+  do { ctx.font = `${weight} ${px}px ${family}`; if (ctx.measureText(text).width <= maxW) break; px -= 2; } while (px > 12);
   return px;
+}
+function gradient(ctx, x0, y0, x1, y1, stops) {
+  const g = ctx.createLinearGradient(x0, y0, x1, y1);
+  stops.forEach((col, i) => g.addColorStop(stops.length === 1 ? 0 : i / (stops.length - 1), col));
+  return g;
+}
+function roundRectPath(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
 }
 
 function drawSale(canvas, prodImg, product, c) {
+  return c.tpl === "doscom" ? drawDoscom(canvas, prodImg, product, c) : drawBasic(canvas, prodImg, product, c);
+}
+
+// Khung DOSCOM — toạ độ/màu/font theo DOSCOM_FRAME (= HUONG-DAN-KHUNG-SALE.md, canvas 1000×1000).
+function drawDoscom(canvas, prodImg, product, c) {
+  const W = canvas.width, k = W / 1000, F = DOSCOM_FRAME;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, W, W);
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, W);
+  const barH = F.bar.h * k, barY = W - barH;
+
+  if (prodImg) {
+    const iw = prodImg.naturalWidth, ih = prodImg.naturalHeight;
+    // "safe": ảnh nằm gọn phía trên thanh đáy (mục 3: tránh 130px dưới cùng). "cover": phủ kín như PNG gốc.
+    const s = (c.dFit === "cover" ? Math.max(W / iw, W / ih) : Math.min(W / iw, barY / ih)) * c.zoom;
+    const cy = c.dFit === "cover" ? W / 2 : barY / 2;
+    const dw = iw * s, dh = ih * s;
+    ctx.drawImage(prodImg, (W - dw) / 2, cy - dh / 2, dw, dh);
+  }
+  if (S.frame) ctx.drawImage(S.frame, 0, 0, W, W);
+
+  const badgeW = F.badge.w * k;
+  const chipW = F.chip.w * k, chipH = F.chip.h * k;
+  const chipX = W - F.chip.right * k - chipW, chipY = barY + (barH - chipH) / 2;
+  const tagW = F.tag.w * k, tagH = F.tag.h * k, tagX = W - F.tag.right * k - tagW;
+  const tag = tagText(product, c);
+
+  if (c.dShapes) {
+    ctx.fillStyle = gradient(ctx, 0, 0, W, 0, F.bar.stops);
+    ctx.fillRect(0, barY, W, barH);
+    ctx.fillStyle = gradient(ctx, 0, barY, 0, W, F.badge.stops);
+    ctx.fillRect(0, barY, badgeW, barH);
+    if (c.dTexts && c.dChip) { roundRectPath(ctx, chipX, chipY, chipW, chipH, chipH / 2); ctx.fillStyle = "#fff"; ctx.fill(); }
+    if (tag) {
+      ctx.save();
+      ctx.shadowColor = "rgba(0,0,0,.22)"; ctx.shadowBlur = 14 * k; ctx.shadowOffsetY = 4 * k;
+      ctx.beginPath();
+      ctx.moveTo(tagX, 0); ctx.lineTo(tagX + tagW, 0); ctx.lineTo(tagX + tagW, tagH - 26 * k);
+      ctx.lineTo(tagX + tagW / 2, tagH); ctx.lineTo(tagX, tagH - 26 * k);
+      ctx.closePath();
+      ctx.fillStyle = gradient(ctx, 0, 0, 0, tagH, F.tag.stops);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  if (!c.dTexts) return;
+
+  ctx.textBaseline = "middle"; ctx.textAlign = "center";
+  if (c.dBadgeLabel) {
+    ctx.fillStyle = F.badge.text;
+    fitFont(ctx, c.dBadgeLabel, badgeW - 30 * k, 30 * k, 900, F.font);
+    ctx.fillText(c.dBadgeLabel, badgeW / 2, barY + 36 * k);
+  }
+  if (c.dDate) {
+    ctx.fillStyle = F.badge.text;
+    fitFont(ctx, c.dDate, badgeW - 24 * k, 64 * k, 900, F.font);
+    ctx.fillText(c.dDate, badgeW / 2, barY + (c.dBadgeLabel ? 86 : 68) * k);
+  }
+  if (c.dChip) {
+    ctx.fillStyle = F.chip.text;
+    fitFont(ctx, c.dChip, chipW - 30 * k, 30 * k, 800, F.font);
+    ctx.fillText(c.dChip, chipX + chipW / 2, chipY + chipH / 2 + k);
+  }
+  if (c.dBarText) {
+    const left = badgeW + 20 * k, right = (c.dChip ? chipX : W) - 20 * k;
+    ctx.fillStyle = "#fff";
+    fitFont(ctx, c.dBarText, right - left, 54 * k, 900, F.font);
+    ctx.fillText(c.dBarText, (left + right) / 2, barY + barH / 2 + 2 * k);
+  }
+  if (tag) {
+    ctx.fillStyle = F.tag.text;
+    if (c.dTagTop) {
+      fitFont(ctx, c.dTagTop, tagW - 30 * k, 28 * k, 800, F.font);
+      ctx.fillText(c.dTagTop, tagX + tagW / 2, 40 * k);
+    }
+    fitFont(ctx, tag, tagW - 24 * k, 72 * k, 900, F.font);
+    ctx.fillText(tag, tagX + tagW / 2, (c.dTagTop ? 94 : 70) * k);
+  }
+}
+
+function drawBasic(canvas, prodImg, product, c) {
   const W = canvas.width, k = W / 1000;
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, W, W);
   ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, W);
 
   const bandH = c.band ? 140 * k : 0;
-  // Vùng ảnh sản phẩm: chừa viền + dải dưới; ảnh "contain" giữ nguyên tỉ lệ.
   const area = { x: 36 * k, y: 36 * k, w: W - 72 * k, h: W - 72 * k - bandH };
   if (prodImg) {
     const s = Math.min(area.w / prodImg.naturalWidth, area.h / prodImg.naturalHeight) * c.zoom;
@@ -374,29 +590,32 @@ function drawSale(canvas, prodImg, product, c) {
     ctx.font = `900 ${px}px ${FONT}`;
     ctx.fillText(c.ribbon, 34 * k, y + h / 2 + 3 * k);
   }
-  if (c.showBadge) {
-    const text = discountText(c.badgeTpl, product, c.badgeFallback);
-    if (text) {
-      const r = 108 * k, cx = W - 140 * k, cy = 150 * k;
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.fillStyle = c.main; ctx.fill();
-      ctx.lineWidth = 8 * k; ctx.strokeStyle = c.accent; ctx.stroke();
-      ctx.textAlign = "center";
-      const hasNum = /\d/.test(text);
-      if (hasNum) {
-        ctx.fillStyle = "#fff"; ctx.font = `800 ${30 * k}px ${FONT}`;
-        ctx.fillText("GIẢM", cx, cy - 48 * k);
-      }
-      ctx.fillStyle = c.accent;
-      const px = fitFont(ctx, text, r * 1.7, (hasNum ? 76 : 56) * k, 900);
-      ctx.font = `900 ${px}px ${FONT}`;
-      ctx.fillText(text, cx, hasNum ? cy + 18 * k : cy + 3 * k);
+  const text = tagText(product, c);
+  if (text) {
+    const r = 108 * k, cx = W - 140 * k, cy = 150 * k;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = c.main; ctx.fill();
+    ctx.lineWidth = 8 * k; ctx.strokeStyle = c.accent; ctx.stroke();
+    ctx.textAlign = "center";
+    const hasNum = /\d/.test(text);
+    if (hasNum) {
+      ctx.fillStyle = "#fff"; ctx.font = `800 ${30 * k}px ${FONT}`;
+      ctx.fillText("GIẢM", cx, cy - 48 * k);
     }
+    ctx.fillStyle = c.accent;
+    const px = fitFont(ctx, text, r * 1.7, (hasNum ? 76 : 56) * k, 900);
+    ctx.font = `900 ${px}px ${FONT}`;
+    ctx.fillText(text, cx, hasNum ? cy + 18 * k : cy + 3 * k);
   }
 }
 
 async function fontsReady() {
-  try { await document.fonts.load(`900 40px "Be Vietnam Pro"`); await document.fonts.load(`800 40px "Be Vietnam Pro"`); } catch (_) {}
+  try {
+    await Promise.all([
+      document.fonts.load(`900 40px "Nunito"`), document.fonts.load(`800 40px "Nunito"`),
+      document.fonts.load(`900 40px "Be Vietnam Pro"`), document.fonts.load(`800 40px "Be Vietnam Pro"`),
+    ]);
+  } catch (_) {}
 }
 
 // ───────── Tab 1: danh sách + xem trước ─────────
@@ -423,6 +642,7 @@ function renderMake() {
       <input type="checkbox" ${sel ? "checked" : ""} ${p.featured ? "" : "disabled"} tabindex="-1" />
       <div class="nm">${esc(p.name)}</div>
       <div class="muted" style="font-size:11px">${p.featured ? `#${p.id}${p.sku ? " · " + esc(p.sku) : ""}` : "chưa có ảnh đại diện"}</div>
+      ${sel ? `<div data-warn="${p.id}"></div>` : ""}
     </div>`;
   }).join("") || `<p class="muted">Không có sản phẩm khớp.</p>`;
   $("#makeSelInfo").textContent = S.makeSel.size ? `· đã chọn ${S.makeSel.size}` : "";
@@ -441,14 +661,24 @@ $("#makeSearch").addEventListener("input", renderMake);
 $("#makeAll").addEventListener("click", () => { filtered($("#makeSearch").value).forEach((p) => p.featured && S.makeSel.add(p.id)); renderMake(); });
 $("#makeNone").addEventListener("click", () => { S.makeSel.clear(); renderMake(); });
 
+function renderBrandWarn(c) {
+  const bad = brandWordViolations(...textsOf(c));
+  $("#brandWarn").innerHTML = bad.length
+    ? `<div class="bad">Chữ trên khung có từ brand DOSCOM không cho dùng: ${esc(bad.join(", "))} — sửa trước khi gắn.</div>` : "";
+  return bad;
+}
+
 let prevTimer = 0;
 function schedulePreview() { clearTimeout(prevTimer); prevTimer = setTimeout(renderPreviews, 120); }
 async function renderPreviews() {
   await fontsReady();
   const c = cfg();
+  renderBrandWarn(c);
   for (const cv of document.querySelectorAll("canvas[data-prev]")) {
     const p = S.byId.get(Number(cv.dataset.prev));
     if (!p || !p.featured) continue;
+    const warn = document.querySelector(`[data-warn="${p.id}"]`);
+    if (warn) { const m = tagPercentMismatch(tagText(p, c), p); warn.innerHTML = m ? `<span class="pill amber">${esc(m)}</span>` : ""; }
     // Đang gắn ảnh sale → preview dựng từ ẢNH GỐC, không dựng chồng lên ảnh sale cũ.
     const src = p.sale && !p.sale_mismatch && p.sale.orig_src ? p.sale.orig_src : p.featured.src;
     try { drawSale(cv, await loadImg(src), p, c); }
@@ -465,15 +695,23 @@ $("#frameFile").addEventListener("change", async () => {
   try {
     const im = await loadImg(url);
     S.frame = im;
+    // PNG của designer đã có nền khung → tool chỉ vẽ chữ đè lên, không vẽ nền trùng.
+    if ($("#tpl").value === "doscom") { $("#dShapes").checked = false; saveFrameSettings(); }
     const sq = Math.abs(im.naturalWidth - im.naturalHeight) <= 4;
-    $("#frameInfo").innerHTML = `Khung ${im.naturalWidth}×${im.naturalHeight}` + (sq ? "" : ` <span class="pill amber">không vuông — sẽ bị kéo giãn</span>`);
+    $("#frameInfo").innerHTML = `Khung ${im.naturalWidth}×${im.naturalHeight}` + (sq ? "" : ` <span class="pill amber">không vuông — sẽ bị kéo giãn</span>`)
+      + ` · PNG đã có sẵn chữ ngày thì tắt "Tool vẽ chữ" để khỏi chồng chữ.`;
     schedulePreview();
   } catch (e) { alert(e.message); }
 });
-$("#btnFrameClear").addEventListener("click", () => { S.frame = null; $("#frameFile").value = ""; $("#frameInfo").textContent = "Đã bỏ khung."; schedulePreview(); });
+$("#btnFrameClear").addEventListener("click", () => {
+  S.frame = null; $("#frameFile").value = "";
+  if ($("#tpl").value === "doscom") { $("#dShapes").checked = true; saveFrameSettings(); }
+  $("#frameInfo").textContent = "Đã bỏ khung PNG — tool tự vẽ khung.";
+  schedulePreview();
+});
 
 function canvasToBase64(canvas) {
-  return new Promise((res, rej) => canvas.toBlob((b) => b ? blobToBase64(b).then(res, rej) : rej(new Error("không xuất được ảnh")), "image/jpeg", 0.9));
+  return new Promise((res, rej) => canvas.toBlob((b) => b ? blobToBase64(b).then(res, rej) : rej(new Error("không xuất được ảnh")), "image/jpeg", 0.92));
 }
 function blobToBase64(blob) {
   return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = () => rej(r.error); r.readAsDataURL(blob); });
@@ -481,19 +719,28 @@ function blobToBase64(blob) {
 
 function needCampaign() {
   const v = $("#campaign").value.trim();
-  if (!v) { alert("Nhập Tên đợt sale trước (VD: SALE 10.10) — dùng để lọc khi gỡ."); $("#campaign").focus(); }
+  if (!v) { alert("Nhập Tên đợt sale trước (VD: SALE 15.9) — dùng để lọc khi gỡ."); $("#campaign").focus(); }
   return v;
 }
 
 $("#btnMakeApply").addEventListener("click", async () => {
   const campaign = needCampaign(); if (!campaign) return;
+  const c = cfg();
+  const bad = renderBrandWarn(c);
+  if (bad.length) return alert(`Chữ trên khung có từ brand DOSCOM không cho dùng: ${bad.join(", ")}.\nSửa rồi gắn lại.`);
+
   const ids = S.products.filter((p) => S.makeSel.has(p.id)).map((p) => p.id);
+  const lech = ids.map((id) => { const p = S.byId.get(id); return [p, tagPercentMismatch(tagText(p, c), p)]; }).filter((x) => x[1]);
+  if (lech.length && !confirm(`${lech.length} SP có mức giảm trên khung KHÔNG khớp giá thật trên web:\n`
+    + lech.slice(0, 8).map(([p, m]) => `• ${p.name}: ${m}`).join("\n")
+    + (lech.length > 8 ? `\n… và ${lech.length - 8} SP khác` : "")
+    + `\n\nBrand DOSCOM yêu cầu mức giảm trên khung đúng khuyến mãi thật. Nên để {pct} cho tool tự tính. Vẫn gắn?`)) return;
+
   const again = ids.filter((id) => S.byId.get(id).sale && !S.byId.get(id).sale_mismatch).length;
   if (!confirm(`Gắn ảnh sale "${campaign}" làm ảnh đại diện cho ${ids.length} SP trên ${S.site}?`
     + (again ? `\n\n${again} SP đang có ảnh sale → ảnh sale cũ sẽ bị thay và xoá, ảnh gốc vẫn giữ để gỡ sau.` : ""))) return;
 
   await fontsReady();
-  const c = cfg();
   const canvas = document.createElement("canvas"); canvas.width = canvas.height = OUT;
   await runJobs(`Gắn ảnh sale "${campaign}"`, ids, async (id) => {
     const p = S.byId.get(id);

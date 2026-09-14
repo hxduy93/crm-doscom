@@ -183,3 +183,48 @@ export function isProxyableImage(url) {
   }
   return false;
 }
+
+/* ───────── Khung sale DOSCOM ─────────
+   Vẽ lại bằng canvas theo HUONG-DAN-KHUNG-SALE.md (designer gửi 14/09/2026). Bản PNG gốc có
+   sẵn chữ ngày/mức giảm trong ảnh → mỗi đợt phải xuất PNG mới. Vẽ bằng code thì người dùng
+   tự sửa ngày, mức giảm, dòng chữ đáy ngay trên tool. Toạ độ theo canvas 1000×1000. */
+export const DOSCOM_FRAME = {
+  font: '"Nunito", "Be Vietnam Pro", Arial, sans-serif',
+  bar:   { h: 130, stops: ["#D32F2F", "#F4511E", "#FB8C00"] },       // thanh đáy full ngang
+  badge: { w: 200, stops: ["#FFD54F", "#FFB300"], text: "#C62828" }, // góc trái thanh đáy
+  chip:  { w: 230, h: 52, right: 24, text: "#D32F2F" },              // góc phải thanh đáy
+  tag:   { w: 230, h: 160, right: 56, stops: ["#FFD54F", "#FFB300"], text: "#C62828" }, // top: 0
+};
+
+// Mục 6 hướng dẫn: từ brand DOSCOM không được dùng trên khung.
+export const BRAND_FORBIDDEN = ["giá sốc", "rẻ nhất", "siêu rẻ", "số 1", "100%"];
+
+/** Các từ cấm xuất hiện trong chữ trên khung (so bỏ dấu, theo ranh giới từ: "số 10" không dính "số 1"). */
+export function brandWordViolations(...texts) {
+  const out = [];
+  for (const t of texts) {
+    const raw = String(t == null ? "" : t);
+    const n = `-${normalizeName(raw)}-`;
+    for (const w of BRAND_FORBIDDEN) {
+      const hit = w.includes("%")
+        ? raw.replace(/\s+/g, "").includes(w)
+        : n.includes(`-${normalizeName(w)}-`);
+      if (hit && !out.includes(w)) out.push(w);
+    }
+  }
+  return out;
+}
+
+/**
+ * Mức giảm ghi trên khung phải đúng khuyến mãi thật (mục 6). Trả câu cảnh báo hoặc null.
+ * Chữ dùng {pct} tự tính từ giá thật nên luôn khớp; chỉ số gõ cố định (VD "-30%") mới có thể lệch.
+ */
+export function tagPercentMismatch(text, product) {
+  const m = String(text || "").match(/(\d{1,2})\s*%/);
+  if (!m) return null;
+  const shown = Number(m[1]);
+  const real = computePercent(product && product.regular_price, product && product.sale_price);
+  if (real == null) return `khung ghi ${shown}% nhưng SP chưa có giá sale trên web`;
+  if (Math.round(real) !== shown) return `khung ghi ${shown}% nhưng giá web giảm ${Math.round(real)}%`;
+  return null;
+}
