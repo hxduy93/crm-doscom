@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Giảm giá hàng loạt</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root { --bg:#f6f7fb; --card:#fff; --ink:#1f2430; --mut:#6b7280; --line:#e6e8ef;
+          --blue:#2563eb; --red:#dc2626; --green:#16a34a; --amber:#d97706; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:'Nunito',system-ui,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--ink); font-size:14px; }
+  .wrap { max-width:1240px; margin:0 auto; padding:18px; }
+  h1 { font-size:20px; margin:0 0 2px; }
+  h2 { font-size:16px; margin:0 0 10px; }
+  .sub { color:var(--mut); margin:0 0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
+  .row { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+  label.f { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--mut); font-weight:700; }
+  select, input[type=text], input[type=search], input[type=date] { padding:9px 11px; border:1px solid var(--line); border-radius:10px; font:inherit; background:#fff; color:var(--ink); }
+  button { padding:9px 15px; border:0; border-radius:10px; font:inherit; font-weight:700; cursor:pointer; background:var(--blue); color:#fff; }
+  button.sec { background:#eef1f8; color:var(--ink); }
+  button.danger { background:var(--red); }
+  button.ok { background:var(--green); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .pill { display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px; font-weight:700; white-space:nowrap; }
+  .pill.red { background:#fde8e8; color:var(--red); }
+  .pill.green { background:#e7f6ec; color:var(--green); }
+  .pill.grey { background:#eef1f8; color:var(--mut); }
+  .pill.amber { background:#fef3c7; color:#92400e; }
+  .pill.blue { background:#e0e7ff; color:#3730a3; }
+  .muted { color:var(--mut); font-size:13px; }
+  .err { color:var(--red); font-weight:700; }
+  .hide { display:none !important; }
+  .note { background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:10px 14px; font-size:13px; color:#92400e; margin-top:12px; }
+  .note ul { margin:4px 0 0; padding-left:18px; }
+  a { color:var(--blue); }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+  .tab { background:#eef1f8; color:var(--ink); }
+  .tab.on { background:var(--ink); color:#fff; }
+  .tablewrap { overflow-x:auto; max-height:640px; overflow-y:auto; border:1px solid var(--line); border-radius:12px; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); font-size:13px; vertical-align:middle; }
+  th { color:var(--mut); font-size:12px; text-transform:uppercase; letter-spacing:.03em; position:sticky; top:0; background:#fff; z-index:1; }
+  td img.th { width:44px; height:44px; object-fit:contain; border-radius:8px; border:1px solid var(--line); background:#fafafa; display:block; }
+  td input.sm { width:78px; padding:6px 8px; }
+  td input.md { width:110px; padding:6px 8px; }
+  tr.sel { background:#f5f8ff; }
+  .money { white-space:nowrap; }
+  .prog { height:8px; background:#eef1f8; border-radius:99px; overflow:hidden; margin:8px 0; }
+  .prog > div { height:100%; width:0; background:var(--blue); transition:width .2s; }
+  .stat { display:flex; gap:12px; flex-wrap:wrap; margin:6px 0 12px; }
+  .stat .b { background:#f4f6fb; border-radius:12px; padding:12px 16px; min-width:120px; }
+  .stat .n { font-size:24px; font-weight:800; }
+  .stat .l { color:var(--mut); font-size:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Giảm giá hàng loạt</h1>
+  <p class="sub">Hẹn giờ giá sale cho nhiều sản phẩm cùng lúc. Tới ngày bắt đầu web tự hiện giá giảm, hết ngày kết thúc tự về giá cũ. Giá gốc (giá gạch) giữ nguyên.</p>
+
+  <div class="card">
+    <div class="row">
+      <label class="f">Website
+        <select id="site">
+          <option value="doscom">doscom.vn</option>
+          <option value="noma">noma.vn</option>
+        </select>
+      </label>
+      <button id="btnLoad">Tải sản phẩm</button>
+      <input id="token" type="text" placeholder="X-Products-Token (nếu Access tắt)" style="flex:1;min-width:180px" />
+    </div>
+    <div id="loadInfo" class="muted" style="margin-top:8px"></div>
+  </div>
+
+  <div id="main" class="hide">
+    <div class="tabs">
+      <button class="tab on" data-tab="new">1. Tạo đợt giảm giá</button>
+      <button class="tab" data-tab="running">2. Đợt đang theo dõi <span id="campCount"></span></button>
+    </div>
+
+    <!-- ───────── TAB 1 ───────── -->
+    <section id="tab-new">
+      <div class="card">
+        <h2>Thông tin đợt</h2>
+        <div class="row">
+          <label class="f">Tên đợt
+            <input id="campaign" type="text" maxlength="60" placeholder="VD: SALE 10.10" style="width:170px" />
+          </label>
+          <label class="f">Bắt đầu (0h)
+            <input id="from" type="date" />
+          </label>
+          <label class="f">Kết thúc (23h59)
+            <input id="to" type="date" />
+          </label>
+          <label class="f">% giảm chung
+            <input id="pct" type="text" value="20" style="width:80px" />
+          </label>
+          <label class="f">Gắn danh mục
+            <select id="cat"></select>
+          </label>
+          <label class="f" id="newCatWrap">Tên danh mục mới
+            <input id="newCat" type="text" value="Giảm giá" maxlength="60" style="width:150px" />
+          </label>
+        </div>
+        <div class="note">
+          <ul>
+            <li>Tool <b>chỉ đặt giá sale</b>, không sửa giá gốc. Giá sale làm tròn tới 1.000đ.</li>
+            <li>SP đang có giá sale riêng: tool lưu lại, kết thúc đợt sẽ trả về đúng giá đó.</li>
+            <li>WordPress đổi giá theo lịch lúc <b>0h theo giờ cài trong web</b>, web ít truy cập có thể trễ vài phút. Sáng ngày sale nên mở web kiểm tra; web có plugin cache thì xoá cache sau 0h.</li>
+            <li>Danh mục chỉ bị gỡ khi bấm "Kết thúc đợt" ở tab 2 (WooCommerce không tự gỡ danh mục khi hết hạn).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <h2 style="margin:0">Chọn sản phẩm <span class="muted" id="selInfo"></span></h2>
+          <div class="row" style="align-items:center">
+            <input id="search" type="search" placeholder="Lọc theo tên / SKU / ID" />
+            <select id="filterCat"><option value="">Mọi danh mục</option></select>
+            <label class="muted" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="onlyNoSale" /> Chỉ SP chưa có giá sale</label>
+            <button class="sec" id="selAll" type="button">Chọn tất cả đang lọc</button>
+            <button class="sec" id="selNone" type="button">Bỏ chọn</button>
+          </div>
+        </div>
+        <p class="muted">Ô "% riêng" / "Giá sale riêng" để trống = dùng % chung. Gõ giá sale riêng thì bỏ qua %. SP có biến thể: đặt theo %, áp cho từng biến thể.</p>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th></th><th></th><th>Sản phẩm</th><th>Giá gốc</th><th>Đang bán</th><th>% riêng</th><th>Giá sale riêng</th><th>Giá sale sẽ đặt</th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="row" style="margin-top:12px;justify-content:flex-end;align-items:center">
+          <span id="applySummary" class="muted"></span>
+          <button class="ok" id="btnApply" disabled>Áp giảm giá</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── TAB 2 ───────── -->
+    <section id="tab-running" class="hide">
+      <div class="card">
+        <h2>Đợt đang theo dõi</h2>
+        <p class="muted">"Kết thúc đợt" = trả giá sale về như trước khi áp + gỡ danh mục tool đã gắn. Đợt đã hết hạn thì web đã tự về giá cũ — vẫn nên bấm để gỡ danh mục và trả lại giá sale riêng (nếu SP từng có).</p>
+        <div class="row">
+          <label class="f">Đợt
+            <select id="campFilter"><option value="">Tất cả</option></select>
+          </label>
+          <button class="sec" id="endAll" type="button">Chọn tất cả</button>
+          <button class="sec" id="endNone" type="button">Bỏ chọn</button>
+        </div>
+        <div class="tablewrap" style="margin-top:10px">
+          <table>
+            <thead><tr><th></th><th></th><th>Sản phẩm</th><th>Đợt</th><th>Thời gian</th><th>Giảm</th><th>Danh mục</th><th>Trạng thái</th></tr></thead>
+            <tbody id="campRows"></tbody>
+          </table>
+        </div>
+        <p id="campEmpty" class="muted hide">Web này chưa có đợt giảm giá nào do tool đặt.</p>
+        <div class="row" style="margin-top:12px;justify-content:flex-end">
+          <button class="danger" id="btnEnd" disabled>Kết thúc đợt</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="runCard" class="card hide">
+      <h2 id="runTitle"></h2>
+      <div class="prog"><div id="runBar"></div></div>
+      <div id="runInfo" class="muted"></div>
+      <div id="runStat"></div>
+      <div class="tablewrap">
+        <table><thead><tr><th>Sản phẩm</th><th>Kết quả</th><th>Chi tiết</th></tr></thead><tbody id="runRows"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import * as B from "./js/bulk-sale.js";
+import { formatMoney, parseMoney, formatPercent, parsePercent } from "./js/price-discount.js";
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+window.addEventListener("error", (e) => { try { $("#loadInfo").innerHTML = '<span class="err">Lỗi JS: ' + esc(e.message || e) + "</span>"; } catch (_) {} });
+const API = "/api/products/bulk-sale";
+const TK = "products_token";
+const money = (v) => (parseMoney(v) ? formatMoney(parseMoney(v)) + "đ" : "—");
+const siteName = () => (S.site === "doscom" ? "doscom.vn" : "noma.vn");
+
+const S = {
+  site: "doscom", products: [], byId: new Map(), cats: new Map(),
+  sel: new Set(), rows: new Map(), vars: new Map(), endSel: new Set(), busy: false,
+};
+
+const store = (k, v) => { try { v === undefined ? (v = localStorage.getItem(k)) : localStorage.setItem(k, v); } catch (_) {} return v; };
+$("#token").value = store(TK) || "";
+$("#token").addEventListener("change", () => store(TK, $("#token").value.trim()));
+$("#campaign").value = store("bulk_sale_campaign") || "";
+$("#campaign").addEventListener("change", () => store("bulk_sale_campaign", $("#campaign").value.trim()));
+$("#from").value = B.vnToday();
+
+function headers(write) {
+  const h = { "content-type": "application/json" };
+  if (write) { const t = $("#token").value.trim(); if (t) h["X-Products-Token"] = t; }
+  return h;
+}
+async function post(body, write) {
+  const r = await fetch(API, { method: "POST", headers: headers(write), body: JSON.stringify({ site: S.site, ...body }) });
+  let d;
+  try { d = await r.json(); } catch { throw new Error(`Phản hồi không phải JSON (${r.status})`); }
+  if (!d.ok) throw new Error(d.error || `Lỗi ${r.status}`);
+  return d;
+}
+
+document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === b));
+  for (const t of ["new", "running"]) $("#tab-" + t).classList.toggle("hide", b.dataset.tab !== t);
+}));
+
+// ───────── Tải ─────────
+$("#btnLoad").addEventListener("click", load);
+$("#site").addEventListener("change", () => { S.sel.clear(); S.rows.clear(); S.vars.clear(); if (S.products.length) load(); });
+
+async function load() {
+  S.site = $("#site").value;
+  $("#btnLoad").disabled = true;
+  $("#loadInfo").textContent = "Đang tải sản phẩm và danh mục…";
+  try {
+    const d = await post({ mode: "list" }, false);
+    S.products = d.products.sort((a, b) => a.name.localeCompare(b.name, "vi"));
+    S.byId = new Map(S.products.map((p) => [p.id, p]));
+    S.cats = new Map(d.categories.map((c) => [c.id, c]));
+    S.sel = new Set([...S.sel].filter((id) => S.byId.has(id)));
+    S.endSel.clear();
+
+    const tz = d.timezone;
+    let tzHtml = "";
+    if (!tz) tzHtml = ` · <span class="pill amber">không đọc được múi giờ web</span>`;
+    else if (tz.gmt_offset !== 7) tzHtml = ` · <span class="pill red">Múi giờ web đang là UTC${tz.gmt_offset >= 0 ? "+" : ""}${tz.gmt_offset}${tz.timezone_string ? " (" + esc(tz.timezone_string) + ")" : ""} — giá sẽ đổi lệch giờ VN, nên chỉnh trong Cài đặt → Tổng quan của WordPress</span>`;
+    else tzHtml = ` · múi giờ web UTC+7 ✓`;
+    const orphan = (d.orphan_camp_ids || []).length;
+    $("#loadInfo").innerHTML = `${S.products.length} sản phẩm đang bán trên <b>${siteName()}</b> · <b>${S.products.filter((p) => p.camp).length}</b> SP trong đợt do tool đặt${tzHtml}`
+      + (orphan ? ` · <span class="pill amber">${orphan} SP trong đợt đã bị ẩn/xoá (ID ${d.orphan_camp_ids.join(", ")})</span>` : "");
+
+    const catOpts = [...S.cats.values()].sort((a, b) => a.name.localeCompare(b.name, "vi"))
+      .map((c) => `<option value="${c.id}">${esc(c.name)} (${c.count})</option>`).join("");
+    const prevCat = $("#cat").value;
+    $("#cat").innerHTML = `<option value="">— Không gắn danh mục —</option><option value="__new">+ Tạo danh mục mới</option>` + catOpts;
+    const saleCat = [...S.cats.values()].find((c) => /giảm giá|khuyến mãi|sale/i.test(c.name));
+    $("#cat").value = prevCat && [...$("#cat").options].some((o) => o.value === prevCat) ? prevCat : (saleCat ? String(saleCat.id) : "__new");
+    const prevFilter = $("#filterCat").value;
+    $("#filterCat").innerHTML = `<option value="">Mọi danh mục</option>` + catOpts;
+    $("#filterCat").value = prevFilter && S.cats.has(Number(prevFilter)) ? prevFilter : "";
+    toggleNewCat();
+
+    $("#main").classList.remove("hide");
+    renderRows();
+    renderCamps();
+    [...S.sel].forEach(ensureVars);
+  } catch (e) {
+    $("#loadInfo").innerHTML = `<span class="err">Lỗi: ${esc(e.message)}</span>`;
+  }
+  $("#btnLoad").disabled = S.busy;
+}
+
+function toggleNewCat() { $("#newCatWrap").classList.toggle("hide", $("#cat").value !== "__new"); }
+$("#cat").addEventListener("change", toggleNewCat);
+
+// ───────── Tính giá từng dòng ─────────
+function evaluate(p) {
+  const r = S.rows.get(p.id) || {};
+  const pct = r.pct ? r.pct : $("#pct").value;
+  if (p.type === "simple") {
+    const rule = r.price ? { sale_price: r.price } : { pct };
+    return { kind: "simple", rule, plan: B.planPrice(p, rule) };
+  }
+  if (p.type === "variable") {
+    const vs = S.vars.get(p.id);
+    if (!vs || vs === "loading") return { kind: "variable", loading: true, rule: { pct } };
+    if (vs.error) return { kind: "variable", error: vs.error, rule: { pct } };
+    return { kind: "variable", rule: { pct }, plans: vs.map((v) => ({ v, plan: B.planPrice(v, { pct }) })) };
+  }
+  return { kind: "other" };
+}
+function isReady(p) {
+  const e = evaluate(p);
+  if (e.kind === "simple") return e.plan.ok;
+  if (e.kind === "variable") return !!(e.plans && e.plans.some((x) => x.plan.ok));
+  return false;
+}
+const warnHtml = (ws) => (ws && ws.length ? ws.map((w) => `<div><span class="pill amber">${esc(w)}</span></div>`).join("") : "");
+
+function resultHtml(p) {
+  const e = evaluate(p);
+  if (e.kind === "simple") {
+    if (!e.plan.ok) return `<span class="pill red">${esc(e.plan.reason)}</span>`;
+    return `<b class="money">${formatMoney(Number(e.plan.sale_price))}đ</b> <span class="pill green">-${formatPercent(e.plan.pct)}%</span>` + warnHtml(e.plan.warnings);
+  }
+  if (e.kind === "variable") {
+    if (e.error) return `<span class="pill red">${esc(e.error)}</span>`;
+    if (e.loading) return S.sel.has(p.id) ? `<span class="muted">đang tải biến thể…</span>` : `<span class="muted">tick để xem biến thể</span>`;
+    const ok = e.plans.filter((x) => x.plan.ok), bad = e.plans.filter((x) => !x.plan.ok);
+    const skip = bad.length ? `<div class="muted" style="font-size:12px">Bỏ qua: ${bad.map((x) => esc(`${x.v.label}: ${x.plan.reason}`)).join("; ")}</div>` : "";
+    if (!ok.length) return `<span class="pill red">không biến thể nào đặt được giá</span>${skip}`;
+    const prices = ok.map((x) => Number(x.plan.sale_price));
+    const lo = Math.min(...prices), hi = Math.max(...prices);
+    const ws = [...new Set(ok.flatMap((x) => x.plan.warnings))];
+    const p0 = parsePercent(e.rule.pct);
+    return `<b class="money">${formatMoney(lo)}${hi !== lo ? "–" + formatMoney(hi) : ""}đ</b> <span class="pill green">${ok.length} biến thể${p0 != null ? " -" + formatPercent(p0) + "%" : ""}</span>${skip}${warnHtml(ws)}`;
+  }
+  return `<span class="pill grey">loại "${esc(p.type)}" không hỗ trợ</span>`;
+}
+
+function currentHtml(p) {
+  const tags = [];
+  if (p.camp) tags.push(`<span class="pill blue">đợt ${esc(p.camp.campaign)}</span>`);
+  if (p.type === "variable") return `<span class="muted">theo biến thể</span> ${tags.join(" ")}`;
+  let s = p.sale_price ? `<span class="money">${money(p.sale_price)}</span>` : `<span class="muted">không sale</span>`;
+  if (p.sale_price && (p.date_on_sale_from_gmt || p.date_on_sale_to_gmt)) {
+    s += `<div class="muted" style="font-size:11px">${esc(B.gmtToVnDate(p.date_on_sale_from_gmt) || "…")} → ${esc(B.gmtToVnDate(p.date_on_sale_to_gmt) || "…")}</div>`;
+  }
+  return s + (tags.length ? "<div>" + tags.join(" ") + "</div>" : "");
+}
+
+function filtered() {
+  const q = $("#search").value.trim().toLowerCase();
+  const cat = Number($("#filterCat").value) || 0;
+  const noSale = $("#onlyNoSale").checked;
+  return S.products.filter((p) => {
+    if (q && !(p.name.toLowerCase().includes(q) || String(p.sku).toLowerCase().includes(q) || String(p.id) === q)) return false;
+    if (cat && !p.category_ids.includes(cat)) return false;
+    if (noSale && (p.sale_price || p.camp)) return false;
+    return true;
+  });
+}
+
+function renderRows() {
+  const list = filtered();
+  $("#rows").innerHTML = list.map((p) => {
+    const r = S.rows.get(p.id) || {};
+    const sel = S.sel.has(p.id);
+    const supported = p.type === "simple" || p.type === "variable";
+    return `<tr class="${sel ? "sel" : ""}" data-row="${p.id}">
+      <td><input type="checkbox" data-chk="${p.id}" ${sel ? "checked" : ""} ${supported ? "" : "disabled"} /></td>
+      <td>${p.thumb ? `<img class="th" src="${esc(p.thumb)}" alt="" loading="lazy" />` : ""}</td>
+      <td><a href="${esc(p.permalink)}" target="_blank">${esc(p.name)}</a>
+        <div class="muted" style="font-size:11px">#${p.id}${p.sku ? " · " + esc(p.sku) : ""}${p.type === "variable" ? ` · <span class="pill grey">biến thể</span>` : ""}</div></td>
+      <td class="money">${p.type === "variable" ? `<span class="muted">—</span>` : money(p.regular_price)}</td>
+      <td>${currentHtml(p)}</td>
+      <td><input class="sm" type="text" data-pct="${p.id}" value="${esc(r.pct || "")}" placeholder="${esc($("#pct").value)}" ${supported ? "" : "disabled"} /></td>
+      <td>${p.type === "simple" ? `<input class="md" type="text" data-price="${p.id}" value="${esc(r.price || "")}" placeholder="giá sale" />` : ""}</td>
+      <td id="res-${p.id}">${resultHtml(p)}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="8" class="muted">Không có sản phẩm khớp.</td></tr>`;
+  updateSummary();
+}
+
+function updateSummary() {
+  const sel = S.products.filter((p) => S.sel.has(p.id));
+  const ready = sel.filter(isReady).length;
+  const loading = sel.filter((p) => p.type === "variable" && (!S.vars.get(p.id) || S.vars.get(p.id) === "loading")).length;
+  $("#selInfo").textContent = sel.length ? `· đã chọn ${sel.length}` : "";
+  $("#applySummary").innerHTML = sel.length
+    ? `${ready} SP đặt được giá` + (sel.length - ready - loading > 0 ? ` · <span class="err">${sel.length - ready - loading} SP lỗi giá sẽ bị bỏ qua</span>` : "") + (loading ? ` · đang tải ${loading} SP biến thể…` : "")
+    : "";
+  $("#btnApply").disabled = !ready || loading > 0 || S.busy;
+  $("#btnApply").textContent = `Áp giảm giá (${ready} SP)`;
+}
+
+const refreshCell = (id) => { const p = S.byId.get(id); const td = document.getElementById("res-" + id); if (p && td) td.innerHTML = resultHtml(p); };
+
+async function ensureVars(id) {
+  const p = S.byId.get(id);
+  if (!p || p.type !== "variable" || S.vars.has(id)) return;
+  S.vars.set(id, "loading");
+  refreshCell(id); updateSummary();
+  try { S.vars.set(id, (await post({ mode: "variations", id }, false)).variations); }
+  catch (e) { S.vars.set(id, { error: e.message }); }
+  refreshCell(id); updateSummary();
+}
+
+$("#rows").addEventListener("change", (e) => {
+  const id = Number(e.target.dataset.chk); if (!id) return;
+  e.target.checked ? S.sel.add(id) : S.sel.delete(id);
+  e.target.closest("tr").classList.toggle("sel", e.target.checked);
+  ensureVars(id); refreshCell(id); updateSummary();
+});
+$("#rows").addEventListener("input", (e) => {
+  const idP = Number(e.target.dataset.pct), idV = Number(e.target.dataset.price);
+  const id = idP || idV; if (!id) return;
+  const r = S.rows.get(id) || {};
+  if (idP) r.pct = e.target.value.trim(); else r.price = e.target.value.trim();
+  S.rows.set(id, r);
+  if (!S.sel.has(id)) { S.sel.add(id); const cb = document.querySelector(`[data-chk="${id}"]`); if (cb) { cb.checked = true; cb.closest("tr").classList.add("sel"); } ensureVars(id); }
+  refreshCell(id); updateSummary();
+});
+$("#pct").addEventListener("input", () => {
+  document.querySelectorAll("[data-pct]").forEach((i) => { i.placeholder = $("#pct").value; });
+  S.products.forEach((p) => refreshCell(p.id)); updateSummary();
+});
+$("#search").addEventListener("input", renderRows);
+$("#filterCat").addEventListener("change", renderRows);
+$("#onlyNoSale").addEventListener("change", renderRows);
+$("#selAll").addEventListener("click", () => {
+  filtered().forEach((p) => { if (p.type === "simple" || p.type === "variable") { S.sel.add(p.id); ensureVars(p.id); } });
+  renderRows();
+});
+$("#selNone").addEventListener("click", () => { S.sel.clear(); renderRows(); });
+
+// ───────── Áp đợt ─────────
+$("#btnApply").addEventListener("click", async () => {
+  const campaign = $("#campaign").value.trim();
+  if (!campaign) { alert("Nhập tên đợt (VD: SALE 10.10)."); return $("#campaign").focus(); }
+  const bad = B.validateRange($("#from").value, $("#to").value);
+  if (bad) return alert(bad);
+  const ready = S.products.filter((p) => S.sel.has(p.id) && isReady(p));
+  if (!ready.length) return;
+  const warn = ready.filter((p) => { const e = evaluate(p); return e.kind === "simple" ? e.plan.warnings.length : e.plans.some((x) => x.plan.warnings.length); }).length;
+  const inCamp = ready.filter((p) => p.camp).length;
+
+  let catId = null, catLabel = "không gắn danh mục";
+  if ($("#cat").value === "__new") {
+    const name = $("#newCat").value.trim();
+    if (!name) return alert("Nhập tên danh mục mới, hoặc chọn \"Không gắn danh mục\".");
+    catLabel = `danh mục mới "${name}"`;
+  } else if ($("#cat").value) {
+    catId = Number($("#cat").value); catLabel = `danh mục "${(S.cats.get(catId) || {}).name || catId}"`;
+  }
+
+  if (!confirm(`Đặt giá sale "${campaign}" cho ${ready.length} SP trên ${siteName()}\n`
+    + `Từ 0h ${fmtDate($("#from").value)} đến 23h59 ${fmtDate($("#to").value)} · ${catLabel}.`
+    + (warn ? `\n\n⚠ ${warn} SP giảm trên 50%.` : "")
+    + (inCamp ? `\n${inCamp} SP đang trong đợt khác — sẽ bị thay bằng đợt này (giá cũ ban đầu vẫn được giữ).` : ""))) return;
+
+  if ($("#cat").value === "__new") {
+    try {
+      const d = await post({ mode: "create_category", name: $("#newCat").value.trim() }, true);
+      catId = d.category.id;
+    } catch (e) { return alert("Không tạo được danh mục: " + e.message); }
+  }
+
+  const body = { mode: "apply", campaign, from: $("#from").value, to: $("#to").value, category_id: catId };
+  await runJobs(`Đặt giá sale "${campaign}"`, ready.map((p) => p.id), async (id) => {
+    const r = S.rows.get(id) || {};
+    const p = S.byId.get(id);
+    const item = p.type === "simple" && r.price ? { id, sale_price: parseMoney(r.price) } : { id, pct: r.pct || $("#pct").value };
+    return (await post({ ...body, items: [item] }, true)).items[0];
+  }, applyDetail);
+});
+
+const fmtDate = (s) => (s ? s.split("-").reverse().join("/") : "");
+
+function applyDetail(res) {
+  const parts = [];
+  if (res.type === "variable") parts.push(`${res.variations_set} biến thể${res.pct ? " -" + formatPercent(res.pct) + "%" : ""}`);
+  else parts.push(`${money(res.regular)} → <b>${money(res.sale_price)}</b> (-${formatPercent(res.pct)}%)`);
+  if (res.category_added) parts.push("đã gắn danh mục");
+  let html = parts.join(" · ");
+  if (res.variations_skipped && res.variations_skipped.length) html += `<div class="muted" style="font-size:12px">Bỏ qua biến thể: ${esc(res.variations_skipped.join("; "))}</div>`;
+  return html + warnHtml(res.warnings);
+}
+
+// ───────── Tab 2: đợt đang theo dõi ─────────
+const STATUS = {
+  pending: `<span class="pill grey">Chờ tới ngày</span>`,
+  running: `<span class="pill green">Đang giảm</span>`,
+  expired: `<span class="pill amber">Đã hết hạn — bấm kết thúc để gỡ danh mục</span>`,
+};
+function campList() {
+  const f = $("#campFilter").value;
+  return S.products.filter((p) => p.camp && (!f || p.camp.campaign === f));
+}
+function renderCamps() {
+  const all = S.products.filter((p) => p.camp);
+  $("#campCount").textContent = all.length ? `(${all.length})` : "";
+  const names = [...new Set(all.map((p) => p.camp.campaign).filter(Boolean))];
+  const cur = $("#campFilter").value;
+  $("#campFilter").innerHTML = `<option value="">Tất cả</option>` + names.map((n) => `<option>${esc(n)}</option>`).join("");
+  if (names.includes(cur)) $("#campFilter").value = cur;
+
+  const list = campList();
+  S.endSel = new Set([...S.endSel].filter((id) => list.some((p) => p.id === id)));
+  $("#campEmpty").classList.toggle("hide", !!list.length);
+  $("#campRows").innerHTML = list.map((p) => {
+    const c = p.camp;
+    const cat = c.category_id ? (S.cats.get(Number(c.category_id)) || {}).name || `#${c.category_id}` : "";
+    return `<tr>
+      <td><input type="checkbox" data-end="${p.id}" ${S.endSel.has(p.id) ? "checked" : ""} /></td>
+      <td>${p.thumb ? `<img class="th" src="${esc(p.thumb)}" alt="" loading="lazy" />` : ""}</td>
+      <td><a href="${esc(p.permalink)}" target="_blank">${esc(p.name)}</a> <span class="muted">#${p.id}</span></td>
+      <td>${esc(c.campaign)}</td>
+      <td class="money">${esc(fmtDate(c.from))} → ${esc(fmtDate(c.to))}</td>
+      <td>${c.pct != null ? "-" + esc(c.pct) + "%" : `<span class="muted">giá riêng</span>`}</td>
+      <td>${cat ? esc(cat) + (c.category_added ? "" : ` <span class="muted">(vốn có sẵn)</span>`) : `<span class="muted">—</span>`}</td>
+      <td>${STATUS[B.campStatus(c)] || ""}</td>
+    </tr>`;
+  }).join("");
+  $("#btnEnd").disabled = !S.endSel.size || S.busy;
+  $("#btnEnd").textContent = `Kết thúc đợt (${S.endSel.size} SP)`;
+}
+$("#campFilter").addEventListener("change", () => { S.endSel.clear(); renderCamps(); });
+$("#endAll").addEventListener("click", () => { campList().forEach((p) => S.endSel.add(p.id)); renderCamps(); });
+$("#endNone").addEventListener("click", () => { S.endSel.clear(); renderCamps(); });
+$("#campRows").addEventListener("change", (e) => {
+  const id = Number(e.target.dataset.end); if (!id) return;
+  e.target.checked ? S.endSel.add(id) : S.endSel.delete(id);
+  renderCamps();
+});
+
+$("#btnEnd").addEventListener("click", async () => {
+  const ids = [...S.endSel];
+  if (!confirm(`Kết thúc đợt cho ${ids.length} SP trên ${siteName()}?\n\nGiá sale trả về như trước khi áp đợt (SP không có sale thì về giá gốc) và gỡ danh mục tool đã gắn. Giá nào đã bị sửa tay sẽ giữ nguyên.`)) return;
+  await runJobs("Kết thúc đợt", ids, async (id) => (await post({ mode: "end", ids: [id] }, true)).items[0], (res) => {
+    const parts = [];
+    parts.push(res.restored ? `đã trả giá cũ${res.type === "variable" ? ` (${res.restored} biến thể)` : ""}` : "không cần đổi giá");
+    if (res.category_removed) parts.push("đã gỡ danh mục");
+    return esc(parts.join(" · ")) + (res.note ? `<div><span class="pill amber">${esc(res.note)}</span></div>` : "");
+  });
+});
+
+// ───────── Chạy lần lượt + báo cáo ─────────
+async function runJobs(title, ids, fn, detail) {
+  S.busy = true;
+  document.querySelectorAll("#btnApply,#btnEnd,#btnLoad").forEach((b) => (b.disabled = true));
+  $("#runCard").classList.remove("hide");
+  $("#runTitle").textContent = `${title} — ${siteName()}`;
+  $("#runRows").innerHTML = ""; $("#runStat").innerHTML = ""; $("#runBar").style.width = "0";
+  $("#runCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  let ok = 0, skip = 0, fail = 0;
+  for (let i = 0; i < ids.length; i++) {
+    const p = S.byId.get(ids[i]) || { id: ids[i], name: "#" + ids[i] };
+    $("#runInfo").textContent = `Đang xử lý ${i + 1}/${ids.length}: ${p.name}`;
+    let res;
+    try { res = await fn(ids[i]); } catch (e) { res = { error: e.message }; }
+    const link = p.permalink ? `<a href="${esc(p.permalink)}" target="_blank">${esc(p.name)}</a>` : esc(p.name);
+    let row;
+    if (res && (res.applied || res.ended)) {
+      ok++;
+      row = `<td>${link}</td><td><span class="pill green">${res.ended ? "Đã kết thúc" : "Đã đặt"}</span></td><td>${detail(res)}</td>`;
+    } else if (res && res.skipped) {
+      skip++;
+      row = `<td>${link}</td><td><span class="pill grey">Bỏ qua</span></td><td class="muted">${esc(res.skipped)}</td>`;
+    } else {
+      fail++;
+      row = `<td>${link}</td><td><span class="pill red">Lỗi</span></td><td class="err" style="font-size:12px">${esc((res && res.error) || "không rõ")}</td>`;
+    }
+    $("#runRows").insertAdjacentHTML("beforeend", `<tr>${row}</tr>`);
+    $("#runBar").style.width = `${Math.round(((i + 1) / ids.length) * 100)}%`;
+  }
+  $("#runInfo").textContent = `Xong ${ids.length} SP. Mở vài trang sản phẩm để kiểm tra (Ctrl+Shift+R nếu còn cache).`;
+  $("#runStat").innerHTML = `<div class="stat"><div class="b"><div class="n">${ok}</div><div class="l">Thành công</div></div>
+    <div class="b"><div class="n">${skip}</div><div class="l">Bỏ qua</div></div>
+    <div class="b"><div class="n">${fail}</div><div class="l">Lỗi</div></div></div>`;
+  S.busy = false;
+  S.sel.clear(); S.rows.clear(); S.vars.clear();
+  await load();
+}
+</script>
+</body>
+</html>

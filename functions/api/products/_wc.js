@@ -235,6 +235,84 @@ export async function uploadMedia(c, { bytes, filename, mime, alt, caption, titl
   return { id: m.id, source_url: m.source_url };
 }
 
+// ---------- Menu "Giảm giá hàng loạt" ----------
+
+// Lấy 1 SP với đúng các trường cần (_fields) — tránh tải cả mô tả dài khi chỉ cần giá/danh mục.
+export async function getProductFields(c, id, fields) {
+  const r = await fetch(`${c.url}/wp-json/wc/v3/products/${id}?_fields=${fields}&_cb=${Date.now()}`, {
+    headers: { Authorization: wcAuth(c.ck, c.cs), "Cache-Control": "no-cache" },
+    signal: AbortSignal.timeout(25000),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) nemLoiWc("get", c.site, r.status, JSON.stringify(d));
+  return d;
+}
+
+export async function listVariations(c, productId) {
+  const f = "id,sku,status,attributes,regular_price,sale_price,date_on_sale_from_gmt,date_on_sale_to_gmt";
+  const out = [];
+  for (let page = 1; page <= 3; page++) {
+    const r = await fetch(`${c.url}/wp-json/wc/v3/products/${productId}/variations?per_page=100&page=${page}&_fields=${f}&_cb=${Date.now()}`, {
+      headers: { Authorization: wcAuth(c.ck, c.cs), "Cache-Control": "no-cache" },
+      signal: AbortSignal.timeout(25000),
+    });
+    if (!r.ok) nemLoiWc("variations list", c.site, r.status, await r.text());
+    const arr = await r.json();
+    if (!Array.isArray(arr)) break;
+    out.push(...arr);
+    if (arr.length < 100) break;
+  }
+  return out;
+}
+
+// Sửa nhiều biến thể 1 lần. Batch trả HTTP 200 KÈM lỗi từng dòng → soi từng phần tử, không ném
+// cho lỗi dòng mà trả { updated:[id], errors:[{id,message}] } để bên gọi hoàn nguyên phần đã ghi.
+export async function updateVariationsBatch(c, productId, updates) {
+  const r = await fetch(`${c.url}/wp-json/wc/v3/products/${productId}/variations/batch`, {
+    method: "POST",
+    headers: { Authorization: wcAuth(c.ck, c.cs), "Content-Type": "application/json" },
+    body: JSON.stringify({ update: updates }),
+    signal: AbortSignal.timeout(45000),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) nemLoiWc("variations update", c.site, r.status, JSON.stringify(d));
+  const rows = Array.isArray(d.update) ? d.update : [];
+  const updated = [], errors = [];
+  updates.forEach((u, i) => {
+    const x = rows[i];
+    if (!x) errors.push({ id: u.id, message: "không có phản hồi" });
+    else if (x.error) errors.push({ id: u.id, message: x.error.message || x.error.code || "lỗi" });
+    else updated.push(u.id);
+  });
+  return { updated, errors };
+}
+
+// Tạo danh mục SP. Trùng tên → WooCommerce trả term_exists kèm id có sẵn → dùng luôn id đó.
+export async function createCategory(c, name) {
+  const r = await fetch(`${c.url}/wp-json/wc/v3/products/categories`, {
+    method: "POST",
+    headers: { Authorization: wcAuth(c.ck, c.cs), "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+    signal: AbortSignal.timeout(20000),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (r.ok) return { id: d.id, name: d.name, existed: false };
+  if (d && d.code === "term_exists" && d.data && d.data.resource_id) return { id: d.data.resource_id, name, existed: true };
+  nemLoiWc("category", c.site, r.status, JSON.stringify(d));
+}
+
+// Múi giờ cài trong WordPress — lịch giá sale chạy lúc 0h theo giờ NÀY. Lỗi → null (chỉ để cảnh báo).
+export async function siteTimezone(c) {
+  try {
+    const r = await fetch(`${c.url}/wp-json/?_fields=gmt_offset,timezone_string`, { signal: AbortSignal.timeout(15000) });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return { gmt_offset: Number(d.gmt_offset), timezone_string: d.timezone_string || "" };
+  } catch {
+    return null;
+  }
+}
+
 // Xoá VĨNH VIỄN 1 file khỏi thư viện Media (force=true: WP không có thùng rác cho media).
 // 404/410 = file đã không còn → coi như xong. Trả { ok, status, error? }, không ném lỗi.
 export async function deleteMedia(c, id) {
