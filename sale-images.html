@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ảnh đại diện sale</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Be+Vietnam+Pro:wght@700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  :root { --bg:#f6f7fb; --card:#fff; --ink:#1f2430; --mut:#6b7280; --line:#e6e8ef;
+          --blue:#2563eb; --red:#dc2626; --green:#16a34a; --amber:#d97706; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:'Nunito',system-ui,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--ink); font-size:14px; }
+  .wrap { max-width:1180px; margin:0 auto; padding:18px; }
+  h1 { font-size:20px; margin:0 0 2px; }
+  h2 { font-size:16px; margin:0 0 10px; }
+  .sub { color:var(--mut); margin:0 0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  label.f { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--mut); font-weight:700; }
+  select, input[type=text], input[type=search] { padding:9px 11px; border:1px solid var(--line); border-radius:10px; font:inherit; background:#fff; color:var(--ink); }
+  input[type=color] { width:44px; height:36px; border:1px solid var(--line); border-radius:8px; padding:2px; background:#fff; }
+  button { padding:9px 15px; border:0; border-radius:10px; font:inherit; font-weight:700; cursor:pointer; background:var(--blue); color:#fff; }
+  button.sec { background:#eef1f8; color:var(--ink); }
+  button.danger { background:var(--red); }
+  button.ok { background:var(--green); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .pill { display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px; font-weight:700; }
+  .pill.red { background:#fde8e8; color:var(--red); }
+  .pill.green { background:#e7f6ec; color:var(--green); }
+  .pill.grey { background:#eef1f8; color:var(--mut); }
+  .pill.amber { background:#fef3c7; color:#92400e; }
+  .muted { color:var(--mut); font-size:13px; }
+  .err { color:var(--red); font-weight:700; }
+  .hide { display:none !important; }
+  .note { background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:10px 12px; font-size:13px; color:#92400e; margin-bottom:12px; }
+  a { color:var(--blue); }
+
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+  .tab { background:#eef1f8; color:var(--ink); }
+  .tab.on { background:var(--ink); color:#fff; }
+
+  .grid2 { display:grid; grid-template-columns: 340px 1fr; gap:14px; align-items:start; }
+  @media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+  .stack { display:flex; flex-direction:column; gap:10px; }
+  .chk { display:flex; gap:6px; align-items:center; font-size:13px; }
+
+  .plist { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:10px; max-height:520px; overflow:auto; padding:2px; }
+  .pc { border:1px solid var(--line); border-radius:12px; padding:8px; cursor:pointer; background:#fff; position:relative; }
+  .pc.sel { border-color:var(--blue); box-shadow:0 0 0 2px var(--blue) inset; }
+  .pc img, .pc canvas { width:100%; aspect-ratio:1; object-fit:contain; border-radius:8px; background:#fafafa; display:block; }
+  .pc .nm { font-size:12px; font-weight:700; margin-top:6px; line-height:1.3; max-height:3.9em; overflow:hidden; }
+  .pc .tg { position:absolute; top:12px; left:12px; }
+  .pc input { position:absolute; top:12px; right:12px; width:18px; height:18px; }
+
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); font-size:13px; vertical-align:middle; }
+  th { color:var(--mut); font-size:12px; text-transform:uppercase; letter-spacing:.03em; }
+  td img.th { width:64px; height:64px; object-fit:contain; border-radius:8px; border:1px solid var(--line); background:#fafafa; display:block; }
+  td select { max-width:320px; }
+  .tablewrap { overflow-x:auto; }
+
+  .prog { height:8px; background:#eef1f8; border-radius:99px; overflow:hidden; margin:8px 0; }
+  .prog > div { height:100%; width:0; background:var(--blue); transition:width .2s; }
+  .stat { display:flex; gap:12px; flex-wrap:wrap; margin:6px 0 12px; }
+  .stat .b { background:#f4f6fb; border-radius:12px; padding:12px 16px; min-width:120px; }
+  .stat .n { font-size:24px; font-weight:800; }
+  .stat .l { color:var(--mut); font-size:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Ảnh đại diện sale</h1>
+  <p class="sub">Đổi ảnh đại diện sản phẩm theo đợt sale của tháng — tạo ảnh có tem/khung sale, thay bằng ảnh thiết kế sẵn, hoặc gỡ để trả lại ảnh cũ. Áp dụng cho doscom.vn và noma.vn.</p>
+
+  <div class="card">
+    <div class="row">
+      <label class="f">Website
+        <select id="site">
+          <option value="doscom">doscom.vn</option>
+          <option value="noma">noma.vn</option>
+        </select>
+      </label>
+      <label class="f">Tên đợt sale
+        <input id="campaign" type="text" placeholder="VD: SALE 10.10" maxlength="60" style="width:180px" />
+      </label>
+      <button id="btnLoad" style="align-self:flex-end">Tải sản phẩm</button>
+      <input id="token" type="text" placeholder="X-Products-Token (nếu Access tắt)" style="flex:1;min-width:180px;align-self:flex-end" />
+    </div>
+    <div id="loadInfo" class="muted" style="margin-top:8px"></div>
+  </div>
+
+  <div id="main" class="hide">
+    <div class="tabs">
+      <button class="tab on" data-tab="make">1. Tạo ảnh sale</button>
+      <button class="tab" data-tab="upload">2. Thay bằng ảnh có sẵn</button>
+      <button class="tab" data-tab="restore">3. Gỡ ảnh sale <span id="saleCount"></span></button>
+    </div>
+
+    <!-- ───────── TAB 1: TẠO ẢNH SALE ───────── -->
+    <section id="tab-make">
+      <div class="grid2">
+        <div class="card stack">
+          <h2>Mẫu ảnh</h2>
+          <label class="f">Chữ trên dải băng góc trái
+            <input id="ribbonText" type="text" placeholder="Để trống = dùng tên đợt sale" />
+          </label>
+          <label class="f">Tem giảm giá — <span style="font-weight:400">{pct} = % giảm tự tính từ giá gạch/giá bán trên web</span>
+            <input id="badgeTpl" type="text" value="-{pct}%" />
+          </label>
+          <label class="f">Chữ tem khi SP không có giá sale
+            <input id="badgeFallback" type="text" value="SALE" />
+          </label>
+          <label class="f">Dải chữ dưới cùng
+            <input id="bandText" type="text" placeholder="VD: Giá sốc chỉ ngày 10/10" />
+          </label>
+          <div class="row">
+            <label class="f">Màu
+              <select id="theme"></select>
+            </label>
+            <label class="f">Chính <input id="cMain" type="color" /></label>
+            <label class="f">Nhấn <input id="cAccent" type="color" /></label>
+          </div>
+          <div class="row">
+            <label class="chk"><input type="checkbox" id="showBorder" checked /> Viền</label>
+            <label class="chk"><input type="checkbox" id="showRibbon" checked /> Băng góc</label>
+            <label class="chk"><input type="checkbox" id="showBadge" checked /> Tem %</label>
+            <label class="chk"><input type="checkbox" id="showBand" checked /> Dải dưới</label>
+          </div>
+          <label class="f">Cỡ ảnh sản phẩm: <span id="zoomVal">90%</span>
+            <input id="zoom" type="range" min="55" max="100" value="90" />
+          </label>
+          <label class="f">Khung PNG của bạn (tuỳ chọn, vuông, giữa trong suốt)
+            <input id="frameFile" type="file" accept="image/png,image/webp" />
+          </label>
+          <div class="row"><button class="sec" id="btnFrameClear" type="button">Bỏ khung</button>
+            <span class="muted" id="frameInfo">Khung vẽ đè lên ảnh SP — nếu khung đã có chữ thì tắt bớt tem/băng.</span></div>
+        </div>
+
+        <div class="card">
+          <div class="row" style="justify-content:space-between">
+            <h2 style="margin:0">Chọn sản phẩm <span class="muted" id="makeSelInfo"></span></h2>
+            <div class="row">
+              <input id="makeSearch" type="search" placeholder="Lọc theo tên / SKU" />
+              <button class="sec" id="makeAll" type="button">Chọn tất cả đang lọc</button>
+              <button class="sec" id="makeNone" type="button">Bỏ chọn</button>
+            </div>
+          </div>
+          <p class="muted">Ô sản phẩm đang chọn hiện luôn bản xem trước ảnh sale. Ảnh xuất ra 1000×1000.</p>
+          <div class="plist" id="makeList"></div>
+          <div class="row" style="margin-top:12px;justify-content:flex-end">
+            <button class="ok" id="btnMakeApply">Gắn ảnh sale lên web</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── TAB 2: THAY BẰNG ẢNH CÓ SẴN ───────── -->
+    <section id="tab-upload" class="hide">
+      <div class="card">
+        <h2>Thay ảnh đại diện bằng ảnh thiết kế sẵn</h2>
+        <p class="muted">Đặt tên file theo sản phẩm (VD <b>noma-911.jpg</b>, <b>D1.png</b>, hoặc số ID <b>24142.jpg</b>) — tool tự ghép, ô nào sai thì chọn lại trong bảng trước khi bấm thay.</p>
+        <div class="row">
+          <input id="upFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple />
+          <label class="muted" style="cursor:pointer;text-decoration:underline">hoặc chọn cả thư mục
+            <input id="upDir" type="file" webkitdirectory multiple class="hide" />
+          </label>
+          <button class="sec" id="upClear" type="button">Xoá danh sách</button>
+        </div>
+        <div id="upSummary" class="muted" style="margin-top:8px"></div>
+        <div class="tablewrap">
+          <table id="upTable" class="hide">
+            <thead><tr><th>Ảnh mới</th><th>File</th><th>Sản phẩm</th><th>Ảnh hiện tại</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="row" style="margin-top:12px;justify-content:flex-end">
+          <button class="ok" id="btnUpApply" disabled>Thay ảnh đại diện</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── TAB 3: GỠ ẢNH SALE ───────── -->
+    <section id="tab-restore" class="hide">
+      <div class="card">
+        <h2>Gỡ ảnh sale — trả lại ảnh đại diện cũ</h2>
+        <div class="note">Gỡ = đặt lại đúng ảnh đại diện trước khi gắn sale, rồi <b>xoá vĩnh viễn file ảnh sale</b> khỏi thư viện Media của web. Sản phẩm bị ai đó đổi ảnh tay sau khi gắn sale sẽ <b>không bị đụng</b>.</div>
+        <div class="row">
+          <label class="f">Đợt sale
+            <select id="restoreCampaign"><option value="">Tất cả</option></select>
+          </label>
+          <button class="sec" id="restoreAll" type="button" style="align-self:flex-end">Chọn tất cả</button>
+          <button class="sec" id="restoreNone" type="button" style="align-self:flex-end">Bỏ chọn</button>
+        </div>
+        <div class="tablewrap">
+          <table id="restoreTable" style="margin-top:10px">
+            <thead><tr><th></th><th>Ảnh sale</th><th>→ Ảnh cũ</th><th>Sản phẩm</th><th>Đợt</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p id="restoreEmpty" class="muted hide">Web này không có sản phẩm nào đang dùng ảnh sale do tool gắn.</p>
+        <div class="row" style="margin-top:12px;justify-content:flex-end">
+          <button class="danger" id="btnRestore" disabled>Gỡ ảnh sale</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── TIẾN TRÌNH + BÁO CÁO ───────── -->
+    <div id="runCard" class="card hide">
+      <h2 id="runTitle"></h2>
+      <div class="prog"><div id="runBar"></div></div>
+      <div id="runInfo" class="muted"></div>
+      <div id="runStat"></div>
+      <div class="tablewrap">
+        <table><thead><tr><th>Sản phẩm</th><th>Kết quả</th><th>Ghi chú</th></tr></thead><tbody id="runRows"></tbody></table>
+      </div>
+      <p class="muted">Web có thể còn cache ảnh cũ — mở trang sản phẩm rồi Ctrl+Shift+R để thấy ngay.</p>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { SALE_THEMES, matchFileToProduct, discountText } from "./js/sale-images.js";
+
+window.addEventListener("error", (e) => { try { $("#loadInfo").innerHTML = '<span class="err">Lỗi JS: ' + esc(e.message || e) + '</span>'; } catch (_) {} });
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const API = "/api/products/sale-images";
+const TK = "products_token";
+const FONT = '"Be Vietnam Pro", Nunito, Arial, sans-serif';
+const OUT = 1000;
+
+const S = {
+  site: "doscom",
+  products: [],
+  byId: new Map(),
+  makeSel: new Set(),
+  uploads: [],        // [{file, url, productId, by, candidates}]
+  restoreSel: new Set(),
+  frame: null,        // HTMLImageElement
+  busy: false,
+};
+
+try { $("#token").value = localStorage.getItem(TK) || ""; } catch (_) {}
+$("#token").addEventListener("change", () => { try { localStorage.setItem(TK, $("#token").value.trim()); } catch (_) {} });
+try { $("#campaign").value = localStorage.getItem("sale_campaign") || ""; } catch (_) {}
+$("#campaign").addEventListener("change", () => { try { localStorage.setItem("sale_campaign", $("#campaign").value.trim()); } catch (_) {} });
+
+function headers(write) {
+  const h = { "content-type": "application/json" };
+  if (write) { const t = $("#token").value.trim(); if (t) h["X-Products-Token"] = t; }
+  return h;
+}
+async function post(body, write) {
+  const r = await fetch(API, { method: "POST", headers: headers(write), body: JSON.stringify({ site: S.site, ...body }) });
+  let d;
+  try { d = await r.json(); } catch { throw new Error(`Phản hồi không phải JSON (${r.status})`); }
+  if (!d.ok) throw new Error(d.error || `Lỗi ${r.status}`);
+  return d;
+}
+
+// ───────── Tab ─────────
+document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === b));
+  for (const t of ["make", "upload", "restore"]) $("#tab-" + t).classList.toggle("hide", b.dataset.tab !== t);
+}));
+
+// ───────── Tải sản phẩm ─────────
+$("#btnLoad").addEventListener("click", load);
+async function load() {
+  S.site = $("#site").value;
+  $("#btnLoad").disabled = true;
+  $("#loadInfo").textContent = "Đang tải danh sách sản phẩm…";
+  try {
+    const d = await post({ mode: "list" }, false);
+    S.products = d.products.sort((a, b) => a.name.localeCompare(b.name, "vi"));
+    S.byId = new Map(S.products.map((p) => [p.id, p]));
+    S.makeSel = new Set([...S.makeSel].filter((id) => S.byId.has(id)));
+    S.restoreSel.clear();
+    const noImg = S.products.filter((p) => !p.featured).length;
+    const orphan = (d.orphan_sale_ids || []).length;
+    $("#loadInfo").innerHTML = `${S.products.length} sản phẩm đang bán trên <b>${S.site === "doscom" ? "doscom.vn" : "noma.vn"}</b> · `
+      + `<b>${S.products.filter((p) => p.sale).length}</b> SP đang dùng ảnh sale`
+      + (noImg ? ` · ${noImg} SP chưa có ảnh đại diện` : "")
+      + (orphan ? ` · <span class="pill amber">${orphan} bản ghi sale của SP đã ẩn/xoá (ID ${d.orphan_sale_ids.join(", ")})</span>` : "");
+    $("#main").classList.remove("hide");
+    renderMake();
+    rematchUploads();
+    renderRestore();
+  } catch (e) {
+    $("#loadInfo").innerHTML = `<span class="err">Lỗi: ${esc(e.message)}</span>`;
+  }
+  $("#btnLoad").disabled = false;
+}
+$("#site").addEventListener("change", () => { if (S.products.length) load(); });
+
+// ───────── Vẽ ảnh sale ─────────
+for (const [k, t] of Object.entries(SALE_THEMES)) $("#theme").insertAdjacentHTML("beforeend", `<option value="${k}">${esc(t.label)}</option>`);
+function applyTheme() { const t = SALE_THEMES[$("#theme").value]; $("#cMain").value = t.main; $("#cAccent").value = t.accent; }
+$("#theme").addEventListener("change", () => { applyTheme(); schedulePreview(); });
+applyTheme();
+
+function cfg() {
+  return {
+    ribbon: $("#showRibbon").checked ? ($("#ribbonText").value.trim() || $("#campaign").value.trim()) : "",
+    badgeTpl: $("#badgeTpl").value, badgeFallback: $("#badgeFallback").value.trim(),
+    showBadge: $("#showBadge").checked,
+    band: $("#showBand").checked ? $("#bandText").value.trim() : "",
+    border: $("#showBorder").checked,
+    main: $("#cMain").value, accent: $("#cAccent").value,
+    zoom: Number($("#zoom").value) / 100,
+  };
+}
+
+const imgCache = new Map();
+function loadImg(src) {
+  if (imgCache.has(src)) return imgCache.get(src);
+  const p = new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = () => rej(new Error("không tải được ảnh đại diện"));
+    im.src = src.startsWith("blob:") ? src : `${API}?img=${encodeURIComponent(src)}`;
+  });
+  imgCache.set(src, p);
+  p.catch(() => imgCache.delete(src));
+  return p;
+}
+
+// Chữ co lại cho vừa bề ngang, không bao giờ tràn khung.
+function fitFont(ctx, text, maxW, maxPx, weight = 800) {
+  let px = maxPx;
+  do { ctx.font = `${weight} ${px}px ${FONT}`; if (ctx.measureText(text).width <= maxW) break; px -= 2; } while (px > 12);
+  return px;
+}
+
+function drawSale(canvas, prodImg, product, c) {
+  const W = canvas.width, k = W / 1000;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, W, W);
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, W);
+
+  const bandH = c.band ? 140 * k : 0;
+  // Vùng ảnh sản phẩm: chừa viền + dải dưới; ảnh "contain" giữ nguyên tỉ lệ.
+  const area = { x: 36 * k, y: 36 * k, w: W - 72 * k, h: W - 72 * k - bandH };
+  if (prodImg) {
+    const s = Math.min(area.w / prodImg.naturalWidth, area.h / prodImg.naturalHeight) * c.zoom;
+    const dw = prodImg.naturalWidth * s, dh = prodImg.naturalHeight * s;
+    ctx.drawImage(prodImg, area.x + (area.w - dw) / 2, area.y + (area.h - dh) / 2, dw, dh);
+  }
+  if (S.frame) ctx.drawImage(S.frame, 0, 0, W, W);
+
+  ctx.textBaseline = "middle";
+  if (c.border) {
+    ctx.lineWidth = 18 * k; ctx.strokeStyle = c.main;
+    ctx.strokeRect(9 * k, 9 * k, W - 18 * k, W - 18 * k);
+  }
+  if (c.band) {
+    const y = W - bandH;
+    ctx.fillStyle = c.main; ctx.fillRect(0, y, W, bandH);
+    ctx.fillStyle = c.accent; ctx.fillRect(0, y, W, 8 * k);
+    ctx.fillStyle = "#fff"; ctx.textAlign = "center";
+    fitFont(ctx, c.band, W - 90 * k, 64 * k);
+    ctx.fillText(c.band, W / 2, y + bandH / 2 + 4 * k);
+  }
+  if (c.ribbon) {
+    const h = 96 * k, y = 54 * k;
+    const px = fitFont(ctx, c.ribbon, 560 * k, 58 * k, 900);
+    const tw = ctx.measureText(c.ribbon).width;
+    const w = tw + 76 * k;
+    ctx.fillStyle = c.accent;
+    ctx.beginPath();
+    ctx.moveTo(0, y); ctx.lineTo(w + 30 * k, y); ctx.lineTo(w, y + h / 2); ctx.lineTo(w + 30 * k, y + h); ctx.lineTo(0, y + h);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = c.main; ctx.textAlign = "left";
+    ctx.font = `900 ${px}px ${FONT}`;
+    ctx.fillText(c.ribbon, 34 * k, y + h / 2 + 3 * k);
+  }
+  if (c.showBadge) {
+    const text = discountText(c.badgeTpl, product, c.badgeFallback);
+    if (text) {
+      const r = 108 * k, cx = W - 140 * k, cy = 150 * k;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = c.main; ctx.fill();
+      ctx.lineWidth = 8 * k; ctx.strokeStyle = c.accent; ctx.stroke();
+      ctx.textAlign = "center";
+      const hasNum = /\d/.test(text);
+      if (hasNum) {
+        ctx.fillStyle = "#fff"; ctx.font = `800 ${30 * k}px ${FONT}`;
+        ctx.fillText("GIẢM", cx, cy - 48 * k);
+      }
+      ctx.fillStyle = c.accent;
+      const px = fitFont(ctx, text, r * 1.7, (hasNum ? 76 : 56) * k, 900);
+      ctx.font = `900 ${px}px ${FONT}`;
+      ctx.fillText(text, cx, hasNum ? cy + 18 * k : cy + 3 * k);
+    }
+  }
+}
+
+async function fontsReady() {
+  try { await document.fonts.load(`900 40px "Be Vietnam Pro"`); await document.fonts.load(`800 40px "Be Vietnam Pro"`); } catch (_) {}
+}
+
+// ───────── Tab 1: danh sách + xem trước ─────────
+function filtered(q) {
+  const s = String(q || "").trim().toLowerCase();
+  if (!s) return S.products;
+  return S.products.filter((p) => p.name.toLowerCase().includes(s) || String(p.sku).toLowerCase().includes(s) || String(p.id) === s);
+}
+
+function saleTag(p) {
+  if (!p.sale) return "";
+  return p.sale_mismatch ? `<span class="pill amber tg">lệch</span>` : `<span class="pill red tg">đang sale</span>`;
+}
+
+function renderMake() {
+  const list = filtered($("#makeSearch").value);
+  $("#makeList").innerHTML = list.map((p) => {
+    const sel = S.makeSel.has(p.id);
+    const media = !p.featured ? `<img alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" />`
+      : sel ? `<canvas width="360" height="360" data-prev="${p.id}"></canvas>`
+      : `<img alt="" loading="lazy" src="${esc(p.featured.src)}" />`;
+    return `<div class="pc ${sel ? "sel" : ""}" data-id="${p.id}" title="${esc(p.name)}">
+      ${media}${saleTag(p)}
+      <input type="checkbox" ${sel ? "checked" : ""} ${p.featured ? "" : "disabled"} tabindex="-1" />
+      <div class="nm">${esc(p.name)}</div>
+      <div class="muted" style="font-size:11px">${p.featured ? `#${p.id}${p.sku ? " · " + esc(p.sku) : ""}` : "chưa có ảnh đại diện"}</div>
+    </div>`;
+  }).join("") || `<p class="muted">Không có sản phẩm khớp.</p>`;
+  $("#makeSelInfo").textContent = S.makeSel.size ? `· đã chọn ${S.makeSel.size}` : "";
+  $("#btnMakeApply").textContent = `Gắn ảnh sale lên web (${S.makeSel.size} SP)`;
+  $("#btnMakeApply").disabled = !S.makeSel.size || S.busy;
+  schedulePreview();
+}
+
+$("#makeList").addEventListener("click", (e) => {
+  const card = e.target.closest(".pc"); if (!card) return;
+  const p = S.byId.get(Number(card.dataset.id)); if (!p || !p.featured) return;
+  S.makeSel.has(p.id) ? S.makeSel.delete(p.id) : S.makeSel.add(p.id);
+  renderMake();
+});
+$("#makeSearch").addEventListener("input", renderMake);
+$("#makeAll").addEventListener("click", () => { filtered($("#makeSearch").value).forEach((p) => p.featured && S.makeSel.add(p.id)); renderMake(); });
+$("#makeNone").addEventListener("click", () => { S.makeSel.clear(); renderMake(); });
+
+let prevTimer = 0;
+function schedulePreview() { clearTimeout(prevTimer); prevTimer = setTimeout(renderPreviews, 120); }
+async function renderPreviews() {
+  await fontsReady();
+  const c = cfg();
+  for (const cv of document.querySelectorAll("canvas[data-prev]")) {
+    const p = S.byId.get(Number(cv.dataset.prev));
+    if (!p || !p.featured) continue;
+    // Đang gắn ảnh sale → preview dựng từ ẢNH GỐC, không dựng chồng lên ảnh sale cũ.
+    const src = p.sale && !p.sale_mismatch && p.sale.orig_src ? p.sale.orig_src : p.featured.src;
+    try { drawSale(cv, await loadImg(src), p, c); }
+    catch (_) { drawSale(cv, null, p, c); }
+  }
+}
+for (const id of ["ribbonText", "badgeTpl", "badgeFallback", "bandText", "campaign"]) $("#" + id).addEventListener("input", schedulePreview);
+for (const id of ["cMain", "cAccent", "showBorder", "showRibbon", "showBadge", "showBand"]) $("#" + id).addEventListener("input", schedulePreview);
+$("#zoom").addEventListener("input", () => { $("#zoomVal").textContent = $("#zoom").value + "%"; schedulePreview(); });
+
+$("#frameFile").addEventListener("change", async () => {
+  const f = $("#frameFile").files[0]; if (!f) return;
+  const url = URL.createObjectURL(f);
+  try {
+    const im = await loadImg(url);
+    S.frame = im;
+    const sq = Math.abs(im.naturalWidth - im.naturalHeight) <= 4;
+    $("#frameInfo").innerHTML = `Khung ${im.naturalWidth}×${im.naturalHeight}` + (sq ? "" : ` <span class="pill amber">không vuông — sẽ bị kéo giãn</span>`);
+    schedulePreview();
+  } catch (e) { alert(e.message); }
+});
+$("#btnFrameClear").addEventListener("click", () => { S.frame = null; $("#frameFile").value = ""; $("#frameInfo").textContent = "Đã bỏ khung."; schedulePreview(); });
+
+function canvasToBase64(canvas) {
+  return new Promise((res, rej) => canvas.toBlob((b) => b ? blobToBase64(b).then(res, rej) : rej(new Error("không xuất được ảnh")), "image/jpeg", 0.9));
+}
+function blobToBase64(blob) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = () => rej(r.error); r.readAsDataURL(blob); });
+}
+
+function needCampaign() {
+  const v = $("#campaign").value.trim();
+  if (!v) { alert("Nhập Tên đợt sale trước (VD: SALE 10.10) — dùng để lọc khi gỡ."); $("#campaign").focus(); }
+  return v;
+}
+
+$("#btnMakeApply").addEventListener("click", async () => {
+  const campaign = needCampaign(); if (!campaign) return;
+  const ids = S.products.filter((p) => S.makeSel.has(p.id)).map((p) => p.id);
+  const again = ids.filter((id) => S.byId.get(id).sale && !S.byId.get(id).sale_mismatch).length;
+  if (!confirm(`Gắn ảnh sale "${campaign}" làm ảnh đại diện cho ${ids.length} SP trên ${S.site}?`
+    + (again ? `\n\n${again} SP đang có ảnh sale → ảnh sale cũ sẽ bị thay và xoá, ảnh gốc vẫn giữ để gỡ sau.` : ""))) return;
+
+  await fontsReady();
+  const c = cfg();
+  const canvas = document.createElement("canvas"); canvas.width = canvas.height = OUT;
+  await runJobs(`Gắn ảnh sale "${campaign}"`, ids, async (id) => {
+    const p = S.byId.get(id);
+    const src = p.sale && !p.sale_mismatch && p.sale.orig_src ? p.sale.orig_src : p.featured.src;
+    const img = await loadImg(src);
+    drawSale(canvas, img, p, c);
+    const b64 = await canvasToBase64(canvas);
+    const d = await post({ mode: "apply", campaign, kind: "frame", items: [{ id, mime: "image/jpeg", image_b64: b64 }] }, true);
+    return d.items[0];
+  });
+});
+
+// ───────── Tab 2: thay bằng ảnh có sẵn ─────────
+function addFiles(files) {
+  const imgs = [...files].filter((f) => /^image\/(jpeg|png|webp)$/.test(f.type));
+  for (const f of imgs) {
+    if (S.uploads.some((u) => u.file.name === f.name && u.file.size === f.size)) continue;
+    S.uploads.push({ file: f, url: URL.createObjectURL(f), productId: null, by: null, candidates: [], touched: false });
+  }
+  rematchUploads();
+}
+$("#upFiles").addEventListener("change", (e) => { addFiles(e.target.files); e.target.value = ""; });
+$("#upDir").addEventListener("change", (e) => { addFiles(e.target.files); e.target.value = ""; });
+$("#upClear").addEventListener("click", () => { S.uploads.forEach((u) => URL.revokeObjectURL(u.url)); S.uploads = []; renderUploads(); });
+
+function rematchUploads() {
+  for (const u of S.uploads) {
+    if (u.touched) continue;
+    const m = matchFileToProduct(u.file.name, S.products);
+    u.productId = m.id; u.by = m.by; u.candidates = m.candidates;
+  }
+  renderUploads();
+}
+
+const BY_LABEL = { id: "khớp ID", sku: "khớp SKU", name: "khớp tên", code: "khớp mã model" };
+function renderUploads() {
+  const tb = $("#upTable tbody");
+  $("#upTable").classList.toggle("hide", !S.uploads.length);
+  const counts = new Map();
+  S.uploads.forEach((u) => u.productId && counts.set(u.productId, (counts.get(u.productId) || 0) + 1));
+  const opts = S.products.map((p) => `<option value="${p.id}">${esc(p.name)} (#${p.id})</option>`).join("");
+
+  tb.innerHTML = S.uploads.map((u, i) => {
+    const p = u.productId ? S.byId.get(u.productId) : null;
+    let tag;
+    if (p && counts.get(p.id) > 1) tag = `<span class="pill red">trùng SP với file khác</span>`;
+    else if (p && u.touched) tag = `<span class="pill green">chọn tay</span>`;
+    else if (p) tag = `<span class="pill green">${BY_LABEL[u.by] || "khớp"}</span>`;
+    else if (u.candidates.length > 1) tag = `<span class="pill amber">${u.candidates.length} SP giống nhau — chọn tay</span>`;
+    else tag = `<span class="pill grey">không khớp — chọn tay hoặc bỏ qua</span>`;
+    const candOpts = u.candidates.length > 1 && !p
+      ? `<optgroup label="Gợi ý">${u.candidates.map((id) => { const c = S.byId.get(id); return c ? `<option value="${id}">${esc(c.name)} (#${id})</option>` : ""; }).join("")}</optgroup>` : "";
+    return `<tr>
+      <td><img class="th" src="${esc(u.url)}" alt="" /></td>
+      <td style="max-width:200px;word-break:break-all">${esc(u.file.name)}<div class="muted" style="font-size:11px">${Math.round(u.file.size / 1024)} KB</div></td>
+      <td><select data-up="${i}"><option value="">— bỏ qua —</option>${candOpts}${opts}</select><div style="margin-top:4px">${tag}</div></td>
+      <td>${p && p.featured ? `<img class="th" src="${esc(p.featured.src)}" alt="" loading="lazy" />` : `<span class="muted">—</span>`}</td>
+      <td><button class="sec" data-updel="${i}" type="button">Xoá</button></td>
+    </tr>`;
+  }).join("");
+  S.uploads.forEach((u, i) => { const sel = tb.querySelector(`select[data-up="${i}"]`); if (sel) sel.value = u.productId ? String(u.productId) : ""; });
+
+  const ready = S.uploads.filter((u) => u.productId).length;
+  const dup = [...counts.values()].some((n) => n > 1);
+  $("#upSummary").innerHTML = S.uploads.length
+    ? `${S.uploads.length} file · <b>${ready}</b> đã gắn với SP` + (dup ? ` · <span class="err">có 2 file cùng trỏ 1 SP — sửa trước khi thay</span>` : "")
+    : "";
+  $("#btnUpApply").disabled = !ready || dup || S.busy;
+  $("#btnUpApply").textContent = `Thay ảnh đại diện (${ready} SP)`;
+}
+$("#upTable").addEventListener("change", (e) => {
+  const i = e.target.dataset.up; if (i == null) return;
+  const u = S.uploads[Number(i)];
+  u.productId = e.target.value ? Number(e.target.value) : null; u.touched = true;
+  renderUploads();
+});
+$("#upTable").addEventListener("click", (e) => {
+  const i = e.target.dataset.updel; if (i == null) return;
+  const [u] = S.uploads.splice(Number(i), 1); URL.revokeObjectURL(u.url);
+  renderUploads();
+});
+
+// Ảnh thiết kế giữ nguyên file nếu gọn; quá nặng thì thu về 1600px JPEG để upload không đứt.
+async function uploadPayload(file) {
+  if (file.size <= 2.5 * 1024 * 1024) return { mime: file.type, image_b64: await blobToBase64(file) };
+  const im = await loadImg(URL.createObjectURL(file));
+  const s = Math.min(1, 1600 / Math.max(im.naturalWidth, im.naturalHeight));
+  const cv = document.createElement("canvas");
+  cv.width = Math.round(im.naturalWidth * s); cv.height = Math.round(im.naturalHeight * s);
+  const ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.drawImage(im, 0, 0, cv.width, cv.height);
+  return { mime: "image/jpeg", image_b64: await canvasToBase64(cv) };
+}
+
+$("#btnUpApply").addEventListener("click", async () => {
+  const campaign = needCampaign(); if (!campaign) return;
+  const jobs = S.uploads.filter((u) => u.productId);
+  if (!confirm(`Thay ảnh đại diện cho ${jobs.length} SP trên ${S.site} bằng ảnh đã chọn (đợt "${campaign}")?\nẢnh gốc được lưu lại để gỡ sau.`)) return;
+  const byProduct = new Map(jobs.map((u) => [u.productId, u]));
+  await runJobs(`Thay ảnh đại diện "${campaign}"`, [...byProduct.keys()], async (id) => {
+    const u = byProduct.get(id);
+    const payload = await uploadPayload(u.file);
+    const d = await post({ mode: "apply", campaign, kind: "upload", items: [{ id, ...payload }] }, true);
+    return d.items[0];
+  });
+});
+
+// ───────── Tab 3: gỡ ảnh sale ─────────
+function saleProducts() {
+  const camp = $("#restoreCampaign").value;
+  return S.products.filter((p) => p.sale && (!camp || p.sale.campaign === camp));
+}
+function renderRestore() {
+  const all = S.products.filter((p) => p.sale);
+  $("#saleCount").textContent = all.length ? `(${all.length})` : "";
+  const camps = [...new Set(all.map((p) => p.sale.campaign).filter(Boolean))];
+  const cur = $("#restoreCampaign").value;
+  $("#restoreCampaign").innerHTML = `<option value="">Tất cả</option>` + camps.map((c) => `<option>${esc(c)}</option>`).join("");
+  if (camps.includes(cur)) $("#restoreCampaign").value = cur;
+
+  const list = saleProducts();
+  S.restoreSel = new Set([...S.restoreSel].filter((id) => list.some((p) => p.id === id && !p.sale_mismatch)));
+  $("#restoreEmpty").classList.toggle("hide", !!list.length);
+  $("#restoreTable").classList.toggle("hide", !list.length);
+  $("#restoreTable tbody").innerHTML = list.map((p) => {
+    const when = p.sale.at ? new Date(p.sale.at).toLocaleDateString("vi-VN") : "";
+    return `<tr>
+      <td>${p.sale_mismatch ? "" : `<input type="checkbox" data-rs="${p.id}" ${S.restoreSel.has(p.id) ? "checked" : ""} />`}</td>
+      <td>${p.featured ? `<img class="th" src="${esc(p.featured.src)}" alt="" loading="lazy" />` : "—"}</td>
+      <td data-orig="${p.id}"><span class="muted">${p.sale.orig_id ? "…" : "(SP gốc không có ảnh)"}</span></td>
+      <td><a href="${esc(p.permalink)}" target="_blank">${esc(p.name)}</a> <span class="muted">#${p.id}</span>
+        ${p.sale_mismatch ? `<div class="err" style="font-size:12px">Ảnh đại diện đã bị đổi tay sau khi gắn sale — không gỡ tự động.</div>` : ""}</td>
+      <td>${esc(p.sale.campaign)}<div class="muted" style="font-size:11px">${esc(when)} · ${p.sale.kind === "upload" ? "ảnh có sẵn" : "ảnh ghép"}</div></td>
+      <td>${p.sale_mismatch ? `<button class="sec" data-forget="${p.id}" type="button">Bỏ theo dõi</button>` : ""}</td>
+    </tr>`;
+  }).join("");
+  $("#btnRestore").disabled = !S.restoreSel.size || S.busy;
+  $("#btnRestore").textContent = `Gỡ ảnh sale (${S.restoreSel.size} SP)`;
+  fillOrigThumbs(list);
+}
+// Ảnh gốc lấy từ metadata KV (orig_src); link quá dài bị lược thì hiện số ID ảnh.
+function fillOrigThumbs(list) {
+  for (const p of list) {
+    const td = document.querySelector(`td[data-orig="${p.id}"]`);
+    if (!td || !p.sale.orig_id) continue;
+    const src = p.sale.orig_src;
+    td.innerHTML = src ? `<img class="th" src="${esc(src)}" alt="" loading="lazy" />` : `<span class="muted">ảnh #${p.sale.orig_id}</span>`;
+  }
+}
+$("#restoreCampaign").addEventListener("change", () => { S.restoreSel.clear(); renderRestore(); });
+$("#restoreAll").addEventListener("click", () => { saleProducts().forEach((p) => !p.sale_mismatch && S.restoreSel.add(p.id)); renderRestore(); });
+$("#restoreNone").addEventListener("click", () => { S.restoreSel.clear(); renderRestore(); });
+$("#restoreTable").addEventListener("change", (e) => {
+  const id = Number(e.target.dataset.rs); if (!id) return;
+  e.target.checked ? S.restoreSel.add(id) : S.restoreSel.delete(id);
+  renderRestore();
+});
+$("#restoreTable").addEventListener("click", async (e) => {
+  const id = Number(e.target.dataset.forget); if (!id) return;
+  if (!confirm("Bỏ theo dõi SP này? Tool sẽ không còn nhớ ảnh gốc của nó (ảnh trên web giữ nguyên).")) return;
+  try { await post({ mode: "forget", id }, true); await load(); } catch (err) { alert(err.message); }
+});
+
+$("#btnRestore").addEventListener("click", async () => {
+  const ids = [...S.restoreSel];
+  if (!confirm(`Gỡ ảnh sale của ${ids.length} SP trên ${S.site}?\n\nẢnh đại diện cũ sẽ được đặt lại và FILE ẢNH SALE BỊ XOÁ VĨNH VIỄN khỏi thư viện Media.`)) return;
+  await runJobs("Gỡ ảnh sale", ids, async (id) => (await post({ mode: "restore", ids: [id] }, true)).items[0]);
+});
+
+// ───────── Chạy lần lượt từng SP + báo cáo ─────────
+async function runJobs(title, ids, fn) {
+  S.busy = true;
+  document.querySelectorAll("#btnMakeApply,#btnUpApply,#btnRestore,#btnLoad").forEach((b) => b.disabled = true);
+  $("#runCard").classList.remove("hide");
+  $("#runTitle").textContent = `${title} — ${S.site === "doscom" ? "doscom.vn" : "noma.vn"}`;
+  $("#runRows").innerHTML = ""; $("#runStat").innerHTML = "";
+  $("#runCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  let ok = 0, skip = 0, fail = 0;
+  for (let i = 0; i < ids.length; i++) {
+    const p = S.byId.get(ids[i]) || { id: ids[i], name: "#" + ids[i] };
+    $("#runInfo").textContent = `Đang xử lý ${i + 1}/${ids.length}: ${p.name}`;
+    let res, row;
+    try { res = await fn(ids[i]); } catch (e) { res = { error: e.message }; }
+    const link = p.permalink ? `<a href="${esc(p.permalink)}" target="_blank">${esc(p.name)}</a>` : esc(p.name);
+    if (res && (res.applied || res.restored)) {
+      ok++;
+      const notes = [];
+      if (res.note) notes.push(res.note);
+      if (res.old_sale_deleted === true) notes.push("đã xoá ảnh sale cũ");
+      else if (typeof res.old_sale_deleted === "string") notes.push("không xoá được ảnh sale cũ: " + res.old_sale_deleted);
+      if (res.restored) notes.push(res.media_deleted ? "đã xoá file ảnh sale" : "KHÔNG xoá được file ảnh sale: " + (res.media_error || ""));
+      const thumb = res.sale_src || res.orig_src;
+      row = `<td>${link}</td><td><span class="pill green">${res.restored ? "Đã gỡ" : "Đã gắn"}</span></td>
+        <td>${thumb ? `<img class="th" src="${esc(thumb)}" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px" />` : ""}<span class="muted">${esc(notes.join(" · "))}</span></td>`;
+    } else if (res && res.skipped) {
+      skip++;
+      row = `<td>${link}</td><td><span class="pill grey">Bỏ qua</span></td><td class="muted">${esc(res.skipped)}</td>`;
+    } else {
+      fail++;
+      row = `<td>${link}</td><td><span class="pill red">Lỗi</span></td><td class="err" style="font-size:12px">${esc((res && res.error) || "không rõ")}</td>`;
+    }
+    $("#runRows").insertAdjacentHTML("beforeend", `<tr>${row}</tr>`);
+    $("#runBar").style.width = `${Math.round(((i + 1) / ids.length) * 100)}%`;
+  }
+  $("#runInfo").textContent = `Xong ${ids.length} SP.`;
+  $("#runStat").innerHTML = `<div class="stat"><div class="b"><div class="n">${ok}</div><div class="l">Thành công</div></div>
+    <div class="b"><div class="n">${skip}</div><div class="l">Bỏ qua</div></div>
+    <div class="b"><div class="n">${fail}</div><div class="l">Lỗi</div></div></div>`;
+  S.busy = false;
+  $("#btnLoad").disabled = false;
+  await load();
+}
+</script>
+</body>
+</html>

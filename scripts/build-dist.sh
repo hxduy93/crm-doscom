@@ -38,6 +38,8 @@ cp -r data dist/data
 # js/price-discount.js dạng module thay vì chép lại công thức giá vào HTML.
 mkdir -p dist/js
 cp functions/lib/price-discount.js dist/js/
+# Menu "Ảnh sale": khớp file ↔ SP + tem % giảm (import ./price-discount.js cùng thư mục).
+cp functions/lib/sale-images.js dist/js/
 [ -d demos ] && cp -r demos dist/demos
 
 # File TRUNG GIAN của pipeline lấy dữ liệu (gộp từ repo cũ 2026-08-10): chỉ dùng
@@ -47,7 +49,7 @@ rm -f dist/data/pancake-crm-contacts.json
 rm -rf dist/data/cost-source
 
 # Trang standalone (nhúng iframe trong CRM) — phải copy thủ công.
-PAGES="agent-geo-doscom.html ads-creator.html product-publisher.html brandcore-fix.html fix-images.html sync-us.html thai-social.html thai-repost.html"
+PAGES="agent-geo-doscom.html ads-creator.html product-publisher.html brandcore-fix.html fix-images.html sync-us.html thai-social.html thai-repost.html sale-images.html"
 for page in $PAGES; do
   [ -f "$page" ] && cp "$page" dist/
 done

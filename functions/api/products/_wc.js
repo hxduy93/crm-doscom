@@ -235,6 +235,22 @@ export async function uploadMedia(c, { bytes, filename, mime, alt, caption, titl
   return { id: m.id, source_url: m.source_url };
 }
 
+// Xoá VĨNH VIỄN 1 file khỏi thư viện Media (force=true: WP không có thùng rác cho media).
+// 404/410 = file đã không còn → coi như xong. Trả { ok, status, error? }, không ném lỗi.
+export async function deleteMedia(c, id) {
+  try {
+    const r = await fetch(`${c.url}/wp-json/wp/v2/media/${id}?force=true`, {
+      method: "DELETE",
+      headers: { Authorization: wpAuth(c.user, c.pwd) },
+      signal: AbortSignal.timeout(30000),
+    });
+    if (r.ok || r.status === 404 || r.status === 410) return { ok: true, status: r.status };
+    return { ok: false, status: r.status, error: `WP media delete ${r.status}: ${(await r.text()).slice(0, 200)}` };
+  } catch (e) {
+    return { ok: false, status: 0, error: `WP media delete: ${String(e.message || e)}` };
+  }
+}
+
 // Nhận diện sản phẩm NOMA (để menu "Sửa brandcore" chỉ áp brand core cho SP NOMA,
 // bỏ qua SP Doscom trên cùng 1 web). Khớp "noma" trong tên/mô tả (không phân biệt hoa thường).
 export function isNomaProduct(p) {
@@ -243,11 +259,13 @@ export function isNomaProduct(p) {
 }
 
 // Liệt kê sản phẩm WooCommerce (1 trang). Trả { items, total, totalPages }.
-export async function listProducts(c, { search = "", perPage = 50, page = 1, status = "publish" } = {}) {
+// `fields` đổi được để menu không cần mô tả (vd "Ảnh sale" chỉ cần ảnh + giá) đỡ tải nặng.
+export async function listProducts(c, { search = "", perPage = 50, page = 1, status = "publish",
+  fields = "id,name,permalink,status,description,short_description,categories" } = {}) {
   const params = new URLSearchParams({
     per_page: String(perPage),
     page: String(page),
-    _fields: "id,name,permalink,status,description,short_description,categories",
+    _fields: fields,
     _cb: String(Date.now()), // cache-bust: tránh WP/CDN trả bản cũ sau khi vừa sửa
   });
   if (search) params.set("search", search);
