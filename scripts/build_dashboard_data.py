@@ -466,13 +466,27 @@ def fetch_campaign_products_from_links(account_id: str):
     found = {}
     pages = 0
     url = f"https://graph.facebook.com/{FB_API_VERSION}/act_{account_id}/ads"
-    # limit nhỏ hơn (100 thay vì 200): mỗi ad kéo theo cả creative lồng nhiều tầng,
-    # trang quá to là Facebook trả 500 thay vì cắt bớt.
-    params = {"access_token": FB_TOKEN, "fields": _AD_CREATIVE_FIELDS, "limit": 100}
-    while url:
+    # CỠ TRANG TỰ CO (17/09/2026). Mỗi ad kéo theo creative lồng nhiều tầng; tài khoản
+    # act_764394829882083 (1.215 ad) bị Facebook trả HTTP 500 "Please reduce the amount
+    # of data you're asking for" ngay TRANG 1 với limit=100 → cả tài khoản 0 campaign đọc
+    # được link → toàn bộ chi phí NOMA của Phương Nam bị đẩy sang ad_spend_excluded
+    # (398tr/90 ngày) và CRM không hiện CPQC. limit=50 chạy được (đo tay 17/09/2026).
+    # Nay: trang nào hỏng thì CHIA ĐÔI limit rồi đọc lại ĐÚNG trang đó (giữ cursor
+    # `after`), chỉ bỏ cuộc khi đã xuống tới 10 mà vẫn hỏng.
+    limit = 100
+    after = None
+    while True:
+        params = {"access_token": FB_TOKEN, "fields": _AD_CREATIVE_FIELDS, "limit": limit}
+        if after:
+            params["after"] = after
         try:
             data = fb_get(url, params=params)
         except Exception as e:
+            if limit > 10:
+                limit = max(10, limit // 2)
+                print(f"   ↪ act_{account_id}: trang {pages + 1} quá nặng ({type(e).__name__}) — "
+                      f"đọc lại với limit={limit}", file=sys.stderr)
+                continue
             print(f"   ⚠ act_{account_id}: đọc link dừng ở trang {pages + 1} ({type(e).__name__}) — "
                   f"giữ {len(found)} campaign đã đọc được", file=sys.stderr)
             break
@@ -485,8 +499,10 @@ def fetch_campaign_products_from_links(account_id: str):
                 prod = _product_from_link(link)
                 if prod:
                     found.setdefault(cid, set()).add(prod)
-        url = data.get("paging", {}).get("next")
-        params = None
+        paging = data.get("paging") or {}
+        after = (paging.get("cursors") or {}).get("after")
+        if not paging.get("next") or not after:
+            break
     return {cid: next(iter(s)) for cid, s in found.items() if len(s) == 1}
 
 
