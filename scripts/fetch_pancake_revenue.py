@@ -379,6 +379,12 @@ def _load_extended_skus():
             if norm:
                 name_map[norm] = [(label, 1)]
 
+    # Combo theo MÃ Pancake (17/09/2026): thành phần lấy từ composite_products của API Pancake,
+    # mỗi dòng [label, số lượng, là_quà]. Khớp theo mã chắc hơn "tên chứa chuỗi" vì tên combo
+    # NOMA đặt rất tuỳ hứng ("COMBO 2 CHAI 230", "NOMA (911+680)", "COPMBO-186"...).
+    for code, parts in (ext.get("combo_codes") or {}).items():
+        code_map[code.lower()] = [tuple(x) for x in parts]
+
     # Combo decompositions (theo Pancake name contains pattern)
     combos = ext.get("combos", [])
 
@@ -401,7 +407,8 @@ PRODUCT_LIST = PRODUCT_LIST_BASE + _EXT_LABELS
 
 # Merge extended code map vào PRODUCT_MAPPING gốc (đã định nghĩa ở trên)
 for k, v in _EXT_CODE_MAP.items():
-    if k not in PRODUCT_MAPPING:
+    # combo-* lấy thẳng từ Pancake nên được ghi đè bản cứng; mã SP lẻ thì giữ bản cứng.
+    if k not in PRODUCT_MAPPING or k.startswith(("combo", "copmbo")):
         PRODUCT_MAPPING[k] = v
 
 def _resolve_pancake_item(code, name):
@@ -447,6 +454,18 @@ def _load_retail_prices():
         price = entry.get("gia_ban_vnd")
         if name in PRODUCT_LIST and price:
             out[name] = float(price)
+    # Giá niêm yết user chốt (sale_price_overrides_vnd) THẮNG xlsx: xlsx Kho tổng cũ và thiếu
+    # hẳn 13 mã NOMA mới → không có dòng này thì combo NOMA bị chia đều doanh thu.
+    try:
+        ext_path = os.path.abspath(os.path.join(
+            os.path.dirname(__file__), "..", "data", "cost-source", "skus-extended.json"))
+        with open(ext_path, "r", encoding="utf-8") as f:
+            sale = json.load(f).get("sale_price_overrides_vnd", {})
+        for k, v in sale.items():
+            if not k.startswith("_") and isinstance(v, (int, float)) and v > 0:
+                out[k] = float(v)
+    except Exception as e:
+        print(f"[WARN] Khong doc duoc sale_price_overrides_vnd: {e}", file=sys.stderr)
     return out
 
 
@@ -923,27 +942,32 @@ def aggregate(orders):
             # Combo nhiều SP (vd combo-103 = 911+922) → chia theo retail price (911=199k, 922=199k → 50/50).
             # Fallback chia đều nếu thiếu retail price. Đổi từ logic cũ "idx 0 nhận full, idx sau = 0"
             # vì logic cũ làm doanh thu Noma 922 bị 0 trong combo-103, không khớp units × giá_bán.
+            # Dòng thứ 3 (tuỳ chọn) = là_quà: món tặng trong combo "... TẶNG 230" vẫn cộng số
+            # lượng để trừ giá vốn, nhưng KHÔNG được ăn phần doanh thu — khách không trả tiền nó.
+            mapping = [(e[0], e[1], bool(e[2]) if len(e) > 2 else False) for e in mapping]
             weights = [
-                RETAIL_PRICES.get(product, 0.0) * qty_per_unit
-                for product, qty_per_unit in mapping
+                0.0 if is_gift else RETAIL_PRICES.get(product, 0.0) * qty_per_unit
+                for product, qty_per_unit, is_gift in mapping
             ]
             total_weight = sum(weights)
+            paid = [i for i, e in enumerate(mapping) if not e[2]] or list(range(len(mapping)))
             n_entries = len(mapping)
-            for idx, (product, qty_per_unit) in enumerate(mapping):
+            for idx, (product, qty_per_unit, is_gift) in enumerate(mapping):
                 total_units = qty_per_unit * qty
                 if n_entries == 1:
                     revenue = float(line_rev)
                 elif total_weight > 0:
                     revenue = float(line_rev) * (weights[idx] / total_weight)
                 else:
-                    revenue = float(line_rev) / n_entries
+                    revenue = float(line_rev) / len(paid) if idx in paid else 0.0
                 bucket[product]["total"] += revenue
                 bucket[product]["units"] += total_units
                 bucket[product]["by_date"][date] = bucket[product]["by_date"].get(date, 0.0) + revenue
                 bucket[product]["units_by_date"][date] = (
                     bucket[product]["units_by_date"].get(date, 0) + total_units
                 )
-                products_in_order.add(product)
+                if not is_gift:          # quà tặng không tính là 1 đơn của SP đó
+                    products_in_order.add(product)
 
         # Đếm orders per product (tổng) + orders per product PER DATE
         for p in products_in_order:
