@@ -215,8 +215,10 @@ def detect_profit_product(name: str):
     # generic bên dưới và bị tính thành Noma 911 — 28,8tr trong 01→19/08.
     # Tên nhắc nhiều model (campaign combo "NOMA 230 + NOMA 911") thì lấy model ĐỨNG
     # TRƯỚC — đó là SP chính đang chạy, model sau chỉ là quà/bán kèm.
+    # 17/09/2026: nhận đủ 17 mã NOMA đang bán (thêm 998/110/880/686/620/890/955/692).
     _hits = []
-    for code in ("911", "922", "250", "310", "120", "130", "230", "350", "680"):
+    for code in ("911", "922", "250", "310", "120", "130", "230", "350", "680",
+                 "998", "110", "880", "686", "620", "890", "955", "692"):
         for form in (f"noma {code}", f"noma{code}"):
             i = n.find(form)
             if i >= 0:
@@ -224,10 +226,9 @@ def detect_profit_product(name: str):
                 break
     if _hits:
         return "Noma " + min(_hits)[1]
-    # Generic "NomaVietNam" / "Noma" không kèm model → mặc định Noma 911
-    # (account Phương Nam config: NOMA = Noma 911 default SKU)
-    if "nomavietnam" in n or "noma vietnam" in n or " noma " in f" {n} ":
-        return "Noma 911"
+    # GỠ 17/09/2026 (chủ dự án chốt): bỏ luật "tên chỉ có NomaVietNam / Noma chung chung →
+    # mặc định Noma 911". Tên campaign CHỈ được gán sản phẩm khi GHI RÕ tên sản phẩm; đoán
+    # mặc định là một kiểu nhận diện thứ ba và từng dồn nhầm tiền SP khác về 911.
 
     # DR
     if "dr4 plus" in n or "dr4plus" in n:
@@ -806,23 +807,15 @@ def build_data():
             # (noma120.asia) nên link ở đây không phân biệt được thị trường.
             prod = by_link or by_name
         else:
-            # CHỈ LINK quyết định sản phẩm (chủ dự án chốt 19/08/2026). Tên campaign
-            # KHÔNG còn được gán sản phẩm — người đặt tên tay, sai lúc nào không biết.
-            prod = by_link
-            if not prod:
-                # Không đọc được link. Tên campaign chỉ dùng để trả lời MỘT câu hỏi:
-                # đây là quảng cáo bán hàng hay bài tương tác chạy hộ team content?
-                #   có tên SP  → vẫn là tiền bán hàng, giữ lại dưới nhãn rõ ràng để
-                #                KHÔNG mất tiền khỏi bảng (26tr/8,3% của 01→19/08).
-                #   không có   → bài tương tác → loại như QUYẾT 31/07/2026.
-                # CHỈ LINK mới được ghi nhận chi phí (chủ dự án chốt 22/08/2026).
-                # Không đọc được link (ad Messenger/inbox, ad đã xoá creative) thì KHÔNG
-                # tính vào chi phí sản phẩm nữa. Trước đây gom vào rổ "(không đọc được
-                # link)", mà giao diện phân thương hiệu bằng luật "tên không bắt đầu bằng
-                # Noma thì là Doscom" nên CẢ RỔ rơi vào Doscom — riêng Phương Nam kỳ
-                # 01→21/08 là 44,8tr = 30% cột chi phí Doscom, đủ để lật CIR và lợi nhuận.
-                # Tiền vẫn giữ trong `ad_spend_excluded` để còn đối chiếu với Trình quản
-                # lý quảng cáo, chỉ không vào bảng sản phẩm/thương hiệu.
+            # CHỈ HAI CÁCH NHẬN DIỆN (chủ dự án chốt 17/09/2026):
+            #   1. LINK landing của quảng cáo — ưu tiên, vì mỗi landing bán đúng 1 SP.
+            #   2. TÊN SẢN PHẨM ghi trong tên campaign — dùng khi không đọc được link.
+            # Không có luật đoán nào khác. Cả hai chịu → không gán SP (ad_spend_excluded).
+            # Tài khoản QC → nhân sự giữ nguyên như ACCOUNTS.
+            prod = by_link or by_name
+            if not by_link:
+                # Không đọc được link (ad Messenger/inbox, bài đăng sẵn không gắn link…) → rơi
+                # về TÊN campaign. Liệt kê ra log để còn soát tên có ghi đúng SP không.
                 if by_name:
                     no_link.append((c.get("name", "")[:46], by_name))
             elif by_name and by_name != by_link:
@@ -864,10 +857,9 @@ def build_data():
     if from_link:
         print(f"   ↪ {len(from_link)} campaign gán SP nhờ LINK landing (tên campaign chịu): {', '.join(from_link[:6])}")
     if no_link:
-        print(f"   ↪ {len(no_link)} campaign KHÔNG đọc được link → KHÔNG tính vào chi phí SP "
-              f"(vẫn nằm trong ad_spend_excluded để đối chiếu Ads Manager):")
+        print(f"   ↪ {len(no_link)} campaign KHÔNG đọc được link → gán SP theo TÊN campaign:")
         for nm, bn in no_link[:8]:
-            print(f"       tên gợi ý '{bn}' ←  {nm}")
+            print(f"       theo tên → '{bn}' ←  {nm}")
     if conflicts:
         # Tên nói một đằng, link trỏ một nẻo. Link thắng (QUYẾT 19/08/2026) nhưng phải
         # in ra: hoặc campaign đặt tên sai, hoặc ad gắn nhầm link — cả hai đều cần sửa tay.

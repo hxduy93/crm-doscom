@@ -136,27 +136,31 @@ test("chi tiêu KHÔNG đọc được link thì KHÔNG vào bảng chi phí s�
   assert.match(src, /ad_spend_excluded/,
     "tiền không quy được vẫn phải giữ ở ad_spend_excluded để đối chiếu Ads Manager");
 });
-test("tên campaign nhận đủ model NOMA, không dồn hết về 911", { skip }, () => {
+test("tên campaign nhận đủ model NOMA, KHÔNG còn đoán mặc định 911", { skip }, () => {
+  // 17/09/2026: bỏ luật "NomaVietNam / Noma chung chung → Noma 911". Tên chỉ gán SP khi ghi rõ.
   const names = [
     "NOMA 230 · Chai Xit Duong & Danh Bon… - TEST",
     "2/8 - Noma 680 - 4 vid",
     "NOMA 350 · Chai Xit Ve Sinh Phanh Dia - TEST",
     "NOMA 120 · Dung Dich Suc Rua Binh Xa… - TEST",
     "Doscom-27/7-Noma911-Phương Nam",
-    "Doscom-NomaVietNam-17/7-Phương Nam",   // generic, không kèm model → 911 như cũ
+    "Doscom-NomaVietNam-17/7-Phương Nam",   // chung chung → KHÔNG gán
     "NOMA 230 + NOMA 911 combo",            // nhắc 2 model → lấy model đứng TRƯỚC
+    "Doscom-11/9-Noma230-PhươngNam-ghep",   // campaign 430.860đ bị loại oan 17/09/2026
+    "14/9 - Noma998 - vá lốp", "Noma 880 phủ sơn",
   ];
   assert.deepEqual(call("detect_profit_product", names), [
-    "Noma 230", "Noma 680", "Noma 350", "Noma 120", "Noma 911", "Noma 911", "Noma 230",
+    "Noma 230", "Noma 680", "Noma 350", "Noma 120", "Noma 911", null, "Noma 230",
+    "Noma 230", "Noma 998", "Noma 880",
   ]);
 });
 
-test("CHỈ link gán sản phẩm — tên campaign không còn quyền đó", { skip }, () => {
-  // Chủ dự án chốt 19/08/2026: bỏ tên, chỉ theo link quảng cáo.
+test("HAI cách nhận diện: LINK landing trước, TÊN SP trong campaign sau", { skip }, () => {
+  // Chủ dự án chốt 17/09/2026: chỉ giữ link landing + tên sản phẩm đặt trên campaign.
   const src = readFileSync(SCRIPT, "utf8");
-  assert.ok(src.includes("            prod = by_link"), "tên campaign lại được gán sản phẩm");
-  assert.ok(!src.includes("prod = by_link or by_name\n        if not prod"),
-    "vẫn còn fallback theo tên cho campaign Việt");
+  assert.match(src, /prod = by_link or by_name\r?\n\s+if not by_link:/,
+    "campaign Việt phải gán theo link, không có link thì theo tên");
+  assert.doesNotMatch(src, /"nomavietnam" in n/, "luật đoán mặc định Noma 911 quay lại");
   assert.match(src, /conflicts\.append/, "mất phần in cảnh báo vênh tên↔link");
 });
 
