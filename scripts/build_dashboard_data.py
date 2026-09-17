@@ -840,7 +840,16 @@ def build_data():
                 "product": key, "spend": round(spent), "source": "facebook",
             })
             th_names.append(c.get("name", "")[:40])
+            c["staff"] = staff
+            c["cpqc_product"] = key
+            c["cpqc_source"] = "link" if by_link else ("name" if by_name else None)
             continue
+
+        # Ghi lại kết quả gán lên chính campaign để API xuất CPQC (api-worker/) trả ĐÚNG
+        # sản phẩm CRM đang dùng — không phải tự nhận diện lại lần hai.
+        c["staff"] = staff
+        c["cpqc_product"] = prod or None
+        c["cpqc_source"] = "link" if (prod and prod == by_link) else ("name" if prod else None)
 
         if not prod:
             bucket = excluded[staff]

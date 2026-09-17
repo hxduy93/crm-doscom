@@ -1,0 +1,11 @@
+{
+  // API ĐỌC CPQC cho đồng nghiệp — Worker riêng, KHÔNG nằm sau Cloudflare Access như
+  // crm-doscom.pages.dev. Xem api-worker/README.md.
+  "name": "crm-doscom-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  "account_id": "cffb0c35f8c649872436b2087a64b7bc",
+  "workers_dev": true,
+  // Secret: API_TOKENS = JSON {"tên người": "token"} — wrangler secret put API_TOKENS --name crm-doscom-api
+  "observability": { "enabled": true }
+}
