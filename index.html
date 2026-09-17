@@ -176,6 +176,22 @@
   .bar .bt span:last-child{color:var(--text-2)}
   .track{height:9px;border-radius:99px;background:var(--muted);overflow:hidden}
   .fill{height:100%;border-radius:99px}
+  /* Chi tiết phương án (combo) của đơn đăng ký: nhãn co giãn, hai cột số bám phải với
+     BỀ RỘNG CỐ ĐỊNH để mọi dòng thẳng hàng như cột bảng — cột cuối là tỉ trọng của
+     phương án đó trên tổng đơn CỦA CHÍNH SẢN PHẨM (không phải tổng cả bảng). */
+  .dk-cb .bt{gap:10px;align-items:baseline}
+  .dk-cb .bt .nm{flex:1;min-width:0}
+  .dk-cb .bt .sl{width:150px;text-align:right;flex:none;color:var(--text-2)}
+  .dk-cb .bt .pc{width:82px;text-align:right;flex:none;font-weight:800}
+  .dk-cb .hd{display:flex;gap:10px;font-size:11px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--text-2);padding-bottom:5px;border-bottom:1px solid var(--border);margin-bottom:9px}
+  .dk-cb .hd .nm{flex:1;min-width:0}
+  .dk-cb .hd .sl{width:150px;text-align:right;flex:none}
+  .dk-cb .hd .pc{width:82px;text-align:right;flex:none}
+  @media(max-width:760px){
+    .dk-cb .bt{flex-wrap:wrap}
+    .dk-cb .bt .nm{flex:1 0 100%}
+    .dk-cb .hd{display:none}
+  }
 
   table{width:100%;border-collapse:collapse;font-size:13px}
   thead th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);font-weight:800;padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
@@ -2300,7 +2316,7 @@
   function dkLaCombo(c){ return !/^le-/.test(String(c||'')); }
 
   function dkTong(){
-    var t={don:0,khach:0,dt:0,giao:0,comboDon:0,ok:0,loi:0,dangTai:0};
+    var t={don:0,khach:0,dt:0,giao:0,ok:0,loi:0,dangTai:0};
     DK_LIST.forEach(function(sp){
       var N=DK_DATA[sp.key];
       if(!N || N.__loading){ t.dangTai++; return; }
@@ -2310,9 +2326,19 @@
       t.khach+= N.summary.unique_customers||0;
       t.dt   += N.summary.revenue||0;
       t.giao += (N.actual&&N.actual.orders_delivered)||0;
-      (N.by_combo||[]).forEach(function(c){ if(dkLaCombo(c.combo)) t.comboDon+=c.orders||0; });
     });
     return t;
+  }
+
+  // Nói ĐÚNG cái đang hỏng. Hay gặp nhất là 'access': endpoint chưa được thêm vào
+  // policy Bypass của Cloudflare Access nên trình duyệt bị đá sang trang đăng nhập.
+  function dkLyDo(N){
+    var ly=(N&&N.__ly)||'', ma=(N&&N.__ma)||'';
+    if(ly==='access') return '<span style="color:#B45309">phiên Cloudflare Access hết hạn / endpoint chưa được Bypass</span> — tải lại trang (F5), còn lỗi thì thêm đường dẫn này vào policy Bypass của Access.';
+    if(ly==='http')   return 'máy chủ trả mã <b>'+ma+'</b>.';
+    if(ly==='data')   return 'dữ liệu trả về không đúng khuôn'+(ma?' ('+ma+')':'')+'.';
+    if(ly==='net')    return 'không gọi được tới máy chủ'+(ma?' ('+ma+')':'')+'.';
+    return 'chưa rõ nguyên nhân.';
   }
 
   // Một sản phẩm = 2 dòng (Duy / Phương Nam), ô sản phẩm rowspan gộp số tổng của nó.
@@ -2322,7 +2348,7 @@
     if(!N || N.__loading)
       return '<tr><td style="vertical-align:top">'+ten+'</td><td colspan="5" style="color:var(--text-2);font-weight:600">Đang tải…</td></tr>';
     if(N.__failed || !N.summary)
-      return '<tr><td style="vertical-align:top">'+ten+'</td><td colspan="5" style="font-size:12.5px;color:#B45309;font-weight:700;line-height:1.6">⚠ Không đọc được <code>/api/'+sp.key+'/stats</code> — <span style="font-weight:600;color:var(--text-2)">đơn vẫn có thể đang về D1, đây là lỗi đọc chứ không phải “0 đơn”.</span></td></tr>';
+      return '<tr><td style="vertical-align:top">'+ten+'</td><td colspan="5" style="font-size:12.5px;color:#B45309;font-weight:700;line-height:1.6">⚠ Không đọc được <code>/api/'+sp.key+'/stats</code> — '+dkLyDo(N)+' <span style="font-weight:600;color:var(--text-2)">Đơn vẫn có thể đang về D1, đây là lỗi đọc chứ không phải “0 đơn”.</span></td></tr>';
 
     var s=N.summary, a=N.actual||{}, byS={};
     (N.by_staff||[]).forEach(function(r){ byS[r.staff]=r; });
@@ -2344,35 +2370,58 @@
     }).join('');
   }
 
-  // Chi tiết combo của từng sản phẩm — gập lại, mở ra khi cần, để bảng chính gọn.
+  // Chi tiết theo phương án (combo) của từng sản phẩm — ĐẶT TRÊN bảng tổng vì đây là
+  // thứ quyết định giá bán, còn bảng dưới chỉ chia đơn theo nhân sự.
+  //
+  // Cột "% đơn SP" = đơn của phương án đó / TỔNG ĐƠN CỦA CHÍNH SẢN PHẨM ĐÓ.
+  // Cố ý KHÔNG lấy mẫu số là tổng đơn cả bảng: câu hỏi cần trả lời là "trong những
+  // người mua NOMA 680, bao nhiêu phần trăm chọn gói này" — trộn mẫu số giữa các sản
+  // phẩm sẽ ra con số vô nghĩa (sản phẩm bán nhiều tự dưng làm nhỏ mọi tỉ lệ của sản
+  // phẩm bán ít). Vì vậy mỗi khối cộng lại đúng 100%.
   function dkChiTietCombo(){
     var kh=DK_LIST.map(function(sp){
       var N=DK_DATA[sp.key];
       if(!N || !N.summary) return '';
       var combos=(N.by_combo||[]).slice().sort(function(x,y){return y.orders-x.orders;});
       if(!combos.length) return '';
+      var tongSP=N.summary.orders||0;                       // mẫu số = tổng đơn của SP này
       var mx=Math.max.apply(null,combos.map(function(c){return c.orders;}))||1;
-      return '<div style="margin-top:13px"><div style="font-weight:800;font-size:12.5px;margin-bottom:7px"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:'+sp.mau+';margin-right:7px;vertical-align:middle"></span>'+sp.ten+'</div><div class="bars">'+
+      var comboDon=combos.reduce(function(t,c){ return t+(dkLaCombo(c.combo)?(c.orders||0):0); },0);
+      var dau='<div style="font-weight:800;font-size:12.5px;margin-bottom:9px">'+
+        '<span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:'+sp.mau+';margin-right:7px;vertical-align:middle"></span>'+sp.ten+
+        '<span style="font-weight:700;color:var(--text-2);margin-left:8px">'+num(tongSP)+' đơn · combo '+
+          (tongSP?(comboDon/tongSP*100):0).toFixed(1).replace('.',',')+'%</span></div>';
+      var hd='<div class="hd"><span class="nm">Phương án</span><span class="sl">Đơn · DT đăng ký</span><span class="pc">% đơn SP</span></div>';
+      return '<div class="dk-cb" style="margin-top:15px">'+dau+hd+'<div class="bars">'+
         combos.map(function(c){
           var isC=dkLaCombo(c.combo);
+          var pct=tongSP?(c.orders/tongSP*100):0;
           var nhan=isC? ' <span style="font-size:10px;font-weight:800;color:#8B5CF6;background:color-mix(in srgb,#8B5CF6 14%,transparent);padding:1px 6px;border-radius:999px;margin-left:4px">combo</span>'
                       : ' <span style="font-size:10px;font-weight:800;color:var(--text-2);background:var(--muted);padding:1px 6px;border-radius:999px;margin-left:4px">lẻ</span>';
-          return '<div class="bar"><div class="bt"><span>'+(c.combo_label||c.combo)+nhan+'</span><span class="tnum">'+num(c.orders)+' đơn · '+vnd(c.revenue)+'</span></div><div class="track"><div class="fill" style="width:'+(c.orders/mx*100).toFixed(1)+'%;background:'+(isC?sp.mau:'var(--text-2)')+'"></div></div></div>';
+          return '<div class="bar"><div class="bt">'+
+            '<span class="nm">'+(c.combo_label||c.combo)+nhan+'</span>'+
+            '<span class="sl tnum">'+num(c.orders)+' đơn · '+vnd(c.revenue)+'</span>'+
+            '<span class="pc tnum" title="'+num(c.orders)+' đơn / '+num(tongSP)+' đơn '+sp.ten+'">'+pct.toFixed(1).replace('.',',')+'%</span>'+
+            '</div><div class="track"><div class="fill" style="width:'+(c.orders/mx*100).toFixed(1)+'%;background:'+(isC?sp.mau:'var(--text-2)')+'"></div></div></div>';
         }).join('')+'</div></div>';
     }).join('');
     if(!kh) return '';
-    return '<details style="margin-top:14px"><summary style="cursor:pointer;font-weight:800;font-size:13px;padding:4px 0">Chi tiết theo phương án (combo) — từng sản phẩm</summary>'+kh+'</details>';
+    return '<div style="margin:2px 0 16px">'+
+      '<div style="font-weight:800;font-size:13px;margin-bottom:2px">Chi tiết theo phương án (combo) — từng sản phẩm</div>'+
+      '<div style="font-size:11.5px;color:var(--text-2);font-weight:600">Cột <b>% đơn SP</b> = phần của phương án đó trên tổng đơn của <b>chính sản phẩm đó</b> (mỗi khối cộng lại 100%), không phải trên tổng đơn cả bảng.</div>'+
+      kh+'</div>';
   }
 
   function renderDangKy(){
     var body=document.getElementById('dk-body'); if(!body) return;
     var t=dkTong();
 
-    var kpi='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:12px">'+
+    // 4 thẻ: đã BỎ "Tỉ lệ đơn combo" (gộp cả 5 sản phẩm) — tỉ lệ combo giờ đọc theo
+    // TỪNG sản phẩm ở cột "% đơn SP" của khối chi tiết bên dưới, sát thực tế hơn.
+    var kpi='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">'+
       noKpi('Đơn đăng ký', num(t.don), '#0EA5E9', 'Tổng lượt khách điền form thành công trên '+t.ok+'/'+DK_LIST.length+' landing đọc được. Đây là LEAD, chưa phải đơn chốt POS.')+
       noKpi('Khách (SĐT)', num(t.khach), '#3257E6', 'Cộng số khách theo SĐT duy nhất của TỪNG sản phẩm. Một người đăng ký 2 sản phẩm khác nhau sẽ được tính 2 — mỗi landing chỉ loại trùng trong phạm vi của nó.')+
       noKpi('DT đăng ký', vnd(t.dt), '#16A34A', 'Doanh thu DỰ KIẾN = giá combo × số đơn đăng ký. CHƯA phải thực thu — đơn COD còn có thể bị từ chối nhận.')+
-      noKpi('Tỉ lệ đơn combo', (t.don?(t.comboDon/t.don*100):0).toFixed(1).replace('.',',')+'%', '#8B5CF6', num(t.comboDon)+' đơn combo / '+num(t.don)+' tổng đơn. Combo = mọi phương án trừ mua lẻ (mã "le-…").')+
       noKpi('Đã giao (POS)', num(t.giao)+' · '+(t.don?(t.giao/t.don*100):0).toFixed(1).replace('.',',')+'%', '#F59E0B', 'Số đơn đã giao thành công (đối chiếu POS Pancake) + tỉ lệ chốt = đã giao / đơn đăng ký.')+
       '</div>';
 
@@ -2382,9 +2431,9 @@
       '<td class="num tnum">'+num(t.don)+'</td><td class="num tnum">'+vnd(t.dt)+'</td><td class="num">100%</td></tr>';
     var canhBao=t.loi? '<div style="font-size:11.5px;color:#8a5a00;font-weight:700;margin-top:9px">⚠ '+t.loi+' sản phẩm không đọc được số — dòng Tổng đang THIẾU phần của các sản phẩm đó.</div>' : '';
 
-    body.innerHTML=kpi+
+    body.innerHTML=kpi+dkChiTietCombo()+
       '<table><thead><tr><th>Sản phẩm</th><th>Landing (nguồn)</th><th>Nhân sự</th><th class="num">Đơn ĐK</th><th class="num">DT đăng ký</th><th class="num">Tỉ trọng</th></tr></thead><tbody>'+
-      rows+tongRow+'</tbody></table>'+canhBao+dkChiTietCombo();
+      rows+tongRow+'</tbody></table>'+canhBao;
   }
 
   function loadDangKy(from,to){
@@ -2392,11 +2441,21 @@
     DK_LIST.forEach(function(sp){ DK_DATA[sp.key]={__loading:true}; });
     renderDangKy();
 
+    // redirect:'manual' để PHÂN BIỆT được ba kiểu hỏng, thay vì gộp hết thành "không đọc
+    // được". Cloudflare Access chặn bằng 302 sang trang đăng nhập khác origin: fetch mặc
+    // định đi theo rồi chết vì CORS, lỗi trả về chỉ là "Failed to fetch" — nhìn y hệt
+    // server sập. Với redirect:'manual' thì lần chuyển hướng đó thành response
+    // type='opaqueredirect' (status 0) → biết chắc là hết phiên đăng nhập, bảo người dùng
+    // tải lại trang thay vì đi tìm lỗi trong D1.
     DK_LIST.forEach(function(sp){
-      fetch('/api/'+sp.key+'/stats?from='+from+'&to='+to,{cache:'no-store'})
-        .then(function(r){ return r.ok?r.json():null; })
-        .then(function(N){ dkNhan(sp.key, (N&&N.summary)?N:{__failed:true}); })
-        .catch(function(){ dkNhan(sp.key, {__failed:true}); });
+      fetch('/api/'+sp.key+'/stats?from='+from+'&to='+to,{cache:'no-store',redirect:'manual'})
+        .then(function(r){
+          if(r.type==='opaqueredirect'||r.status===0) return {__failed:true,__ly:'access'};
+          if(!r.ok) return {__failed:true,__ly:'http',__ma:r.status};
+          return r.json().then(function(N){ return (N&&N.summary)?N:{__failed:true,__ly:'data',__ma:(N&&N.error)||''}; });
+        })
+        .then(function(N){ dkNhan(sp.key, N); })
+        .catch(function(e){ dkNhan(sp.key, {__failed:true,__ly:'net',__ma:String((e&&e.message)||e).slice(0,80)}); });
     });
 
     // Lead landing khác (Máy dò D1, Ghi âm DR1) — nguồn riêng, chỉ dùng cho cột Lead

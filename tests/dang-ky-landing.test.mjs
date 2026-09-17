@@ -69,7 +69,6 @@ test("cộng tổng đủ bốn sản phẩm", () => {
   assert.equal(t.khach, 19);
   assert.equal(t.dt, 2000);
   assert.equal(t.giao, 7);
-  assert.equal(t.comboDon, 12, "combo = mọi phương án trừ mã 'le-…'");
   assert.equal(t.ok, 4);
   assert.equal(t.loi, 0);
 });
@@ -85,4 +84,35 @@ test("endpoint lỗi KHÔNG bị tính thành 0 đơn — chỉ đếm vào loi"
   assert.equal(t.ok, 2);
   assert.equal(t.loi, 1, "sản phẩm lỗi phải được đếm riêng để bảng cảnh báo thiếu số");
   assert.equal(t.dangTai, 1);
+});
+
+// 17/09/2026 (chủ dự án): bỏ thẻ KPI "Tỉ lệ đơn combo" gộp cả 5 sản phẩm, thay bằng cột
+// "% đơn SP" trong khối chi tiết — tỉ trọng của TỪNG phương án trên tổng đơn của CHÍNH
+// sản phẩm đó. Hai test dưới canh đúng chỗ dễ sai lại: phân loại combo/lẻ và MẪU SỐ.
+test("dkLaCombo: chỉ mã 'le-…' là mua lẻ", () => {
+  const laCombo = new Function(`${comboFn[0]}
+    return dkLaCombo;`)();
+  for (const ma of ["le-911", "le-680", "le-350", "le-230", "le-120"]) {
+    assert.equal(laCombo(ma), false, `${ma} phải là mua lẻ`);
+  }
+  for (const ma of ["combo-2x911", "combo-911-922", "combo-230-680", "combo-120-130"]) {
+    assert.equal(laCombo(ma), true, `${ma} phải là combo`);
+  }
+});
+
+test("% đơn SP lấy mẫu số là tổng đơn CỦA SẢN PHẨM, mỗi khối cộng lại 100%", () => {
+  const fn = html.match(/function dkChiTietCombo\(\)\{[\s\S]*?\n  \}/);
+  assert.ok(fn, "không trích được dkChiTietCombo từ index.html");
+  assert.match(fn[0], /var tongSP=N\.summary\.orders\|\|0;/,
+    "mẫu số phải là tổng đơn của chính sản phẩm, KHÔNG phải tổng đơn cả bảng");
+  assert.match(fn[0], /c\.orders\/tongSP\*100/, "công thức % đơn SP sai mẫu số");
+  // Chỉ canh THẺ KPI của bảng đơn đăng ký (noKpi). Báo cáo tuần ở mục "3. Noma911 —
+  // Tỉ lệ combo" vẫn có chữ này một cách hợp lệ, không được bắt nhầm.
+  assert.doesNotMatch(html, /noKpi\('Tỉ lệ đơn combo'/, "thẻ KPI gộp 5 sản phẩm đã bỏ, không được dựng lại");
+
+  // Cộng tay theo đúng công thức: 3 phương án của một sản phẩm 20 đơn phải ra 100%.
+  const combos = [{ orders: 10 }, { orders: 6 }, { orders: 4 }];
+  const tongSP = 20;
+  const tong = combos.reduce((t, c) => t + Math.round(c.orders / tongSP * 1000) / 10, 0);
+  assert.equal(tong, 100);
 });
