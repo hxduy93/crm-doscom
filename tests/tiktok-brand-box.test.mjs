@@ -30,6 +30,9 @@ function napLogic(videos) {
   vm.createContext(ctx);
   vm.runInContext([
     layKhoi("var BRANDS=[", "[", "]") + ";",
+    // 18/09/2026: spKeyOf gom theo MÃ nên cần kèm 2 hàm phụ maTu/maSP.
+    layKhoi("function maTu(", "{", "}"),
+    layKhoi("function maSP(", "{", "}"),
     layKhoi("function spKeyOf(", "{", "}"),
     layKhoi("function brandOf(", "{", "}"),
     layKhoi("function gomTheoBrand(", "{", "}"),
@@ -74,14 +77,29 @@ test("gom sản phẩm vào đúng hộp brand, cộng đủ GMV, xếp GMV gi�
   assert.equal(noma.sp.length, 2);
   assert.equal(noma.n, 3);
   assert.equal(noma.gmv, 25_600_000);
-  assert.equal(noma.sp[0].name, "NOMA 911 · Dung Dịch Tẩy Ố Kính Ô tô");   // GMV cao nhất đứng đầu
+  // 18/09/2026: gom theo MÃ nên tên nhóm là "NOMA 911", không kèm mô tả — hai SKU
+  // "NOMA 911 · Dung Dịch…" và "NOMA 911 · Có Quà Tặng" phải nằm chung một dòng.
+  assert.equal(noma.sp[0].name, "NOMA 911");   // GMV cao nhất đứng đầu
   assert.equal(noma.sp[0].n, 2);
   assert.equal(noma.sp[0].gmv, 22_600_000);
 
   assert.equal(doscom.sp.length, 2);
   assert.equal(doscom.gmv, 5_900_000);
-  assert.equal(doscom.sp[0].name, "DR1 · Thiết Bị Ghi Âm Doscom");
+  assert.equal(doscom.sp[0].name, "DR1");
   assert.equal(khac.sp.length, 0);
+});
+
+test("hai SKU cùng mã gom làm MỘT dòng", () => {
+  const { gomTheoBrand } = napLogic([
+    v("NOMA 911 · Dung Dịch Tẩy Ố Kính Ô tô", "Noma Auto", 1_000_000),
+    v("NOMA 911 · Có Quà Tặng", "Noma Auto", 2_000_000),
+    v("NOMA 911+922 · Combo Chăm Sóc Kính", "Noma Auto", 500_000),
+  ]);
+  const { noma } = gomTheoBrand().theoBrand;
+  assert.equal(noma.sp.length, 2, "911 và 911+922 là hai mã khác nhau, nhưng 2 SKU của 911 phải gộp");
+  const sp911 = noma.sp.find((x) => x.name === "NOMA 911");
+  assert.equal(sp911.n, 2);
+  assert.equal(sp911.gmv, 3_000_000);
 });
 
 test("brand của 1 sản phẩm theo SỐ PHIẾU, một dòng lẻ thiếu tên không kéo cả nhóm đi", () => {

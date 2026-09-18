@@ -791,7 +791,10 @@
           #view-tiktok .tt-bnum div b{font-size:13.5px;font-weight:800}
           #view-tiktok .tt-caret{color:var(--tt-mut);font-size:12px;transition:transform .18s}
           #view-tiktok .tt-brand.open .tt-caret{transform:rotate(180deg)}
-          #view-tiktok .tt-blist{border-top:1px solid var(--tt-line);padding:11px 14px 13px;display:flex;flex-wrap:wrap;gap:7px}
+          /* Đóng/mở bằng LỚP .open. Trước đây dựa vào thuộc tính `hidden`, mà quy tắc
+             display:flex ở đây đè lên nó nên hộp không bao giờ thu lại được. */
+          #view-tiktok .tt-blist{border-top:1px solid var(--tt-line);padding:11px 14px 13px;display:none;flex-wrap:wrap;gap:7px}
+          #view-tiktok .tt-brand.open .tt-blist{display:flex}
           #view-tiktok .tt-sp{display:flex;align-items:center;gap:8px;border:1px solid var(--tt-line);background:var(--surface-2,#EEF2FA);
             border-radius:11px;padding:6px 11px;cursor:pointer;font:700 12.5px var(--font);color:var(--text)}
           #view-tiktok .tt-sp:hover{border-color:var(--primary)}
@@ -3296,7 +3299,14 @@
   // Dựng TỪ dữ liệu đang có chứ không hard-code: shop thêm/bớt SKU thì danh sách tự theo.
   // Xếp theo GMV giảm dần — doanh thu lệch rất mạnh về vài SKU, xếp theo tên sẽ đẩy
   // sản phẩm đáng bấm nhất xuống cuối.
-  function spKeyOf(v){ return v && (v.product_key || String(v.product_short||v.product||'').toLowerCase()) || ''; }
+  // Gom theo MÃ sản phẩm, không theo mô tả: "NOMA 911 · Kem Tẩy Ố Kính…",
+  // "NOMA 911 · Có Quà Tặng" và "NOMA 911 · Dung Dịch…" là MỘT sản phẩm — trước đây
+  // tách thành ba dòng nên danh sách nhìn như bị trùng.
+  function maTu(t){ t=String(t||'').trim(); return t?t.split('·')[0].trim():''; }
+  function maSP(v){ return maTu(v&&(v.product_short||v.product)) || '(chưa rõ sản phẩm)'; }
+  // Vẫn ưu tiên product_key (khoá do API đặt) để dòng MẤT tên sản phẩm không tách khỏi
+  // nhóm của nó — chỉ rút product_key về phần mã.
+  function spKeyOf(v){ return (maTu(v&&v.product_key) || maSP(v)).toLowerCase(); }
 
   var BRANDS=[
     { id:'noma',   ten:'NOMA',   mo:'Noma Auto' },
@@ -3325,7 +3335,9 @@
     var gom=new Map();
     lastVideos.forEach(function(v){
       var k=spKeyOf(v);
-      var a=gom.get(k)||{ key:k, name:v.product_short||v.product||'(chưa rõ sản phẩm)', gmv:0, n:0, phieu:{} };
+      var a=gom.get(k)||{ key:k, name:maSP(v), gmv:0, n:0, phieu:{} };
+      // Dòng đầu tiên của nhóm có thể là dòng mất tên → tên nhóm lấy theo dòng có tên.
+      if(a.name==='(chưa rõ sản phẩm)' && maSP(v)!=='(chưa rõ sản phẩm)') a.name=maSP(v);
       a.gmv+=Number(v.gmv)||0; a.n++;
       var b=brandOf(v); a.phieu[b]=(a.phieu[b]||0)+1;
       gom.set(k,a);
