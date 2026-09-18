@@ -674,14 +674,26 @@
         </style>
       </div><!-- /view-health -->
       <div class="view" id="view-tiktok">
-        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
-          <div>
-            <h2 style="margin:0 0 4px">🛍️ TikTok Shop</h2>
-            <p style="margin:0;color:var(--text-2);font-size:13px;max-width:760px">Video KOC 3 shop TikTok (Noma Auto · Doscom Mart · Bao Mat Doscom), chia thành <b>2 ô brand</b> — bấm vào ô để xổ danh sách sản phẩm, chọn sản phẩm để lọc video. Gộp <b>2 nguồn</b>: Lark Base <b>Hiep_Tiktokshop_Auto</b> + kho <b>TikTok Shop API</b> (sale-report). Video trùng được khử theo mã video, mỗi chỉ số lấy <b>số đo cao nhất</b> giữa hai nguồn.</p>
-          </div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <h2 style="margin:0">🛍️ TikTok Shop</h2>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span id="tt-moc" class="tt-sub"></span>
             <button class="btn-cl" id="tt-refresh" type="button">↻ Tải lại</button>
           </div>
+        </div>
+
+        <div class="tt-panel" style="margin-bottom:14px">
+          <div class="tt-growth-head">
+            <div class="tt-seg" id="tt-seg" role="tablist">
+              <button type="button" data-moc="ngay" aria-pressed="true">Ngày</button>
+              <button type="button" data-moc="tuan" aria-pressed="false">Tuần</button>
+              <button type="button" data-moc="thang" aria-pressed="false">Tháng</button>
+            </div>
+            <span id="tt-growth-sub" class="tt-sub"></span>
+          </div>
+          <div id="tt-kpi" class="tt-kpis"></div>
+          <div id="tt-chart" class="tt-chart"></div>
+          <div id="tt-shops" class="tt-shops"></div>
         </div>
 
         <!-- Đã bỏ HẲN 4 khối tổng quan (thẻ KPI, GMV theo nguồn, Theo shop, Theo ngày)
@@ -703,11 +715,6 @@
               <option value="30">30 ngày</option>
             </select>
           </div>
-          <p style="margin:0 0 10px;color:var(--text-2);font-size:12.5px;line-height:1.5">
-            Tick video muốn chạy Facebook Ads → bấm <b>Chạy Ads luôn</b> → chọn <b>ai chạy</b> trong popup → video được ghi tên người đó, người kia không tick được nữa (tránh 2 người chạy trùng 1 video). Bấm nhầm thì <b>gỡ được trong 1 phút</b>.
-            <br>Muốn tự tải file: bấm <b>Tải video về máy</b> → chọn thư mục lưu → mở <b>Tạo Ads tự động</b> chọn đúng thư mục đó. Chrome không cho chọn ổ đĩa gốc <code>C:\</code>, <code>D:\</code> hay thư mục hệ thống — phải chọn <b>một thư mục con</b> (vd <code>D:\video-ads</code>).
-            <br>Khai báo kênh của công ty vào ô dưới để phân biệt với creator ngoài (video của creator cần xin phép trước khi chạy quảng cáo).
-          </p>
           <div id="tt-brands" class="tt-brands"></div>
           <div id="tt-filters" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
             <select class="btn-cl" id="tt-sort" style="padding:6px 9px;font-size:12px">
@@ -774,6 +781,38 @@
           #view-tiktok .tt-all.on{background:var(--primary,#3b82f6);border-color:transparent;color:#fff}
           #view-tiktok .tt-all .n{font-weight:600;opacity:.66;margin-left:5px}
           #view-tiktok .tt-sub{font-size:11.5px;font-weight:600;color:var(--text-2)}
+          /* ── Khối tăng trưởng ────────────────────────────────────────────────
+             Một chuỗi số duy nhất (đơn hàng) nên cột dùng đúng MỘT màu — không có
+             chuyện tô mỗi cột một màu. GMV không vẽ chung trục với đơn (hai đơn vị
+             khác nhau), nó nằm ở thẻ số và trong tooltip. */
+          #view-tiktok .tt-growth-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+          #view-tiktok .tt-seg{display:inline-flex;background:var(--muted);border-radius:999px;padding:3px;gap:2px}
+          #view-tiktok .tt-seg button{border:0;background:transparent;border-radius:999px;padding:6px 16px;cursor:pointer;
+            font:800 13px var(--font);color:var(--text-2)}
+          #view-tiktok .tt-seg button[aria-pressed="true"]{background:var(--surface);color:var(--primary);box-shadow:var(--shadow-sm)}
+          #view-tiktok .tt-seg button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+          #view-tiktok .tt-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+          #view-tiktok .tt-kpi{background:var(--muted);border-radius:12px;padding:10px 12px}
+          #view-tiktok .tt-kpi .k{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text-2)}
+          #view-tiktok .tt-kpi .v{font-size:22px;font-weight:900;letter-spacing:-.02em;margin-top:2px}
+          #view-tiktok .tt-kpi .d{font-size:12px;font-weight:800;margin-top:2px}
+          #view-tiktok .up{color:#0F7B4F} #view-tiktok .down{color:#C0342F} #view-tiktok .flat{color:var(--text-2)}
+          #view-tiktok .tt-chart{position:relative;margin-bottom:14px}
+          #view-tiktok .tt-chart svg{width:100%;height:210px;display:block;overflow:visible}
+          #view-tiktok .tt-chart .bar{fill:var(--primary);transition:opacity .12s}
+          #view-tiktok .tt-chart .bar.dim{opacity:.32}
+          #view-tiktok .tt-chart .grid{stroke:var(--border);stroke-width:1}
+          #view-tiktok .tt-chart .lbl{font:600 10.5px var(--font);fill:var(--text-2)}
+          #view-tiktok .tt-chart .val{font:800 11px var(--font);fill:var(--text)}
+          #view-tiktok .tt-tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border);
+            border-radius:10px;padding:8px 10px;font-size:12px;box-shadow:var(--shadow);white-space:nowrap;z-index:5;display:none}
+          #view-tiktok .tt-tip b{font-size:13px}
+          #view-tiktok .tt-shops{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px}
+          #view-tiktok .tt-shop{border:1px solid var(--border);border-radius:12px;padding:10px 12px}
+          #view-tiktok .tt-shop .n{font-size:13px;font-weight:900}
+          #view-tiktok .tt-shop .r{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-top:4px;font-size:12.5px}
+          #view-tiktok .tt-shop .r span{color:var(--text-2);font-weight:700}
+          #view-tiktok .tt-shop .r b{font-weight:800}
           #view-tiktok .tt-scroll{max-height:340px;overflow:auto}
           #view-tiktok table{width:100%;border-collapse:collapse;font-size:13px}
           #view-tiktok th{text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-2);padding:6px 8px;position:sticky;top:0;background:var(--bg-1,#fff)}
@@ -3824,9 +3863,159 @@
     if(lastVideos.length) renderVideos();   // vẽ lại nhãn kênh nhà/creator
   }
 
-  nav.addEventListener('click',function(){ if(loaded)return; loaded=true; loadVideos(); loadMarks(); });
+  // ── TĂNG TRƯỞNG ĐƠN HÀNG ───────────────────────────────────────────────────
+  // Nguồn: /api/lark/tiktok (bảng shop_doanh_thu_theo_ngay của Lark). Bảng này do
+  // automation ngoài ghi, mỗi ngày ghi số của NGÀY HÔM TRƯỚC — nên kỳ mới nhất luôn có
+  // thể chưa trọn, phải đánh dấu chứ không để người xem tưởng doanh số sụt.
+  var segEl=document.getElementById('tt-seg'), kpiEl=document.getElementById('tt-kpi'),
+      chartEl=document.getElementById('tt-chart'), shopsEl=document.getElementById('tt-shops'),
+      growthSub=document.getElementById('tt-growth-sub'), mocEl=document.getElementById('tt-moc');
+  var DAILY=[], MOC=null, MOCK='ngay';
+  var SO_KY={ngay:14,tuan:10,thang:6};
+
+  function dauTuan(iso){                       // thứ Hai của tuần chứa ngày đó
+    var d=new Date(iso+'T00:00:00Z'), th=(d.getUTCDay()+6)%7;
+    d.setUTCDate(d.getUTCDate()-th); return d.toISOString().slice(0,10);
+  }
+  function khoaKy(iso){
+    if(MOCK==='thang') return iso.slice(0,7);
+    if(MOCK==='tuan') return dauTuan(iso);
+    return iso;
+  }
+  function nhanKy(k){
+    if(MOCK==='thang'){ var p=k.split('-'); return 'th'+(+p[1])+'/'+p[0].slice(2); }
+    return dm(k);
+  }
+  function cuoiKy(k){
+    if(MOCK==='thang'){ var y=+k.slice(0,4), m=+k.slice(5,7); return new Date(Date.UTC(y,m,0)).toISOString().slice(0,10); }
+    if(MOCK==='tuan'){ var d=new Date(k+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+6); return d.toISOString().slice(0,10); }
+    return k;
+  }
+
+  // Gom ngày thành kỳ, chỉ giữ SO_KY kỳ gần nhất để cột không bị bóp nhỏ.
+  function gomKy(){
+    var m=new Map();
+    DAILY.forEach(function(d){
+      var k=khoaKy(d.date);
+      var e=m.get(k);
+      if(!e){ e={key:k,orders:0,gmv:0,revenue:0,visitors:0,shops:{},ngay:0}; m.set(k,e); }
+      e.orders+=d.orders||0; e.gmv+=d.gmv||0; e.revenue+=d.revenue||0; e.visitors+=d.visitors||0; e.ngay++;
+      var ct=d.shops_chi_tiet||{};
+      Object.keys(ct).forEach(function(sh){
+        var a=e.shops[sh]; if(!a){ a={orders:0,gmv:0}; e.shops[sh]=a; }
+        a.orders+=ct[sh].orders||0; a.gmv+=ct[sh].gmv||0;
+      });
+    });
+    var ds=[];
+    m.forEach(function(v){ ds.push(v); });
+    ds.sort(function(a,b){ return a.key<b.key?-1:1; });
+    return ds.slice(-SO_KY[MOCK]);
+  }
+
+  function pct(a,b){ return b?((a-b)/b*100):null; }
+  function nhanTang(p){
+    if(p===null||p===undefined||!isFinite(p)) return '<span class="flat">—</span>';
+    var cls=p>0.5?'up':(p<-0.5?'down':'flat'), mui=p>0.5?'▲':(p<-0.5?'▼':'■');
+    return '<span class="'+cls+'">'+mui+' '+(p>0?'+':'')+p.toFixed(1).replace('.',',')+'%</span>';
+  }
+  function the(k,v,d){ return '<div class="tt-kpi"><div class="k">'+k+'</div><div class="v">'+v+'</div><div class="d">'+(d||'')+'</div></div>'; }
+  function tien(n){ n=Number(n)||0; return n>=1e9?(n/1e9).toFixed(2).replace('.',',')+' tỷ':(n/1e6).toFixed(1).replace('.',',')+'tr'; }
+
+  function veTangTruong(){
+    var ks=gomKy();
+    if(!ks.length){ kpiEl.innerHTML=''; chartEl.innerHTML='<div class="tt-empty">Chưa có dữ liệu.</div>'; shopsEl.innerHTML=''; return; }
+    var nay=ks[ks.length-1], truoc=ks.length>1?ks[ks.length-2]:null;
+    var chuaTron=MOC&&cuoiKy(nay.key)>MOC;
+    var ten={ngay:'Ngày',tuan:'Tuần',thang:'Tháng'}[MOCK];
+
+    growthSub.textContent=ten+' gần nhất: '+nhanKy(nay.key)+(chuaTron?' · chưa trọn kỳ':'');
+    kpiEl.innerHTML=
+      the('Đơn '+ten.toLowerCase(), vnd(nay.orders), truoc?nhanTang(pct(nay.orders,truoc.orders))+' so kỳ trước':'')+
+      the('GMV', tien(nay.gmv), truoc?nhanTang(pct(nay.gmv,truoc.gmv))+' so kỳ trước':'')+
+      the('Khách vào shop', vnd(nay.visitors), truoc?nhanTang(pct(nay.visitors,truoc.visitors))+' so kỳ trước':'')+
+      the('Đơn / 100 khách', nay.visitors?(nay.orders/nay.visitors*100).toFixed(1).replace('.',','):'—',
+          (truoc&&truoc.visitors&&nay.visitors)?nhanTang(pct(nay.orders/nay.visitors,truoc.orders/truoc.visitors))+' so kỳ trước':'');
+
+    veCot(ks,chuaTron);
+    veShop(nay,truoc);
+  }
+
+  // Cột đơn hàng: MỘT chuỗi số nên một màu duy nhất. GMV KHÔNG vẽ chung trục (khác đơn
+  // vị) — nó nằm ở thẻ số và trong tooltip.
+  function veCot(ks,chuaTron){
+    var W=Math.max(ks.length*54,320), H=210, TOP=26, BOT=30;
+    var max=1;
+    ks.forEach(function(k){ if(k.orders>max) max=k.orders; });
+    var gap=W/ks.length, bw=Math.min(38,gap-12);
+    var out=['<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Đơn hàng theo kỳ">'];
+    [0,0.5,1].forEach(function(t){
+      var y=(TOP+(H-TOP-BOT)*(1-t)).toFixed(1);
+      out.push('<line class="grid" x1="0" y1="'+y+'" x2="'+W+'" y2="'+y+'"/>');
+    });
+    ks.forEach(function(k,i){
+      var h=Math.max(2,(H-TOP-BOT)*(k.orders/max)), x=i*gap+(gap-bw)/2, y=H-BOT-h, cuoi=i===ks.length-1;
+      out.push('<rect class="bar'+(cuoi&&chuaTron?' dim':'')+'" data-i="'+i+'" x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+
+               '" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="4"></rect>');
+      if(cuoi||i===0||k.orders===max)
+        out.push('<text class="val" x="'+(x+bw/2).toFixed(1)+'" y="'+(y-7).toFixed(1)+'" text-anchor="middle">'+vnd(k.orders)+'</text>');
+      out.push('<text class="lbl" x="'+(x+bw/2).toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle">'+nhanKy(k.key)+'</text>');
+    });
+    out.push('</svg><div class="tt-tip" id="tt-tip"></div>');
+    chartEl.innerHTML=out.join('');
+
+    var tip=document.getElementById('tt-tip');
+    Array.prototype.forEach.call(chartEl.querySelectorAll('rect.bar'),function(r){
+      r.addEventListener('mouseenter',function(){
+        var i=+r.getAttribute('data-i'), k=ks[i], tr=ks[i-1];
+        tip.innerHTML='<b>'+nhanKy(k.key)+'</b><br>'+vnd(k.orders)+' đơn'+
+          (tr?' · '+nhanTang(pct(k.orders,tr.orders)):'')+'<br>GMV '+tien(k.gmv)+' · '+vnd(k.visitors)+' khách';
+        tip.style.display='block';
+      });
+      r.addEventListener('mousemove',function(e){
+        var b=chartEl.getBoundingClientRect();
+        tip.style.left=Math.min(b.width-160,Math.max(0,e.clientX-b.left-70))+'px';
+        tip.style.top=Math.max(0,e.clientY-b.top-66)+'px';
+      });
+      r.addEventListener('mouseleave',function(){ tip.style.display='none'; });
+    });
+  }
+
+  function veShop(nay,truoc){
+    var tens=Object.keys(nay.shops).sort(function(a,b){ return nay.shops[b].orders-nay.shops[a].orders; });
+    shopsEl.innerHTML=tens.map(function(sh){
+      var a=nay.shops[sh], b=truoc&&truoc.shops[sh];
+      return '<div class="tt-shop"><div class="n">'+esc(sh)+'</div>'+
+        '<div class="r"><span>Đơn</span><b>'+vnd(a.orders)+' '+nhanTang(b?pct(a.orders,b.orders):null)+'</b></div>'+
+        '<div class="r"><span>GMV</span><b>'+tien(a.gmv)+' '+nhanTang(b?pct(a.gmv,b.gmv):null)+'</b></div></div>';
+    }).join('');
+  }
+
+  function loadTangTruong(){
+    chartEl.innerHTML='<div class="tt-empty">Đang tải…</div>';
+    return fetch('/api/lark/tiktok?days=0',{credentials:'same-origin'})
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if(!j.ok) throw new Error(j.error||'lỗi');
+        DAILY=(j.daily||[]).slice().sort(function(a,b){ return a.date<b.date?-1:1; });
+        MOC=(j.range||{}).data_to||null;
+        if(mocEl) mocEl.textContent=MOC?'Dữ liệu tới '+dm(MOC):'';
+        veTangTruong();
+      })
+      .catch(function(e){ chartEl.innerHTML=''; errBox(chartEl,e.message); });
+  }
+
+  segEl.addEventListener('click',function(e){
+    var b=e.target.closest('button[data-moc]'); if(!b) return;
+    MOCK=b.getAttribute('data-moc');
+    Array.prototype.forEach.call(segEl.querySelectorAll('button'),function(x){
+      x.setAttribute('aria-pressed', x===b?'true':'false');
+    });
+    veTangTruong();
+  });
+
+  nav.addEventListener('click',function(){ if(loaded)return; loaded=true; loadTangTruong(); loadVideos(); loadMarks(); });
   vidDaysSel.addEventListener('change',loadVideos);
-  refreshBtn.addEventListener('click',function(){ loadVideos(); loadMarks(); });
+  refreshBtn.addEventListener('click',function(){ loadTangTruong(); loadVideos(); loadMarks(); });
   // Lọc/sắp xếp chạy trên dữ liệu đã tải — không gọi lại API.
   sortSel.addEventListener('change',renderVideos);
   fCampSel.addEventListener('change',renderVideos);

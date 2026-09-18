@@ -79,9 +79,13 @@ export async function onRequestGet(context) {
         gmv_other: num(f["GMV từ nguồn khác"]),
       };
 
-      if (!byDate.has(date)) byDate.set(date, { date, shops: {}, ...blank() });
+      if (!byDate.has(date)) byDate.set(date, { date, shops: {}, shops_chi_tiet: {}, ...blank() });
       addInto(byDate.get(date), row);
       byDate.get(date).shops[shop] = (byDate.get(date).shops[shop] || 0) + row.gmv;
+      // `shops` chỉ có GMV (giữ nguyên cho phần đọc cũ). Khối tăng trưởng cần cả SỐ ĐƠN
+      // theo shop để so kỳ này với kỳ trước, nên thêm bản chi tiết bên cạnh.
+      const ct = byDate.get(date).shops_chi_tiet[shop] || (byDate.get(date).shops_chi_tiet[shop] = { gmv: 0, revenue: 0, orders: 0 });
+      ct.gmv += row.gmv; ct.revenue += row.revenue; ct.orders += row.orders;
 
       if (!byShop.has(shop)) byShop.set(shop, { shop, days: 0, ...blank() });
       addInto(byShop.get(shop), row);
