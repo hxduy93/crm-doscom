@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ROAS mục tiêu · CRM Doscom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap">
+<style>
+  :root{
+    --bg:#F5F7FB; --surface:#FFFFFF; --surface-2:#EEF2FA; --line:#E1E7F2;
+    --text:#111A2E; --text-2:#55607B; --primary:#3257E6; --primary-soft:#E7ECFD;
+    --good:#0F7B4F; --good-soft:#E3F5EC; --bad:#C0342F; --bad-soft:#FBEAE9;
+    --warn:#9A5B00; --warn-soft:#FBF0DE;
+    --font:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.6;
+       padding:20px 16px 56px;font-variant-numeric:tabular-nums}
+  .wrap{max-width:1140px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+  h1{margin:0;font-size:24px;font-weight:900}
+  h2{margin:0 0 4px;font-size:18px;font-weight:900}
+  p{margin:0;max-width:78ch}
+  .sub{color:var(--text-2);font-size:14px}
+  .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--surface);border:1px solid var(--line);
+       border-radius:14px;padding:12px 14px}
+  .bar label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;font-weight:800;color:var(--text-2);text-transform:uppercase;letter-spacing:.04em}
+  .bar input{font:700 14px var(--font);color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:7px 9px}
+  .bar button{font:800 13.5px var(--font);color:#fff;background:var(--primary);border:0;border-radius:9px;padding:9px 16px;cursor:pointer}
+  .bar button.ghost{color:var(--text-2);background:transparent;border:1px solid var(--line)}
+  .bar button:focus-visible,.bar input:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+  .stamp{margin-left:auto;font-size:12.5px;color:var(--text-2);font-weight:700}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:11px}
+  .card .top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .card h3{margin:0;font-size:17px;font-weight:900}
+  .be{font-size:12px;font-weight:800;color:var(--text-2);text-align:right}
+  .be b{color:var(--text);font-size:15px}
+  .dial{display:flex;flex-direction:column;gap:4px}
+  .dial .row{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .dial label{font-size:11.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text-2)}
+  .dial output{font-size:26px;font-weight:900}
+  input[type=range]{width:100%;accent-color:var(--primary)}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .kpi{background:var(--surface-2);border-radius:10px;padding:8px 11px}
+  .kpi span{display:block;font-size:11px;font-weight:800;color:var(--text-2);letter-spacing:.03em}
+  .kpi b{font-size:16.5px;font-weight:800}
+  .verdict{border-radius:10px;padding:8px 11px;font-size:13px;font-weight:800}
+  .v-good{background:var(--good-soft);color:var(--good)}
+  .v-bad{background:var(--bad-soft);color:var(--bad)}
+  .v-warn{background:var(--warn-soft);color:var(--warn)}
+  details{border-top:1px dashed var(--line);padding-top:8px}
+  summary{cursor:pointer;font-size:12px;font-weight:800;color:var(--text-2)}
+  .fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+  .fields label{display:flex;flex-direction:column;gap:3px;font-size:11px;font-weight:800;color:var(--text-2)}
+  .fields input{font:700 13.5px var(--font);color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;width:100%}
+  .note{font-size:11.5px;color:var(--text-2);font-weight:700;margin-top:8px}
+  .tbl{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:720px}
+  th,td{padding:8px 11px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  thead th{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:var(--text-2);background:var(--surface-2)}
+  tr:last-child td{border-bottom:0}
+  tr.be-row td{background:var(--bad-soft)}
+  tr.now td{background:var(--primary-soft);font-weight:800}
+  .pos{color:var(--good)} .neg{color:var(--bad)}
+  .msg{background:var(--warn-soft);border-left:3px solid var(--warn);border-radius:0 10px 10px 0;padding:11px 13px;font-size:13.5px;font-weight:700}
+  @media (max-width:520px){.kpis{grid-template-columns:1fr}.fields{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1>ROAS mục tiêu theo sản phẩm</h1>
+    <p class="sub">Đặt ROAS mục tiêu bao nhiêu thì còn lãi. Số lấy thẳng từ dữ liệu CRM: doanh thu nguồn đơn Pancake, chi phí quảng cáo Facebook, chi tiết gói mua trên landing và giá vốn trong kho.</p>
+  </div>
+
+  <div class="bar">
+    <label>Từ ngày<input type="date" id="tu"></label>
+    <label>Đến ngày<input type="date" id="den"></label>
+    <button type="button" id="ap">Áp dụng</button>
+    <button type="button" class="ghost" id="thangNay">Tháng này</button>
+    <button type="button" class="ghost" id="ngay30">30 ngày</button>
+    <span class="stamp" id="stamp">Đang tải…</span>
+  </div>
+
+  <div id="canhbao"></div>
+  <div class="cards" id="cards"></div>
+
+  <div>
+    <h2>Bậc thang ROAS</h2>
+    <p class="sub"><b>CPQC/đơn</b> = AOV ÷ ROAS, là tiền quảng cáo cho mỗi đơn chốt. <b>Cost cap</b> = mức chi phí trên mỗi kết quả tương đương, để đặt khi chạy theo giá thầu thay vì ROAS. <b>LN/1tr chi</b> = lãi trên mỗi triệu đồng quảng cáo.</p>
+  </div>
+  <div class="tbl"><table id="ladder">
+    <thead><tr><th>Sản phẩm</th><th>ROAS</th><th>CPQC/đơn</th><th>Cost cap</th><th>LN/đơn</th><th>LN/1tr chi</th><th>Biên LN</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+
+  <p class="sub" id="ghichu"></p>
+</div>
+
+<script type="module">
+import { giaVonMoiDon, tinhTaiRoas, soLieuSanPham, VAT_MAC_DINH } from "./js/roas-model.js";
+
+/* Landing NOMA có endpoint /api/<key>/stats và có nguồn đơn riêng trên Pancake.
+   Thêm landing mới thì thêm một dòng ở đây — nguồn đơn phải khớp tên sale đặt trên Pancake
+   (quy ước "<NHÂN SỰ> - <SẢN PHẨM>"), nhãn phải khớp ad_spend_by_staff. */
+const SP = [
+  { key:"noma230", ten:"NOMA 230", nhan:"Noma 230", mo:"Xịt dưỡng nhựa nhám",
+    nguon:["DUY - NOMA 230","PHƯƠNG NAM - NOMA 230"] },
+  { key:"noma680", ten:"NOMA 680", nhan:"Noma 680", mo:"Bọt tuyết đa năng",
+    nguon:["DUY - NOMA 680","PHƯƠNG NAM - NOMA 680"] },
+  { key:"noma350", ten:"NOMA 350", nhan:"Noma 350", mo:"Vệ sinh phanh đĩa",
+    nguon:["DUY - NOMA 350","PHƯƠNG NAM - NOMA 350"] },
+  { key:"noma120", ten:"NOMA 120", nhan:"Noma 120", mo:"Vệ sinh kim phun",
+    nguon:["DUY - NOMA 120","PHƯƠNG NAM - NOMA 120"] },
+  { key:"noma911", ten:"NOMA 911", nhan:"Noma 911", mo:"Tẩy ố kính",
+    nguon:["DUY - NOMA 911","DUY - NOMA 911 MESSENGER","PHƯƠNG NAM - NOMA911"] },
+];
+
+const $ = (id) => document.getElementById(id);
+const vnd = (n) => Math.round(Number(n) || 0).toLocaleString("vi-VN") + "đ";
+const so = (n, d = 2) => Number(n || 0).toFixed(d).replace(".", ",");
+const ymd = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+
+let D = null, GIA_VON = {}, DU_LIEU = [];
+
+function dautHang() {
+  const h = new Date();
+  $("tu").value = ymd(new Date(h.getFullYear(), h.getMonth(), 1));
+  $("den").value = ymd(h);
+}
+
+async function nap() {
+  const [d1, d2] = await Promise.all([
+    fetch("/data/dashboard-data.json", { cache: "no-store" }).then((r) => r.json()),
+    fetch("/data/sku-costs.json", { cache: "no-store" }).then((r) => r.ok ? r.json() : null).catch(() => null),
+  ]);
+  D = d1;
+  GIA_VON = (d2 && d2.gia_von) || {};
+  $("stamp").textContent = "Dữ liệu CRM: " + (D.generated_at || "—");
+}
+
+async function tinhTatCa() {
+  const from = $("tu").value, to = $("den").value;
+  if (!from || !to || from > to) { $("canhbao").innerHTML = '<div class="msg">Khoảng ngày chưa hợp lệ.</div>'; return; }
+  $("cards").innerHTML = '<div class="sub">Đang tính…</div>';
+
+  const ds = await Promise.all(SP.map(async (s) => {
+    const n = soLieuSanPham(D, s, from, to);
+    let mix = null, loi = null;
+    try {
+      const r = await fetch(`/api/${s.key}/stats?from=${from}&to=${to}`, { cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const j = await r.json();
+      if (!j.summary) throw new Error("dữ liệu không đúng khuôn");
+      mix = giaVonMoiDon(j.by_combo, j.by_gift, GIA_VON, 0);
+    } catch (e) { loi = String(e.message || e); }
+    // Giá vốn mỗi đơn CHỐT = tỉ lệ giá vốn trên doanh thu của landing × AOV đơn chốt.
+    // Dùng tỉ lệ chứ không dùng thẳng số tuyệt đối vì sale còn bán thêm sau khi khách đăng ký.
+    const von = mix && mix.tyLeTrenDoanhThu ? mix.tyLeTrenDoanhThu * n.aov : 0;
+    return { sp: s, n, mix, von, loi, phi: 0, roas: 0 };
+  }));
+
+  DU_LIEU = ds.filter((x) => x.n.donChot > 0 || x.n.chiPhi > 0);
+  const bo = ds.filter((x) => !(x.n.donChot > 0 || x.n.chiPhi > 0)).map((x) => x.sp.ten);
+  const thieu = [...new Set(DU_LIEU.flatMap((x) => (x.mix ? x.mix.skuThieuGia : [])))];
+  $("canhbao").innerHTML =
+    (bo.length ? `<div class="msg">Không có đơn hoặc chi phí trong kỳ: ${bo.join(" · ")} — đã bỏ khỏi bảng.</div>` : "") +
+    (thieu.length ? `<div class="msg">Thiếu giá vốn của SKU ${thieu.join(", ")} nên giá vốn đang tính thiếu. Bổ sung ở data/cost-source/skus-extended.json.</div>` : "");
+
+  DU_LIEU.forEach((x) => { x.roas = Math.max(1, Math.round(x.n.roasHienTai * 100) / 100); });
+  ve();
+}
+
+function ve() {
+  $("cards").innerHTML = "";
+  DU_LIEU.forEach((x, i) => {
+    const el = document.createElement("div");
+    el.className = "card";
+    el.innerHTML = `
+      <div class="top"><div><h3>${x.sp.ten}</h3><div class="sub" style="font-size:12px">${x.sp.mo} · ${x.n.donChot} đơn chốt · ${vnd(x.n.doanhThu)}</div></div>
+        <div class="be">hoà vốn<br><b id="hv${i}"></b></div></div>
+      <div class="dial"><div class="row"><label for="r${i}">ROAS mục tiêu</label><output id="out${i}"></output></div>
+        <input type="range" id="r${i}" min="1" max="15" step="0.05" value="${x.roas}">
+        <div class="note" id="nt${i}"></div></div>
+      <div class="kpis">
+        <div class="kpi"><span>CPQC mỗi đơn</span><b id="cp${i}"></b></div>
+        <div class="kpi"><span>Cost cap tương đương</span><b id="cc${i}"></b></div>
+        <div class="kpi"><span>Lợi nhuận mỗi đơn</span><b id="ln${i}"></b></div>
+        <div class="kpi"><span>Lợi nhuận / 1tr chi</span><b id="l1${i}"></b></div>
+      </div>
+      <div class="verdict" id="vd${i}"></div>
+      <details><summary>Giả định — bấm để sửa</summary><div class="fields">
+        <label>AOV mỗi đơn chốt (đ)<input type="number" id="a${i}" value="${Math.round(x.n.aov)}" step="1000"></label>
+        <label>Giá vốn cả đơn (đ)<input type="number" id="v${i}" value="${Math.round(x.von)}" step="500"></label>
+        <label>Tỉ lệ giao thành công<input type="number" id="g${i}" value="${x.n.giao.toFixed(3)}" step="0.01"></label>
+        <label>Phí khác mỗi đơn (đ)<input type="number" id="p${i}" value="0" step="1000"></label>
+      </div><div class="note" id="ct${i}"></div></details>`;
+    $("cards").appendChild(el);
+    ["r", "a", "v", "g", "p"].forEach((k) => $(k + i).addEventListener("input", () => capNhat(i)));
+  });
+  DU_LIEU.forEach((_, i) => capNhat(i));
+}
+
+function doc(i) {
+  const x = DU_LIEU[i];
+  const aov = parseFloat($("a" + i).value) || 0;
+  const von = parseFloat($("v" + i).value) || 0;
+  const giao = parseFloat($("g" + i).value) || 0;
+  const phi = parseFloat($("p" + i).value) || 0;
+  const roas = parseFloat($("r" + i).value) || 0;
+  return { x, aov, von, giao, phi, roas };
+}
+
+function capNhat(i) {
+  const { x, aov, von, giao, phi, roas } = doc(i);
+  const t = tinhTaiRoas({ aov, von, giao, phi, roas, ketQuaMoiDon: x.n.ketQuaMoiDon });
+  $("out" + i).textContent = so(roas);
+  $("hv" + i).textContent = so(t.hoaVon);
+  $("cp" + i).textContent = vnd(t.cpqc);
+  $("cc" + i).textContent = vnd(t.costCap);
+  const ln = $("ln" + i); ln.textContent = vnd(t.ln); ln.className = t.ln >= 0 ? "pos" : "neg";
+  const l1 = $("l1" + i); l1.textContent = vnd(t.lnMoiTrieu); l1.className = t.ln >= 0 ? "pos" : "neg";
+  $("nt" + i).textContent = `Đang đạt ${so(x.n.roasHienTai)} · chi ${vnd(x.n.chiPhi)} trong kỳ · Meta ghi ${so(x.n.ketQuaMoiDon)} kết quả mỗi đơn chốt`;
+  const vd = $("vd" + i);
+  if (t.ln <= 0) { vd.className = "verdict v-bad"; vd.textContent = `Lỗ. Phải trên ${so(t.hoaVon)} mới hoà vốn.`; }
+  else if (t.bien < 8) { vd.className = "verdict v-warn"; vd.textContent = `Lãi mỏng ${so(t.bien, 1)}% — tỉ lệ giao tụt vài phần trăm là về hoà vốn.`; }
+  else { vd.className = "verdict v-good"; vd.textContent = `Lãi ${so(t.bien, 1)}% doanh thu · trên hoà vốn ${so(roas - t.hoaVon)} điểm.`; }
+  $("ct" + i).innerHTML = x.mix
+    ? `Giá vốn cả đơn = ${so(x.mix.tyLeTrenDoanhThu * 100, 1)}% doanh thu (tổng ${vnd(x.mix.tong)} cho ${x.mix.donHang} đơn landing, riêng quà ${vnd(x.mix.qua)}). `
+      + `Thu thật ${vnd(t.thu)} − VAT ${vnd(t.thu * VAT_MAC_DINH)} − giá vốn ${vnd(t.vonThuc)}${phi ? " − phí khác " + vnd(phi) : ""} = <b>${vnd(t.conLai)}</b> để chi quảng cáo.`
+    : `Không đọc được chi tiết gói mua của landing (${x.loi}) nên giá vốn đang để 0 — điền tay vào ô trên.`;
+  veBang();
+}
+
+function veBang() {
+  const tb = document.querySelector("#ladder tbody");
+  tb.innerHTML = "";
+  DU_LIEU.forEach((x, i) => {
+    const { aov, von, giao, phi } = doc(i);
+    const hv = Math.round(tinhTaiRoas({ aov, von, giao, phi, roas: 2, ketQuaMoiDon: x.n.ketQuaMoiDon }).hoaVon * 100) / 100;
+    const now = Math.round(x.n.roasHienTai * 100) / 100;
+    const moc = [...new Set([1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.2, 2.5, 3, 4, 5, hv, now])]
+      .filter((v) => v > 0 && isFinite(v)).sort((a, b) => a - b);
+    moc.forEach((R) => {
+      const t = tinhTaiRoas({ aov, von, giao, phi, roas: R, ketQuaMoiDon: x.n.ketQuaMoiDon });
+      const tr = document.createElement("tr");
+      let nhan = "";
+      if (R === hv) { tr.className = "be-row"; nhan = " · hoà vốn"; }
+      if (R === now) { tr.className = "now"; nhan += " · đang đạt"; }
+      tr.innerHTML = `<td>${x.sp.ten}</td><td>${so(R)}${nhan}</td><td>${vnd(t.cpqc)}</td><td>${vnd(t.costCap)}</td>`
+        + `<td class="${t.ln >= 0 ? "pos" : "neg"}">${vnd(t.ln)}</td>`
+        + `<td class="${t.ln >= 0 ? "pos" : "neg"}">${vnd(t.lnMoiTrieu)}</td><td>${so(t.bien, 1)}%</td>`;
+      tb.appendChild(tr);
+    });
+  });
+}
+
+$("ap").addEventListener("click", tinhTatCa);
+$("thangNay").addEventListener("click", () => { dautHang(); tinhTatCa(); });
+$("ngay30").addEventListener("click", () => {
+  const h = new Date();
+  $("den").value = ymd(h);
+  $("tu").value = ymd(new Date(h.getTime() - 29 * 864e5));
+  tinhTatCa();
+});
+
+$("ghichu").innerHTML =
+  "ROAS ở đây là <b>đúng con số hiển thị trong Trình quản lý quảng cáo</b>. Đã đối chiếu 18/09/2026: Meta ghi 356 kết quả và 46,8tr giá trị cho NOMA 230 trong khi landing nhận 368 đơn và 48,5tr — lệch 3-4%, pixel không đếm trùng. "
+  + "Lợi nhuận đã trừ VAT 10% và toàn bộ giá vốn hàng trong đơn (gồm chai của gói ghép và chai tặng), chưa trừ phí vận chuyển, phí thu hộ COD và phí agency — điền vào ô \"Phí khác mỗi đơn\" nếu muốn tính. "
+  + "Giá vốn khăn microfiber đang bằng 0 vì kho tổng chưa có giá nhập.";
+
+dautHang();
+nap().then(tinhTatCa).catch((e) => {
+  $("canhbao").innerHTML = `<div class="msg">Không nạp được dữ liệu CRM: ${e.message}</div>`;
+  $("stamp").textContent = "lỗi tải dữ liệu";
+});
+</script>
+</body>
+</html>
