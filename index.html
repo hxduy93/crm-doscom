@@ -3355,8 +3355,13 @@
       var d=theoBrand[b.id], mo=openBrand.has(b.id);
       return '<section class="tt-brand'+(mo?' open':'')+'" data-b="'+b.id+'">'+
         '<button type="button" class="tt-bhead" data-b="'+b.id+'" aria-expanded="'+(mo?'true':'false')+'">'+
+          '<span class="tt-blogo">'+esc(b.ten.slice(0,2))+'</span>'+
           '<span><span class="tt-bname">'+esc(b.ten)+'</span><span class="tt-bsub">'+esc(b.mo)+'</span></span>'+
-          '<span class="tt-bnum">'+d.sp.length+' sản phẩm · '+d.n+' video<br>'+money(d.gmv)+' GMV</span>'+
+          '<span class="tt-bnum">'+
+            '<div><span>Sản phẩm</span><b>'+d.sp.length+'</b></div>'+
+            '<div><span>Video</span><b>'+vnd(d.n)+'</b></div>'+
+            '<div><span>GMV</span><b>'+money(d.gmv)+'</b></div>'+
+          '</span>'+
           '<span class="tt-caret">▼</span>'+
         '</button>'+
         '<div class="tt-blist"'+(mo?'':' hidden')+'>'+
