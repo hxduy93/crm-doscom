@@ -104,7 +104,7 @@ const trongKy = (obj, from, to) => {
  *   nhan : nhãn sản phẩm trong ad_spend_by_staff ("Noma 230")
  */
 export function soLieuSanPham(D, { nguon, nhan }, from, to) {
-  let donChot = 0, dt = 0, dtGiao = 0, dtChotXong = 0;
+  let donChot = 0, dt = 0, dtGiao = 0, dtChotXong = 0, von = 0, thieuGia = 0;
   const sg = (D.revenue && D.revenue.source_groups) || {};
   for (const st of Object.keys(sg)) {
     for (const [ten, v] of Object.entries(sg[st].sources || {})) {
@@ -116,6 +116,11 @@ export function soLieuSanPham(D, { nguon, nhan }, from, to) {
         if (tt !== "other") dtChotXong += x;   // đơn đã kết thúc: giao / hoàn / huỷ
         if (tt === "delivered") dtGiao += x;
       }
+      // GIÁ VỐN THẬT từng đơn Pancake (cộng mọi mặt hàng, combo đã bung, chai tặng tính cả).
+      for (const [tt, bd] of Object.entries(v.cogs_by_status_by_date || {})) {
+        if (tt !== "canceled") von += trongKy(bd, from, to);
+      }
+      thieuGia += Number(v.cogs_missing_lines) || 0;
     }
   }
   let chiPhi = 0;
@@ -132,6 +137,10 @@ export function soLieuSanPham(D, { nguon, nhan }, from, to) {
   }
   return {
     donChot, doanhThu: dt, chiPhi, ketQua,
+    giaVon: von,
+    vonMoiDon: donChot ? von / donChot : 0,
+    tyLeVon: dt ? von / dt : 0,
+    thieuGiaDong: thieuGia,
     aov: donChot ? dt / donChot : 0,
     giao: dtChotXong ? dtGiao / dtChotXong : 0,
     roasHienTai: chiPhi ? dt / chiPhi : 0,

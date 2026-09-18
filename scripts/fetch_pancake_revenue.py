@@ -471,6 +471,61 @@ def _load_retail_prices():
 
 RETAIL_PRICES = _load_retail_prices()
 
+def _load_cost_prices():
+    """{label: giá vốn 1 đơn vị} — để tính GIÁ VỐN THẬT của từng đơn Pancake.
+
+    Nguồn: data/product-costs.json (rút từ xlsx Kho tổng) rồi ĐÈ bằng
+    price_overrides_vnd trong data/cost-source/skus-extended.json (giá chủ dự án chốt).
+    Thiếu giá thì KHÔNG đoán — dòng đó được đếm vào cogs_missing để báo ra ngoài.
+    """
+    out = {}
+    base = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    try:
+        with open(os.path.join(base, "data", "product-costs.json"), "r", encoding="utf-8") as f:
+            for entry in json.load(f).get("products", {}).values():
+                name = (entry.get("ma_ten_goi") or "").strip()
+                gia = entry.get("gia_nhap_vnd")
+                if name in PRODUCT_LIST and gia:
+                    out[name] = float(gia)
+    except Exception as e:
+        print(f"[WARN] Khong doc duoc product-costs.json: {e}", file=sys.stderr)
+    try:
+        with open(os.path.join(base, "data", "cost-source", "skus-extended.json"), "r", encoding="utf-8") as f:
+            for k, v in (json.load(f).get("price_overrides_vnd") or {}).items():
+                if not k.startswith("_") and isinstance(v, (int, float)) and v > 0:
+                    out[k] = float(v)
+    except Exception as e:
+        print(f"[WARN] Khong doc duoc price_overrides_vnd: {e}", file=sys.stderr)
+    return out
+
+
+COST_PRICES = _load_cost_prices()
+
+
+def order_cogs(order):
+    """(giá vốn đơn, số dòng thiếu giá) — cộng giá vốn MỌI mặt hàng trong đơn.
+
+    Combo được bung ra thành phần (kể cả chai TẶNG: không thu tiền nhưng vẫn mất hàng),
+    đúng bảng combo_codes lấy từ API Pancake. Dòng không tra được giá thì KHÔNG tính 0 im
+    lặng mà đếm riêng để dashboard còn cảnh báo.
+    """
+    tong = 0.0
+    thieu = 0
+    for code, qty, line_rev, name in extract_items(order):
+        mapping = _resolve_pancake_item(code, name)
+        if not mapping:
+            thieu += 1
+            continue
+        for e in mapping:
+            label, per = e[0], e[1]
+            gia = COST_PRICES.get(label)
+            if gia is None:
+                thieu += 1
+                continue
+            tong += gia * per * qty
+    return tong, thieu
+
+
 
 PAGE_SIZE = 500          # Pancake cho tối đa 500 đơn/page — ít request hơn
 MAX_PAGES = 60           # trần page MỖI LÁT thời gian (60 × 500 = 30k đơn/lát)
@@ -840,12 +895,21 @@ def aggregate_by_source(orders):
             # (đơn hoàn thường là đơn giá trị cao/thấp bất thường), nên phải có cả hai mới
             # nói được câu "hoàn nhiều" là hoàn nhiều tiền hay hoàn nhiều đơn.
             "orders_by_status_by_date": {},
+            # GIÁ VỐN THẬT của đơn Pancake (18/09/2026) — cộng mọi mặt hàng trong đơn, combo
+            # bung ra thành phần, chai tặng cũng tính. Để công cụ "ROAS mục tiêu" dùng số
+            # thống kê thật thay vì suy từ gói mua trên landing.
+            "cogs_by_status_by_date": {},
+            "cogs_missing_lines": 0,
         })
         e["orders_by_date"][date] = e["orders_by_date"].get(date, 0) + 1
         rv = e["revenue_by_status_by_date"].setdefault(bucket_key, {})
         rv[date] = rv.get(date, 0.0) + order_revenue(o)
         oc = e["orders_by_status_by_date"].setdefault(bucket_key, {})
         oc[date] = oc.get(date, 0) + 1
+        cogs, thieu = order_cogs(o)
+        cg = e["cogs_by_status_by_date"].setdefault(bucket_key, {})
+        cg[date] = cg.get(date, 0.0) + cogs
+        e["cogs_missing_lines"] += thieu
     return out
 
 

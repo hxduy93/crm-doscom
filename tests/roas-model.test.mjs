@@ -79,6 +79,15 @@ test("phí khác đẩy điểm hoà vốn lên", () => {
   assert.ok(tinhTaiRoas({ ...p, phi: 15000, roas: 2 }).hoaVon > tinhTaiRoas({ ...p, roas: 2 }).hoaVon);
 });
 
+test("giá vốn mỗi đơn lấy từ ĐƠN PANCAKE, không suy từ landing", () => {
+  const D = JSON.parse(readFileSync(new URL("../data/product-revenue.json", import.meta.url), "utf8"));
+  const s = soLieuSanPham({ revenue: D }, { nguon: ["DUY - NOMA 230", "PHƯƠNG NAM - NOMA 230"], nhan: "Noma 230" },
+    "2026-09-01", "2026-09-30");
+  assert.ok(s.giaVon > 0, "phải đọc được cogs_by_status_by_date do fetch_pancake_revenue.py ghi");
+  assert.ok(s.vonMoiDon > 10000 && s.vonMoiDon < s.aov, "giá vốn mỗi đơn phải nhỏ hơn AOV");
+  assert.ok(s.tyLeVon > 0.05 && s.tyLeVon < 0.6, "tỉ lệ giá vốn trên doanh thu nằm trong khoảng hợp lý");
+});
+
 test("rút số liệu sản phẩm từ dashboard-data thật", () => {
   const D = JSON.parse(readFileSync(new URL("../data/dashboard-data.json", import.meta.url), "utf8"));
   const s = soLieuSanPham(D, { nguon: ["DUY - NOMA 230", "PHƯƠNG NAM - NOMA 230"], nhan: "Noma 230" },
@@ -95,6 +104,8 @@ test("khoảng ngày lọc đúng, ngày ngoài kỳ không được cộng", ()
     revenue: { source_groups: { DUY: { sources: { "DUY - X": {
       orders_by_date: { "2026-09-01": 2, "2026-10-01": 5 },
       revenue_by_status_by_date: { delivered: { "2026-09-01": 200000, "2026-10-01": 999 } },
+      cogs_by_status_by_date: { delivered: { "2026-09-01": 40000, "2026-10-01": 777 }, canceled: { "2026-09-01": 12345 } },
+      cogs_missing_lines: 3,
     } } } } },
     ad_spend_by_staff: { DUY: { X: { by_date: { "2026-09-01": 50000, "2026-10-01": 777 } } } },
     campaigns: [{ cpqc_product: "X", market: "vn", daily: [{ date: "2026-09-01", registrations: 3 }, { date: "2026-10-01", registrations: 9 }] }],
@@ -106,4 +117,7 @@ test("khoảng ngày lọc đúng, ngày ngoài kỳ không được cộng", ()
   assert.equal(s.ketQua, 3);
   assert.equal(s.aov, 100000);
   assert.equal(s.roasHienTai, 4);
+  assert.equal(s.giaVon, 40000, "đơn huỷ không tính giá vốn, ngày ngoài kỳ không cộng");
+  assert.equal(s.vonMoiDon, 20000);
+  assert.equal(s.thieuGiaDong, 3);
 });
