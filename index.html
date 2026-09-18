@@ -3766,11 +3766,21 @@
           ? (j.nhan_ky||'')+' '+dm(j.start)
           : 'từ '+dm(j.start)+' đến '+dm(j.end);
         vidSub.textContent='· '+khoang+' · '+vnd(j.unique_videos)+' video'+
+          (j.moc_du_lieu?' · dữ liệu tới '+dm(j.moc_du_lieu):'')+
           (g.trung_ma!=null?' (Lark '+vnd(g.lark)+' + TikTok Shop '+vnd(g.tts)+', trùng '+vnd((g.trung_ma||0)+(g.trung_ten||0))+')':'')+
           (g.loi_nguon_phu?' · ⚠ thiếu nguồn TikTok Shop':'')+
           (j.cached?' · bộ nhớ đệm':'');
         lastVideos=j.videos||[];
         renderVideos();
+        /* Dữ liệu video do automation bên ngoài đổ vào Lark, hay trễ 1-2 ngày. Kỳ đang xem
+           mà mới hơn mốc dữ liệu thì phải NÓI RÕ, không thì bảng rỗng bị đọc thành "hôm nay
+           không bán được gì" (đúng cảnh 18/09/2026: Lark mới có tới 16/09). */
+        if(j.moc_du_lieu && j.start>j.moc_du_lieu){
+          vidsEl.insertAdjacentHTML('afterbegin',
+            '<div class="tt-err" style="margin-bottom:10px">Dữ liệu video mới có tới <b>'+dm(j.moc_du_lieu)+
+            '</b>, trong khi kỳ đang xem bắt đầu từ <b>'+dm(j.start)+'</b>. Bảng rỗng ở đây là <b>chưa có dữ liệu</b>, '+
+            'không phải không có đơn. Doanh thu theo shop vẫn cập nhật sớm hơn phần video.</div>');
+        }
       })
       .catch(function(e){ vidSub.textContent=''; errBox(vidsEl,e.message); });
   }

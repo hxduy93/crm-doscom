@@ -230,8 +230,30 @@ export async function onRequestGet(context) {
     }
     const products = [...gom.values()].sort((a, b) => b.gmv - a.gmv);
 
+    // MỐC DỮ LIỆU: ngày mới nhất Lark THẬT SỰ có dòng video. Cần vì bảng này do automation
+    // bên ngoài ghi, hay trễ 1-2 ngày — không có mốc thì kỳ "hôm nay"/"hôm qua" trả rỗng và
+    // người xem tưởng hôm đó không bán được gì (18/09/2026: Lark mới có tới 16/09).
+    let moc_du_lieu = null;
+    for (const rec of out.records) {
+      const d = toVnDate(rec.fields[DATE_FIELD]);
+      if (d && (!moc_du_lieu || d > moc_du_lieu)) moc_du_lieu = d;
+    }
+    if (!moc_du_lieu) {
+      // Kỳ đang xem rỗng hoàn toàn → quét lùi 14 ngày chỉ để biết dữ liệu dừng ở đâu.
+      try {
+        const lui = await searchRecordsSince(env, kv, appToken, TABLE_VIDEO, DATE_FIELD,
+          mocVN(ngayVN(14)), { fieldNames: [DATE_FIELD], maxRecords: 3000 });
+        for (const rec of lui.records) {
+          const d = toVnDate(rec.fields[DATE_FIELD]);
+          if (d && (!moc_du_lieu || d > moc_du_lieu)) moc_du_lieu = d;
+        }
+      } catch { /* không có mốc thì thôi, giao diện tự ẩn */ }
+    }
+
     const payload = {
       ok: true,
+      // Ngày mới nhất có dữ liệu trong Lark (null nếu 14 ngày qua không có dòng nào).
+      moc_du_lieu,
       ky: q.get("ky") || "",
       nhan_ky: nhan,
       start,
