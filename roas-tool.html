@@ -59,6 +59,12 @@
   .fields .ro{font:800 14px var(--font);color:var(--text);background:var(--surface-2);border:1px solid var(--line);
               border-radius:8px;padding:7px 9px}
   .lock{font-size:11px;font-weight:800;color:var(--text-2)}
+  .mix{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:2px}
+  .mix th,.mix td{padding:5px 7px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+  .mix th:first-child,.mix td:first-child{text-align:left}
+  .mix thead th{font-size:10.5px;font-weight:900;text-transform:uppercase;letter-spacing:.03em;color:var(--text-2);border-bottom:1px solid var(--line)}
+  .mix tr:last-child td{border-bottom:0}
+  .mix .ty{color:var(--text-2);font-weight:700}
   .tbl{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
   table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:720px}
   th,td{padding:8px 11px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
@@ -167,7 +173,7 @@ function ve() {
     const el = document.createElement("div");
     el.className = "card";
     el.innerHTML = `
-      <div class="top"><div><h3>${x.sp.ten}</h3><div class="sub" style="font-size:12px">${x.sp.mo} · ${x.n.donChot} đơn chốt · ${vnd(x.n.doanhThu)}</div></div>
+      <div class="top"><div><h3>${x.sp.ten}</h3><div class="sub" style="font-size:12px">${x.sp.mo} · ${x.n.donChot} đơn chốt · ${vnd(x.n.doanhThu)} · <b>combo ${so(x.n.tyLeCombo * 100, 1)}%</b></div></div>
         <div class="be">hoà vốn<br><b id="hv${i}"></b></div></div>
       <div class="dial"><div class="row"><label for="r${i}">ROAS mục tiêu</label><output id="out${i}"></output></div>
         <input type="range" id="r${i}" min="1" max="15" step="0.05" value="${x.roas}">
@@ -178,6 +184,8 @@ function ve() {
         <div class="kpi"><span>Lợi nhuận mỗi đơn</span><b id="ln${i}"></b></div>
         <div class="kpi"><span>Lợi nhuận / 1tr chi</span><b id="l1${i}"></b></div>
       </div>
+      <table class="mix"><thead><tr><th>Loại đơn</th><th>Tỉ trọng</th><th>AOV</th><th>Giá vốn</th><th>CPQC</th><th>LN/đơn</th></tr></thead>
+        <tbody id="mx${i}"></tbody></table>
       <div class="verdict" id="vd${i}"></div>
       <details><summary>Thống kê thực tế từ Pancake — số khoá, chỉ đổi khi cập nhật dữ liệu</summary><div class="fields">
         <label>AOV mỗi đơn chốt<div class="ro" id="a${i}">${vnd(x.n.aov)}</div></label>
@@ -221,9 +229,21 @@ function capNhat(i) {
   if (t.ln <= 0) { vd.className = "verdict v-bad"; vd.textContent = `Lỗ. Phải trên ${so(t.hoaVon)} mới hoà vốn.`; }
   else if (t.bien < 8) { vd.className = "verdict v-warn"; vd.textContent = `Lãi mỏng ${so(t.bien, 1)}% — tỉ lệ giao tụt vài phần trăm là về hoà vốn.`; }
   else { vd.className = "verdict v-good"; vd.textContent = `Lãi ${so(t.bien, 1)}% doanh thu · trên hoà vốn ${so(roas - t.hoaVon)} điểm.`; }
+  const mxHtml = ["le", "combo"].map((k) => {
+    const m = x.n.mix[k];
+    if (!m.don) return "";
+    const tm = tinhTaiRoas({ aov: m.aov, von: m.vonMoiDon, giao: m.giao, phi, roas, ketQuaMoiDon: x.n.ketQuaMoiDon });
+    const ty = x.n.donChot ? (m.don / x.n.donChot) * 100 : 0;
+    return `<tr><td>${k === "le" ? "Mua lẻ" : "Combo"}</td>`
+      + `<td class="ty">${so(ty, 1)}% · ${m.don} đơn</td>`
+      + `<td>${vnd(m.aov)}</td><td>${vnd(m.vonMoiDon)}</td><td>${vnd(tm.cpqc)}</td>`
+      + `<td class="${tm.ln >= 0 ? "pos" : "neg"}">${vnd(tm.ln)}</td></tr>`;
+  }).join("");
+  $("mx" + i).innerHTML = mxHtml || '<tr><td colspan="6" class="ty">Chưa tách được lẻ/combo — dữ liệu Pancake chưa kéo lại.</td></tr>';
+
   $("ct" + i).innerHTML =
     `Giá vốn cộng từ <b>${x.n.donChot} đơn Pancake</b> của nguồn này: tổng ${vnd(x.n.giaVon)}, bằng ${so(x.n.tyLeVon * 100, 1)}% doanh thu. `
-    + `Combo đã bung ra từng chai, chai tặng cũng tính. `
+    + `Combo đã bung ra từng chai, chai tặng cũng tính. Bốn ô lớn phía trên là <b>trung bình của cả hai loại đơn</b> theo đúng tỉ trọng ${so(x.n.tyLeCombo * 100, 1)}% combo; muốn nhìn riêng thì xem bảng lẻ/combo. `
     + `Thu thật ${vnd(t.thu)} − VAT ${vnd(t.thu * VAT_MAC_DINH)} − giá vốn ${vnd(t.vonThuc)}${phi ? " − phí khác " + vnd(phi) : ""} = <b>${vnd(t.conLai)}</b> để chi quảng cáo.`;
   veBang();
 }
@@ -265,6 +285,7 @@ $("ghichu").innerHTML =
   + "<b>Giá vốn cả đơn</b> = cộng giá nhập mọi mặt hàng trong từng đơn Pancake, combo đã bung ra từng chai và chai tặng cũng tính, rồi chia số đơn. "
   + "<b>Tỉ lệ giao thành công</b> = tiền của đơn đã giao ÷ tiền của các đơn đã kết thúc (giao, hoàn, huỷ). Ba số này khoá cứng, chỉ đổi khi dữ liệu Pancake được kéo lại. "
   + "<b>ROAS</b> là đúng con số hiển thị trong Trình quản lý quảng cáo — đã đối chiếu 18/09/2026, pixel không đếm trùng. "
+  + "<b>Đơn combo</b> = đơn có từ 2 món khách trả tiền trở lên (gộp cả gói 2 chai lẫn gói ghép sản phẩm khác); chai tặng không tính là món. "
   + "Lợi nhuận đã trừ VAT 10%; phí vận chuyển, thu hộ COD và agency chưa có trong dữ liệu nên điền tay nếu cần.";
 
 dautHang();

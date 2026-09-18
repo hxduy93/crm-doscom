@@ -103,8 +103,25 @@ const trongKy = (obj, from, to) => {
  *   nguon: danh sách tên nguồn đơn Pancake ("DUY - NOMA 230", …)
  *   nhan : nhãn sản phẩm trong ad_spend_by_staff ("Noma 230")
  */
+/** Gộp một nhánh lẻ/combo của nguồn đơn. */
+function gopMix(dich, m, from, to) {
+  dich.don += trongKy(m.orders_by_date, from, to);
+  for (const [tt, bd] of Object.entries(m.revenue_by_status_by_date || {})) {
+    const x = trongKy(bd, from, to);
+    if (tt !== "canceled") dich.doanhThu += x;
+    if (tt !== "other") dich.chotXong += x;
+    if (tt === "delivered") dich.daGiao += x;
+  }
+  for (const [tt, bd] of Object.entries(m.cogs_by_status_by_date || {})) {
+    if (tt !== "canceled") dich.giaVon += trongKy(bd, from, to);
+  }
+}
+
+const mixRong = () => ({ don: 0, doanhThu: 0, giaVon: 0, chotXong: 0, daGiao: 0 });
+
 export function soLieuSanPham(D, { nguon, nhan }, from, to) {
   let donChot = 0, dt = 0, dtGiao = 0, dtChotXong = 0, von = 0, thieuGia = 0;
+  const mix = { le: mixRong(), combo: mixRong() };
   const sg = (D.revenue && D.revenue.source_groups) || {};
   for (const st of Object.keys(sg)) {
     for (const [ten, v] of Object.entries(sg[st].sources || {})) {
@@ -121,6 +138,11 @@ export function soLieuSanPham(D, { nguon, nhan }, from, to) {
         if (tt !== "canceled") von += trongKy(bd, from, to);
       }
       thieuGia += Number(v.cogs_missing_lines) || 0;
+      // Tách lẻ / combo: trung bình gộp che mất chuyện hai loại đơn có kinh tế khác hẳn.
+      if (v.mix) {
+        if (v.mix.le) gopMix(mix.le, v.mix.le, from, to);
+        if (v.mix.combo) gopMix(mix.combo, v.mix.combo, from, to);
+      }
     }
   }
   let chiPhi = 0;
@@ -135,8 +157,18 @@ export function soLieuSanPham(D, { nguon, nhan }, from, to) {
       if (d.date >= from && d.date <= to) ketQua += Number(d.registrations) || 0;
     }
   }
+  for (const k of ["le", "combo"]) {
+    const m = mix[k];
+    m.aov = m.don ? m.doanhThu / m.don : 0;
+    m.vonMoiDon = m.don ? m.giaVon / m.don : 0;
+    m.giao = m.chotXong ? m.daGiao / m.chotXong : 0;
+    m.tyLeVon = m.doanhThu ? m.giaVon / m.doanhThu : 0;
+  }
+  const donMix = mix.le.don + mix.combo.don;
+
   return {
     donChot, doanhThu: dt, chiPhi, ketQua,
+    mix, tyLeCombo: donMix ? mix.combo.don / donMix : 0,
     giaVon: von,
     vonMoiDon: donChot ? von / donChot : 0,
     tyLeVon: dt ? von / dt : 0,

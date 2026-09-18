@@ -99,6 +99,19 @@ test("rút số liệu sản phẩm từ dashboard-data thật", () => {
   assert.ok(Math.abs(s.roasHienTai - s.doanhThu / s.chiPhi) < 1e-9);
 });
 
+test("tách lẻ/combo: cộng lại phải bằng tổng, tỉ lệ combo đúng", () => {
+  const D = JSON.parse(readFileSync(new URL("../data/product-revenue.json", import.meta.url), "utf8"));
+  const s = soLieuSanPham({ revenue: D }, { nguon: ["DUY - NOMA 230", "PHƯƠNG NAM - NOMA 230"], nhan: "Noma 230" },
+    "2026-09-01", "2026-09-30");
+  const don = s.mix.le.don + s.mix.combo.don;
+  assert.equal(don, s.donChot, "đơn lẻ + đơn combo phải bằng tổng đơn chốt");
+  assert.ok(Math.abs(s.mix.le.doanhThu + s.mix.combo.doanhThu - s.doanhThu) < 1, "doanh thu hai nhánh phải cộng đủ");
+  assert.ok(Math.abs(s.mix.le.giaVon + s.mix.combo.giaVon - s.giaVon) < 1, "giá vốn hai nhánh phải cộng đủ");
+  assert.ok(s.mix.combo.aov > s.mix.le.aov, "đơn combo phải có AOV cao hơn đơn lẻ");
+  assert.ok(s.tyLeCombo > 0 && s.tyLeCombo < 1);
+  assert.ok(Math.abs(s.tyLeCombo - s.mix.combo.don / don) < 1e-9);
+});
+
 test("khoảng ngày lọc đúng, ngày ngoài kỳ không được cộng", () => {
   const D = {
     revenue: { source_groups: { DUY: { sources: { "DUY - X": {
@@ -106,6 +119,12 @@ test("khoảng ngày lọc đúng, ngày ngoài kỳ không được cộng", ()
       revenue_by_status_by_date: { delivered: { "2026-09-01": 200000, "2026-10-01": 999 } },
       cogs_by_status_by_date: { delivered: { "2026-09-01": 40000, "2026-10-01": 777 }, canceled: { "2026-09-01": 12345 } },
       cogs_missing_lines: 3,
+      mix: {
+        le: { orders_by_date: { "2026-09-01": 1 }, revenue_by_status_by_date: { delivered: { "2026-09-01": 80000 } },
+              cogs_by_status_by_date: { delivered: { "2026-09-01": 15000 } } },
+        combo: { orders_by_date: { "2026-09-01": 1 }, revenue_by_status_by_date: { delivered: { "2026-09-01": 120000 } },
+                 cogs_by_status_by_date: { delivered: { "2026-09-01": 25000 } } },
+      },
     } } } } },
     ad_spend_by_staff: { DUY: { X: { by_date: { "2026-09-01": 50000, "2026-10-01": 777 } } } },
     campaigns: [{ cpqc_product: "X", market: "vn", daily: [{ date: "2026-09-01", registrations: 3 }, { date: "2026-10-01", registrations: 9 }] }],
@@ -120,4 +139,7 @@ test("khoảng ngày lọc đúng, ngày ngoài kỳ không được cộng", ()
   assert.equal(s.giaVon, 40000, "đơn huỷ không tính giá vốn, ngày ngoài kỳ không cộng");
   assert.equal(s.vonMoiDon, 20000);
   assert.equal(s.thieuGiaDong, 3);
+  assert.equal(s.tyLeCombo, 0.5);
+  assert.equal(s.mix.le.aov, 80000);
+  assert.equal(s.mix.combo.vonMoiDon, 25000);
 });

@@ -503,7 +503,7 @@ COST_PRICES = _load_cost_prices()
 
 
 def order_cogs(order):
-    """(giá vốn đơn, số dòng thiếu giá) — cộng giá vốn MỌI mặt hàng trong đơn.
+    """(giá vốn đơn, số dòng thiếu giá, số món KHÁCH TRẢ TIỀN) — giá vốn MỌI mặt hàng trong đơn.
 
     Combo được bung ra thành phần (kể cả chai TẶNG: không thu tiền nhưng vẫn mất hàng),
     đúng bảng combo_codes lấy từ API Pancake. Dòng không tra được giá thì KHÔNG tính 0 im
@@ -511,6 +511,7 @@ def order_cogs(order):
     """
     tong = 0.0
     thieu = 0
+    mon_ban = 0          # đếm món khách TRẢ TIỀN (không tính chai tặng) → phân loại lẻ/combo
     for code, qty, line_rev, name in extract_items(order):
         mapping = _resolve_pancake_item(code, name)
         if not mapping:
@@ -518,12 +519,15 @@ def order_cogs(order):
             continue
         for e in mapping:
             label, per = e[0], e[1]
+            la_qua = bool(e[2]) if len(e) > 2 else False
+            if not la_qua:
+                mon_ban += per * qty
             gia = COST_PRICES.get(label)
             if gia is None:
                 thieu += 1
                 continue
             tong += gia * per * qty
-    return tong, thieu
+    return tong, thieu, mon_ban
 
 
 
@@ -900,16 +904,32 @@ def aggregate_by_source(orders):
             # thống kê thật thay vì suy từ gói mua trên landing.
             "cogs_by_status_by_date": {},
             "cogs_missing_lines": 0,
+            # Tách ĐƠN LẺ (1 món khách trả tiền) và ĐƠN COMBO (từ 2 món trở lên) — chai tặng
+            # KHÔNG tính là món. Cần vì trung bình gộp che mất chuyện đơn lẻ và đơn combo có
+            # kinh tế khác hẳn nhau: cùng một mức ROAS, đơn lẻ tiền quảng cáo thấp hơn nhưng
+            # lãi tuyệt đối cũng thấp hơn.
+            "mix": {
+                "le":    {"orders_by_date": {}, "revenue_by_status_by_date": {}, "cogs_by_status_by_date": {}},
+                "combo": {"orders_by_date": {}, "revenue_by_status_by_date": {}, "cogs_by_status_by_date": {}},
+            },
         })
         e["orders_by_date"][date] = e["orders_by_date"].get(date, 0) + 1
         rv = e["revenue_by_status_by_date"].setdefault(bucket_key, {})
         rv[date] = rv.get(date, 0.0) + order_revenue(o)
         oc = e["orders_by_status_by_date"].setdefault(bucket_key, {})
         oc[date] = oc.get(date, 0) + 1
-        cogs, thieu = order_cogs(o)
+        cogs, thieu, mon_ban = order_cogs(o)
         cg = e["cogs_by_status_by_date"].setdefault(bucket_key, {})
         cg[date] = cg.get(date, 0.0) + cogs
         e["cogs_missing_lines"] += thieu
+
+        loai = "combo" if mon_ban >= 2 else "le"
+        mx = e["mix"][loai]
+        mx["orders_by_date"][date] = mx["orders_by_date"].get(date, 0) + 1
+        mr = mx["revenue_by_status_by_date"].setdefault(bucket_key, {})
+        mr[date] = mr.get(date, 0.0) + order_revenue(o)
+        mc = mx["cogs_by_status_by_date"].setdefault(bucket_key, {})
+        mc[date] = mc.get(date, 0.0) + cogs
     return out
 
 
