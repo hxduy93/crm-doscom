@@ -135,7 +135,13 @@ export async function onRequestGet(context) {
   // ?merge=0 để xem riêng số Lark khi cần soát lệch giữa hai nguồn.
   const gopNguonPhu = q.get("merge") !== "0";
   const kv = env.INVENTORY;
-  const { start, end, nhan } = khoangKy(q.get("ky") || "", days);
+  // from/to: khoảng ngày CHỈ ĐỊNH — cần cho khối "video tăng trưởng" bên CRM, nó phải
+  // hỏi được kỳ TRƯỚC (vd 7 ngày liền trước 7 ngày gần nhất) để so hai kỳ với nhau.
+  const laNgay = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v || "");
+  const tuY = laNgay(q.get("from")) && laNgay(q.get("to"));
+  const { start, end, nhan } = tuY
+    ? { start: q.get("from"), end: q.get("to"), nhan: `${q.get("from")} → ${q.get("to")}` }
+    : khoangKy(q.get("ky") || "", days);
   // Khoá cache theo KHOẢNG NGÀY chứ không theo tên kỳ: "hôm nay" hôm qua và "hôm nay"
   // hôm nay là hai tập dữ liệu khác nhau, dùng chung khoá là trả số của ngày cũ.
   const cacheKey = `lark:tiktok_videos:v5:${start}:${end}:${top}:${gopNguonPhu ? 1 : 0}`;
