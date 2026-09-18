@@ -674,157 +674,178 @@
         </style>
       </div><!-- /view-health -->
       <div class="view" id="view-tiktok">
-        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px">
-          <h2 style="margin:0">🛍️ TikTok Shop</h2>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <span id="tt-moc" class="tt-sub"></span>
+        <div class="tt-head">
+          <h2>TikTok Shop</h2>
+          <div class="tt-hr">
+            <span class="tt-chip" id="tt-moc"></span>
+            <div class="tt-range">
+              <select class="tt-ip" id="tt-preset">
+                <option value="7">7 ngày</option>
+                <option value="14" selected>14 ngày</option>
+                <option value="30">30 ngày</option>
+                <option value="thang">Tháng này</option>
+                <option value="tuy">Tuỳ chọn…</option>
+              </select>
+              <input class="tt-ip tt-dt" type="date" id="tt-tu">
+              <span class="tt-to">→</span>
+              <input class="tt-ip tt-dt" type="date" id="tt-den">
+            </div>
             <button class="btn-cl" id="tt-refresh" type="button">↻ Tải lại</button>
           </div>
         </div>
 
-        <!-- Đã bỏ HẲN 4 khối tổng quan (thẻ KPI, GMV theo nguồn, Theo shop, Theo ngày)
-             cùng mã đọc chúng: menu này giờ chỉ phục vụ một việc — chọn video KOC để
-             chạy ads. Số tổng quan toàn shop xem ở dashboard sale-report.
-             Gỡ tiếp khối nào thì soát luôn chốt bảo vệ đầu IIFE bên dưới: nó từng trỏ
-             vào #tt-cards, gỡ thẻ KPI đi là cả menu chết câm. -->
-
-        <div class="tt-panel">
-          <div class="tt-h" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-            <span>Top video theo GMV <span id="tt-vid-sub" class="tt-sub"></span></span>
-            <select class="btn-cl" id="tt-vid-days" style="padding:6px 9px;font-size:12px">
-              <option value="hom-nay">Hôm nay</option>
-              <option value="hom-qua">Hôm qua</option>
-              <option value="tuan-nay">Tuần này</option>
-              <option value="thang-nay">Tháng này</option>
-              <option value="7">7 ngày</option>
-              <option value="14" selected>14 ngày</option>
-              <option value="30">30 ngày</option>
-            </select>
-          </div>
-          <div id="tt-kpi" class="tt-kpis"></div>
-          <div id="tt-brands" class="tt-brands"></div>
-          <div id="tt-filters" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-            <select class="btn-cl" id="tt-sort" style="padding:6px 9px;font-size:12px">
-              <option value="tang">↓ Tăng đơn nhiều nhất</option>
-              <option value="tang_asc">↑ Tăng đơn ít nhất</option>
-              <option value="gmv">↓ GMV cao nhất</option>
-              <option value="orders">↓ Nhiều đơn nhất</option>
-              <option value="views">↓ Lượt xem cao nhất</option>
-            </select>
-            <select class="btn-cl" id="tt-fcamp" style="padding:6px 9px;font-size:12px">
-              <option value="">Camp: tất cả</option>
-              <option value="no">Chưa lên camp</option>
-              <option value="yes">Đã lên camp</option>
-            </select>
-            <select class="btn-cl" id="tt-fstaff" style="padding:6px 9px;font-size:12px">
-              <option value="">Người nhận: tất cả</option>
-              <option value="free">Chưa ai nhận</option>
-              <option value="DUY">Duy nhận</option>
-              <option value="PHUONG_NAM">Nam nhận</option>
-            </select>
-            <span id="tt-filter-n" class="tt-sub"></span>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-            <input id="tt-own" class="btn-cl" style="flex:1;min-width:230px;padding:7px 10px;font-size:12.5px"
-                   placeholder="Kênh nhà, cách nhau dấu phẩy (vd: toanmanshop, shopnhatom79)">
-            <span id="tt-own-n" class="tt-sub"></span>
-          </div>
-          <div id="tt-cart" class="tt-cart" style="display:none"></div>
-          <div id="tt-videos"><div class="tt-empty">Đang tải…</div></div>
+        <div class="tt-boxes" id="tt-boxes">
+          <button class="tt-box" type="button" data-f="chua" aria-pressed="true"><span class="k">Chưa lên camp</span><span class="v" id="bx-chua">—</span></button>
+          <button class="tt-box" type="button" data-f="moi" aria-pressed="false"><span class="k">Mới ra đơn</span><span class="v" id="bx-moi">—</span></button>
+          <button class="tt-box" type="button" data-f="capnhat" aria-pressed="false"><span class="k">Mới cập nhật</span><span class="v" id="bx-capnhat">—</span></button>
+          <button class="tt-box" type="button" data-f="kenhnha" aria-pressed="false"><span class="k">Kênh nhà</span><span class="v" id="bx-kenhnha">—</span></button>
         </div>
 
+        <div id="tt-brands" class="tt-brands"></div>
+
+        <div class="tt-bar">
+          <select class="tt-ip" id="tt-sort">
+            <option value="tang">↓ Tăng đơn nhiều nhất</option>
+            <option value="tang_asc">↑ Tăng đơn ít nhất</option>
+            <option value="gmv">↓ GMV cao nhất</option>
+            <option value="orders">↓ Nhiều đơn nhất</option>
+            <option value="views">↓ Lượt xem cao nhất</option>
+          </select>
+          <select class="tt-ip" id="tt-fcamp">
+            <option value="">Camp: tất cả</option>
+            <option value="no">Chưa lên camp</option>
+            <option value="yes">Đã lên camp</option>
+          </select>
+          <select class="tt-ip" id="tt-fstaff">
+            <option value="">Người nhận: tất cả</option>
+            <option value="free">Chưa ai nhận</option>
+            <option value="DUY">Duy nhận</option>
+            <option value="PHUONG_NAM">Nam nhận</option>
+          </select>
+          <input class="tt-ip tt-q" id="tt-q" placeholder="Tìm nhanh theo tên video, kênh hoặc sản phẩm…">
+          <input class="tt-ip tt-own" id="tt-own" placeholder="Kênh nhà của công ty, cách nhau dấu phẩy…">
+          <span id="tt-filter-n" class="tt-sub"></span>
+          <span id="tt-own-n" class="tt-sub"></span>
+        </div>
+
+        <div class="tt-hdr tt-cols">
+          <div></div><div>Video</div><div></div>
+          <div class="r">Đơn kỳ này</div><div class="r">Tăng</div><div class="r">Đổi</div>
+          <div class="r">GMV</div><div class="r">Lượt xem</div><div></div>
+        </div>
+        <div id="tt-videos" class="tt-list"><div class="tt-empty">Đang tải…</div></div>
+        <div id="tt-cart" class="tt-cart" style="display:none"></div>
+
         <style>
-          #view-tiktok .tt-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;margin-bottom:14px}
-          #view-tiktok .tt-card{background:var(--bg-1,#fff);border:1px solid var(--line,rgba(0,0,0,.08));border-radius:14px;padding:13px 15px}
-          #view-tiktok .tt-card .k{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--text-2)}
-          #view-tiktok .tt-card .v{font-size:21px;font-weight:800;letter-spacing:-.02em;margin-top:3px}
-          #view-tiktok .tt-card .s{font-size:11.5px;color:var(--text-2);margin-top:2px}
-          #view-tiktok .tt-panel{background:var(--bg-1,#fff);border:1px solid var(--line,rgba(0,0,0,.08));border-radius:16px;padding:14px 16px}
-          #view-tiktok .tt-grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-          @media (max-width:900px){#view-tiktok .tt-grid2{grid-template-columns:1fr}}
-          #view-tiktok .tt-h{font-size:13.5px;font-weight:800;margin-bottom:10px}
-          /* Ô brand xổ ra danh sách sản phẩm. Thay cho dải tab ngang cũ: 20+ sản phẩm nhét
-             vào một hàng cuộn ngang thì phải kéo mới thấy hết, và không phân biệt được
-             hàng Noma với hàng Doscom. Hai ô đứng cạnh nhau, mặc định đóng. */
-          #view-tiktok .tt-brands{margin-bottom:12px}
-          #view-tiktok .tt-brands:empty{display:none}
+          /* Menu TikTok Shop — một câu hỏi duy nhất: video nào đang lên đơn mà CHƯA
+             đem đi set camp Facebook. Vì vậy 4 hộp lọc và cột "Tăng" là thứ nổi nhất;
+             mọi thẻ dùng CHUNG một lưới 9 cột nên các số thẳng hàng dọc như bảng. */
+          #view-tiktok{--tt-line:var(--border);--tt-up:#127A50;--tt-up-bg:#E7F5EE;--tt-down:#C0413C;
+                       --tt-amber:#8A5A12;--tt-amber-bg:#FBF3E4;--tt-mut:#7C879C}
+          #view-tiktok .tt-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
+          #view-tiktok .tt-head h2{margin:0;font-size:22px;font-weight:800;letter-spacing:-.01em}
+          #view-tiktok .tt-hr{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+          #view-tiktok .tt-chip{font-size:12px;font-weight:700;color:var(--tt-mut);background:var(--surface);
+            border:1px solid var(--tt-line);border-radius:999px;padding:5px 11px}
+          #view-tiktok .tt-range{display:flex;align-items:center;gap:6px}
+          #view-tiktok .tt-to{color:var(--tt-mut);font-weight:700}
+          #view-tiktok .tt-dt{width:142px}
+          #view-tiktok .tt-ip{font:700 12.5px var(--font);color:var(--text);background:var(--surface-2,#EEF2FA);
+            border:1px solid var(--tt-line);border-radius:10px;padding:7px 10px}
+          #view-tiktok .tt-ip:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
+          #view-tiktok .tt-q{flex:1;min-width:240px}
+          #view-tiktok .tt-own{max-width:260px;flex:1}
+          #view-tiktok .tt-ip::placeholder{font-weight:500;font-size:12px;font-style:italic;color:var(--tt-mut);opacity:.85}
+          #view-tiktok .tt-sub{font-size:11.5px;font-weight:600;color:var(--tt-mut)}
+
+          #view-tiktok .tt-boxes{display:grid;grid-template-columns:repeat(auto-fit,minmax(166px,1fr));gap:11px;margin-bottom:12px}
+          #view-tiktok .tt-box{text-align:left;font-family:var(--font);background:var(--surface);border:1px solid var(--tt-line);
+            border-radius:14px;padding:11px 14px;cursor:pointer;display:block}
+          #view-tiktok .tt-box:hover{border-color:var(--primary)}
+          #view-tiktok .tt-box[aria-pressed="true"]{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 7%,transparent)}
+          #view-tiktok .tt-box .k{display:block;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--tt-mut)}
+          #view-tiktok .tt-box[aria-pressed="true"] .k{color:var(--primary)}
+          #view-tiktok .tt-box .v{display:block;font-size:25px;font-weight:800;letter-spacing:-.02em;margin-top:2px}
+          #view-tiktok .tt-box .dl{font-size:12.5px;font-weight:800;margin-left:6px;letter-spacing:0}
+          #view-tiktok .up{color:var(--tt-up)} #view-tiktok .down{color:var(--tt-down)} #view-tiktok .flat{color:var(--tt-mut)}
+
+          #view-tiktok .tt-brands{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+          #view-tiktok .tt-all{font:700 12.5px var(--font);background:var(--surface);border:1px solid var(--tt-line);
+            border-radius:999px;padding:7px 14px;cursor:pointer;color:var(--text-2);align-self:flex-start}
+          #view-tiktok .tt-all.on{background:color-mix(in srgb,var(--primary) 10%,transparent);border-color:var(--primary);color:var(--primary)}
+          #view-tiktok .tt-all .n{font-weight:700;color:var(--tt-mut);margin-left:7px}
+          #view-tiktok .tt-all.on .n{color:var(--primary)}
           #view-tiktok .tt-bgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-          @media (max-width:900px){#view-tiktok .tt-bgrid{grid-template-columns:1fr}}
-          #view-tiktok .tt-brand{border:1px solid var(--line,rgba(0,0,0,.12));border-radius:14px;overflow:hidden;background:var(--bg-1,#fff)}
-          #view-tiktok .tt-brand.open{border-color:color-mix(in srgb,var(--primary) 45%,transparent)}
-          #view-tiktok .tt-bhead{width:100%;display:flex;gap:10px;align-items:center;cursor:pointer;border:0;background:transparent;color:var(--text-1,inherit);padding:11px 13px;text-align:left;font:inherit}
-          #view-tiktok .tt-bhead:hover{background:color-mix(in srgb,var(--primary) 6%,transparent)}
-          #view-tiktok .tt-bname{font-size:14px;font-weight:800;letter-spacing:-.01em}
-          #view-tiktok .tt-bsub{display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-top:2px}
-          #view-tiktok .tt-bnum{margin-left:auto;text-align:right;font-size:11.5px;font-weight:700;color:var(--text-2);white-space:nowrap}
-          #view-tiktok .tt-caret{font-size:11px;color:var(--text-2);transition:transform .15s}
+          @media (max-width:820px){#view-tiktok .tt-bgrid{grid-template-columns:1fr}}
+          #view-tiktok .tt-brand{background:var(--surface);border:1px solid var(--tt-line);border-radius:14px;overflow:hidden}
+          #view-tiktok .tt-brand.open{border-color:var(--primary)}
+          #view-tiktok .tt-bhead{width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;
+            background:transparent;border:0;font-family:var(--font);text-align:left;color:var(--text)}
+          #view-tiktok .tt-blogo{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:none;
+            font-weight:800;font-size:12.5px;color:#fff;background:linear-gradient(135deg,var(--primary),var(--primary-700))}
+          #view-tiktok .tt-brand[data-b="doscom"] .tt-blogo{background:linear-gradient(135deg,#127A50,#0C5738)}
+          #view-tiktok .tt-bname{display:block;font-size:14.5px;font-weight:800;line-height:1.2}
+          #view-tiktok .tt-bsub{display:block;font-size:11.5px;font-weight:600;color:var(--tt-mut)}
+          #view-tiktok .tt-bnum{margin-left:auto;display:flex;gap:14px;text-align:right}
+          #view-tiktok .tt-bnum div span{display:block;font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--tt-mut)}
+          #view-tiktok .tt-bnum div b{font-size:13.5px;font-weight:800}
+          #view-tiktok .tt-caret{color:var(--tt-mut);font-size:12px;transition:transform .18s}
           #view-tiktok .tt-brand.open .tt-caret{transform:rotate(180deg)}
-          #view-tiktok .tt-blist{border-top:1px solid var(--line,rgba(0,0,0,.08));max-height:290px;overflow:auto;padding:6px}
-          #view-tiktok .tt-sp{width:100%;display:flex;gap:10px;align-items:center;cursor:pointer;border:0;background:transparent;color:var(--text-1,inherit);border-radius:9px;padding:7px 9px;text-align:left;font:inherit;font-size:12.5px}
-          #view-tiktok .tt-sp:hover{background:color-mix(in srgb,var(--primary) 9%,transparent)}
-          #view-tiktok .tt-sp.on{background:var(--primary,#3b82f6);color:#fff}
-          #view-tiktok .tt-spn{font-weight:700;line-height:1.35}
-          #view-tiktok .tt-spm{margin-left:auto;font-size:11.5px;font-weight:600;opacity:.7;white-space:nowrap}
-          #view-tiktok .tt-all{cursor:pointer;border:1px solid var(--line,rgba(0,0,0,.12));background:var(--bg-1,#fff);color:var(--text-1,inherit);border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:700;margin-bottom:10px;line-height:1.3}
-          #view-tiktok .tt-all:hover{border-color:var(--primary,#3b82f6)}
-          #view-tiktok .tt-all.on{background:var(--primary,#3b82f6);border-color:transparent;color:#fff}
-          #view-tiktok .tt-all .n{font-weight:600;opacity:.66;margin-left:5px}
-          #view-tiktok .tt-sub{font-size:11.5px;font-weight:600;color:var(--text-2)}
-          /* Thẻ số + các cột tăng trưởng nằm THẲNG HÀNG trong chính bảng video:
-             một bảng duy nhất trả lời "video nào đang lên đơn mà chưa set camp". */
-          #view-tiktok .tt-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
-          #view-tiktok .tt-kpi{background:var(--muted);border-radius:12px;padding:9px 12px}
-          #view-tiktok .tt-kpi .k{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text-2)}
-          #view-tiktok .tt-kpi .v{font-size:21px;font-weight:900;letter-spacing:-.02em;margin-top:2px}
-          #view-tiktok .tt-kpi .d{font-size:12px;font-weight:800;margin-top:2px}
-          #view-tiktok .up{color:#0F7B4F} #view-tiktok .down{color:#C0342F} #view-tiktok .flat{color:var(--text-2)}
-          #view-tiktok .tt-scroll td.num,#view-tiktok .tt-scroll th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-          #view-tiktok .tt-scroll td.act{text-align:right;white-space:nowrap}
-          #view-tiktok .tt-spark{display:inline-flex;align-items:flex-end;gap:2px;height:20px;vertical-align:middle;margin-right:8px}
-          #view-tiktok .tt-spark i{width:5px;background:var(--primary);border-radius:2px 2px 0 0;opacity:.45}
-          #view-tiktok .tt-spark i.last{opacity:1}
-          #view-tiktok .tt-camp-btn{border:1px solid var(--primary);background:var(--primary);color:#fff;border-radius:8px;
-            padding:5px 11px;font:800 12px var(--font);cursor:pointer;white-space:nowrap}
-          #view-tiktok .tt-camp-btn[disabled]{background:transparent;color:var(--text-2);border-color:var(--border);cursor:not-allowed}
-          #view-tiktok .tt-camp-btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
-          #view-tiktok .tt-scroll{max-height:340px;overflow:auto}
-          #view-tiktok table{width:100%;border-collapse:collapse;font-size:13px}
-          #view-tiktok th{text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-2);padding:6px 8px;position:sticky;top:0;background:var(--bg-1,#fff)}
-          #view-tiktok th:first-child,#view-tiktok td:first-child{text-align:left}
-          #view-tiktok td{padding:7px 8px;border-top:1px solid var(--line,rgba(0,0,0,.06));text-align:right;white-space:nowrap}
-          #view-tiktok td.t{white-space:normal;line-height:1.35}
-          #view-tiktok .tt-empty{color:var(--text-2);padding:22px;text-align:center;font-size:13px}
+          #view-tiktok .tt-blist{border-top:1px solid var(--tt-line);padding:11px 14px 13px;display:flex;flex-wrap:wrap;gap:7px}
+          #view-tiktok .tt-sp{display:flex;align-items:center;gap:8px;border:1px solid var(--tt-line);background:var(--surface-2,#EEF2FA);
+            border-radius:11px;padding:6px 11px;cursor:pointer;font:700 12.5px var(--font);color:var(--text)}
+          #view-tiktok .tt-sp:hover{border-color:var(--primary)}
+          #view-tiktok .tt-sp.on{background:color-mix(in srgb,var(--primary) 10%,transparent);border-color:var(--primary);color:var(--primary)}
+          #view-tiktok .tt-spm{font-size:11px;font-weight:700;color:var(--tt-mut)}
+          #view-tiktok .tt-sp.on .tt-spm{color:var(--primary)}
+
+          #view-tiktok .tt-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--surface);
+            border:1px solid var(--tt-line);border-radius:14px;padding:10px 12px;margin-bottom:10px}
+          #view-tiktok .tt-cols{display:grid;
+            grid-template-columns:20px minmax(300px,1fr) 42px 72px 62px 64px 70px 78px 108px;gap:12px;align-items:center}
+          #view-tiktok .tt-hdr{padding:2px 14px 4px;font-size:9.5px;font-weight:800;letter-spacing:.06em;
+            text-transform:uppercase;color:var(--tt-mut)}
+          #view-tiktok .tt-hdr .r{text-align:right}
+          #view-tiktok .tt-list{display:flex;flex-direction:column;gap:7px}
+          #view-tiktok .tt-card{background:var(--surface);border:1px solid var(--tt-line);border-left:3px solid var(--tt-line);
+            border-radius:12px;padding:9px 14px}
+          #view-tiktok .tt-card:hover{border-color:color-mix(in srgb,var(--primary) 35%,var(--tt-line))}
+          #view-tiktok .tt-card.free{border-left-color:var(--tt-up)}
+          #view-tiktok .tt-card.locked{opacity:.72}
+          #view-tiktok .tt-card input[type=checkbox]{width:16px;height:16px;accent-color:var(--primary);cursor:pointer}
+          #view-tiktok .tt-info{min-width:0}
+          #view-tiktok .tt-vt{font-size:13px;font-weight:700;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+          #view-tiktok .tt-vt a{color:inherit;text-decoration:none}
+          #view-tiktok .tt-vt a:hover{color:var(--primary);text-decoration:underline}
+          #view-tiktok .tt-vm{display:flex;gap:6px;align-items:center;margin-top:2px;font-size:11px;font-weight:600;
+            color:var(--tt-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+          #view-tiktok .tt-vm .sp-nm{overflow:hidden;text-overflow:ellipsis}
+          #view-tiktok .tt-badge{font-size:10px;font-weight:800;border-radius:999px;padding:2px 7px;flex:none}
+          #view-tiktok .tt-badge.free{background:var(--tt-up-bg);color:var(--tt-up)}
+          #view-tiktok .tt-badge.camp{background:var(--surface-2,#EEF2FA);color:var(--tt-mut)}
+          #view-tiktok .tt-badge.mine,#view-tiktok .tt-badge.other{background:color-mix(in srgb,var(--primary) 12%,transparent);color:var(--primary)}
+          #view-tiktok .tt-badge.new{background:var(--tt-amber-bg);color:var(--tt-amber)}
+          #view-tiktok .tt-badge.own,#view-tiktok .tt-badge.ext{background:var(--surface-2,#EEF2FA);color:var(--text-2);border:1px solid var(--tt-line)}
+          #view-tiktok .tt-num{text-align:right;font-size:14.5px;font-weight:800;white-space:nowrap}
+          #view-tiktok .tt-num.sm{font-size:13px;font-weight:700}
+          #view-tiktok .tt-spark{display:flex;align-items:flex-end;gap:3px;height:22px;justify-content:center}
+          #view-tiktok .tt-spark i{width:5px;border-radius:2px 2px 0 0;background:var(--primary);opacity:.38}
+          #view-tiktok .tt-spark i.l{opacity:.9}
+          #view-tiktok .tt-go{border:1px solid var(--primary);background:var(--primary);color:#fff;border-radius:9px;
+            padding:7px 10px;font:800 12px var(--font);cursor:pointer;white-space:nowrap;width:100%}
+          #view-tiktok .tt-go.ghost{background:transparent;color:var(--text-2);border-color:var(--tt-line)}
+          #view-tiktok .tt-go[disabled]{background:transparent;color:var(--tt-mut);border-color:var(--tt-line);cursor:not-allowed}
+          #view-tiktok .tt-empty{color:var(--tt-mut);padding:22px;text-align:center;font-size:13px;font-weight:600;
+            background:var(--surface);border:1px dashed var(--tt-line);border-radius:12px}
           #view-tiktok .tt-err{color:#b3261e;background:#fdeced;border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.5}
-          #view-tiktok .tt-bar{height:7px;border-radius:99px;background:var(--muted);overflow:hidden;margin-top:5px}
-          #view-tiktok .tt-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--primary),var(--primary-700))}
-          #view-tiktok .tt-srcrow{display:grid;grid-template-columns:120px 1fr auto;gap:10px;align-items:center;font-size:13px;padding:5px 0}
-          #view-tiktok .tt-vt{font-weight:700;font-size:13px;line-height:1.35}
-          #view-tiktok .tt-vm{font-size:11.5px;color:var(--text-2);margin-top:2px}
-          #view-tiktok a{color:var(--primary);text-decoration:none}
-          #view-tiktok a:hover{text-decoration:underline}
-          #view-tiktok .tt-cart{background:color-mix(in srgb,var(--primary) 8%,var(--bg-1,#fff));border:1px solid color-mix(in srgb,var(--primary) 30%,transparent);border-radius:12px;padding:10px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px}
-          #view-tiktok .tt-cart b{font-size:15px}
-          #view-tiktok .tt-badge{font-size:10px;font-weight:800;border-radius:99px;padding:2px 7px;margin-left:6px;text-transform:uppercase;letter-spacing:.03em}
-          #view-tiktok .tt-badge.own{background:#e9f7ef;color:#0f7b43}
-          #view-tiktok .tt-badge.ext{background:#fdf3e7;color:#8a5a00}
-          /* Nhãn "ai đang giữ video" — của mình (xanh) vs người khác (đỏ, không tick được). */
-          #view-tiktok .tt-badge.mine{background:#e7f0fd;color:#1a4fa0}
-          #view-tiktok .tt-badge.other{background:#fdeced;color:#b3261e}
-          #view-tiktok .tt-badge.camp{background:#eceff1;color:#4a5560}
-          #view-tiktok td.ck{width:34px;text-align:center}
-          #view-tiktok td.ck input{width:16px;height:16px;cursor:pointer}
-          #view-tiktok tr.locked{opacity:.62}
-          /* Popup chọn nhân sự + toast gỡ nhận — dựng bằng JS, style để sẵn ở đây. */
-          .tt-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px}
-          .tt-modal{background:var(--bg-1,#fff);color:var(--text-1,#111);border-radius:16px;padding:20px 22px;max-width:460px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);font-size:13.5px;line-height:1.55}
-          .tt-modal h3{margin:0 0 6px;font-size:16px}
-          .tt-who{display:flex;gap:10px;margin:14px 0 4px}
-          .tt-who label{flex:1;border:2px solid var(--line,rgba(0,0,0,.12));border-radius:12px;padding:12px;text-align:center;cursor:pointer;font-weight:800}
-          .tt-who label.on{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 10%,transparent)}
-          .tt-who input{position:absolute;opacity:0;pointer-events:none}
-          .tt-modal .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
-          .tt-toast{position:fixed;left:16px;bottom:16px;z-index:9998;background:#12321f;color:#fff;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.5;box-shadow:0 8px 28px rgba(0,0,0,.35);max-width:380px}
-          .tt-toast button{margin-left:10px;background:#fff;color:#12321f;border:0;border-radius:8px;padding:5px 10px;font-weight:800;cursor:pointer;font-size:12.5px}
+          #view-tiktok .tt-cart{position:sticky;bottom:0;display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-top:10px;
+            background:var(--surface);border:1px solid var(--primary);border-radius:14px;padding:11px 14px;
+            box-shadow:0 10px 26px -14px rgba(50,87,230,.45);z-index:3}
+          @media (max-width:1100px){
+            #view-tiktok .tt-hdr{display:none}
+            #view-tiktok .tt-cols{grid-template-columns:20px minmax(0,1fr);row-gap:9px}
+            #view-tiktok .tt-spark{display:none}
+          }
         </style>
       </div><!-- /view-tiktok -->
       <div class="view" id="view-heatmap">
@@ -3203,8 +3224,10 @@
   // không gắn nổi listener nào. Kiểm cú pháp không bắt được loại lỗi này.
   if(!nav||!document.getElementById('tt-videos')) return;
 
-  var vidsEl=document.getElementById('tt-videos'), vidSub=document.getElementById('tt-vid-sub'),
-      vidDaysSel=document.getElementById('tt-vid-days'),
+  var vidsEl=document.getElementById('tt-videos'), KHOANG='',
+      presetSel=document.getElementById('tt-preset'), tuEl=document.getElementById('tt-tu'),
+      denEl=document.getElementById('tt-den'), qEl=document.getElementById('tt-q'),
+      boxesEl=document.getElementById('tt-boxes'), mocEl=document.getElementById('tt-moc'),
       refreshBtn=document.getElementById('tt-refresh'),
       ownEl=document.getElementById('tt-own'), ownN=document.getElementById('tt-own-n'),
       cartEl=document.getElementById('tt-cart'),
@@ -3217,6 +3240,10 @@
   var lastVideos=[];              // kết quả lần tải gần nhất, để đối chiếu khi tick
   var shown=[];                   // lastVideos sau khi lọc + sắp xếp — data-i trỏ vào đây
   var picked=new Map();           // link video → bản ghi đã chọn (giữ khi đổi khoảng ngày)
+  // 4 hộp lọc trên đầu. Bật nhiều hộp thì điều kiện CỘNG DỒN (và), không phải hoặc —
+  // "chưa lên camp" + "kênh nhà" = video kênh nhà chưa ai chạy.
+  var HOP={chua:true,moi:false,capnhat:false,kenhnha:false};
+  var timKiem='';
 
   // ── Sổ NHẬN video (server) ─────────────────────────────────────────────────
   // 1 video chỉ 1 nhân sự chạy. Nguồn sự thật nằm ở D1 (/api/video-claims), KHÔNG
@@ -3373,6 +3400,12 @@
       if(activeSP && spKeyOf(v)!==activeSP) return false;
       poolN++;
       var k=videoKey(v.link), c=k?claims.get(k):null;
+      var h=nhomCua(v);
+      for(var hid in HOP){ if(HOP[hid] && !h[hid]) return false; }
+      if(timKiem){
+        var mo=((v.title||'')+' '+(v.username||'')+' '+(v.product||'')+' '+(v.shop||'')).toLowerCase();
+        if(mo.indexOf(timKiem)<0) return false;
+      }
       if(fCamp==='yes' && !(k&&inCamp.has(k))) return false;
       if(fCamp==='no'  &&  (k&&inCamp.has(k))) return false;
       if(fStaff==='free' && c) return false;
@@ -3386,7 +3419,7 @@
     });
     // Mẫu số là số video CỦA SẢN PHẨM đang chọn, không phải toàn bộ — đang xem NOMA 911
     // mà báo "12/457" thì đọc ra vô nghĩa.
-    filterN.innerHTML = (shown.length===poolN
+    filterN.innerHTML = (KHOANG?KHOANG+' · ':'')+(shown.length===poolN
       ? 'Hiện tất cả '+poolN+' video'
       : 'Hiện '+shown.length+'/'+poolN+' video')+
       (activeSP ? ' trong sản phẩm này' : '')+
@@ -3399,7 +3432,7 @@
     if(!lastVideos.length){ vidsEl.innerHTML='<div class="tt-empty">Không có video trong khoảng này.</div>'; renderCart(); return; }
     if(!shown.length){ vidsEl.innerHTML='<div class="tt-empty">Không video nào khớp bộ lọc. Nới bộ lọc ở trên để xem thêm.</div>'; renderCart(); return; }
     var me=myStaff();
-    vidsEl.innerHTML='<div class="tt-scroll"><table><thead><tr><th class="ck"></th><th>Video</th><th class="num">GMV</th><th class="num">Đơn</th><th class="num">Tăng</th><th class="num">Đổi</th><th class="num">Lượt xem</th><th></th></tr></thead><tbody>'+
+    vidsEl.innerHTML=
       shown.map(function(v,i){
         var link=v.link?('https://'+String(v.link).replace(/^https?:\/\//,'')):null;
         var own=isOwn(v.username);
@@ -3413,19 +3446,24 @@
         var dis = !v.link ? ' disabled title="Không có link, không chạy được"'
                 : locked ? ' disabled title="'+esc(c.staff_name||c.staff)+' đã nhận video này"' : '';
         var tr=truocCua(v), tg=tangCua(v);
-        return '<tr'+(locked?' class="locked"':'')+'><td class="ck"><input type="checkbox" data-i="'+i+'"'+(picked.has(v.link||v.title)?' checked':'')+dis+'></td>'+
-          '<td class="t"><div class="tt-vt">'+(link?'<a href="'+esc(link)+'" target="_blank" rel="noopener">':'')+esc(v.title)+(link?'</a>':'')+'</div>'+
-          '<div class="tt-vm">'+esc(v.shop)+(v.username?' · @'+esc(v.username):'')+badge+claimBadge+campBadge+
-          (v.product?'<br><span title="'+esc(v.product)+'">SP: '+esc(v.product_short||v.product)+'</span>':'')+'</div></td>'+
-          '<td class="num"><b>'+money(v.gmv)+'</b></td>'+
-          '<td class="num">'+spark(v)+vnd(v.orders)+'</td>'+
-          '<td class="num">'+(tg===null?'—':(tg>0?'<b class="up">+'+vnd(tg)+'</b>':(tg<0?'<span class="down">'+vnd(tg)+'</span>':'0')))+'</td>'+
-          '<td class="num">'+(tr===null?'—':nhanTang(tr?pct(v.orders||0,tr):null))+'</td>'+
-          '<td class="num">'+vnd(v.views)+'</td>'+
-          '<td class="act"><button class="tt-camp-btn" data-camp="'+i+'"'+
+        var chua=!(k&&inCamp.has(k)) && !c;
+        return '<div class="tt-card tt-cols'+(chua?' free':'')+(locked?' locked':'')+'">'+
+          '<input type="checkbox" data-i="'+i+'"'+(picked.has(v.link||v.title)?' checked':'')+dis+'>'+
+          '<div class="tt-info"><div class="tt-vt">'+(link?'<a href="'+esc(link)+'" target="_blank" rel="noopener">':'')+esc(v.title||'(không tiêu đề)')+(link?'</a>':'')+'</div>'+
+          '<div class="tt-vm">'+esc(v.shop)+(v.username?' · @'+esc(v.username):'')+
+          (chua?'<span class="tt-badge free">chưa lên camp</span>':'')+claimBadge+campBadge+
+          (nhomCua(v).moi?'<span class="tt-badge new">mới ra đơn</span>':'')+badge+
+          (v.product?'<span class="sp-nm" title="'+esc(v.product)+'">· '+esc(v.product_short||v.product)+'</span>':'')+'</div></div>'+
+          spark(v)+
+          '<div class="tt-num">'+vnd(v.orders)+'</div>'+
+          '<div class="tt-num '+(tg>0?'up':(tg<0?'down':''))+'">'+(tg===null?'—':(tg>0?'+':'')+vnd(tg))+'</div>'+
+          '<div class="tt-num sm">'+(tr===null?'—':nhanTang(tr?pct(v.orders||0,tr):null))+'</div>'+
+          '<div class="tt-num sm">'+money(v.gmv)+'</div>'+
+          '<div class="tt-num sm">'+vnd(v.views)+'</div>'+
+          '<div><button class="tt-go'+((k&&inCamp.has(k))?' ghost':'')+'" data-camp="'+i+'"'+
             (!v.link?' disabled title="Không có link"':(locked?' disabled title="'+esc(c.staff_name||c.staff)+' đã nhận"':''))+'>'+
-            ((k&&inCamp.has(k))?'Lên lại camp':'Lên camp')+'</button></td></tr>';
-      }).join('')+'</tbody></table></div>';
+            ((k&&inCamp.has(k))?'Lên lại camp':'Lên camp')+'</button></div></div>';
+      }).join('');
 
     // Nút "Lên camp": chọn đúng video đó rồi chạy luôn luồng cũ (hỏi ai chạy → ghi sổ
     // nhận → chuyển sang Tạo Ads). Không đụng các video đang tick dở.
@@ -3446,16 +3484,17 @@
       });
     });
     renderCart();
-    veKpi(KY_TRUOC);
+    veHop();
   }
 
-  // Cột đơn kèm 2 vạch: kỳ trước → kỳ này. Nhìn phát thấy đang lên hay đang tụt.
+  // Ô sparkline riêng trong lưới: 2 vạch kỳ trước → kỳ này.
   function spark(v){
-    var t=truocCua(v); if(t===null) return '';
+    var t=truocCua(v);
+    if(t===null) return '<div class="tt-spark"></div>';
     var o=v.orders||0, mx=Math.max(t,o)||1;
-    return '<span class="tt-spark" title="kỳ trước '+vnd(t)+' đơn → kỳ này '+vnd(o)+' đơn">'+
-      '<i style="height:'+Math.max(3,t/mx*20).toFixed(0)+'px"></i>'+
-      '<i class="last" style="height:'+Math.max(3,o/mx*20).toFixed(0)+'px"></i></span>';
+    return '<div class="tt-spark" title="kỳ trước '+vnd(t)+' đơn → kỳ này '+vnd(o)+' đơn">'+
+      '<i style="height:'+Math.max(3,t/mx*22).toFixed(0)+'px"></i>'+
+      '<i class="l" style="height:'+Math.max(3,o/mx*22).toFixed(0)+'px"></i></div>';
   }
 
   // Video vừa bị người khác nhận (do tải lại sổ) → bỏ khỏi giỏ, không để lỡ tay chạy.
@@ -3793,10 +3832,15 @@
   // Ô thời gian nhận HAI loại giá trị: số ("7"/"14"/"30") → tham số days như cũ, còn
   // chữ ("hom-nay"…) → tham số ky, để SERVER tự quy ra khoảng ngày. Cố ý không tính
   // ngày ở đây: máy người dùng có thể đặt sai múi giờ, còn server luôn tính theo giờ VN.
-  function thamSoKy(){
-    var v=vidDaysSel.value||'14';
-    return /^\d+$/.test(v) ? 'days='+v : 'ky='+encodeURIComponent(v);
+  // Khoảng ngày: ô chọn nhanh điền sẵn 2 ô ngày; chọn "Tuỳ chọn" thì tự gõ.
+  function ngayVN(lui){ return new Date(Date.now()+7*3600e3-(lui||0)*864e5).toISOString().slice(0,10); }
+  function dungPreset(){
+    var v=presetSel.value;
+    if(v==='tuy') return;
+    if(v==='thang'){ denEl.value=ngayVN(0); tuEl.value=ngayVN(0).slice(0,8)+'01'; }
+    else { denEl.value=ngayVN(0); tuEl.value=ngayVN(Number(v)-1); }
   }
+  function thamSoKy(){ return 'from='+tuEl.value+'&to='+denEl.value; }
 
   function loadVideos(){
     vidsEl.innerHTML='<div class="tt-empty">Đang tải… (gộp Lark + TikTok Shop, có thể mất vài giây)</div>';
@@ -3808,16 +3852,12 @@
         if(!j.ok) throw new Error(j.error||'lỗi');
         var g=j.gop||{};
         // Kỳ 1 ngày thì ghi thẳng "hôm nay 13/8", không ghi "từ 13/8 đến 13/8".
-        var khoang = (j.start===j.end)
-          ? (j.nhan_ky||'')+' '+dm(j.start)
-          : 'từ '+dm(j.start)+' đến '+dm(j.end);
-        vidSub.textContent='· '+khoang+' · '+vnd(j.unique_videos)+' video'+
-          (j.moc_du_lieu?' · dữ liệu tới '+dm(j.moc_du_lieu):'')+
-          (g.trung_ma!=null?' (Lark '+vnd(g.lark)+' + TikTok Shop '+vnd(g.tts)+', trùng '+vnd((g.trung_ma||0)+(g.trung_ten||0))+')':'')+
-          (g.loi_nguon_phu?' · ⚠ thiếu nguồn TikTok Shop':'')+
-          (j.cached?' · bộ nhớ đệm':'');
+        var khoang=(j.start===j.end)?dm(j.start):(dm(j.start)+'–'+dm(j.end));
+        KHOANG=khoang+' · '+vnd(j.unique_videos)+' video'+
+          (g.loi_nguon_phu?' · ⚠ thiếu nguồn TikTok Shop':'')+(j.cached?' · bộ nhớ đệm':'');
         lastVideos=j.videos||[];
-        if(mocEl) mocEl.textContent=j.moc_du_lieu?('Dữ liệu tới '+dm(j.moc_du_lieu)):'';
+        MOC_DATA=j.moc_du_lieu||null;
+        if(mocEl) mocEl.textContent=MOC_DATA?('Dữ liệu tới '+dm(MOC_DATA)):'';
         coTruoc=false; TRUOC={}; KY_TRUOC=null;
         renderVideos();
         // Kỳ trước tải sau: bảng hiện ngay, cột Tăng/Đổi điền thêm khi có.
@@ -3832,7 +3872,7 @@
             'không phải không có đơn. Doanh thu theo shop vẫn cập nhật sớm hơn phần video.</div>');
         }
       })
-      .catch(function(e){ vidSub.textContent=''; errBox(vidsEl,e.message); });
+      .catch(function(e){ errBox(vidsEl,e.message); });
   }
 
   // Sổ nhận + sổ đã-lên-camp. Hỏng thì bảng vẫn dùng được (chỉ mất nhãn/bộ lọc),
@@ -3878,8 +3918,7 @@
   // Một bảng duy nhất: video nào đang lên đơn mà CHƯA set camp. Kỳ trước = cửa sổ cùng
   // độ dài liền trước kỳ đang xem, hỏi qua /api/lark/tiktok-videos?from=&to=.
   // Xếp theo MỨC TĂNG TUYỆT ĐỐI, không theo %: video 1→3 đơn có +200% nhưng không đáng chạy.
-  var kpiEl=document.getElementById('tt-kpi'), mocEl=document.getElementById('tt-moc');
-  var TRUOC={}, KY_TRUOC=null;  // khoá video → số đơn kỳ trước
+  var TRUOC={}, KY_TRUOC=null, MOC_DATA=null;  // khoá video → số đơn kỳ trước
   var coTruoc=false;
 
   function lui(iso,n){ var d=new Date(iso+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()-n); return d.toISOString().slice(0,10); }
@@ -3912,23 +3951,58 @@
       .catch(function(){ coTruoc=false; return null; });
   }
 
-  function veKpi(ky){
-    if(!kpiEl) return;
-    var coDon=lastVideos.filter(function(v){ return (v.orders||0)>0; });
-    var tang=coTruoc?lastVideos.filter(function(v){ return (tangCua(v)||0)>0; }):[];
-    var chuaCamp=tang.filter(function(v){ var k=videoKey(v.link); return !(k&&inCamp.has(k)) && !(k&&claims.get(k)); });
-    var moi=coTruoc?tang.filter(function(v){ return !TRUOC[khoaVid(v)]; }):[];
-    var donNay=lastVideos.reduce(function(t,v){ return t+(v.orders||0); },0);
-    var donTruoc=coTruoc?lastVideos.reduce(function(t,v){ return t+(TRUOC[khoaVid(v)]||0); },0):0;
-    kpiEl.innerHTML=
-      the('Đơn từ video', vnd(donNay), coTruoc?nhanTang(pct(donNay,donTruoc))+' so kỳ trước':'')+
-      the('Video có đơn', vnd(coDon.length), coTruoc?vnd(tang.length)+' video đang tăng':'')+
-      the('Đang tăng · chưa lên camp', coTruoc?vnd(chuaCamp.length):'—', 'nên đem đi set camp')+
-      the('Video mới ra đơn', coTruoc?vnd(moi.length):'—', ky?('kỳ trước '+dm(ky.start)+'–'+dm(ky.end)):'');
+  // Nhóm của một video theo 4 hộp lọc.
+  function nhomCua(v){
+    var k=videoKey(v.link);
+    return {
+      chua: !(k&&inCamp.has(k)) && !(k&&claims.get(k)),
+      moi: coTruoc && !TRUOC[khoaVid(v)] && (v.orders||0)>0,
+      capnhat: (v.last_date&&MOC_DATA) ? v.last_date>=MOC_DATA : false,
+      kenhnha: isOwn(v.username),
+    };
   }
 
+  // Con số trên hộp = SỐ VIDEO thuộc nhóm. Mũi tên = chênh lệch ĐƠN của chính nhóm đó
+  // giữa kỳ này và kỳ trước (trạng thái camp không có lịch sử nên không so được theo video).
+  function veHop(){
+    ['chua','moi','capnhat','kenhnha'].forEach(function(id){
+      var el=document.getElementById('bx-'+id); if(!el) return;
+      var ds=lastVideos.filter(function(v){ return nhomCua(v)[id]; });
+      var nay=ds.reduce(function(t,v){ return t+(v.orders||0); },0);
+      var truoc=coTruoc?ds.reduce(function(t,v){ return t+(TRUOC[khoaVid(v)]||0); },0):null;
+      var d=(truoc===null)?'':(nay-truoc);
+      el.innerHTML=vnd(ds.length)+
+        (d===''?'':' <span class="dl '+(d>0?'up':(d<0?'down':'flat'))+'">'+(d>0?'▲ +':(d<0?'▼ ':'■ '))+vnd(Math.abs(d))+' đơn</span>');
+    });
+  }
+
+  function napKyTruoc(start,end){
+    var n=soNgay(start,end);
+    var tEnd=lui(start,1), tStart=lui(tEnd,n-1);
+    return fetch('/api/lark/tiktok-videos?from='+tStart+'&to='+tEnd+'&top=3000',{credentials:'same-origin'})
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if(!j.ok) throw new Error(j.error||'lỗi');
+        TRUOC={}; (j.videos||[]).forEach(function(v){ TRUOC[khoaVid(v)]=v.orders||0; });
+        coTruoc=true;
+        return {start:tStart,end:tEnd};
+      })
+      .catch(function(){ coTruoc=false; return null; });
+  }
+
+  dungPreset();
   nav.addEventListener('click',function(){ if(loaded)return; loaded=true; loadVideos(); loadMarks(); });
-  vidDaysSel.addEventListener('change',loadVideos);
+  presetSel.addEventListener('change',function(){ dungPreset(); loadVideos(); });
+  tuEl.addEventListener('change',function(){ presetSel.value='tuy'; loadVideos(); });
+  denEl.addEventListener('change',function(){ presetSel.value='tuy'; loadVideos(); });
+  qEl.addEventListener('input',function(){ timKiem=qEl.value.trim().toLowerCase(); renderVideos(); });
+  boxesEl.addEventListener('click',function(e){
+    var b=e.target.closest('button[data-f]'); if(!b) return;
+    var id=b.getAttribute('data-f');
+    HOP[id]=!HOP[id];
+    b.setAttribute('aria-pressed',HOP[id]?'true':'false');
+    renderVideos();
+  });
   refreshBtn.addEventListener('click',function(){ loadVideos(); loadMarks(); });
   // Lọc/sắp xếp chạy trên dữ liệu đã tải — không gọi lại API.
   sortSel.addEventListener('change',renderVideos);

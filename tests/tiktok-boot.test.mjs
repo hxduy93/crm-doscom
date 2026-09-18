@@ -65,7 +65,10 @@ test("khối TikTok Shop khởi động được, không ném ReferenceError", (
   assert.ok(daGan.length > 0, "khong gan duoc listener nao — khoi da return som");
   const co = (x) => daGan.some((k) => k.includes(x));
   assert.ok(co("tiktok"), "thieu listener mo menu TikTok — bam vao menu se khong tai du lieu");
-  assert.ok(co("tt-vid-days"), "thieu listener doi khoang ngay");
+  // 18/09/2026: ô chọn "N ngày" đổi thành bộ lọc khoảng ngày (preset + 2 ô ngày).
+  assert.ok(co("tt-preset") && co("tt-tu") && co("tt-den"), "thieu listener bo loc khoang ngay");
+  assert.ok(co("tt-q"), "thieu listener o tim kiem");
+  assert.ok(co("tt-boxes"), "thieu listener 4 hop loc nhanh");
   assert.ok(co("tt-refresh"), "thieu listener nut Tai lai");
   assert.ok(co("tt-sort") && co("tt-fcamp") && co("tt-fstaff"), "thieu listener bo loc");
 });
