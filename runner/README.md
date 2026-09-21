@@ -24,7 +24,7 @@ Cần sẵn trên máy: Python 3.12+, Node 20+, `wrangler` (đã đăng nhập t
    **public**. Kiểm lại trước khi ghi token vào:
 
    ```powershell
-   cd C:\Users\HXDUy\jarvis-1\crm-doscom
+   cd E:\Du an\jarvis-1\crm-doscom
    git check-ignore -v .dev.vars.refresh
    ```
    → PASS nếu in ra `.gitignore:5:.dev.vars.*`. Nếu không in gì thì **DỪNG**, file đang
@@ -51,7 +51,7 @@ Cần sẵn trên máy: Python 3.12+, Node 20+, `wrangler` (đã đăng nhập t
 3. Chạy thử một lượt:
 
    ```powershell
-   cd C:\Users\HXDUy\jarvis-1\crm-doscom
+   cd E:\Du an\jarvis-1\crm-doscom
    .\runner\refresh-runner.ps1 -Once
    ```
    → PASS nếu thấy `Runner v1.0 khoi dong` và không có dòng `FATAL`.
@@ -62,7 +62,7 @@ Cần sẵn trên máy: Python 3.12+, Node 20+, `wrangler` (đã đăng nhập t
 **Cách 1 — mở cửa sổ để đó** (dễ nhìn log nhất, hợp lúc mới dùng):
 
 ```powershell
-cd C:\Users\HXDUy\jarvis-1\crm-doscom
+cd E:\Du an\jarvis-1\crm-doscom
 .\runner\refresh-runner.ps1
 ```
 
@@ -88,7 +88,7 @@ C:\Users\HXDUy\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\crm
 > Nếu bạn có quyền admin và muốn dùng Task Scheduler, mở PowerShell **Run as Administrator**:
 > ```powershell
 > $action  = New-ScheduledTaskAction -Execute "powershell.exe" `
->   -Argument '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "C:\Users\HXDUy\jarvis-1\crm-doscom\runner\refresh-runner.ps1"'
+>   -Argument '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "E:\Du an\jarvis-1\crm-doscom\runner\refresh-runner.ps1"'
 > Register-ScheduledTask -TaskName "CRM Doscom Refresh Runner" -Action $action -Trigger (New-ScheduledTaskTrigger -AtLogOn)
 > ```
 > Dùng Task Scheduler thì nhớ xoá file `.vbs` ở Startup, không thì chạy 2 runner cùng lúc.
@@ -98,14 +98,14 @@ Chạy nền thì không thấy log trực tiếp — xem ở `runner/logs/`.
 ## Cập nhật gấp, không cần bấm nút trên web
 
 ```powershell
-cd C:\Users\HXDUy\jarvis-1\crm-doscom
+cd E:\Du an\jarvis-1\crm-doscom
 .\runner\refresh-runner.ps1 -RunNow
 ```
 
 ## Xem log
 
 ```powershell
-Get-Content C:\Users\HXDUy\jarvis-1\crm-doscom\runner\logs\2026-08-17.log -Tail 50
+Get-Content E:\Du an\jarvis-1\crm-doscom\runner\logs\2026-08-17.log -Tail 50
 ```
 
 Log giữ 14 ngày gần nhất, tự dọn. Log trên D1 chỉ có 2000 ký tự cuối của bước lỗi — log
@@ -194,7 +194,7 @@ còn một, nên vẫn nên đổi token định kỳ.
 **Kiểm sau khi cấu hình xong:**
 
 ```powershell
-cd C:\Users\HXDUy\jarvis-1\crm-doscom
+cd E:\Du an\jarvis-1\crm-doscom
 .\runner\refresh-runner.ps1 -Once
 ```
 → PASS nếu KHÔNG thấy dòng `FATAL ... Cloudflare Access chan`.

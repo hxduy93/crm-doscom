@@ -8,7 +8,7 @@
 # Chi tiet: openspec/changes/refresh-button/design.md
 #
 # Cach chay (PowerShell, dung dau .\ vi PowerShell khong tu chay file trong thu muc hien tai):
-#   cd C:\Users\HXDUy\jarvis-1\crm-doscom
+#   cd E:\Du an\jarvis-1\crm-doscom
 #   .\runner\refresh-runner.ps1              # chay lien tuc
 #   .\runner\refresh-runner.ps1 -Once        # chay 1 luot roi thoat (de test)
 #   .\runner\refresh-runner.ps1 -RunNow      # chay pipeline ngay, khong cho ai bam nut
