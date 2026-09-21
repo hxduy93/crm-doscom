@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-21 12:33",
+  "generated_at": "2026-09-21 20:23",
   "source_data_date_range": {
     "start_7d": "2026-09-14",
     "end": "2026-09-20",
@@ -49,31 +49,31 @@
   },
   "roas_proxy": {
     "google_ads_spend_30d": 73471941.0,
-    "website_revenue_30d_vnd": 224080800.0,
-    "roas_overall": 3.05,
+    "website_revenue_30d_vnd": 223365800.0,
+    "roas_overall": 3.04,
     "target_roas": 3.0,
     "status": "healthy",
     "note": "ROAS = Pancake Website revenue (30d) / Google Ads spend (30d). Proxy — mua qua Zalo/Hotline sau khi thay Google Ads khong count vao day."
   },
   "website_revenue_pancake": {
-    "total_30d": 224080800.0,
-    "orders_30d": 130,
+    "total_30d": 223365800.0,
+    "orders_30d": 129,
     "by_status": {
       "delivered": {
-        "revenue": 162411800.0,
-        "orders": 94
+        "revenue": 166506800.0,
+        "orders": 98
       },
       "returning": {
-        "revenue": 11347000.0,
-        "orders": 7
+        "revenue": 17632000.0,
+        "orders": 10
       },
       "canceled": {
         "revenue": 11514000.0,
         "orders": 5
       },
       "other": {
-        "revenue": 37918000.0,
-        "orders": 23
+        "revenue": 26823000.0,
+        "orders": 15
       },
       "returned": {
         "revenue": 890000.0,
@@ -82,8 +82,8 @@
     },
     "by_source": {
       "WEBSITE": {
-        "revenue": 113146000.0,
-        "orders": 77
+        "revenue": 112431000.0,
+        "orders": 76
       },
       "ZALO_OA": {
         "revenue": 14272000.0,
@@ -1518,31 +1518,17 @@
         ]
       },
       {
-        "search_term": "cam năng lượng mặt trời",
-        "spend_30d": 22848.0,
-        "clicks_30d": 3,
+        "search_term": "thiết bị ghi âm",
+        "spend_30d": 151518.0,
+        "clicks_30d": 18,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.0462,
+        "ctr_30d": 0.1333,
         "match_types": [
           "BROAD",
-          "PHRASE"
+          "EXACT"
         ],
         "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera không dây",
-        "spend_30d": 281167.0,
-        "clicks_30d": 38,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.092,
-        "match_types": [
-          "BROAD",
-          "NEAR_EXACT",
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
+          "ADDED",
           "NONE"
         ]
       },
@@ -1565,6 +1551,19 @@
         "clicks_30d": 16,
         "conversions_30d": 1.0,
         "ctr_30d": 0.3556,
+        "match_types": [
+          "EXACT"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm mini",
+        "spend_30d": 694022.0,
+        "clicks_30d": 66,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1091,
         "match_types": [
           "EXACT"
         ],
@@ -2081,6 +2080,12 @@
       }
     ],
     "match_type_breakdown": {
+      "EXACT": {
+        "spend_30d": 4864055.0,
+        "clicks_30d": 524,
+        "conversions_30d": 13.49,
+        "term_count": 55
+      },
       "BROAD": {
         "spend_30d": 12300051.0,
         "clicks_30d": 1369,
@@ -2099,12 +2104,6 @@
         "conversions_30d": 15.69,
         "term_count": 741
       },
-      "EXACT": {
-        "spend_30d": 4864055.0,
-        "clicks_30d": 524,
-        "conversions_30d": 13.49,
-        "term_count": 55
-      },
       "NEAR_EXACT": {
         "spend_30d": 964623.0,
         "clicks_30d": 90,
@@ -2115,7 +2114,7 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 8631,
+      "total_unique_placements": 8640,
       "total_spend_30d": 9404830.0
     },
     "network_breakdown": {
@@ -2140,9 +2139,9 @@
       "WEBSITE": {
         "spend_30d": 9404830.0,
         "clicks_30d": 3072,
-        "impressions_30d": 272202,
+        "impressions_30d": 272331,
         "ctr_30d": 0.0113,
-        "placement_count": 8631
+        "placement_count": 8640
       }
     },
     "top_waste_placements": [],
@@ -2367,7 +2366,7 @@
       "OTHER": {
         "spend_30d": 71510161.0,
         "clicks_30d": 8430,
-        "impressions_30d": 469907,
+        "impressions_30d": 469908,
         "ctr_30d": 0.0179,
         "ad_count": 56
       }
