@@ -2,8 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  groupName, parseGroupName, demKetQua, soNgayChay, chamDiem, adCuNhat,
-  tinhChoTrong, MAX_TEST_ADS,
+  groupName, parseGroupName, demKetQua, soNgayChay, chamDiem,
 } from "../functions/lib/fb-groups.js";
 
 // QUYẾT 2026-08-05: mỗi sản phẩm có ĐÚNG 2 hộp sống lâu dài "<SP> - TEST" và
@@ -89,38 +88,32 @@ test("KHÔNG phán bừa khi chưa có CPL chuẩn", () => {
   assert.match(d.ly_do, /chưa có CPL chuẩn/);
 });
 
-// ── Giữ trần 4 creative trong hộp TEST ──────────────────────────────────────
-test("ad cũ nhất bỏ qua ad đã tắt", () => {
-  const ads = [
-    { ad_id: "1", created_time: "2026-08-01T00:00:00Z", dang_chay: false },
-    { ad_id: "2", created_time: "2026-08-02T00:00:00Z", dang_chay: true },
-    { ad_id: "3", created_time: "2026-08-03T00:00:00Z", dang_chay: true },
-  ];
-  assert.equal(adCuNhat(ads).ad_id, "2", "ad tắt rồi thì không chiếm chỗ");
-  assert.equal(adCuNhat([]), null);
-});
-
-test("tính số ad phải tắt để giữ trần", () => {
-  assert.deepEqual(tinhChoTrong(2, 2), { can_tat: 0, con_cho: 2 });
-  assert.deepEqual(tinhChoTrong(4, 2), { can_tat: 2, con_cho: 0 });
-  assert.deepEqual(tinhChoTrong(0, 6), { can_tat: 0, con_cho: 4 }, "không có ad nào thì không tắt được gì");
-  assert.equal(MAX_TEST_ADS, 4);
-});
-
+// ── Trần 4 creative ĐÃ BỎ (23/09/2026) ──────────────────────────────────────
+// Luồng tự động từng tự tắt ad CŨ NHẤT để giữ hộp TEST ở 4 creative. Luật đó xét tuổi
+// chứ không xét hiệu quả nên tắt nhầm creative đang thắng. Giữ test này để không ai
+// lặng lẽ dựng lại cơ chế đó.
 // ── Luồng tự động phải dùng lại hộp, không đẻ ad set mới ────────────────────
 const html = readFileSync(new URL("../ads-creator.html", import.meta.url), "utf8");
 
-test("tên campaign/ad set là tên hộp cố định, KHÔNG kèm ngày", () => {
+test("tên CAMPAIGN là tên hộp cố định, KHÔNG kèm ngày", () => {
   assert.match(html, /campaign_name: tenHop/, "campaign phải mang tên hộp");
-  assert.match(html, /adset_name: tenHop/, "ad set phải mang tên hộp");
   assert.match(html, /const tenHop = `\$\{g\.product\} - \$\{autoGroup\}`/);
   assert.doesNotMatch(html, /campaign_name: `\$\{dm\} - \$\{g\.product\}/,
     "quay lại đặt tên campaign theo ngày là mỗi lần chạy lại đẻ hộp mới");
 });
 
-test("có hộp sẵn thì gửi existing_adset_id, ad vẫn mang tên ngày/tháng - SP - KOC", () => {
-  assert.match(html, /existing_adset_id: hop\.adset_id/);
-  assert.match(html, /existing_campaign_id: hop\.campaign_id/);
+// Nhóm QC ĐẦU TIÊN mang đúng tên hộp; nhóm thứ hai trở đi trong cùng campaign phải có
+// tên khác để còn phân biệt trên Ads Manager — danh tính hộp neo ở sổ D1 nên không sao.
+test("ad set đầu mang tên hộp, ad set thêm vào campaign cũ mới kèm ngày", () => {
+  assert.match(html, /adset_name: dich\.loai === "adset_moi" \? `\$\{tenHop\} · \$\{dm\}` : tenHop/);
+});
+
+// 23/09/2026: đích KHÔNG còn tự dò theo tên (timHop) mà do người chạy chọn ở dropdown.
+test("đích đổ creative lấy từ lựa chọn của người chạy, không tự dò theo tên", () => {
+  assert.match(html, /const dich = dichCua\(g\.product, gdNow\)/);
+  assert.doesNotMatch(html, /timHop\(g\.product/, "không được quay lại cách dò theo tên");
+  assert.match(html, /existing_adset_id: dich\.adset_id/);
+  assert.match(html, /existing_campaign_id: dich\.campaign_id/);
   assert.match(html, /ad_name: adNames\[i\]/, "tên ad vẫn theo công thức KOC");
 });
 
@@ -128,7 +121,10 @@ const cc = readFileSync(new URL("../functions/api/create-campaign.js", import.me
 
 test("backend: existing_adset_id thì KHÔNG tạo campaign/ad set mới và không đụng ngân sách", () => {
   assert.match(cc, /if \(cfg\.existing_adset_id\)/);
-  const khoi = cc.slice(cc.indexOf("if (cfg.existing_adset_id)"), cc.indexOf("const campaignBody = {"));
+  // Cắt đúng thân nhánh dùng lại ad set (tới câu return của chính nó), không cắt lấn
+  // sang nhánh "campaign có sẵn" thêm ngày 23/09/2026.
+  const iRe = cc.indexOf("if (cfg.existing_adset_id)");
+  const khoi = cc.slice(iRe, cc.indexOf("if (cfg.existing_campaign_id)", iRe));
   assert.doesNotMatch(khoi, /campaigns`/, "không được tạo campaign khi đã có ad set");
   assert.doesNotMatch(khoi, /withAdsetBudget/, "không được sửa ngân sách ad set đang chạy (reset máy học)");
   assert.match(khoi, /reused_adset: true/);

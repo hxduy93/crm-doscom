@@ -6,19 +6,35 @@
  * / CPL bao nhiêu, và chấm sẵn "bê sang SCALE · tắt · theo dõi · chưa đủ dữ liệu".
  *
  * Dùng cho 2 việc:
- *   1. Luồng tạo Ads tự động: tìm ad set "<SP> - TEST" đang chạy để ĐỔ VIDEO MỚI
- *      VÀO ĐÓ thay vì đẻ ad set mới mỗi lần (xem lib/fb-groups.js).
+ *   1. Luồng tạo Ads tự động: liệt kê MỌI ad set của hộp để người chạy chọn đích.
  *   2. Bảng "TEST vs SCALE" trong ads-creator.html.
  *
  * CPL mục tiêu: lấy ?target_cpl= nếu có, không thì tính từ chính nhóm SCALE của
  * sản phẩm đó (chi tiêu / kết quả). Không có cả hai thì KHÔNG chấm điểm — thà báo
  * "chưa có chuẩn để so" còn hơn phán bừa.
  *
+ * 23/09/2026 — SỬA LỖI GỘP AD SET. Trước đây mỗi nhóm chỉ trả về MỘT ad set (ad set của
+ * ad đầu tiên Meta trả về) nhưng lại gom ad của MỌI ad set vào chung danh sách đó.
+ * Campaign "NOMA 230 · … - TEST" có 3 ad set. Hai hệ quả, nặng nhẹ khác nhau:
+ *   · Đích đổ creative phụ thuộc thứ tự Meta trả ad — thứ tự đó không có cam kết nào.
+ *     Đo 23/09/2026 thì Meta trả ad mới nhất trước nên vô tình trúng ad set đúng.
+ *   · Danh sách ad gộp làm cơ chế "giữ trần 4 creative" (đã bỏ) đếm trên cả campaign rồi
+ *     tắt ad cũ nhất bất kể ad set — cái này sai thật và đã sẵn sàng quét sạch ad set
+ *     không liên quan ở hộp NOMA 350 (13 creative bật trên 3 ad set).
+ * Nay trả về ĐỦ danh sách ad set, kèm gợi ý mặc định neo theo sổ D1 `ad_boxes`.
+ *
  * Response: { ok, account_id, days, products:[{ product, target_cpl, test, scale }] }
- *   test/scale = { campaign_id, adset_id, adset_name, status, daily_budget, ads:[...] } | null
+ *   test/scale = {
+ *     adsets: [{ campaign_id, campaign_name, adset_id, adset_name, adset_status,
+ *                daily_budget, optimization_goal, ads:[...], so_ad_dang_chay, la_so }],
+ *     ads: [...],               // gộp ad của MỌI ad set — dùng cho việc tick bê sang SCALE
+ *     mac_dinh_adset_id,        // ad set chọn sẵn trong dropdown (chỉ là gợi ý)
+ *     adset_id_theo_so,         // ad set mà sổ D1 đang trỏ tới, null nếu chưa ghi sổ
+ *   } | null
  */
 import { getIdentity, canAccess } from "../lib/access.js";
 import { parseGroupName, demKetQua, soNgayChay, chamDiem } from "../lib/fb-groups.js";
+import { docSo, khoaHop, chonMacDinh } from "../lib/ad-boxes.js";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
@@ -75,7 +91,11 @@ export async function onRequestGet(context) {
     }, token);
 
     const now = Date.now();
-    const sanPham = new Map();   // product -> { test, scale }
+    // product -> { test: Map<adset_id, hop>, scale: Map<adset_id, hop> }
+    // Khoá theo adset_id: một campaign có thể chứa nhiều ad set, mỗi cái là một đích đổ
+    // creative RIÊNG. Gộp chúng lại chính là gốc của lỗi chọn nhầm ad set.
+    const sanPham = new Map();
+    const so = await docSo(env.DB, acct);
 
     for (const ad of ads) {
       const camp = ad.campaign || {};
@@ -106,24 +126,26 @@ export async function onRequestGet(context) {
         tiktok_id: null,            // ID video gốc trên TikTok — điền ở bước dưới
       };
 
-      if (!sanPham.has(g.product)) sanPham.set(g.product, { test: null, scale: null });
+      if (!sanPham.has(g.product)) sanPham.set(g.product, { test: new Map(), scale: new Map() });
       const nhom = sanPham.get(g.product);
       const key = g.group.toLowerCase();
-      if (!nhom[key]) {
-        const as = ad.adset || {};
-        nhom[key] = {
+      const as = ad.adset || {};
+      const asId = String(as.id || "");
+      if (!asId) continue;   // ad không gắn ad set thì không thuộc đích nào
+      if (!nhom[key].has(asId)) {
+        nhom[key].set(asId, {
           campaign_id: camp.id || null,
           campaign_name: camp.name || null,
           campaign_status: camp.status || null,
-          adset_id: as.id || null,
+          adset_id: asId,
           adset_name: as.name || null,
           adset_status: as.status || null,
           daily_budget: Number(as.daily_budget) || null,
           optimization_goal: as.optimization_goal || null,
           ads: [],
-        };
+        });
       }
-      nhom[key].ads.push(item);
+      nhom[key].get(asId).ads.push(item);
     }
 
     // Gắn ID video GỐC TRÊN TIKTOK: sổ uploaded_videos lưu filename = "<id tiktok>.mp4"
@@ -142,8 +164,8 @@ export async function onRequestGet(context) {
           if (r.video_id) theoVideo.set(String(r.video_id), tt);
         }
         for (const nhom of sanPham.values()) {
-          for (const hop of [nhom.test, nhom.scale]) {
-            for (const a of (hop ? hop.ads : [])) {
+          for (const hop of [...nhom.test.values(), ...nhom.scale.values()]) {
+            for (const a of hop.ads) {
               a.tiktok_id = theoAd.get(String(a.ad_id))
                 || (a.video_id ? theoVideo.get(String(a.video_id)) : null)
                 || null;
@@ -153,29 +175,58 @@ export async function onRequestGet(context) {
       } catch (e) { /* sổ lỗi → cột UID để trống, phần còn lại vẫn dùng được */ }
     }
 
+    // Gói một nhóm (TEST hoặc SCALE) thành { adsets, ads, mac_dinh_adset_id, ... }.
+    // `ads` là danh sách GỘP của mọi ad set — chỗ tick "bê sang SCALE" làm việc ở cấp ad
+    // nên không cần biết ad nằm ở ad set nào; còn chỗ chọn đích thì đọc `adsets`.
+    const goiNhom = (m, product, group) => {
+      const ds = [...m.values()];
+      if (!ds.length) return null;
+      for (const hop of ds) {
+        hop.ads.sort((a, b) => Date.parse(b.created_time || 0) - Date.parse(a.created_time || 0));
+        hop.so_ad_dang_chay = hop.ads.filter(a => a.dang_chay).length;
+      }
+      const ghi = so.get(khoaHop(product, group)) || null;
+      const idTheoSo = ghi && ghi.adset_id ? String(ghi.adset_id) : null;
+      for (const hop of ds) hop.la_so = idTheoSo != null && hop.adset_id === idTheoSo;
+      // Ad set đang chạy lên trước, trong mỗi nhóm thì cái có ad mới nhất lên trước.
+      ds.sort((a, b) => {
+        const ra = a.adset_status === "ACTIVE" ? 0 : 1;
+        const rb = b.adset_status === "ACTIVE" ? 0 : 1;
+        if (ra !== rb) return ra - rb;
+        return Date.parse(b.ads[0] && b.ads[0].created_time || 0) - Date.parse(a.ads[0] && a.ads[0].created_time || 0);
+      });
+      const md = chonMacDinh(ds, idTheoSo);
+      return {
+        adsets: ds,
+        ads: ds.flatMap(h => h.ads),
+        so_adset: ds.length,
+        mac_dinh_adset_id: md ? md.adset_id : null,
+        adset_id_theo_so: idTheoSo,
+        // Sổ trỏ tới một ad set KHÔNG còn trong tài khoản (đã xoá / đổi campaign) —
+        // nói ra để người chạy biết vì sao gợi ý mặc định khác với lần trước.
+        so_lac: idTheoSo != null && !ds.some(h => h.adset_id === idTheoSo),
+      };
+    };
+
     const products = [];
     for (const [product, nhom] of sanPham) {
-      // CPL chuẩn = CPL thật của nhóm SCALE (gộp mọi ad). Không có thì dùng tham số.
+      const test = goiNhom(nhom.test, product, "TEST");
+      const scale = goiNhom(nhom.scale, product, "SCALE");
+      // CPL chuẩn = CPL thật của nhóm SCALE (gộp mọi ad set). Không có thì dùng tham số.
       let target = targetCplParam;
-      if (!target && nhom.scale) {
-        const s = nhom.scale.ads.reduce((t, a) => t + a.spend, 0);
-        const k = nhom.scale.ads.reduce((t, a) => t + a.results, 0);
-        if (k > 0) target = Math.round(s / k);
+      if (!target && scale) {
+        const chi = scale.ads.reduce((t, a) => t + a.spend, 0);
+        const kq = scale.ads.reduce((t, a) => t + a.results, 0);
+        if (kq > 0) target = Math.round(chi / kq);
       }
-      if (nhom.test) {
-        for (const a of nhom.test.ads) {
+      if (test) {
+        for (const a of test.ads) {
           const d = chamDiem(a, { target_cpl: target });
           a.verdict = a.dang_chay ? d.verdict : "off";
           a.ly_do = a.dang_chay ? d.ly_do : "ad đang tắt";
         }
-        nhom.test.ads.sort((a, b) => Date.parse(b.created_time || 0) - Date.parse(a.created_time || 0));
-        nhom.test.so_ad_dang_chay = nhom.test.ads.filter(a => a.dang_chay).length;
       }
-      if (nhom.scale) {
-        nhom.scale.ads.sort((a, b) => Date.parse(b.created_time || 0) - Date.parse(a.created_time || 0));
-        nhom.scale.so_ad_dang_chay = nhom.scale.ads.filter(a => a.dang_chay).length;
-      }
-      products.push({ product, target_cpl: target || null, test: nhom.test, scale: nhom.scale });
+      products.push({ product, target_cpl: target || null, test, scale });
     }
     products.sort((a, b) => a.product.localeCompare(b.product, "vi"));
 

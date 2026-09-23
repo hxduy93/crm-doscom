@@ -4,8 +4,9 @@
  * Hai thao tác của quy trình TEST → SCALE:
  *
  *   { action: "pause_ad", ad_id }
- *       Tắt 1 ad. Dùng cho "creative thua thì tắt" và cho luồng tự động khi ad set
- *       TEST đã đủ 4 creative (tắt cái cũ nhất để nhường chỗ).
+ *       Tắt 1 ad. Dùng cho nút "Tắt" ở bảng TEST vs SCALE và cho tuỳ chọn "tắt bản ở
+ *       TEST sau khi bê sang SCALE". Luồng tạo ads tự động KHÔNG còn gọi tới đây —
+ *       trần 4 creative + cơ chế tự tắt đã bỏ ngày 23/09/2026 (xem lib/fb-groups.js).
  *
  *   { action: "promote", ad_id, account_id, product, daily_budget? }
  *       Bê 1 ad từ nhóm TEST sang nhóm SCALE của cùng sản phẩm.

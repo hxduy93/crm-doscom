@@ -23,6 +23,8 @@
 const FB_API_VERSION = "v20.0";
 const GRAPH = `https://graph.facebook.com/${FB_API_VERSION}`;
 
+import { ghiSo } from "../lib/ad-boxes.js";
+
 // ─────────────────── chiến lược giá thầu (Meta: "Chiến lược giá thầu") ───────────────────
 // LOWEST_COST_WITHOUT_CAP  = "Chi phí thấp nhất" — Meta tự đấu, không trần (mặc định).
 // LOWEST_COST_WITH_MIN_ROAS= "Mục tiêu ROAS"     — chỉ có nghĩa với optimization_goal=VALUE.
@@ -431,6 +433,21 @@ export async function onRequestPost(context) {
        đang chạy, làm 05/08/2026) gọi hàm rồi THOÁT SỚM, không bao giờ chạy tới chỗ
        khai báo cũ ở dưới → tính năng đó hỏng 100% từ lúc ra đời, tới 22/08/2026 mới
        phát hiện. Đừng dời hai dòng này xuống dưới. */
+
+    /* Ghi sổ hộp: (tài khoản, sản phẩm, nhóm) -> campaign_id + adset_id vừa dùng.
+       Lần chạy sau tra theo ID nên đổi tên bên Trình quản lý QC không làm lạc hộp nữa.
+       Ghi cả khi DÙNG LẠI ad set — đó là lúc người chạy tự tay chọn đích, chính là thứ
+       đáng nhớ nhất. Hỏng sổ KHÔNG làm hỏng lượt tạo: chỉ cảnh báo. */
+    async function ghiSoHop(campaignId, adsetId) {
+      const box = cfg.box || null;
+      if (!box || !box.product || !adsetId) return;
+      const ok = await ghiSo(env.DB, {
+        account_id: accountIdRaw, product: box.product, group: box.group || "TEST",
+        campaign_id: campaignId, adset_id: adsetId,
+      });
+      if (!ok) warnings.push("Không ghi được sổ hộp vào D1 — lần sau phải tự chọn lại nhóm quảng cáo đích.");
+    }
+
     let currentAdSubStep = "";  // để báo lỗi chính xác sub-step nào fail
     let currentAdIndex = -1;
     /* Cũng phải khai TRƯỚC nhánh existing_adset_id vì nhánh đó return sớm — khai ở dưới
@@ -475,6 +492,7 @@ export async function onRequestPost(context) {
       } catch (adErr) {
         throw new Error(`[Ad #${idx + 1} - thêm vào ad set sẵn có] ${adErr.message || adErr}`);
       }
+      await ghiSoHop(partial.campaign_id, adsetId);
       return json({
         success: true,
         reused_adset: true,
@@ -486,6 +504,18 @@ export async function onRequestPost(context) {
         ads_manager_url: `https://adsmanager.facebook.com/adsmanager/manage/ads?act=${accountIdRaw}&selected_adset_ids=${adsetId}`,
       });
     }
+    /* ĐÍCH THỨ BA (23/09/2026): "tạo NHÓM QC MỚI trong campaign đang có".
+       Trước đây chỉ có hai đường — dùng lại nguyên ad set cũ, hoặc đẻ campaign mới hoàn
+       toàn. Không có cách nào thêm một ad set thứ hai vào đúng campaign đang chạy, nên
+       người chạy phải vào Trình quản lý QC làm tay (đó là gốc của mấy ad set "BID",
+       "BID - tăng tốc" nằm lẫn trong campaign hộp mà luồng tự động không hiểu). */
+    if (cfg.existing_campaign_id) {
+      partial.campaign_id = String(cfg.existing_campaign_id);
+      partial.reused_campaign = true;
+      if (isCBO) {
+        warnings.push("Campaign có sẵn đang giữ ngân sách của chính nó (CBO) — không đụng vào; ngân sách khai trong form bị bỏ qua.");
+      }
+    } else {
     const campaignBody = {
       name: cfg.campaign_name || `${cfg.objective}-${Date.now()}`,
       objective: cfg.objective,
@@ -506,6 +536,7 @@ export async function onRequestPost(context) {
     }
     const campRes = await fbPost(`/act_${accountIdRaw}/campaigns`, campaignBody, token);
     partial.campaign_id = campRes.id;
+    }
 
     // ── Step 3+4: AdSet(s) + Ads ────────────────────────────────
     // 2026-07-06: hỗ trợ "1 creative = 1 ad set" (cfg.adset_per_ad).
@@ -624,8 +655,10 @@ export async function onRequestPost(context) {
       throw new Error(`[Ad #${currentAdIndex + 1} - ${currentAdSubStep}] ${adErr.message || adErr}`);
     }
 
+    await ghiSoHop(partial.campaign_id, partial.adset_id);
     return json({
       success: true,
+      reused_campaign: partial.reused_campaign === true,
       campaign_id: partial.campaign_id,
       adset_id: partial.adset_id,
       adsets: partial.adsets,

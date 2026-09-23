@@ -1,7 +1,7 @@
 // Nhóm chạy TEST / SCALE cho quảng cáo Facebook.
 //
 // QUYẾT 2026-08-05 (chủ dự án): mỗi sản phẩm có ĐÚNG hai "hộp" sống lâu dài —
-//   "<sản phẩm> - TEST"  : ngân sách nhỏ, tối đa 4 creative, luân chuyển liên tục
+//   "<sản phẩm> - TEST"  : ngân sách nhỏ, creative luân chuyển liên tục
 //   "<sản phẩm> - SCALE" : ngân sách lớn, chỉ chứa creative đã thắng
 // Trước đó mỗi lần chạy tự động lại đẻ 1 campaign + 1 ad set mới → tài khoản Noma
 // Việt Nam có ~19 ad set cùng tệp, mỗi cái ~7 chuyển đổi/tuần nên KHÔNG cái nào
@@ -12,7 +12,12 @@
 // thay đổi theo từng video.
 
 export const GROUPS = ["TEST", "SCALE"];
-export const MAX_TEST_ADS = 4;   // trần creative sống cùng lúc trong 1 ad set TEST
+
+// 23/09/2026 — ĐÃ BỎ trần MAX_TEST_ADS = 4 cùng hai hàm adCuNhat()/tinhChoTrong().
+// Luồng tự động từng tự TẮT ad cũ nhất để giữ hộp TEST ở 4 creative. Luật đó xét TUỔI
+// chứ không xét HIỆU QUẢ nên tắt nhầm cả creative đang thắng, trong khi chamDiem() ngay
+// dưới đây đã biết chấm đúng nhưng chỉ được dùng để tô màu bảng. Chủ dự án quyết bỏ hẳn:
+// số creative mỗi nhóm do người chạy tự quyết bên Trình quản lý QC.
 
 // Tên hộp. Sản phẩm giữ nguyên chữ người dùng nhập, chỉ gọn khoảng trắng.
 export function groupName(product, group) {
@@ -89,18 +94,3 @@ export function chamDiem(ad, opts = {}) {
   return { verdict: "watch", ly_do: `CPL ${Math.round(cpl).toLocaleString("vi-VN")}đ, cho chạy thêm 2–3 ngày` };
 }
 
-// Ad cũ nhất trong danh sách (để nhường chỗ khi ad set TEST đã đủ 4 creative).
-// Chỉ xét ad đang bật; ad tắt rồi thì không chiếm chỗ.
-export function adCuNhat(ads) {
-  const song = (ads || []).filter(a => a && a.dang_chay !== false);
-  if (!song.length) return null;
-  return song.slice().sort((a, b) => Date.parse(a.created_time || 0) - Date.parse(b.created_time || 0))[0];
-}
-
-// Còn chỗ cho bao nhiêu creative mới, và phải tắt bớt mấy cái.
-export function tinhChoTrong(soAdDangChay, soVideoMoi, tran = MAX_TEST_ADS) {
-  const dangChay = Math.max(0, Number(soAdDangChay) || 0);
-  const moi = Math.max(0, Number(soVideoMoi) || 0);
-  const canTat = Math.max(0, dangChay + moi - tran);
-  return { can_tat: Math.min(canTat, dangChay), con_cho: Math.max(0, tran - dangChay) };
-}

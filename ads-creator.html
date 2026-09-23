@@ -185,7 +185,16 @@ function AdsCreatorPanel() {
   // Nhóm chạy: mỗi sản phẩm có ĐÚNG 2 hộp sống lâu dài "<SP> - TEST" và "<SP> - SCALE".
   // Video mới luôn vào TEST; creative thắng mới được bê sang SCALE (nút ở bảng bên dưới).
   const [autoGroup, setAutoGroup] = useState("TEST")
-  const MAX_TEST_ADS = 4
+  // Đích đổ creative do người chạy chọn, khoá "<sản phẩm>|<nhóm>" -> mã đích.
+  // Không có khoá = dùng gợi ý mặc định của server (xem mucMacDinh).
+  const [autoTarget, setAutoTarget] = useState({})
+  // 23/09/2026 — BỎ TRẦN 4 CREATIVE (quyết của chủ dự án). Trước đây hộp TEST chỉ cho 4 ad
+  // sống cùng lúc và luồng tự động TỰ TẮT ad CŨ NHẤT để nhường chỗ. Hai chỗ sai:
+  //   · xét TUỔI chứ không xét HIỆU QUẢ, nên creative đang thắng vẫn bị tắt vì nó già nhất,
+  //     dù hàm chấm điểm chamDiem() đã có sẵn (chỉ được dùng để tô màu bảng);
+  //   · đếm ad trên CẢ campaign vì server gộp mọi ad set lại, nên tắt lan sang ad set khác:
+  //     hộp NOMA 350 có 13 creative bật trên 3 ad set, đổ thêm 3 video là tắt 12 ad.
+  // Nay không tắt, không cảnh báo; số creative mỗi nhóm do người chạy tự quyết bên Ads Manager.
   // Trạng thái hai nhóm của tài khoản đang chọn (/api/fb-groups) — dùng cho cả việc
   // tái dùng ad set lúc chạy lẫn bảng TEST vs SCALE.
   const [groups, setGroups] = useState(null)      // { products:[...] } | null
@@ -1089,12 +1098,6 @@ function AdsCreatorPanel() {
     }
   }
 
-  // Ngưỡng cảnh báo số creative trong 1 ad set. KHÔNG còn cắt thành nhiều campaign —
-  // mọi video mới của 1 sản phẩm gộp vào 1 campaign → 1 ad set → N ad.
-  // 4 là mức hợp lý với ngân sách ~400k/ngày: cả ad set cần ~50 conversion/tuần để thoát
-  // learning phase, chia cho quá nhiều creative thì không cái nào đủ dữ liệu.
-  const MAX_CREATIVES = 4
-
   // Nhãn hiển thị ↔ giá trị Marketing API của ô "Chiến lược giá thầu".
   const AUTO_BID_STRATEGY = {
     lowest: "LOWEST_COST_WITHOUT_CAP",
@@ -1130,7 +1133,7 @@ function AdsCreatorPanel() {
     // Trạng thái hộp TEST/SCALE phải là bản MỚI NHẤT ngay lúc chạy (state React có
     // thể cũ), nên tải lại và dùng biến cục bộ cho cả vòng lặp.
     const gdNow = await loadGroups(true)
-    if (!gdNow) pushLog("⚠ Không đọc được trạng thái nhóm TEST/SCALE — sẽ tạo hộp mới nếu chưa có.")
+    if (!gdNow) pushLog("⚠ Không đọc được các nhóm quảng cáo hiện có — MỌI sản phẩm sẽ tạo campaign mới. Huỷ đi và bấm lại nếu không muốn vậy.")
     try {
       for (const g of autoGroups) {
         // Chỉ chạy video MỚI (chưa có ad). Đã quét + cả nhóm đều cũ → bỏ qua.
@@ -1142,9 +1145,6 @@ function AdsCreatorPanel() {
         // 1 sản phẩm = 1 campaign, mọi video mới thành creative bên trong cùng 1 ad set.
         const files = newFiles
         pushLog(`▶ Sản phẩm "${g.product}" — ${files.length} video mới → 1 campaign, 1 ad set, ${files.length} creative`)
-        if (files.length > MAX_CREATIVES) {
-          pushLog(`  ⚠ ${files.length} creative chung 1 ad set (khuyến nghị ≤ ${MAX_CREATIVES}) — ngân sách chia mỏng, có creative sẽ không tiêu được tiền.`)
-        }
         // UTM: cả 4 field (source/medium/campaign/id) BẰNG NHAU = "d/m-sảnphẩm-ngườichạy"
         // (đúng cấu trúc user đang dùng, vd "6/7-noma911-thangthattha").
         const utmVal = [dm, slugCompact(g.product), runnerSlug].filter(Boolean).join("-")
@@ -1244,33 +1244,39 @@ function AdsCreatorPanel() {
           }
           if (skipped.length) pushLog(`  ⚠ ${skipped.length} video lỗi — giữ trạng thái "mới" để thử lại sau: ${skipped.join(", ")}`)
           if (adsArr.length === 0) throw new Error(`cả ${files.length} video đều upload lỗi — không tạo campaign`)
-          // 3) Đổ creative vào HỘP đang chạy của sản phẩm ("<SP> - TEST"), chưa có
-          //    thì mới dựng hộp mới. Không đẻ campaign/ad set mới mỗi lần chạy nữa —
-          //    đó là thứ đã sinh ra ~19 ad set cùng tệp ở tài khoản Noma Việt Nam.
-          const hop = timHop(g.product, autoGroup, gdNow)
+          /* 3) ĐÍCH ĐỔ CREATIVE — do người chạy chọn ở dropdown từng sản phẩm (dichCua()).
+                KHÔNG còn tự dò theo tên. Cách dò cũ (timHop) chỉ thấy MỘT ad set mỗi hộp
+                nên campaign chứa nhiều nhóm QC thì đích phụ thuộc thứ tự Meta trả ad —
+                thứ tự không có cam kết, và người chạy không hề biết mình đổ vào đâu.
+
+                Vẫn giữ nguyên tắc 2026-08-05: mặc định ĐỔ VÀO nhóm đang chạy thay vì đẻ
+                hộp mới mỗi lần — đó là thứ đã sinh ra ~19 ad set cùng tệp ở tài khoản Noma
+                Việt Nam, không cái nào đủ ~50 chuyển đổi/tuần để thoát máy học. Khác ở chỗ
+                nay nó là GỢI Ý hiện rõ trên màn hình, không phải suy đoán ngầm. */
           const tenHop = `${g.product} - ${autoGroup}`
-          if (hop) {
-            // Giữ trần 4 creative sống cùng lúc: đủ chỗ thì thôi, thiếu thì tắt ad CŨ NHẤT.
-            const dangChay = (hop.ads || []).filter(a => a.dang_chay)
-            const canTat = Math.max(0, Math.min(dangChay.length, dangChay.length + adsArr.length - MAX_TEST_ADS))
-            if (canTat > 0) {
-              const cuNhat = dangChay.slice().sort((a, b) => Date.parse(a.created_time || 0) - Date.parse(b.created_time || 0)).slice(0, canTat)
-              pushLog(`  • Hộp "${tenHop}" đang có ${dangChay.length} creative → tắt ${canTat} cái cũ nhất để giữ trần ${MAX_TEST_ADS}`)
-              for (const a of cuNhat) {
-                const r = await pauseAd(a.ad_id)
-                pushLog(r.ok ? `    · đã tắt "${a.ad_name}"` : `    ⚠ không tắt được "${a.ad_name}": ${r.error}`)
-              }
-            }
-            pushLog(`  • Thêm ${adsArr.length} creative vào hộp "${tenHop}" (giữ nguyên ngân sách ad set)...`)
+          const dich = dichCua(g.product, gdNow)
+          let cauHinhDich = {}
+          if (dich.loai === "adset") {
+            pushLog(`  • Đổ ${adsArr.length} creative vào nhóm QC "${dich.adset_name}" (${dich.adset_id})`
+              + ` — campaign "${dich.campaign_name}". Giữ nguyên ngân sách nhóm.`)
+            cauHinhDich = { existing_adset_id: dich.adset_id, existing_campaign_id: dich.campaign_id }
+          } else if (dich.loai === "adset_moi") {
+            pushLog(`  • Tạo NHÓM QC MỚI trong campaign "${dich.campaign_name}" (${dich.campaign_id}),`
+              + ` ngân sách ${Number(autoBudget).toLocaleString("vi-VN")}đ/ngày, ${adsArr.length} creative...`)
+            cauHinhDich = { existing_campaign_id: dich.campaign_id }
           } else {
-            pushLog(`  • Chưa có hộp "${tenHop}" → tạo mới: 1 campaign, 1 ad set, ${adsArr.length} creative...`)
+            pushLog(`  • Tạo CAMPAIGN MỚI "${tenHop}" — 1 nhóm QC, ${adsArr.length} creative...`)
           }
           const config = {
             // Tên hộp CỐ ĐỊNH (không kèm ngày) để lần chạy sau tìm lại đúng chỗ.
             // Ngày/tháng + KOC nằm ở TÊN AD (adNames) — xem ghi chú phía trên.
             campaign_name: tenHop,
-            adset_name: tenHop,
-            ...(hop ? { existing_adset_id: hop.adset_id, existing_campaign_id: hop.campaign_id } : {}),
+            // Nhóm QC thứ hai trở đi trong cùng campaign phải có tên KHÁC để còn phân biệt
+            // trên Ads Manager. Tên hộp chuẩn vẫn nằm ở campaign nên việc dò tên không hỏng.
+            adset_name: dich.loai === "adset_moi" ? `${tenHop} · ${dm}` : tenHop,
+            ...cauHinhDich,
+            // Ghi sổ D1: lần sau tra theo ID, khỏi phụ thuộc tên.
+            box: { product: g.product, group: autoGroup },
             objective: "OUTCOME_SALES",
             buying_type: "AUCTION",
             account_id: autoAccount,
@@ -1373,14 +1379,51 @@ function AdsCreatorPanel() {
   // với nhau — gọn khoảng trắng, bỏ phân biệt hoa thường.
   const chuanSP = (s) => String(s || "").trim().replace(/\s+/g, " ").toLowerCase()
 
-  // Hộp (campaign + ad set) của 1 sản phẩm trong 1 nhóm; chưa tải groups thì trả null
-  // → chỗ gọi sẽ tạo hộp mới, đúng hành vi cũ.
-  const timHop = (product, group, data) => {
+  /* ── ĐÍCH ĐỔ CREATIVE ────────────────────────────────────────────────────────
+     Mã đích lưu trong autoTarget:
+       "as:<adset_id>"    đổ vào đúng nhóm QC này
+       "nas:<campaign_id>" tạo nhóm QC MỚI trong campaign này
+       "new"              tạo campaign + nhóm QC mới hoàn toàn
+     Khoá theo (sản phẩm, nhóm TEST/SCALE) nên đổi nhóm chạy không kéo theo lựa chọn cũ.
+
+     THAY CHO timHop() cũ: hàm đó trả về "hộp" mà server đã gộp sẵn thành MỘT ad set, nên
+     campaign có nhiều nhóm QC thì đích phụ thuộc thứ tự Meta trả ad — không cam kết, và
+     người chạy KHÔNG hề thấy mình đang đổ vào đâu. Nay server trả đủ danh sách, giao diện
+     bày ra, người chạy chọn. */
+  const nhomCua = (product, data) => {
     const src = data || groups
     const p = (src && src.products || []).find(x => chuanSP(x.product) === chuanSP(product))
-    if (!p) return null
-    const h = p[String(group).toLowerCase()]
-    return (h && h.adset_id) ? h : null
+    return p ? (p[autoGroup.toLowerCase()] || null) : null
+  }
+
+  const khoaDich = (product) => `${chuanSP(product)}|${autoGroup}`
+
+  // Gợi ý mặc định do server tính: sổ D1 trước, không có thì nhóm ĐANG CHẠY mới nhất.
+  const mucMacDinh = (product, data) => {
+    const n = nhomCua(product, data)
+    return (n && n.mac_dinh_adset_id) ? `as:${n.mac_dinh_adset_id}` : "new"
+  }
+
+  const maDich = (product, data) => autoTarget[khoaDich(product)] || mucMacDinh(product, data)
+
+  /* Giải mã mã đích thành thứ handleAutoRun dùng được. Nhóm QC đã biến mất khỏi tài khoản
+     (xoá bên Ads Manager giữa hai lần quét) thì LÙI VỀ tạo campaign mới, thay vì gửi một
+     ID chết xuống Meta rồi nhận lỗi sau khi đã upload xong cả loạt video. */
+  const dichCua = (product, data) => {
+    const ma = maDich(product, data)
+    const ds = (nhomCua(product, data) || {}).adsets || []
+    if (ma.startsWith("as:")) {
+      const h = ds.find(x => String(x.adset_id) === ma.slice(3))
+      return h ? { loai: "adset", adset_id: h.adset_id, adset_name: h.adset_name,
+                   campaign_id: h.campaign_id, campaign_name: h.campaign_name }
+               : { loai: "moi" }
+    }
+    if (ma.startsWith("nas:")) {
+      const h = ds.find(x => String(x.campaign_id) === ma.slice(4))
+      return h ? { loai: "adset_moi", campaign_id: h.campaign_id, campaign_name: h.campaign_name }
+               : { loai: "moi" }
+    }
+    return { loai: "moi" }
   }
 
   const loadGroups = async (silent) => {
@@ -1844,10 +1887,11 @@ function AdsCreatorPanel() {
                   ))}
                 </div>
                 <p className="text-[11px] text-gray-500 mt-1.5">
-                  Mỗi sản phẩm có đúng 2 hộp sống lâu dài: <b>&lt;SP&gt; - TEST</b> và <b>&lt;SP&gt; - SCALE</b>.
-                  Video mới luôn vào TEST (tối đa {MAX_TEST_ADS} creative — đủ rồi thì tự tắt cái cũ nhất).
-                  Ad set đã có thì <b>thêm creative vào đó</b>, không tạo ad set mới và <b>không đụng ngân sách</b> (sửa ngân sách = reset máy học).
-                  Creative thắng thì bê sang SCALE bằng nút ở bảng bên dưới.
+                  Mỗi sản phẩm có 2 hộp sống lâu dài: <b>&lt;SP&gt; - TEST</b> và <b>&lt;SP&gt; - SCALE</b>. Video mới vào TEST,
+                  creative thắng thì bê sang SCALE bằng nút ở bảng bên dưới.
+                  <b>Đích cụ thể</b> (nhóm QC nào, hay tạo mới) chọn ở từng sản phẩm trong danh sách video bên dưới —
+                  không còn tự đoán. Đổ vào nhóm có sẵn thì <b>không đụng ngân sách</b> của nhóm đó (sửa ngân sách = reset máy học),
+                  và <b>không ad nào bị tắt tự động</b>.
                 </p>
               </div>
               <div>
@@ -2043,12 +2087,74 @@ function AdsCreatorPanel() {
                 </p>
                 {autoGroups.map(g => {
                   const newCnt = g.files.filter(isNewFile).length
+                  const nhom = nhomCua(g.product)
+                  const dsAdset = (nhom && nhom.adsets) || []
+                  const ma = maDich(g.product)
+                  const campIds = [...new Set(dsAdset.map(a => String(a.campaign_id)).filter(Boolean))]
+                  const dat = (v) => setAutoTarget(c => ({ ...c, [khoaDich(g.product)]: v }))
                   return (
                   <div key={g.product} className="border border-gray-200 rounded-lg p-3">
                     <p className="text-sm font-bold text-gray-800">📁 {g.product}
-                      <span className="font-normal text-gray-400"> — {g.files.length} video → 1 campaign</span>
+                      <span className="font-normal text-gray-400"> — {g.files.length} video</span>
                       {autoExisting && <span className={"ml-2 text-[11px] font-bold " + (newCnt > 0 ? "text-green-700" : "text-gray-400")}>({newCnt} mới)</span>}
                     </p>
+
+                    {/* ĐÍCH ĐẾN — thứ trước đây hệ thống tự đoán và không nói ra.
+                        Liệt kê TỪNG nhóm QC thật trong hộp, kèm trạng thái/ngân sách/số creative. */}
+                    <div className="mt-2 rounded-lg bg-indigo-50/60 border border-indigo-100 p-2">
+                      <label className="block text-[11px] font-bold text-indigo-900 mb-1">
+                        Đổ {newCnt || g.files.length} creative vào đâu? <span className="font-normal text-indigo-700">(nhóm {autoGroup})</span>
+                      </label>
+                      {!groups ? (
+                        <p className="text-[11px] text-gray-500 italic">Đang đọc các nhóm quảng cáo hiện có…</p>
+                      ) : (
+                        <select className="w-full text-[12px] px-2 py-1.5 rounded-md border border-indigo-200 bg-white"
+                          value={ma} onChange={e => dat(e.target.value)}>
+                          {dsAdset.map(a => (
+                            <option key={a.adset_id} value={`as:${a.adset_id}`}>
+                              {(a.adset_status === "ACTIVE" ? "▶ " : "⏸ ") + a.adset_name}
+                              {` · ${a.so_ad_dang_chay || 0} creative đang chạy`}
+                              {a.daily_budget ? ` · ${Number(a.daily_budget).toLocaleString("vi-VN")}đ/ngày` : ""}
+                              {a.la_so ? " · đã dùng lần trước" : ""}
+                            </option>
+                          ))}
+                          {campIds.map(cid => {
+                            const ten = (dsAdset.find(a => String(a.campaign_id) === cid) || {}).campaign_name || cid
+                            return <option key={"nas" + cid} value={`nas:${cid}`}>➕ Nhóm QC mới trong campaign "{ten}"</option>
+                          })}
+                          <option value="new">➕ Campaign + nhóm QC mới hoàn toàn</option>
+                        </select>
+                      )}
+                      {/* Nói thẳng hệ quả của lựa chọn đang chọn — đây là chỗ trước đây mù tịt. */}
+                      {groups && (() => {
+                        const d = dichCua(g.product)
+                        if (d.loai === "adset") return (
+                          <p className="text-[11px] text-gray-600 mt-1">
+                            → thêm vào nhóm có sẵn, <b>giữ nguyên ngân sách và giá thầu</b> của nhóm đó
+                            {autoBidActive && !autoBidToExisting ? " (giá thầu vừa chọn sẽ KHÔNG được áp)" : ""}.
+                            Không ad nào bị tắt.
+                          </p>
+                        )
+                        if (d.loai === "adset_moi") return (
+                          <p className="text-[11px] text-gray-600 mt-1">
+                            → nhóm QC mới <b>{`${g.product} - ${autoGroup} · ${new Date().getDate()}/${new Date().getMonth() + 1}`}</b> trong campaign cũ,
+                            ngân sách {Number(autoBudget).toLocaleString("vi-VN")}đ/ngày. Nhóm cũ không bị đụng.
+                          </p>
+                        )
+                        return (
+                          <p className="text-[11px] text-gray-600 mt-1">
+                            → campaign mới <b>{`${g.product} - ${autoGroup}`}</b> + 1 nhóm QC,
+                            ngân sách {Number(autoBudget).toLocaleString("vi-VN")}đ/ngày.
+                            {dsAdset.length > 0 && <span className="text-amber-700"> Lưu ý: sản phẩm này đã có {dsAdset.length} nhóm QC, thêm campaign nữa là các nhóm tự đấu giá với nhau.</span>}
+                          </p>
+                        )
+                      })()}
+                      {nhom && nhom.so_lac && (
+                        <p className="text-[11px] text-amber-600 mt-1">
+                          ⚠ Nhóm QC dùng lần trước không còn trong tài khoản (đã xoá?) — đã chọn sẵn nhóm khác.
+                        </p>
+                      )}
+                    </div>
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {g.files.map(f => {
                         const isNew = isNewFile(f)
@@ -2171,14 +2277,24 @@ function AdsCreatorPanel() {
                   </span>
                 </div>
                 {["test", "scale"].map(k => {
-                  const h = p[k]
-                  if (!h) return <p key={k} className="text-[11px] text-gray-400 mb-1">— chưa có hộp {k.toUpperCase()}</p>
+                  const nh = p[k]
+                  if (!nh) return <p key={k} className="text-[11px] text-gray-400 mb-1">— chưa có hộp {k.toUpperCase()}</p>
                   return (
-                    <div key={k} className="mb-2 border border-gray-200 rounded-lg overflow-hidden">
+                  <div key={k}>
+                    {/* Một hộp có thể chứa NHIỀU nhóm QC — trước đây bảng gộp hết vào một
+                        dòng nên không ai thấy. Mỗi nhóm giờ là một khối riêng. */}
+                    {nh.so_adset > 1 && (
+                      <p className="text-[11px] text-amber-700 font-semibold mb-1">
+                        ⚠ Hộp {k.toUpperCase()} này có {nh.so_adset} nhóm quảng cáo — chúng dùng chung tệp nên có thể tự đấu giá với nhau.
+                      </p>
+                    )}
+                    {nh.adsets.map(h => (
+                    <div key={h.adset_id} className="mb-2 border border-gray-200 rounded-lg overflow-hidden">
                       <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50 text-[11px] font-bold text-gray-700">
                         <span>{k === "test" ? "🧪" : "🚀"} {h.adset_name}
-                          <span className="font-normal text-gray-500"> · {h.so_ad_dang_chay || 0}/{k === "test" ? MAX_TEST_ADS : 4} creative đang chạy
-                            {h.daily_budget ? ` · ${Number(h.daily_budget).toLocaleString("vi-VN")}đ/ngày` : ""}</span>
+                          <span className="font-normal text-gray-500"> · {h.so_ad_dang_chay || 0} creative đang chạy
+                            {h.daily_budget ? ` · ${Number(h.daily_budget).toLocaleString("vi-VN")}đ/ngày` : ""}
+                            {h.la_so ? " · đích của lần chạy trước" : ""}</span>
                         </span>
                         <span className={h.adset_status === "ACTIVE" ? "text-green-600" : "text-amber-600"}>{h.adset_status}</span>
                       </div>
@@ -2260,6 +2376,8 @@ function AdsCreatorPanel() {
                         </tbody>
                       </table>
                     </div>
+                    ))}
+                  </div>
                   )
                 })}
               </div>
