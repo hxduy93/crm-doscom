@@ -46,7 +46,11 @@ test("nhánh 'đổ vào ad set đang chạy' vẫn còn và vẫn thoát sớm"
   assert.ok(i > 0, "mất nhánh thêm creative vào ad set đang chạy");
   assert.ok(SRC.indexOf("let currentAdSubStep") < i,
     "khai báo phải đứng trước nhánh này");
-  assert.match(SRC.slice(i, i + 1600), /reused_adset: true/,
+  // Cắt tới mốc NGỮ NGHĨA (câu return của chính nhánh này), không đếm ký tự: cửa sổ
+  // 1600 ký tự cũ vỡ ngay khi thêm vài dòng vào nhánh — báo đỏ dù nhánh vẫn đúng.
+  const ketThuc = SRC.indexOf("ads_manager_url", i);
+  assert.ok(ketThuc > i, "không tìm thấy câu return của nhánh dùng lại ad set");
+  assert.match(SRC.slice(i, ketThuc), /reused_adset: true/,
     "nhánh này phải trả reused_adset để UI biết là không tạo campaign mới");
 });
 

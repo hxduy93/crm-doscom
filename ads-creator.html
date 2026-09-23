@@ -169,6 +169,16 @@ function AdsCreatorPanel() {
   //   value       = tối đa hoá GIÁ TRỊ chuyển đổi (VALUE) — cần pixel gửi kèm value
   const [autoPerfGoal, setAutoPerfGoal] = useState("conversions")
   const [autoRoasFloor, setAutoRoasFloor] = useState("")   // "" = không đặt sàn ROAS
+  // Chiến lược giá thầu khi tối đa hoá SỐ LƯỢT chuyển đổi (ô "Chiến lược giá thầu"
+  // trong Trình quản lý QC). Tối đa hoá GIÁ TRỊ thì dùng sàn ROAS ở trên, không dùng ô này.
+  //   lowest = Chi phí thấp nhất (mặc định — giữ nguyên hành vi cũ)
+  //   cost   = Mục tiêu chi phí trên mỗi kết quả → COST_CAP (Meta giữ CPA TRUNG BÌNH quanh mức đặt)
+  //   bidcap = Giới hạn giá thầu → LOWEST_COST_WITH_BID_CAP (trần CỨNG mỗi phiên đấu giá)
+  const [autoBidMode, setAutoBidMode] = useState("lowest")
+  const [autoBidAmount, setAutoBidAmount] = useState("")     // VND, chỉ dùng cho cost/bidcap
+  // Hộp TEST/SCALE được dùng LẠI giữa các lần chạy → mặc định KHÔNG đổi giá thầu của ad set
+  // đang sống (đổi là reset máy học). Tick cái này mới ghi đè.
+  const [autoBidToExisting, setAutoBidToExisting] = useState(false)
   // Chiến lược vòng đời khách hàng (ad set Doanh số, Meta mở 2026):
   //   all = thu hút chuyển đổi từ TẤT CẢ đối tượng · new = chinh phục khách hàng mới
   const [autoLifecycle, setAutoLifecycle] = useState("all")
@@ -1085,8 +1095,28 @@ function AdsCreatorPanel() {
   // learning phase, chia cho quá nhiều creative thì không cái nào đủ dữ liệu.
   const MAX_CREATIVES = 4
 
+  // Nhãn hiển thị ↔ giá trị Marketing API của ô "Chiến lược giá thầu".
+  const AUTO_BID_STRATEGY = {
+    lowest: "LOWEST_COST_WITHOUT_CAP",
+    cost:   "COST_CAP",
+    bidcap: "LOWEST_COST_WITH_BID_CAP",
+  }
+  const AUTO_BID_LABEL = {
+    lowest: "Chi phí thấp nhất",
+    cost:   "Mục tiêu chi phí trên mỗi kết quả",
+    bidcap: "Giới hạn giá thầu",
+  }
+  // Chỉ tối đa hoá SỐ LƯỢT chuyển đổi mới đặt được giá thầu bằng tiền.
+  const autoBidActive = autoPerfGoal !== "value" && autoBidMode !== "lowest"
+
   const handleAutoRun = async () => {
     if (autoBusy || autoGroups.length === 0) return
+    // Chặn ngay tại chỗ: thiếu số tiền thì đừng gọi API để rồi nhận lỗi sau khi đã
+    // upload xong cả loạt video.
+    if (autoBidActive && !(Number(autoBidAmount) > 0)) {
+      setAutoLog([`✗ Chưa nhập giá thầu cho "${AUTO_BID_LABEL[autoBidMode]}" — nhập số tiền (VND) rồi chạy lại.`])
+      return
+    }
     setAutoBusy(true); setAutoResults([]); setAutoLog([])
     const today = new Date().toISOString().slice(0, 10)
     // dd/m (không leading zero, không năm) — khớp cấu trúc UTM đang dùng, vd "6/7".
@@ -1248,10 +1278,22 @@ function AdsCreatorPanel() {
             pixel_id: autoPixel,
             // Mục tiêu hiệu quả: số lượt chuyển đổi (mặc định) hay giá trị chuyển đổi.
             optimization_goal: autoPerfGoal === "value" ? "VALUE" : "OFFSITE_CONVERSIONS",
-            // Sàn ROAS chỉ có nghĩa khi tối đa hoá GIÁ TRỊ; bỏ trống = để Meta tự chạy.
-            ...(autoPerfGoal === "value" && Number(autoRoasFloor) > 0
-              ? { bid_strategy: "LOWEST_COST_WITH_MIN_ROAS", roas_average_floor: Number(autoRoasFloor) }
-              : {}),
+            // Chiến lược giá thầu — hai nhánh loại trừ nhau:
+            //  · tối đa hoá GIÁ TRỊ  → sàn ROAS (bỏ trống = để Meta tự chạy)
+            //  · tối đa hoá SỐ LƯỢT  → chi phí thấp nhất | mục tiêu chi phí/kết quả | giới hạn giá thầu
+            ...(autoPerfGoal === "value"
+              ? (Number(autoRoasFloor) > 0
+                  ? { bid_strategy: "LOWEST_COST_WITH_MIN_ROAS", roas_average_floor: Number(autoRoasFloor) }
+                  : {})
+              : (autoBidMode !== "lowest"
+                  ? {
+                      bid_strategy: AUTO_BID_STRATEGY[autoBidMode],
+                      // VND gửi NGUYÊN số, không nhân 100 — xem ghi chú đơn vị ở create-campaign.js.
+                      bid_amount: Number(autoBidAmount),
+                      // Hộp đang chạy chỉ bị ghi đè giá thầu khi người chạy tick.
+                      apply_bid_to_existing: autoBidToExisting === true,
+                    }
+                  : {})),
             // Chiến lược vòng đời khách hàng — LUÔN khai, kể cả khi chọn "tất cả đối tượng":
             //   0   = không tiêu đồng nào cho khách cũ  → "Chinh phục khách hàng mới"
             //   100 = không giới hạn                     → "Thu hút chuyển đổi từ tất cả đối tượng"
@@ -1890,6 +1932,58 @@ function AdsCreatorPanel() {
                   disabled={autoPerfGoal !== "value"}
                   onChange={e => setAutoRoasFloor(e.target.value)} />
               </div>
+
+              {/* CHIẾN LƯỢC GIÁ THẦU — chỉ dùng khi tối đa hoá SỐ LƯỢT chuyển đổi.
+                  Tối đa hoá GIÁ TRỊ thì Meta dùng sàn ROAS ở ô bên trên. */}
+              <div>
+                <label className={labelClass}>Chiến lược giá thầu</label>
+                <select className={selectClass} value={autoBidMode}
+                  disabled={autoPerfGoal === "value"}
+                  onChange={e => setAutoBidMode(e.target.value)}>
+                  <option value="lowest">Chi phí thấp nhất (Meta tự đấu)</option>
+                  <option value="cost">Mục tiêu chi phí trên mỗi kết quả</option>
+                  <option value="bidcap">Giới hạn giá thầu</option>
+                </select>
+                {autoPerfGoal === "value" && (
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    Đang tối đa hoá <b>giá trị</b> → Meta dùng <b>sàn ROAS</b> ở ô bên cạnh, không đặt giá thầu bằng tiền.
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className={labelClass}>
+                  {autoBidMode === "bidcap" ? "Giá thầu tối đa (VND)" : "Chi phí mục tiêu / kết quả (VND)"}
+                </label>
+                <input className={inputClass} type="number" min="1" step="1000" value={autoBidAmount}
+                  placeholder="vd: 50000"
+                  disabled={!autoBidActive}
+                  onChange={e => setAutoBidAmount(e.target.value)} />
+                {autoBidMode === "cost" && autoPerfGoal !== "value" && (
+                  <p className="text-[11px] text-gray-600 mt-1">
+                    Meta cố thu được nhiều <b>Hoàn tất đăng ký</b> nhất và giữ chi phí <b>trung bình</b> quanh mức này —
+                    từng kết quả vẫn có thể cao hoặc thấp hơn.
+                  </p>
+                )}
+                {autoBidMode === "bidcap" && autoPerfGoal !== "value" && (
+                  <p className="text-[11px] text-amber-600 mt-1">
+                    ⚠ Trần <b>cứng</b> cho mỗi phiên đấu giá. Đặt thấp quá là ad set gần như không tiêu được tiền —
+                    thường chỉ dùng khi đã biết chắc CPA thật.
+                  </p>
+                )}
+              </div>
+              {autoBidActive && (
+                <div className="md:col-span-2">
+                  <label className="flex items-start gap-2 text-[12px] text-gray-600">
+                    <input type="checkbox" className="mt-0.5" checked={autoBidToExisting}
+                      onChange={e => setAutoBidToExisting(e.target.checked)} />
+                    <span>
+                      Áp giá thầu lên <b>hộp đang chạy</b> ({autoGroup}) chứ không chỉ hộp tạo mới.
+                      <b className="text-amber-600"> Sẽ reset giai đoạn máy học</b> của ad set đó (cần lại ~50 chuyển đổi/tuần)
+                      — để trống thì giá thầu chỉ áp cho hộp được tạo lần đầu, hộp cũ giữ nguyên cài đặt.
+                    </span>
+                  </label>
+                </div>
+              )}
               <div className="md:col-span-2">
                 <label className={labelClass}>Chiến lược vòng đời khách hàng</label>
                 <select className={selectClass} value={autoLifecycle} onChange={e => setAutoLifecycle(e.target.value)}>

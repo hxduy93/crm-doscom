@@ -23,6 +23,44 @@
 const FB_API_VERSION = "v20.0";
 const GRAPH = `https://graph.facebook.com/${FB_API_VERSION}`;
 
+// ─────────────────── chiến lược giá thầu (Meta: "Chiến lược giá thầu") ───────────────────
+// LOWEST_COST_WITHOUT_CAP  = "Chi phí thấp nhất" — Meta tự đấu, không trần (mặc định).
+// LOWEST_COST_WITH_MIN_ROAS= "Mục tiêu ROAS"     — chỉ có nghĩa với optimization_goal=VALUE.
+// COST_CAP                 = "Mục tiêu chi phí trên mỗi kết quả" — Meta giữ CPA TRUNG BÌNH
+//                            quanh mức đặt; từng kết quả có thể cao/thấp hơn.
+// LOWEST_COST_WITH_BID_CAP = "Giới hạn giá thầu" — trần CỨNG cho mỗi phiên đấu giá.
+// Hai cái cuối BẮT BUỘC kèm bid_amount.
+//
+// ĐƠN VỊ bid_amount: đơn vị NHỎ NHẤT của tiền tệ tài khoản. VND không có phần thập phân
+// (currency offset = 1) nên 50.000đ gửi đúng là 50000 — CÙNG quy ước với daily_budget đang
+// gửi (400000 = 400k/ngày). ĐỪNG nhân 100: đó là quy ước của USD/EUR, gửi nhầm thành đặt
+// thầu gấp 100 lần mức muốn.
+export const BID_STRATEGIES = [
+  "LOWEST_COST_WITHOUT_CAP",
+  "LOWEST_COST_WITH_MIN_ROAS",
+  "COST_CAP",
+  "LOWEST_COST_WITH_BID_CAP",
+];
+const BID_AMOUNT_REQUIRED = new Set(["COST_CAP", "LOWEST_COST_WITH_BID_CAP"]);
+
+// Chuỗi lạ / bỏ trống → quay về chi phí thấp nhất, KHÔNG ném lỗi: mất giá thầu còn hơn
+// làm hỏng cả lượt tạo campaign.
+export function normalizeBidStrategy(v) {
+  const s = String(v || "").trim().toUpperCase();
+  return BID_STRATEGIES.includes(s) ? s : "LOWEST_COST_WITHOUT_CAP";
+}
+
+export function needsBidAmount(v) {
+  return BID_AMOUNT_REQUIRED.has(normalizeBidStrategy(v));
+}
+
+// Số tiền giá thầu hợp lệ (VND nguyên, > 0) hoặc null nếu không nhập/không hợp lệ.
+export function parseBidAmount(v) {
+  if (v === null || v === undefined || String(v).trim() === "") return null;
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 // ───────────────────────── helpers ─────────────────────────
 
 // JSON response helper — trước đây thiếu, gây ReferenceError khi catch block
@@ -249,11 +287,19 @@ export function buildAdsetBase(cfg, campaignId, isCBO, launchStatus) {
   // ABO → bid_strategy nằm ở ad set (CBO thì ở campaign).
   // cfg.bid_strategy chỉ dùng khi chạy "tối đa hoá GIÁ TRỊ có sàn ROAS"
   // (LOWEST_COST_WITH_MIN_ROAS) — mọi trường hợp khác giữ chi phí thấp nhất.
-  if (!isCBO) base.bid_strategy = cfg.bid_strategy || "LOWEST_COST_WITHOUT_CAP";
+  const bidStrategy = normalizeBidStrategy(cfg.bid_strategy);
+  if (!isCBO) base.bid_strategy = bidStrategy;
   // Sàn ROAS: Meta nhận qua bid_constraints.roas_average_floor, đơn vị 1/10000
   // (2.0 → 20000). Chỉ có nghĩa với optimization_goal = VALUE.
   if (base.bid_strategy === "LOWEST_COST_WITH_MIN_ROAS" && Number(cfg.roas_average_floor) > 0) {
     base.bid_constraints = { roas_average_floor: Math.round(Number(cfg.roas_average_floor) * 10000) };
+  }
+  // Giá thầu bằng tiền (COST_CAP / LOWEST_COST_WITH_BID_CAP): bid_amount nằm ở AD SET
+  // KỂ CẢ khi chạy CBO — CBO chỉ đẩy bid_strategy lên campaign, số tiền vẫn ở đây.
+  if (BID_AMOUNT_REQUIRED.has(bidStrategy)) {
+    const amt = parseBidAmount(cfg.bid_amount);
+    if (amt === null) throw new Error(`Chiến lược giá thầu "${bidStrategy}" phải kèm bid_amount là số VND > 0`);
+    base.bid_amount = amt;
   }
   // Chiến lược vòng đời khách hàng (Meta mở 2026 cho campaign Doanh số):
   // 0 = KHÔNG tiêu đồng nào cho khách cũ = "Chinh phục khách hàng mới".
@@ -324,6 +370,14 @@ export async function onRequestPost(context) {
   if (!Array.isArray(cfg.ads) || cfg.ads.length === 0) {
     return json({ success: false, step: "validate", error: "config.ads must be a non-empty array" }, 400);
   }
+  // Bắt thiếu giá thầu Ở ĐÂY, trước khi tạo bất cứ thứ gì trên Meta: lỗi ở bước ad set
+  // để lại một campaign rỗng nằm trơ trong tài khoản, phải vào xoá tay.
+  if (needsBidAmount(cfg.bid_strategy) && parseBidAmount(cfg.bid_amount) === null) {
+    return json({
+      success: false, step: "validate",
+      error: `Chiến lược giá thầu "${normalizeBidStrategy(cfg.bid_strategy)}" phải kèm giá thầu (bid_amount) là số VND > 0`,
+    }, 400);
+  }
 
   const accountIdRaw = String(cfg.account_id).replace(/^act_/, "");
   const partial = {};
@@ -379,6 +433,9 @@ export async function onRequestPost(context) {
        phát hiện. Đừng dời hai dòng này xuống dưới. */
     let currentAdSubStep = "";  // để báo lỗi chính xác sub-step nào fail
     let currentAdIndex = -1;
+    /* Cũng phải khai TRƯỚC nhánh existing_adset_id vì nhánh đó return sớm — khai ở dưới
+       thì nhánh dùng lại hộp không có chỗ ghi cảnh báo. Xem ghi chú TDZ ngay trên. */
+    const warnings = [];
 
     if (cfg.existing_adset_id) {
       const adsetId = String(cfg.existing_adset_id);
@@ -386,6 +443,29 @@ export async function onRequestPost(context) {
       partial.adset_id = adsetId;
       partial.adsets = [adsetId];
       partial.ads = [];
+
+      /* GIÁ THẦU TRÊN HỘP ĐANG CHẠY — mặc định KHÔNG ĐỤNG VÀO.
+         Sửa bid_strategy/bid_amount của một ad set đang sống làm Meta chạy lại giai đoạn
+         máy học, đúng thứ mà việc dùng lại hộp sinh ra để tránh (xem ghi chú ngân sách ở
+         trên). Nên chỉ đổi khi người chạy tick rõ ràng; không tick mà vẫn chọn giá thầu
+         thì phải NÓI RA, đừng để họ tưởng đã đặt được. */
+      const reuseStrategy = normalizeBidStrategy(cfg.bid_strategy);
+      if (cfg.apply_bid_to_existing === true) {
+        const bidBody = { bid_strategy: reuseStrategy };
+        if (BID_AMOUNT_REQUIRED.has(reuseStrategy)) bidBody.bid_amount = parseBidAmount(cfg.bid_amount);
+        try {
+          await fbPost(`/${adsetId}`, bidBody, token);
+          warnings.push(
+            `Đã đặt lại giá thầu cho hộp đang chạy: ${reuseStrategy}` +
+            (bidBody.bid_amount ? ` · ${bidBody.bid_amount}đ` : "") +
+            " — ad set sẽ chạy lại giai đoạn máy học (~50 chuyển đổi/tuần).");
+        } catch (e) {
+          warnings.push(`Không đặt được giá thầu cho hộp đang chạy: ${e.message || e}. Creative vẫn được thêm, giá thầu giữ nguyên như cũ.`);
+        }
+      } else if (reuseStrategy !== "LOWEST_COST_WITHOUT_CAP") {
+        warnings.push('Hộp đã có sẵn nên giá thầu vừa chọn KHÔNG được áp — ad set giữ nguyên cài đặt cũ. Tick "Áp giá thầu lên hộp đang chạy" nếu thật sự muốn đổi.');
+      }
+
       let idx = -1;
       try {
         for (let i = 0; i < cfg.ads.length; i++) {
@@ -402,6 +482,7 @@ export async function onRequestPost(context) {
         adset_id: adsetId,
         adsets: partial.adsets,
         ads: partial.ads,
+        ...(warnings.length ? { warnings } : {}),
         ads_manager_url: `https://adsmanager.facebook.com/adsmanager/manage/ads?act=${accountIdRaw}&selected_adset_ids=${adsetId}`,
       });
     }
@@ -419,8 +500,9 @@ export async function onRequestPost(context) {
       } else {
         campaignBody.daily_budget = cfg.budget_amount;
       }
-      // CBO requires a bid_strategy on campaign too
-      campaignBody.bid_strategy = "LOWEST_COST_WITHOUT_CAP";
+      // CBO: bid_strategy nằm ở CAMPAIGN (số tiền bid_amount vẫn ở ad set — xem buildAdsetBase).
+      // Trước đây ghim cứng LOWEST_COST_WITHOUT_CAP nên chọn giá thầu ở CBO là mất im lặng.
+      campaignBody.bid_strategy = normalizeBidStrategy(cfg.bid_strategy);
     }
     const campRes = await fbPost(`/act_${accountIdRaw}/campaigns`, campaignBody, token);
     partial.campaign_id = campRes.id;
@@ -492,7 +574,7 @@ export async function onRequestPost(context) {
 
     // Tạo ad set — tài khoản chưa được Meta bật "vòng đời khách hàng" thì bỏ đúng
     // field đó rồi tạo lại, kèm cảnh báo trả về UI (xem isLifecycleUnsupported).
-    const warnings = [];
+    // (`warnings` khai ở trên, trước nhánh dùng lại hộp.)
     async function createAdset(body) {
       try {
         return await fbPost(`/act_${accountIdRaw}/adsets`, body, token);
