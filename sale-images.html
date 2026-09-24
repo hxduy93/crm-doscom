@@ -195,6 +195,9 @@
             <h2 style="margin:0">Chọn sản phẩm <span class="muted" id="makeSelInfo"></span></h2>
             <div class="row">
               <input id="makeSearch" type="search" placeholder="Lọc theo tên / SKU" />
+              <label class="chk" title="SP đã có ảnh sale thì không hiện ở đây nữa — bấm Tải lại danh sách sau khi chạy để cập nhật">
+                <input type="checkbox" id="hideDone" checked /> Ẩn SP đã gắn ảnh sale
+              </label>
               <button class="sec" id="makeAll" type="button">Chọn tất cả đang lọc</button>
               <button class="sec" id="makeNone" type="button">Bỏ chọn</button>
             </div>
@@ -202,6 +205,15 @@
           <p class="muted">Ô sản phẩm đang chọn hiện luôn bản xem trước ảnh sale. Ảnh xuất ra 1000×1000.</p>
           <div class="plist" id="makeList"></div>
           <div class="row" style="margin-top:12px;justify-content:flex-end">
+            <label class="chk" title="Web doscom.vn/noma.vn trả 429 khi bị gọi dồn. Chạy chậm thì lâu hơn nhưng ít lỗi hơn nhiều.">
+              Tốc độ chạy
+              <select id="tocDo" style="margin-left:6px">
+                <option value="600">Nhanh — 0,6 giây/SP</option>
+                <option value="2500" selected>Vừa — 2,5 giây/SP</option>
+                <option value="5000">Chậm — 5 giây/SP</option>
+                <option value="9000">Rất chậm — 9 giây/SP</option>
+              </select>
+            </label>
             <button class="ok" id="btnMakeApply">Gắn ảnh sale lên web</button>
           </div>
         </div>
@@ -331,14 +343,20 @@ async function load() {
     const d = await post({ mode: "list" }, false);
     S.products = d.products.sort((a, b) => a.name.localeCompare(b.name, "vi"));
     S.byId = new Map(S.products.map((p) => [p.id, p]));
-    S.makeSel = new Set([...S.makeSel].filter((id) => S.byId.has(id)));
+    S.makeSel = new Set([...S.makeSel].filter((id) => {
+      const p = S.byId.get(id);
+      // Vừa gắn xong ở lượt trước → bỏ khỏi vùng chọn để không gắn lại lần nữa.
+      return !!p && !($("#hideDone") && $("#hideDone").checked && daGan(p));
+    }));
     S.restoreSel.clear();
     const noImg = S.products.filter((p) => !p.featured).length;
     const orphan = (d.orphan_sale_ids || []).length;
     $("#loadInfo").innerHTML = `${S.products.length} sản phẩm đang bán trên <b>${S.site === "doscom" ? "doscom.vn" : "noma.vn"}</b> · `
       + `<b>${S.products.filter((p) => p.sale).length}</b> SP đang dùng ảnh sale`
       + (noImg ? ` · ${noImg} SP chưa có ảnh đại diện` : "")
-      + (orphan ? ` · <span class="pill amber">${orphan} bản ghi sale của SP đã ẩn/xoá (ID ${d.orphan_sale_ids.join(", ")})</span>` : "");
+      + (orphan ? ` · <span class="pill amber">${orphan} bản ghi sale của SP đã ẩn/xoá (ID ${d.orphan_sale_ids.join(", ")})</span>` : "")
+      + (($("#hideDone") && $("#hideDone").checked && S.products.filter(daGan).length)
+          ? ` · <b>đang ẩn ${S.products.filter(daGan).length} SP đã gắn</b>` : "");
     $("#main").classList.remove("hide");
     renderMake();
     rematchUploads();
@@ -619,10 +637,20 @@ async function fontsReady() {
 }
 
 // ───────── Tab 1: danh sách + xem trước ─────────
+/* SP đã gắn ảnh sale rồi thì mặc định KHÔNG hiện nữa: chạy hàng loạt xong, bấm Tải lại
+   là danh sách chỉ còn phần chưa làm, khỏi phải tự nhớ đã tới đâu — nhất là khi đợt trước
+   đứt giữa chừng vì web trả 429. "lệch" thì vẫn hiện, vì đó là SP cần gắn lại.
+   Bỏ tick ô này khi muốn gắn đè đợt sale mới lên SP đang có ảnh sale cũ. */
+function daGan(p) {
+  return !!(p.sale && !p.sale_mismatch);
+}
+
 function filtered(q) {
   const s = String(q || "").trim().toLowerCase();
-  if (!s) return S.products;
-  return S.products.filter((p) => p.name.toLowerCase().includes(s) || String(p.sku).toLowerCase().includes(s) || String(p.id) === s);
+  const an = $("#hideDone") && $("#hideDone").checked;
+  let ds = an ? S.products.filter((p) => !daGan(p)) : S.products;
+  if (!s) return ds;
+  return ds.filter((p) => p.name.toLowerCase().includes(s) || String(p.sku).toLowerCase().includes(s) || String(p.id) === s);
 }
 
 function saleTag(p) {
@@ -658,6 +686,13 @@ $("#makeList").addEventListener("click", (e) => {
   renderMake();
 });
 $("#makeSearch").addEventListener("input", renderMake);
+$("#hideDone").addEventListener("change", () => {
+  // Bật ẩn thì bỏ luôn khỏi vùng chọn, tránh nút "Gắn (N SP)" đếm cả SP không nhìn thấy.
+  if ($("#hideDone").checked) {
+    for (const id of [...S.makeSel]) { const p = S.byId.get(id); if (p && daGan(p)) S.makeSel.delete(id); }
+  }
+  renderMake();
+});
 $("#makeAll").addEventListener("click", () => { filtered($("#makeSearch").value).forEach((p) => p.featured && S.makeSel.add(p.id)); renderMake(); });
 $("#makeNone").addEventListener("click", () => { S.makeSel.clear(); renderMake(); });
 
@@ -911,16 +946,24 @@ $("#btnRestore").addEventListener("click", async () => {
 });
 
 // ───────── Chạy lần lượt từng SP + báo cáo ─────────
-/* Nhịp gọi giữa hai sản phẩm.
-   doscom.vn và noma.vn chạy trên Hostinger, chặn theo IP, KHÔNG qua Cloudflare — còn CRM
-   thì gọi từ dải IP dùng chung của Cloudflare. Trước 24/09/2026 vòng này bắn liên tiếp
-   không nghỉ, mỗi SP tốn 3–4 request sang web, nên chạy được một lúc là ăn 429 hàng loạt
-   ("WC get full 429: {}"). Nghỉ một nhịp ngắn giữa các SP rẻ hơn nhiều so với việc chạy
-   lại cả đợt. Dính 429 thì nghỉ dài hẳn cho host hạ nhiệt. */
-const NGHI_GIUA_SP = 600;      // ms
-const NGHI_SAU_429 = 12000;    // ms
+/* NHỊP GỌI GIỮA HAI SẢN PHẨM — vì sao phải có.
+   Mỗi SP tốn 3–4 request sang doscom.vn/noma.vn (đọc SP → upload ảnh → cập nhật SP →
+   xoá ảnh sale cũ). Bắn liên tiếp không nghỉ thì web trả 429 hàng loạt.
+
+   Đo 24/09/2026, đọc header thật của phản hồi 429: `platform=hostinger` có mặt →
+   CHÍNH WEB trả 429, không phải Cloudflare chặn (giả thuyết đó đã bị bác bỏ bằng một
+   Worker chạy trên mạng Cloudflare gọi 8 lần liên tiếp đều thành công). Ngưỡng phụ
+   thuộc tải, nên vài SP thì lọt mà nhiều SP thì dính — đúng như người dùng gặp.
+
+   Vì vậy nhịp KHÔNG cố định mà TỰ THÍCH NGHI: gặp 429 thì giãn gấp đôi và GIỮ mức giãn
+   đó cho cả lượt chạy, chạy êm một lúc mới rút ngắn dần lại. Một lần nghỉ 12s rồi quay
+   về nhịp cũ là không đủ — web vẫn đang ở trạng thái chặn. */
+const NGHI_SAU_429 = 12000;    // nghỉ dài ngay khi vừa dính, cho web hạ nhiệt
+const NHIP_TOI_DA = 30000;     // trần giãn, tránh một lượt chạy kéo dài vô tận
+const EM_THI_RUT = 5;          // chạy êm liên tiếp bấy nhiêu SP thì rút ngắn nhịp lại
 const doi = (ms) => new Promise((r) => setTimeout(r, ms));
-const la429 = (res) => /429|quá nhanh/i.test(String((res && res.error) || ""));
+const la429 = (res) => /429/.test(String((res && res.error) || ""));
+const nhipGoc = () => Number(($("#tocDo") && $("#tocDo").value) || 2500);
 
 async function runJobs(title, ids, fn) {
   S.busy = true;
@@ -930,6 +973,8 @@ async function runJobs(title, ids, fn) {
   $("#runRows").innerHTML = ""; $("#runStat").innerHTML = "";
   $("#runCard").scrollIntoView({ behavior: "smooth", block: "start" });
   let ok = 0, skip = 0, fail = 0;
+  let nhip = nhipGoc(), em = 0;
+  const loi429 = [];        // SP dính 429 — chạy lại một lượt ở cuối, chậm hơn
   for (let i = 0; i < ids.length; i++) {
     const p = S.byId.get(ids[i]) || { id: ids[i], name: "#" + ids[i] };
     $("#runInfo").textContent = `Đang xử lý ${i + 1}/${ids.length}: ${p.name}`;
@@ -955,12 +1000,42 @@ async function runJobs(title, ids, fn) {
     }
     $("#runRows").insertAdjacentHTML("beforeend", `<tr>${row}</tr>`);
     $("#runBar").style.width = `${Math.round(((i + 1) / ids.length) * 100)}%`;
-    if (i < ids.length - 1) {
-      const cho = la429(res) ? NGHI_SAU_429 : NGHI_GIUA_SP;
-      if (cho >= 2000) {
-        $("#runInfo").textContent = `Web đang chặn vì gọi quá nhanh — nghỉ ${Math.round(cho / 1000)} giây rồi chạy tiếp…`;
+    let cho = nhip;
+    if (la429(res)) {
+      loi429.push(ids[i]);
+      nhip = Math.min(nhip * 2, NHIP_TOI_DA);   // giãn và GIỮ, không quay lại nhịp cũ ngay
+      cho = Math.max(NGHI_SAU_429, nhip);
+      em = 0;
+      $("#runInfo").textContent = `Web trả 429 — giãn nhịp lên ${(nhip / 1000).toFixed(1)}s/SP, nghỉ ${Math.round(cho / 1000)} giây rồi chạy tiếp…`;
+    } else if (++em >= EM_THI_RUT && nhip > nhipGoc()) {
+      nhip = Math.max(nhipGoc(), Math.round(nhip * 0.75));   // chạy êm thì rút ngắn dần
+      em = 0;
+    }
+    if (i < ids.length - 1) await doi(cho);
+  }
+
+  /* Chạy lại một lượt cho những SP dính 429. Chúng hỏng vì thời điểm chứ không phải vì
+     dữ liệu, nên thử lại ở nhịp chậm nhất thường là xong — đỡ bắt người dùng tự dò xem
+     còn thiếu SP nào rồi tick lại bằng tay. */
+  if (loi429.length) {
+    const nhipCham = Math.min(Math.max(nhip, NGHI_SAU_429), NHIP_TOI_DA);
+    $("#runInfo").textContent = `Chạy lại ${loi429.length} SP bị web chặn, nhịp ${(nhipCham / 1000).toFixed(1)}s/SP…`;
+    await doi(nhipCham);
+    for (let k = 0; k < loi429.length; k++) {
+      const p = S.byId.get(loi429[k]) || { id: loi429[k], name: "#" + loi429[k] };
+      $("#runInfo").textContent = `Chạy lại ${k + 1}/${loi429.length}: ${p.name}`;
+      let res;
+      try { res = await fn(loi429[k]); } catch (e) { res = { error: e.message }; }
+      const link = p.permalink ? `<a href="${esc(p.permalink)}" target="_blank">${esc(p.name)}</a>` : esc(p.name);
+      if (res && (res.applied || res.restored)) {
+        ok++; fail--;
+        $("#runRows").insertAdjacentHTML("beforeend",
+          `<tr><td>${link}</td><td><span class="pill green">Đã gắn</span></td><td class="muted">chạy lại lần 2 thì được</td></tr>`);
+      } else {
+        $("#runRows").insertAdjacentHTML("beforeend",
+          `<tr><td>${link}</td><td><span class="pill red">Lỗi</span></td><td class="err" style="font-size:12px">chạy lại vẫn hỏng: ${esc((res && res.error) || "không rõ")}</td></tr>`);
       }
-      await doi(cho);
+      if (k < loi429.length - 1) await doi(nhipCham);
     }
   }
   $("#runInfo").textContent = `Xong ${ids.length} SP.`;

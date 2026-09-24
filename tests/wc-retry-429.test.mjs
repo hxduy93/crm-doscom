@@ -133,15 +133,41 @@ test("uploadMedia KHÔNG còn vòng thử lại riêng (tránh thử lại lồn
 // ── giao diện phải giãn nhịp ──
 const html = readFileSync(new URL("../sale-images.html", import.meta.url), "utf8");
 
-test("vòng chạy hàng loạt có nghỉ giữa các sản phẩm", () => {
-  assert.match(html, /const NGHI_GIUA_SP = \d+/);
-  assert.match(html, /const NGHI_SAU_429 = \d+/);
+test("vòng chạy hàng loạt có nghỉ giữa các sản phẩm, nhịp do người dùng chọn", () => {
+  assert.match(html, /const nhipGoc = \(\) =>/, "nhịp lấy từ ô Tốc độ chạy");
+  assert.match(html, /id="tocDo"/, "phải có ô chọn tốc độ trên giao diện");
   const khoi = html.slice(html.indexOf("async function runJobs"));
-  assert.match(khoi, /await doi\(cho\)/, "phải thật sự chờ giữa hai SP, không chỉ khai hằng số");
+  assert.match(khoi, /await doi\(cho\)/, "phải thật sự chờ giữa hai SP");
 });
 
-test("dính 429 thì nghỉ dài hơn hẳn nhịp thường", () => {
-  const thuong = Number(html.match(/const NGHI_GIUA_SP = (\d+)/)[1]);
-  const sau429 = Number(html.match(/const NGHI_SAU_429 = (\d+)/)[1]);
-  assert.ok(sau429 >= thuong * 5, `nghỉ sau 429 (${sau429}ms) phải dài hơn nhịp thường (${thuong}ms)`);
+/* 24/09/2026 — đọc header thật của 429: có `platform=hostinger` → CHÍNH WEB trả 429,
+   không phải Cloudflare. Ngưỡng phụ thuộc tải nên vài SP thì lọt, nhiều SP thì dính.
+   Vì vậy nhịp phải TỰ GIÃN và GIỮ mức giãn, không phải nghỉ một lần rồi về như cũ. */
+test("dính 429 thì giãn nhịp và GIỮ, không quay lại nhịp cũ ngay", () => {
+  const khoi = html.slice(html.indexOf("async function runJobs"));
+  assert.match(khoi, /nhip = Math\.min\(nhip \* 2, NHIP_TOI_DA\)/, "gặp 429 phải giãn gấp đôi");
+  assert.match(khoi, /nhip > nhipGoc\(\)/, "chạy êm mới được rút ngắn dần");
+  assert.match(html, /const NHIP_TOI_DA = \d+/, "phải có trần giãn, tránh chạy vô tận");
+});
+
+test("SP dính 429 được chạy lại một lượt ở cuối", () => {
+  const khoi = html.slice(html.indexOf("async function runJobs"));
+  assert.match(khoi, /loi429\.push\(ids\[i\]\)/, "phải ghi lại SP dính 429");
+  assert.match(khoi, /if \(loi429\.length\)/, "phải có lượt chạy lại");
+  assert.match(khoi, /ok\+\+; fail--/, "chạy lại được thì phải sửa lại số đếm");
+});
+
+// ── Ẩn SP đã gắn ảnh sale khỏi bảng chọn ──
+test("mặc định ẩn SP đã gắn ảnh sale, nhưng vẫn hiện SP bị lệch", () => {
+  assert.match(html, /id="hideDone" checked/, "mặc định bật");
+  assert.match(html, /function daGan\(p\) \{\s*return !!\(p\.sale && !p\.sale_mismatch\);/,
+    "SP lệch vẫn phải hiện vì đó là SP cần gắn lại");
+  const f = html.slice(html.indexOf("function filtered(q)"), html.indexOf("function saleTag"));
+  assert.match(f, /S\.products\.filter\(\(p\) => !daGan\(p\)\)/);
+});
+
+test("SP đã gắn cũng rời khỏi vùng chọn, để nút không đếm SP đang bị ẩn", () => {
+  assert.match(html, /if \(p && daGan\(p\)\) S\.makeSel\.delete\(id\)/, "bật ô ẩn thì bỏ chọn luôn");
+  const l = html.slice(html.indexOf("async function load()"), html.indexOf("const noImg"));
+  assert.match(l, /daGan\(p\)/, "tải lại danh sách cũng phải bỏ SP vừa gắn xong khỏi vùng chọn");
 });
