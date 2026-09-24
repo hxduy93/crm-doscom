@@ -26,11 +26,19 @@ export const AD_FORMATS = [
     label: "USP + gạch đầu dòng",
     bestFor: "Bài chủ lực, an toàn nhất. Hợp khách mua lần đầu cần thấy đủ tính năng.",
     headline: "USP ngắn hoặc Benefit có số",
-    skeleton: `1. HOOK: 1-2 dòng, emoji đầu dòng, nêu thẳng USP ấn tượng nhất + tên SP.
-2. AGITATE: 2-4 câu ngắn dồn dập, vẽ tình huống thực tế khách đang gặp.
-3. CHUYỂN: 1 dòng ("👉 Đó là lý do…" / "Giải pháp gọn nhẹ:") giới thiệu SP như lời đáp.
-4. TÍNH NĂNG: 5-7 bullet ✅, mỗi bullet = "Tính năng cụ thể – Lợi ích nói bằng ngôn ngữ khách". Có số liệu thật.
-5. ĐỐI TƯỢNG: 1 dòng "💼 Phù hợp cho: [3-5 nhóm cụ thể]".
+    // 24/09/2026 chủ dự án duyệt 22 bài: dòng mở bài dài, nhồi thông số; đoạn
+    // "agitate" giảng giải lê thê mới tới sản phẩm; câu chuyển "Đó là lý do…" đọc
+    // ra mùi AI. Khung mới: vấn đề → sản phẩm ngay câu kế tiếp, ngắn hơn.
+    skeleton: `1. DÒNG MỞ BÀI (1 dòng, tối đa ~90 ký tự, emoji đầu dòng). Chọn 1 trong 2 kiểu:
+   a) Vấn đề → giải pháp có TÊN SP: "Kính xe còn ố trắng sau khi rửa? Dùng ngay dung dịch tẩy ố kính Noma 911"
+   b) TÊN SP + 1 tính năng đinh: "Noma 680 – bọt tuyết đa năng, tích hợp bàn chải ngay trên thân chai"
+   CHỈ 1 ý chính. KHÔNG nhồi 3-4 thông số vào dòng này (pin, cân nặng… để xuống bullet).
+2. VẤN ĐỀ: 1-2 câu ngắn, nói thẳng điều khách đang gặp bằng lời thường. KHÔNG giảng cơ chế
+   hoá học/kỹ thuật dài dòng, KHÔNG mở bằng "Tình huống quen thuộc:", "Bạn có bao giờ…".
+3. GIỚI THIỆU SP NGAY câu tiếp theo: tên SP + tính năng đặc biệt nhất giải quyết đúng vấn đề đó.
+   KHÔNG dùng câu chuyển kiểu "👉 Đó là lý do…", "…được thiết kế để…", "Giải pháp gọn nhẹ:".
+4. TÍNH NĂNG: 4-5 bullet ✅, mỗi bullet 1 dòng = "Tính năng – lợi ích cho khách". Có số liệu thật.
+5. ĐỐI TƯỢNG: 1 dòng "💼 Phù hợp cho: [3-4 nhóm cụ thể]".
 6. CAM KẾT (chỉ khi SP có; + khuyến mãi nếu có).
 7. CTA + {{URL}}.`,
   },
@@ -215,6 +223,12 @@ thông số ở headline, đọc như bảng giá thì không mời được ai.
 // Chỉ áp cho dạng KHÔNG có headline bắt buộc. Vài dạng có headline gắn liền với
 // cấu trúc bài (hỏi-đáp mở bằng câu hỏi, checklist mở bằng con số) hoặc đã được
 // chủ dự án chốt cứng — những dạng đó giữ nguyên, ép xoay sẽ hỏng bài.
+// 24/09/2026 chủ dự án duyệt 22 bài AI viết thật:
+//  - "Số người đã mua" bị loại: prompt bắt AI tự chế con số (850.000 doanh nhân…)
+//    — bằng chứng xã hội giả.
+//  - "Câu hỏi", "Gọi thẳng nhóm khách", "Hệ quả nếu bỏ qua" bị chê "vô nghĩa":
+//    nêu vấn đề rồi bỏ lửng, giải pháp phải đọc tới tận thân bài mới thấy.
+// Luật chung: MỌI kiểu đều phải có TÊN SP hoặc giải pháp rõ, và ≤ 40 ký tự.
 export const HEADLINE_STYLES = [
   {
     key: "van_de_chot_ha",
@@ -224,11 +238,11 @@ Vừa cho lối giải quyết, vừa gián tiếp khẳng định sản phẩm 
     example: `"Cặn canxi bám kính? Dùng ngay Noma 911"`,
   },
   {
-    key: "social_proof",
-    label: "Số người đã mua",
-    rule: `Nêu số người đã mua để tạo tin cậy. Con số hợp lý trong khoảng 1-5 triệu.
-KHÔNG kèm số tiền tiết kiệm cụ thể nếu không có dữ liệu.`,
-    example: `"Hơn 1.200.000 chủ xe đã đặt tại đây"`,
+    key: "hoi_kem_giai_phap",
+    label: "Câu hỏi + giải pháp",
+    rule: `Hỏi đúng tình huống khách đang gặp, rồi trả lời ngay bằng tên sản phẩm trong
+CÙNG tiêu đề. Câu hỏi đứng một mình (không có giải pháp) là tiêu đề hỏng.`,
+    example: `"Kính còn ố sau khi rửa? Có Noma 911"`,
   },
   {
     key: "benefit_so",
@@ -238,30 +252,23 @@ số hoặc USP được cấp — không tự chế.`,
     example: `"1 chai 100ml làm sạch 2-3 xe"`,
   },
   {
-    key: "cau_hoi",
-    label: "Câu hỏi gọi đúng người",
-    rule: `Hỏi đúng tình huống khách đang gặp để họ tự nhận ra mình. Là câu hỏi TÌNH
-HUỐNG, không phải câu tấn công thuộc tính cá nhân.`,
-    example: `"Kính xe bạn còn ố sau khi rửa?"`,
+    key: "ten_sp_tinh_nang",
+    label: "Tên SP + tính năng đinh",
+    rule: `Tên sản phẩm đi liền MỘT tính năng khác biệt nhất. Chỉ một tính năng, không liệt kê.`,
+    example: `"Noma 680 – bọt tuyết kèm bàn chải"`,
   },
   {
-    key: "doi_tuong",
-    label: "Gọi thẳng nhóm khách",
-    rule: `Gọi đích danh nhóm khách hợp nhất với sản phẩm, để đúng người dừng lại đọc.`,
-    example: `"Xe đỗ ngoài trời cả mùa mưa nên xem"`,
-  },
-  {
-    key: "he_qua",
-    label: "Hệ quả nếu bỏ qua",
-    rule: `Nêu điều sẽ xấu đi nếu để nguyên tình trạng. Nói ở mức thực tế, KHÔNG hù dọa
-cực đoan, KHÔNG dọa mất an toàn tính mạng.`,
-    example: `"Ố kính để lâu càng bám càng khó tẩy"`,
+    key: "nhom_khach_loi_ich",
+    label: "Nhóm khách + lợi ích",
+    rule: `Gọi đúng nhóm khách rồi nói ngay họ được gì từ sản phẩm (có tên SP hoặc công
+dụng). Gọi tên nhóm khách suông ("… cần xem ngay") là tiêu đề hỏng.`,
+    example: `"Phóng viên ghi âm rõ cả buổi với DR1"`,
   },
   {
     key: "usp_ngan",
     label: "USP ngắn gọn",
     rule: `Nêu điểm khác biệt mạnh nhất, cô đọng, không thừa chữ.`,
-    example: `"Tẩy ố kính – hạt mài siêu nhỏ, không xước"`,
+    example: `"Tẩy ố kính – hạt mài nhỏ, không xước"`,
   },
 ];
 

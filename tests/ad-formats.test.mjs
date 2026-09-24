@@ -24,7 +24,7 @@ test("mỗi dạng có đủ khung bài riêng, không dạng nào rỗng", () =
 
 test("các dạng phải KHÁC KHUNG nhau, không chỉ khác giọng văn", () => {
   // Chỉ 1 dạng được phép có block bullet ✅ tính năng làm xương sống.
-  const dungBulletLamXuong = AD_FORMATS.filter((f) => /5-7 bullet ✅/.test(f.skeleton));
+  const dungBulletLamXuong = AD_FORMATS.filter((f) => /\d-\d bullet ✅/.test(f.skeleton));
   assert.equal(dungBulletLamXuong.length, 1, "chỉ dạng usp_bullet mới lấy bullet làm xương sống");
   assert.equal(dungBulletLamXuong[0].key, "usp_bullet");
 

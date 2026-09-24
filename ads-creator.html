@@ -3047,6 +3047,19 @@ function AdsCreatorPanel() {
                                   <p className="font-semibold text-gray-800">{v.headline}</p>
                                   <p className="text-gray-600 whitespace-pre-wrap leading-tight max-h-24 overflow-y-auto">{v.primary_text}</p>
                                 </div>
+                                {/* Cảnh báo server tự dò (không tự sửa) — đọc lại trước khi dùng. */}
+                                {(() => {
+                                  const w = [
+                                    ...(v.trimmed || []).map(f => f === "headline" ? "tiêu đề quá 40 ký tự, đã bị cắt" : "mô tả quá 30 ký tự, đã bị cắt"),
+                                    ...(v.copy_warnings || []),
+                                    ...(v.brand_warnings || []).map(b => `brand: “${b.quote}”`),
+                                  ]
+                                  return w.length > 0 && (
+                                    <ul className="mt-1.5 space-y-0.5 text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-1.5 py-1">
+                                      {w.map((t, i) => <li key={i}>⚠ {t}</li>)}
+                                    </ul>
+                                  )
+                                })()}
                                 <button
                                   type="button"
                                   onClick={() => handleUseVariant(v)}

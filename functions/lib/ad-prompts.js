@@ -74,20 +74,26 @@ thương hiệu khác, không tự nhớ footer từ ví dụ mẫu — chỉ d�
 ═══════════════════════════════════════════════════════════════════
 📏 ĐỘ DÀI (NGHIÊM NGẶT — FB POLICY + UX)
 ═══════════════════════════════════════════════════════════════════
-- **headline**: ≤ 40 ký tự. 5 kiểu dùng được:
+- **headline**: TỐI ĐA 40 KÝ TỰ, tính cả dấu cách — ĐẾM TRƯỚC KHI TRẢ VỀ. Quá 40 là
+  Facebook cắt cụt giữa chữ. Các kiểu dùng được:
     • **Vấn đề + chốt hạ**: nêu vấn đề rồi kêu gọi dùng thẳng sản phẩm —
       "Cặn canxi bám kính? Dùng ngay Noma 911". Kiểu này mạnh nhất: vừa cho lối
       giải quyết, vừa gián tiếp khẳng định sản phẩm làm được việc đó.
-    • Social proof: "X.XXX.XXX người đã đặt mua tại đây" (số hợp lý 1-5 triệu)
     • USP ngắn: "Ghi âm nhỏ gọn - BH 12 Tháng"
-    • Urgency: "Giảm ngay 500K khi đặt hôm nay" (CHỈ khi có KM thật)
     • Benefit: "Kính sáng bóng chỉ sau 5 phút"
+    • Urgency: "Giảm ngay 500K khi đặt hôm nay" (CHỈ khi có KM thật)
   Headline phải khớp DẠNG BÀI được giao (mỗi dạng có gợi ý kiểu headline riêng).
   🚫 Headline chỉ MÔ TẢ suông ("Noma 911 – kính trong lại, giữ được lâu") là yếu:
   người lướt không thấy mình cần làm gì tiếp.
-- **primary_text**: phần thân 750-1400 ký tự (KHÔNG tính footer ~240 ký tự).
-  Không được dưới 600 ký tự thân bài.
-- **video_title**: ≤ 100 ký tự. **description**: ≤ 30 ký tự.
+  🚫 Headline chỉ nêu VẤN ĐỀ / HẬU QUẢ mà không có giải pháp ("Ghi âm bằng điện thoại
+  rồi hối hận", "Kính rít, cửa kêu — để lâu càng hỏng") = vô nghĩa. Phải có TÊN SP
+  hoặc lời giải trong CHÍNH headline.
+  🚫 KHÔNG giải thích nguyên nhân trong headline ("vì dầu trong nhựa bay hơi…").
+  🚫 KHÔNG nêu số người đã mua / đã tin dùng — không có dữ liệu thật thì là bịa.
+  🚫 KHÔNG chép nguyên câu ví dụ của sản phẩm khác (ví dụ về kính chỉ dành cho Noma 911).
+- **primary_text**: phần thân 450-850 ký tự (KHÔNG tính footer ~240 ký tự).
+  Ngắn, đọc lướt được trên điện thoại. Dài hơn là khách bỏ đi giữa chừng.
+- **video_title**: ≤ 100 ký tự. **description**: TỐI ĐA 30 KÝ TỰ — chỉ 3-6 chữ.
 
 ═══════════════════════════════════════════════════════════════════
 🎨 EMOJI (DÙNG CÓ KỶ LUẬT)
@@ -109,6 +115,27 @@ KHÔNG 🔥🔥🔥 hay ⭐⭐⭐ cuối câu.
 - "Full HD 1080P + hồng ngoại" (camera)
 - "Chỉ cần bấm / 1 gạt là [X]" (ghi âm, camera DA8.1)
 - Dòng cam kết/bảo hành: dùng ĐÚNG chữ được cấp ở phần yêu cầu, không tự chế.
+
+═══════════════════════════════════════════════════════════════════
+🗣 VIẾT NHƯ NGƯỜI BÁN HÀNG, KHÔNG NHƯ AI (CHỦ DỰ ÁN DUYỆT 2026-09-24)
+═══════════════════════════════════════════════════════════════════
+Lỗi bị chê nhiều nhất: bài "đậm chất AI", lê thê, giảng giải rồi mới tới sản phẩm.
+- Nêu vấn đề xong thì câu KẾ TIẾP phải là tên sản phẩm + tính năng đặc biệt nhất.
+  Không có đoạn giảng cơ chế, không "vẽ tình huống" dài giữa vấn đề và sản phẩm.
+- Câu ngắn, lời thường, như người bán hàng nói với khách. Mỗi câu một ý.
+- 🚫 CỤM CẤM (đọc ra là biết máy viết): "Tình huống quen thuộc", "Bạn có bao giờ",
+  "Hãy tưởng tượng", "Đó là lý do…", "…được thiết kế để giải quyết…", "Giải pháp
+  gọn nhẹ:", "Vì vậy, hàng triệu…", "Bạn có thể đang gặp:", "Đừng để…",
+  "không chỉ… mà còn…" dùng lặp, dấu "=" thay cho động từ.
+- KHÔNG giải thích hoá học/kỹ thuật (tên hoạt chất, cơ chế phân tử) ở phần đầu bài.
+  Cần thì gói trong ĐÚNG 1 bullet, nói bằng lời thường.
+
+🇻🇳 CHỈ VIẾT TIẾNG VIỆT — KHÔNG TRỘN TIẾNG ANH
+- Đổi sang tiếng Việt: video call → gọi điện / gọi video / liên lạc với con cháu;
+  DIY → tự làm tại nhà; detailing → chăm sóc xe / tiệm chăm xe; non-chlorinated →
+  không chứa clo; check → kiểm tra; app → ứng dụng.
+- Chỉ giữ nguyên: tên sản phẩm, tên ứng dụng riêng (Im Cam), đơn vị & chuẩn kỹ thuật
+  không có từ Việt (GB, mAh, Full HD, WiFi, GPS, Type-C, OTG, MP3).
 
 ═══════════════════════════════════════════════════════════════════
 🚫 KHÔNG BỊA LỜI CHỨNG THỰC KHÁCH HÀNG (QUYẾT 2026-07-22)
@@ -141,8 +168,10 @@ là sản phẩm hoặc hiện tượng, không phải một nhân vật:
   Dịch vụ tẩy ố kính: chỉ nêu chung "ra gara/detailing", KHÔNG đưa con số.
 - Giá SP chỉ lấy từ trường priceRange được cấp. Không làm tròn, không phóng đại.
 - So với "nước lau kính thường" / "ghi âm bằng điện thoại" — OK nếu chỉ so TÍNH NĂNG.
-- Social proof số người đặt: được phép nêu con số trong khoảng 1-5 triệu, nhưng
-  KHÔNG kèm số tiền tiết kiệm cụ thể nếu không có dữ liệu.
+- KHÔNG nêu số người đã mua/đã dùng/"hàng triệu chủ xe tin dùng" — không có dữ liệu
+  thật thì đó là bằng chứng xã hội giả.
+- Con số trong TÊN sản phẩm (Noma 350, Noma 680…) là MÃ SẢN PHẨM, KHÔNG phải dung tích.
+  Dung tích chỉ lấy từ tên đầy đủ/USP; không có thì không nêu.
 
 ═══════════════════════════════════════════════════════════════════
 🚫 RÀNG BUỘC FACEBOOK POLICY (TUYỆT ĐỐI KHÔNG VI PHẠM)
@@ -166,20 +195,18 @@ TUYỆT ĐỐI KHÔNG bắt chước BỐ CỤC này cho các dạng khác — d
 
 Headline: Ghi âm 30 giờ – Lọc tạp âm – BH 12 tháng
 Primary text:
-🎙 Ghi âm rõ từng câu, lọc tạp âm, pin ghi liên tục 30 giờ – DR1 Doscom nhỏ gọn 41g bỏ vừa túi áo
+🎙 Ghi âm bằng điện thoại bị rè, hết pin giữa buổi họp? Dùng ngay máy ghi âm DR1 Doscom
 
-Nhiều người đã mất dữ liệu quan trọng vì file ghi âm từ điện thoại bị rè, tiếng ồn át hết nội dung, pin tụt giữa buổi họp. DR1 được Doscom thiết kế chuyên dụng để giải quyết đúng 3 điểm yếu đó.
+File ghi bằng điện thoại hay lẫn tiếng ồn, pin tụt đúng lúc cần. DR1 Doscom lọc tạp âm, ghi liên tục 30 giờ, nhỏ gọn 41g bỏ vừa túi áo.
 
 ✅ Micro siêu nhạy + lọc tạp âm – thu rõ giọng trong quán cà phê, phòng họp đông người
 ✅ Ghi âm chỉ trong 1 chạm, tự kích hoạt theo giọng nói – không lỡ khoảnh khắc quan trọng
-✅ Pin ghi liên tục 30 giờ – họp cả tuần không cần sạc giữa chừng
-✅ Bộ nhớ 16GB – lưu file đến 192 giờ
-✅ Chỉ 41g, dài 77mm – bỏ túi áo mang cả ngày không vướng
-✅ Cắm OTG vào điện thoại hoặc máy tính là lấy file, không cần cài app
+✅ Pin ghi liên tục 30 giờ, bộ nhớ 16GB lưu file đến 192 giờ
+✅ Cắm OTG vào điện thoại hoặc máy tính là lấy file, không cần cài ứng dụng
 
-💼 Phù hợp cho: nhà báo, phóng viên, nhà sáng tạo nội dung, học sinh, sinh viên
+💼 Phù hợp cho: nhà báo, phóng viên, nhà sáng tạo nội dung, sinh viên
 
-🎁 Bảo hành 12 tháng – 1 đổi 1 trong 90 ngày nếu lỗi kỹ thuật
+🎁 Bảo hành 12 tháng – Lỗi 1 đổi 1 trong 90 ngày
 ✔ Hỗ trợ kỹ thuật 12 tháng kể từ ngày mua
 
 👉 Đặt mua DR1 tại đây: {{URL}}
@@ -294,6 +321,13 @@ ${product.provenAngles.map((a, i) => `${i + 1}. ${a}`).join("\n")}
 Angle là THÔNG ĐIỆP, không phải khung bài: giữ tinh thần của angle nhưng vẫn phải viết đúng KHUNG của dạng được giao, và viết lại tươi mới (không copy nguyên câu cũ).`
     : "";
 
+  // Hướng nội dung do chủ dự án chốt khi duyệt bài (24/09/2026). Đặt riêng một mục
+  // để THẮNG thứ tự USP/pain point — AI hay lấy ý đầu danh sách làm trọng tâm.
+  const focusSection = (product.contentFocus && product.contentFocus.length)
+    ? `\n🎯 TRỌNG TÂM NỘI DUNG (chủ dự án chốt — ưu tiên hơn thứ tự USP/pain point ở trên):
+${product.contentFocus.map((f) => `• ${f}`).join("\n")}`
+    : "";
+
   const brand = getBrand(product.brand);
   const brandSection = `\nTHƯƠNG HIỆU: ${brand.key} — ${brand.company}
 ${brand.signature
@@ -315,7 +349,7 @@ ${product.painPoints.map((p, i) => `${i + 1}. ${p}`).join("\n")}
 
 ĐỐI TƯỢNG MỤC TIÊU: ${product.targetAudience}
 TONE PHÙ HỢP: ${product.tonePreferred}
-LƯU Ý POLICY CHO SP NÀY: ${product.fbPolicyNotes}${avoidSection}${specsSection}${guaranteeSection}${usageSection}${durationSection}${limitsSection}${provenAnglesSection}
+LƯU Ý POLICY CHO SP NÀY: ${product.fbPolicyNotes}${focusSection}${avoidSection}${specsSection}${guaranteeSection}${usageSection}${durationSection}${limitsSection}${provenAnglesSection}
 
 CAMPAIGN FORMAT: ${formatLabel}
 CTA BUTTON: ${cta}${promoSection}
@@ -329,7 +363,8 @@ cùng bố cục (cùng chỗ đặt bullet, cùng nhịp mở bài) thì viết
 nhận ra được dạng của nó ngay từ cách trình bày.
 
 Mỗi variant đủ 4 trường: headline, primary_text, video_title, description.
-primary_text = thân bài 750-1400 ký tự theo khung của dạng, RỒI chèn FOOTER cố định ở cuối.
+primary_text = thân bài 450-850 ký tự theo khung của dạng, RỒI chèn FOOTER cố định ở cuối.
+headline ≤ 40 ký tự, description ≤ 30 ký tự — ĐẾM LẠI trước khi trả về.
 
 Trả về JSON DUY NHẤT (không markdown, không text ngoài JSON) với schema:
 {

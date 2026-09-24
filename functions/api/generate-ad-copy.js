@@ -17,7 +17,7 @@ import { anthropicBase, proxyHeaders } from "../lib/ai-endpoint.js";
 // Response: { ok, model, product, styles, variants: [...] }
 //
 // 2026-06-15 (crm): đổi từ Cloudflare Workers AI (Llama 3.3 70B — hay trả JSON hỏng)
-// sang Anthropic Claude Haiku 4.5 qua Cloudflare AI Gateway 'doscom-erp' (JSON ổn định,
+// sang Anthropic Claude (nay là Sonnet 5, xem CLAUDE_MODEL) qua Cloudflare AI Gateway 'doscom-erp' (JSON ổn định,
 // nhanh). Tái dùng pattern callClaudeViaGateway của agent FB/Google.
 // CẦN env: ANTHROPIC_API_KEY (secret) + CF_ACCOUNT_ID (var) — crm đã có sẵn.
 
@@ -30,7 +30,10 @@ import { AD_FORMATS, ENABLED_FORMATS, FORMAT_KEYS, getFormat, pickFormats } from
 // "chuẩn Mỹ" sai nghĩa xuất xứ — đúng thứ brand core cấm.
 import { NOMA_BRAND_GUIDE, scanForbidden } from "./geo/_utils/noma-brandcore.js";
 
-const CLAUDE_MODEL = "claude-haiku-4-5";
+// 24/09/2026: Haiku 4.5 → Sonnet 5. Đo trên cùng prompt, 22 bài/11 SP: Haiku vẫn
+// 12 bài quá độ dài headline/mô tả, 2 cụm cấm, 1 bài thiếu câu bắt buộc; Sonnet 5
+// = 0/0/0. Lượng bài ads ít nên chênh chi phí không đáng kể.
+const CLAUDE_MODEL = "claude-sonnet-5";
 
 /**
  * Thay placeholder {{URL}} trong bài bằng link đích thật.
@@ -46,6 +49,36 @@ export function fillUrlPlaceholder(text, link) {
   const l = String(link || "").trim();
   const s = String(text == null ? "" : text);
   return l ? s.replace(/\{\{?\s*URL\s*\}?\}/gi, l) : s;
+}
+
+/**
+ * Cắt chuỗi về tối đa `max` ký tự, ưu tiên cắt ở ranh giới TỪ.
+ *
+ * Trước 24/09/2026 dùng .slice(0, 40) thẳng: duyệt 22 bài thì 11 headline bị cắt
+ * giữa chữ ("…không dùng smartphone, làm s"). Giờ lùi về dấu cách gần nhất và bỏ
+ * dấu nối/dấu câu thừa ở đuôi. Đếm theo code point để emoji không bị chẻ đôi.
+ */
+export function cutAtWord(text, max) {
+  const chars = Array.from(String(text == null ? "" : text).trim());
+  if (chars.length <= max) return chars.join("");
+  let cut = chars.slice(0, max).join("");
+  const sp = cut.lastIndexOf(" ");
+  if (sp >= Math.floor(max * 0.5)) cut = cut.slice(0, sp);
+  return cut.replace(/[\s\-–—:;,.?!]+$/u, "");
+}
+
+// Lỗi Haiku vẫn lặp lại dù prompt đã cấm (đo 24/09/2026 trên 22 bài). Chỉ CẢNH BÁO
+// cho người duyệt, không tự sửa. "rẻ" không nằm trong scanForbidden dùng chung với
+// GEO vì bộ đó bỏ dấu trước khi so ("re" khớp cả "rè", "rẽ") — ở đây so nguyên dấu.
+const COPY_CHECKS = [
+  { re: /(^|[^\p{L}])rẻ(?![\p{L}])/iu, msg: "từ cấm NOMA: “rẻ”", noma: true },
+  { re: /\bDIY\b|detailing|video call|non-chlorinated/i, msg: "trộn tiếng Anh" },
+  { re: /Đó là lý do|được thiết kế để|Tình huống quen thuộc|Bạn có bao giờ/i, msg: "câu chuyển mùi AI" },
+  { re: /\d{1,3}\.\d{3}(\.\d{3})? (người|chủ xe|khách|doanh nhân)|hàng triệu (người|chủ xe)/i, msg: "số người mua tự bịa" },
+];
+
+export function copyWarnings(text, isNoma) {
+  return COPY_CHECKS.filter((c) => (!c.noma || isNoma) && c.re.test(text)).map((c) => c.msg);
 }
 
 function jsonResponse(data, status = 200) {
@@ -74,12 +107,13 @@ async function callClaudeViaGateway(env, systemPrompt, userPrompt) {
     },
     body: JSON.stringify({
       model: CLAUDE_MODEL,
-      max_tokens: 4096,
-      temperature: 0.9,
+      // Sonnet 5 không nhận `temperature` (API trả 400 "deprecated for this model").
+      max_tokens: 8192,
       system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: userPrompt }],
     }),
-    signal: AbortSignal.timeout(60000),
+    // Sonnet viết 3 bài mất ~40-70 giây, 60s cũ dễ hụt.
+    signal: AbortSignal.timeout(120000),
   });
 
   if (!r.ok) {
@@ -196,15 +230,24 @@ export async function onRequestPost(context) {
 
   parsed.variants = parsed.variants.map((v, i) => {
     const f = chosenFormats[i] || chosenFormats[chosenFormats.length - 1];
+    const rawHeadline = fillUrl(v.headline).trim();
+    const rawDesc = fillUrl(v.description).trim();
     const out = {
       id: v.id || String.fromCharCode(65 + i),
       style: f.key,
       style_label: f.label,
-      headline: fillUrl(v.headline).slice(0, 40),
+      headline: cutAtWord(rawHeadline, 40),
       primary_text: fillUrl(v.primary_text).slice(0, 2200),
-      video_title: fillUrl(v.video_title).slice(0, 100),
-      description: fillUrl(v.description).slice(0, 30),
+      video_title: cutAtWord(fillUrl(v.video_title), 100),
+      description: cutAtWord(rawDesc, 30),
     };
+    // AI viết quá dài mà server phải cắt → báo để người duyệt đọc lại câu đã cắt.
+    const cutFields = [];
+    if (Array.from(rawHeadline).length > 40) cutFields.push("headline");
+    if (Array.from(rawDesc).length > 30) cutFields.push("description");
+    if (cutFields.length) out.trimmed = cutFields;
+    const cw = copyWarnings(`${out.headline}\n${out.primary_text}\n${out.description}`, product.brand === "NOMA");
+    if (cw.length) out.copy_warnings = cw;
     // Rà cụm vi phạm brand core bằng regex (không tốn credit AI). Chỉ CẢNH BÁO,
     // không tự sửa: câu chữ do người duyệt quyết, nhưng phải biết mà sửa.
     if (product.brand === "NOMA") {
