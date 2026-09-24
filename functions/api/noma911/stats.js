@@ -42,7 +42,12 @@ export async function onRequestGet(context) {
 
     const STAFF_LABEL = { duy: "Duy", pn: "Phương Nam" };
     const byStaffLabeled = (byStaff.results || []).map(r => ({ ...r, staff_label: STAFF_LABEL[r.staff] || r.staff }));
-    const GIFT_LABEL = { noma250: "NOMA 250", noma120: "NOMA 120", noma692: "NOMA 692" };
+    // noma110/noma955: luật quà mới 24/09/2026; các mã còn lại là quà cũ, giữ cho đơn cũ trong D1.
+    const GIFT_LABEL = {
+      noma110: "NOMA 110 chống rỉ và bôi trơn đa năng",
+      noma955: "NOMA 955 xoá vết trầy sơn xe",
+      noma250: "NOMA 250", noma120: "NOMA 120", noma692: "NOMA 692",
+    };
     const byGiftLabeled = (byGift.results || []).map(r => ({ gift: r.gift_key, gift_label: GIFT_LABEL[r.gift_key] || r.gift_key, orders: r.orders }));
 
     return json({

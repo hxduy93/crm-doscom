@@ -21,9 +21,14 @@ function vnDate(epochSec) {
 
 const STAFF_LABEL = { duy: "Duy", pn: "Phương Nam" };
 // Quà tặng bật 14/08/2026: mọi gói từ hai sản phẩm trở lên tặng 1 chai NOMA 250, gói lẻ
-// 1 chai không có quà. Vì vậy by_gift trả về HAI dòng: 'noma250' và '(không quà)'.
+// 1 chai không có quà. Từ 24/09/2026 gói đôi đổi sang tặng NOMA 110 → by_gift gồm
+// 'noma110', '(không quà)' và mã quà cũ của đơn trước đó.
 // Thiếu nhãn ở đây thì dashboard hiện mã thô chứ không vỡ.
 const GIFT_LABEL = {
+  // Luật quà mới 24/09/2026 cho mọi landing NOMA: gói ≥2 chai dưới 400k tặng NOMA 110,
+  // gói từ 400k tặng NOMA 955. Các mã dưới đây là quà cũ, giữ để đơn cũ trong D1 hiện đúng tên.
+  noma110: "NOMA 110 chống rỉ và bôi trơn đa năng",
+  noma955: "NOMA 955 xoá vết trầy sơn xe",
   noma998: "NOMA 998",
   noma230: "NOMA 230",
   noma250: "NOMA 250",   // quà cũ, giữ để đơn trước 09/09/2026 vẫn hiện đúng tên

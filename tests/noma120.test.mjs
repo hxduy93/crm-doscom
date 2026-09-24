@@ -135,7 +135,9 @@ test("by_combo chỉ chứa combo của NOMA 120", async (t) => {
 // 1 chai không có quà. Nên by_gift chỉ được ra 'noma250' hoặc '(không quà)'.
 // Mã quà lạ lọt vào đây nghĩa là hoặc landing đổi chính sách quà mà quên khai COMBO_META
 // bên CRM, hoặc đơn của sản phẩm khác ghi nhầm sang bảng 120.
-const QUA_HOP_LE = new Set(["noma250", "(không quà)"]);
+// 24/09/2026: luật quà mới → gói đôi của 120 tặng NOMA 110 (noma955 cho gói từ 400k nếu có).
+// Mã cũ (noma250, noma998, noma230) vẫn hợp lệ vì đơn cũ trong D1 còn mang chúng.
+const QUA_HOP_LE = new Set(["noma110", "noma955", "noma250", "noma998", "noma230", "(không quà)"]);
 
 test("by_gift chỉ chứa quà của NOMA 120", async (t) => {
   const kq = await layThongKe();

@@ -143,3 +143,17 @@ test("khoảng ngày lọc đúng, ngày ngoài kỳ không được cộng", ()
   assert.equal(s.mix.le.aov, 80000);
   assert.equal(s.mix.combo.vonMoiDon, 25000);
 });
+
+// 24/09/2026: luật quà mới — NOMA 110 (gói ≥2 chai dưới 400k) và NOMA 955 (gói từ 400k)
+// phải được tính giá vốn quà như mọi chai khác.
+test("quà mới noma110 / noma955 được tính giá vốn", () => {
+  assert.equal(skuCuaQua("noma110"), "110");
+  assert.equal(skuCuaQua("noma955"), "955");
+  const r = giaVonMoiDon(
+    [{ combo: "combo-2x230", orders: 2, revenue: 396000 }, { combo: "combo-230-880", orders: 1, revenue: 498000 }],
+    [{ gift: "noma110", orders: 2 }, { gift: "noma955", orders: 1 }],
+    { "230": 18751, "880": 89040, "110": 23751, "955": 35096 },
+  );
+  assert.equal(r.qua, 2 * 23751 + 35096);
+  assert.deepEqual(r.skuThieuGia, []);
+});

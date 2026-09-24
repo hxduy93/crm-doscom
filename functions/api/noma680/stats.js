@@ -22,6 +22,10 @@ const STAFF_LABEL = { duy: "Duy", pn: "Phương Nam" };
 // Quà KHÔNG đồng nhất giữa các gói: gói 2 chai 680 tặng khăn microfiber, các gói
 // 680 + sản phẩm kính tặng NOMA 250. Thiếu nhãn ở đây thì dashboard hiện mã thô.
 const GIFT_LABEL = {
+  // Luật quà mới 24/09/2026 cho mọi landing NOMA: gói ≥2 chai dưới 400k tặng NOMA 110,
+  // gói từ 400k tặng NOMA 955. Các mã dưới đây là quà cũ, giữ để đơn cũ trong D1 hiện đúng tên.
+  noma110: "NOMA 110 chống rỉ và bôi trơn đa năng",
+  noma955: "NOMA 955 xoá vết trầy sơn xe",
   noma680: "NOMA 680",
   noma120: "NOMA 120",
   noma230: "NOMA 230",
