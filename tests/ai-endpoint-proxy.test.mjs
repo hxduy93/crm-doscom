@@ -52,7 +52,7 @@ test("mọi chỗ gọi Claude/Gemini đều đi qua bộ chọn đường, khô
     "../functions/api/geo/_utils/ai-engines/gemini.js",
     "../functions/api/agent-fb-ai.js",
     "../functions/api/agent-google-ai.js",
-    "../functions/api/generate-ad-copy.js",
+    "../functions/lib/ad-copy-providers.js",   // chỗ gọi Claude/Gemini của viết ads
     "../functions/api/weekly-ai.js",
     "../functions/api/clarity/optimize.js",
     "../functions/lib/keyHealth.js",

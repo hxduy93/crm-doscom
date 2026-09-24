@@ -646,7 +646,11 @@ function AdsCreatorPanel() {
       })
       const data = await res.json()
       if (!res.ok || !data.variants) {
-        throw new Error(data.error || "Lỗi không xác định")
+        // Chuỗi dự phòng đã thử hết các model: liệt kê từng model hỏng vì sao.
+        const chiTiet = (data.attempts || [])
+          .map(a => `${a.provider} lần ${a.lan}: ${a.error || (a.loi || []).flat().slice(0, 3).join("; ")}`)
+          .join(" | ")
+        throw new Error((data.error || "Lỗi không xác định") + (chiTiet ? ` — ${chiTiet}` : ""))
       }
       setAiVariants(data.variants)
     } catch (err) {
@@ -1176,7 +1180,10 @@ function AdsCreatorPanel() {
             // video dùng chung 1 khung nên cả campaign nhìn như một bài nhân bản.
             // seed theo sản phẩm để 2 sản phẩm khác nhau không mở màn cùng dạng.
             pushLog(`  • [${file.name}] AI viết caption...`)
-            let headline = g.product, adCopy = baseName
+            // Không có content đạt chuẩn thì KHÔNG lên quảng cáo cho video đó (bỏ qua, giữ
+            // trạng thái "mới" để lần sau thử lại). Trước 24/09/2026 chỗ này "tạm dùng tên
+            // file" làm nội dung → Claude hết tiền là camp lên với caption kiểu "video_03".
+            let headline = null, adCopy = null
             try {
               const r = await fetch("/api/generate-ad-copy", {
                 method: "POST",
@@ -1201,19 +1208,25 @@ function AdsCreatorPanel() {
               })
               const d = await r.json()
               if (r.ok && d.variants && d.variants[0]) {
-                headline = d.variants[0].headline || g.product
-                adCopy = d.variants[0].primary_text || baseName
-                pushLog(`    ✓ caption dạng "${d.variants[0].style_label || d.variants[0].style}"`)
+                headline = d.variants[0].headline || null
+                adCopy = d.variants[0].primary_text || null
+                pushLog(`    ✓ caption dạng "${d.variants[0].style_label || d.variants[0].style}"`
+                  + (d.variants[0].fallback_provider ? ` — do ${d.variants[0].fallback_provider} viết (Claude không chạy được)` : ""))
                 // Còn {{URL}} nghĩa là chưa điền link đích ở trên → báo ngay,
                 // đừng để phát hiện lúc quảng cáo đã chạy.
                 if (/\{\{?\s*URL\s*\}?\}/i.test(adCopy)) {
                   pushLog(`    ⚠ bài còn chỗ trống {{URL}} — chưa điền "Link đích" ở phần cấu hình`)
                 }
               } else {
-                pushLog(`    ⚠ caption lỗi (${d.error || r.status}) → tạm dùng tên file`)
+                pushLog(`    ⚠ caption lỗi (${d.error || r.status})`)
               }
             } catch (err) {
-              pushLog(`    ⚠ caption lỗi: ${err.message} → tạm dùng tên file`)
+              pushLog(`    ⚠ caption lỗi: ${err.message}`)
+            }
+            if (!headline || !adCopy) {
+              skipped.push(file.name)
+              pushLog(`    ✗ bỏ qua "${file.name}": không có content đạt chuẩn — không lên quảng cáo với nội dung tạm`)
+              continue
             }
             // 2) Upload video lên FB — lỗi 1 video KHÔNG làm hỏng cả nhóm, chỉ bỏ qua video đó.
             pushLog(`  • [${file.name}] upload lên FB (đợi xử lý)...`)
@@ -1243,7 +1256,7 @@ function AdsCreatorPanel() {
             }
           }
           if (skipped.length) pushLog(`  ⚠ ${skipped.length} video lỗi — giữ trạng thái "mới" để thử lại sau: ${skipped.join(", ")}`)
-          if (adsArr.length === 0) throw new Error(`cả ${files.length} video đều upload lỗi — không tạo campaign`)
+          if (adsArr.length === 0) throw new Error(`cả ${files.length} video đều lỗi (content hoặc upload) — không tạo campaign`)
           /* 3) ĐÍCH ĐỔ CREATIVE — do người chạy chọn ở dropdown từng sản phẩm (dichCua()).
                 KHÔNG còn tự dò theo tên. Cách dò cũ (timHop) chỉ thấy MỘT ad set mỗi hộp
                 nên campaign chứa nhiều nhóm QC thì đích phụ thuộc thứ tự Meta trả ad —
@@ -3050,6 +3063,7 @@ function AdsCreatorPanel() {
                                 {/* Cảnh báo server tự dò (không tự sửa) — đọc lại trước khi dùng. */}
                                 {(() => {
                                   const w = [
+                                    ...(v.fallback_provider ? [`Claude không chạy được — bài do ${v.fallback_provider} (${v.written_by}) viết, đã qua kiểm tra cấu trúc nhưng nên đọc kỹ giọng văn`] : []),
                                     ...(v.trimmed || []).map(f => f === "headline" ? "tiêu đề quá 40 ký tự, đã bị cắt" : "mô tả quá 30 ký tự, đã bị cắt"),
                                     ...(v.copy_warnings || []),
                                     ...(v.brand_warnings || []).map(b => `brand: “${b.quote}”`),

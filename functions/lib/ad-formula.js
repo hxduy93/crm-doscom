@@ -92,6 +92,8 @@ export const CONG_THUC = {
 //   dongMoBai : câu mở bài chủ dự án TỰ VIẾT (AI dùng gần nguyên văn)
 //   trongTam  : phải nói gì, nói nhiều cái gì
 //   tranh     : không được nói gì
+//   batBuoc   : câu an toàn/giới hạn BẮT BUỘC có — code kiểm (ad-copy-validate.js),
+//               thiếu là bài bị trả về viết lại. re = regex, msg = mô tả cho người/AI đọc.
 export const CONG_THUC_SAN_PHAM = {
   "D1": {
     dongMoBai: ["D1 Doscom – Máy dò định vị GPS, nghe lén, quay lén chuyên nghiệp"],
@@ -133,6 +135,10 @@ export const CONG_THUC_SAN_PHAM = {
     dongMoBai: ["Phanh kêu rít dù đã rửa xe sạch sẽ – Xịt ngay Noma 350"],
     trongTam: ["Nêu vấn đề xong thì câu kế tiếp giới thiệu ngay dung dịch vệ sinh phanh Noma 350"],
     tranh: ["Không nêu dung tích chai và số lần dùng (không có số xác minh)"],
+    batBuoc: [
+      { re: "nguội", msg: "chỉ xịt khi phanh đã nguội" },
+      { re: "lửa", msg: "tránh xa nguồn lửa" },
+    ],
   },
   "Noma 230": {
     dongMoBai: [
@@ -140,11 +146,13 @@ export const CONG_THUC_SAN_PHAM = {
       "Ốp, cản nhựa bạc trắng – Xịt ngay Noma 230",
     ],
     trongTam: ["Bài NGẮN: 2 câu vấn đề/giải pháp + 3-4 bullet. Chuyện 'bù dầu cho nhựa' tối đa 1 bullet"],
+    batBuoc: [{ re: "(tuỳ|tùy) tình trạng", msg: "mức độ phục hồi tuỳ tình trạng nhựa lúc bắt đầu" }],
   },
   "Noma 120": {
     dongMoBai: ["Noma 120 – Dung dịch súc rửa kim phun và buồng đốt ngay từ bên trong. Thao tác cực dễ, tự làm tại nhà trong 3 phút"],
     trongTam: ["Chuyện tia phun, piston, xu-páp tối đa 1 câu", "Cách dùng 'đổ vào bình xăng' chỉ nói 1 lần, trong bullet"],
     tranh: ["Không nhắc tên hoạt chất PEA ở đầu bài"],
+    batBuoc: [{ re: "xe chạy xăng|động cơ xăng", msg: "chỉ dùng cho xe chạy xăng" }],
   },
   "Noma 880": {
     dongMoBai: ["Dung dịch phủ tinh thể Noma 880 – xoá vết xước, vết trầy nhẹ trên sơn xe, tự làm tại nhà"],
@@ -156,6 +164,10 @@ export const CONG_THUC_SAN_PHAM = {
       "Không nói xe phải nằm xưởng, chờ bảo hiểm — xước nhẹ không đến mức hỏng xe",
       "Không dùng 'xước xoáy', 'mạng nhện'",
     ],
+    batBuoc: [
+      { re: "12 giờ", msg: "để khô ráo 12 giờ sau khi phủ" },
+      { re: "xước sâu|sâu tới lớp", msg: "không xử lý được xước sâu tới lớp màu" },
+    ],
   },
   "Noma 130": {
     dongMoBai: ["Noma 130 – Dung dịch làm mềm ron cao su, công thức từ dầu silicone tinh khiết"],
@@ -165,7 +177,13 @@ export const CONG_THUC_SAN_PHAM = {
     ],
     tranh: ["Không nói 'tạo ra từ dầu silicone' — nói 'công thức từ dầu silicone tinh khiết'"],
   },
-  // Noma 998: 4/4 bài Đạt qua 3 vòng — chưa cần hướng riêng.
+  // Noma 998: 4/4 bài Đạt qua 3 vòng — chưa cần hướng viết riêng, chỉ khoá câu an toàn.
+  "Noma 998": {
+    batBuoc: [
+      { re: "tạm thời", msg: "đây là giải pháp tạm thời, sau đó phải tới tiệm vá" },
+      { re: "không săm", msg: "chỉ dùng cho lốp không săm" },
+    ],
+  },
 };
 
 /** Khung bài (skeleton) dạng chữ, dùng cho dạng usp_bullet trong ad-formats.js. */
@@ -192,6 +210,7 @@ export function congThucSanPham(key) {
     ...(c.dongMoBai || []).map((d) => `Dòng mở bài mẫu (chủ dự án viết): '${d}'`),
     ...(c.trongTam || []),
     ...(c.tranh || []).map((t) => `TRÁNH: ${t}`),
+    ...(c.batBuoc || []).map((b) => `BẮT BUỘC CÓ (code sẽ kiểm, thiếu là bài bị trả lại): ${b.msg}`),
   ];
   return `\n🎯 TRỌNG TÂM NỘI DUNG (chủ dự án chốt — ưu tiên hơn thứ tự USP/pain point ở trên):
 ${dong.map((d) => `• ${d}`).join("\n")}`;

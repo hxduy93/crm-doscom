@@ -28,8 +28,9 @@ test("mã sản phẩm trong công thức phải có thật trong catalog (gõ s
 test("prompt của SP có hướng riêng thì kèm câu mở bài mẫu + điều tránh", () => {
   assert.match(prompt("Noma 130"), /công thức từ dầu silicone tinh khiết/);
   assert.match(prompt("D1"), /TRÁNH: KHÔNG dựng tình huống ai gắn định vị/);
-  assert.equal(congThucSanPham("Noma 998"), "", "998 chưa có hướng riêng");
-  assert.doesNotMatch(prompt("Noma 998"), /TRỌNG TÂM NỘI DUNG/);
+  // 998 chưa cần hướng viết riêng, chỉ khoá câu an toàn bắt buộc.
+  assert.doesNotMatch(congThucSanPham("Noma 998"), /Dòng mở bài mẫu/);
+  assert.match(prompt("Noma 998"), /BẮT BUỘC CÓ[^\n]*tạm thời/);
 });
 
 test("vòng 3: các lời chê cuối cùng đã vào công thức", () => {

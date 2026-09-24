@@ -1,4 +1,3 @@
-import { anthropicBase, proxyHeaders } from "../lib/ai-endpoint.js";
 // Endpoint: POST /api/generate-ad-copy
 // Body: { product: "D1" | "DR1" | ..., format: "lead_gen" | ..., formatLabel, cta, notes, promotion,
 //         styles?, count?, seed?, rotate? }
@@ -16,10 +15,9 @@ import { anthropicBase, proxyHeaders } from "../lib/ai-endpoint.js";
 // khung 8 bước nên chạy N video ra N bài giống hệt nhau về cấu trúc.
 // Response: { ok, model, product, styles, variants: [...] }
 //
-// 2026-06-15 (crm): đổi từ Cloudflare Workers AI (Llama 3.3 70B — hay trả JSON hỏng)
-// sang Anthropic Claude (nay là Sonnet 5, xem CLAUDE_MODEL) qua Cloudflare AI Gateway 'doscom-erp' (JSON ổn định,
-// nhanh). Tái dùng pattern callClaudeViaGateway của agent FB/Google.
-// CẦN env: ANTHROPIC_API_KEY (secret) + CF_ACCOUNT_ID (var) — crm đã có sẵn.
+// 2026-06-15: Llama 3.3 (hay trả JSON hỏng) → Claude. 2026-09-24: Claude Sonnet 5 + chuỗi
+// dự phòng Gemini → OpenAI → Workers AI, mọi bài qua bộ kiểm tra cấu trúc trước khi trả.
+// Cần ÍT NHẤT một trong: ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY, binding AI.
 
 import { getProduct } from "../lib/product-catalog.js";
 import { SYSTEM_PROMPT, buildUserPrompt } from "../lib/ad-prompts.js";
@@ -29,11 +27,13 @@ import { AD_FORMATS, ENABLED_FORMATS, FORMAT_KEYS, getFormat, pickFormats } from
 // KHÔNG đọc file này nên viết Noma như một dòng sản phẩm của Doscom và dùng cụm
 // "chuẩn Mỹ" sai nghĩa xuất xứ — đúng thứ brand core cấm.
 import { NOMA_BRAND_GUIDE, scanForbidden } from "./geo/_utils/noma-brandcore.js";
+import { getBrand, footerFor } from "../lib/ad-brands.js";
+import { vietVoiDuPhong } from "../lib/ad-copy-chain.js";
+import { ganFooter } from "../lib/ad-copy-validate.js";
+import { PROVIDERS } from "../lib/ad-copy-providers.js";
 
-// 24/09/2026: Haiku 4.5 → Sonnet 5. Đo trên cùng prompt, 22 bài/11 SP: Haiku vẫn
-// 12 bài quá độ dài headline/mô tả, 2 cụm cấm, 1 bài thiếu câu bắt buộc; Sonnet 5
-// = 0/0/0. Lượng bài ads ít nên chênh chi phí không đáng kể.
-const CLAUDE_MODEL = "claude-sonnet-5";
+// Model & chuỗi dự phòng (Claude → Gemini → OpenAI → Workers AI): lib/ad-copy-providers.js.
+// Kiểm tra cấu trúc bài theo công thức đã duyệt: lib/ad-copy-validate.js.
 
 /**
  * Thay placeholder {{URL}} trong bài bằng link đích thật.
@@ -88,59 +88,8 @@ function jsonResponse(data, status = 200) {
   });
 }
 
-// Gọi Claude qua Cloudflare AI Gateway (giữ observability gateway 'doscom-erp').
-// System prompt cache_control ephemeral → bấm lại nhiều mẫu cùng SP → cache hit.
-async function callClaudeViaGateway(env, systemPrompt, userPrompt) {
-  if (!env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY chưa set trong Cloudflare env");
-  if (!env.CF_ACCOUNT_ID) throw new Error("CF_ACCOUNT_ID chưa set trong Cloudflare env");
-
-  // Đường ra do lib/ai-endpoint.js chọn: proxy ghim vùng Bắc Mỹ nếu có (Anthropic chặn
-  // colo Hong Kong — xem file đó), không thì AI Gateway như cũ.
-  const url = `${anthropicBase(env)}/v1/messages`;
-  const r = await fetch(url, {
-    method: "POST",
-    headers: {
-      "x-api-key": env.ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-      ...proxyHeaders(env),
-    },
-    body: JSON.stringify({
-      model: CLAUDE_MODEL,
-      // Sonnet 5 không nhận `temperature` (API trả 400 "deprecated for this model").
-      // Để mặc định (effort high) thì có lượt nó dùng hết 8.192 token vào phần suy nghĩ,
-      // không còn chữ nào trả về, mất ~75 giây. effort "low": ~20 giây, đủ bài (đo 24/09/2026).
-      output_config: { effort: "low" },
-      max_tokens: 16000,
-      system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-      messages: [{ role: "user", content: userPrompt }],
-    }),
-    // Sonnet viết 3 bài mất ~40-70 giây, 60s cũ dễ hụt.
-    signal: AbortSignal.timeout(120000),
-  });
-
-  if (!r.ok) {
-    const errText = await r.text().catch(() => "");
-    throw new Error(`Claude API ${r.status}: ${errText.slice(0, 300)}`);
-  }
-  const data = await r.json();
-  const textBlock = (data.content || []).find(b => b.type === "text");
-  if (!textBlock?.text) {
-    throw new Error(data.stop_reason === "max_tokens"
-      ? "Claude dùng hết token vào phần suy nghĩ, chưa kịp viết bài — bấm sinh lại"
-      : `Claude trả empty content (stop_reason: ${data.stop_reason || "?"})`);
-  }
-  return textBlock.text;
-}
-
 export async function onRequestPost(context) {
   const { request, env } = context;
-
-  if (!env.ANTHROPIC_API_KEY || !env.CF_ACCOUNT_ID) {
-    return jsonResponse({
-      error: "Thiếu cấu hình Claude: cần ANTHROPIC_API_KEY (secret) + CF_ACCOUNT_ID (var) trên Cloudflare Pages.",
-    }, 500);
-  }
 
   let body;
   try {
@@ -200,35 +149,16 @@ export async function onRequestPost(context) {
     ? `${SYSTEM_PROMPT}\n\n${NOMA_BRAND_GUIDE}`
     : SYSTEM_PROMPT;
 
-  let textOut;
-  try {
-    textOut = await callClaudeViaGateway(env, systemPrompt, userPrompt);
-  } catch (err) {
-    return jsonResponse({
-      error: "Claude lỗi: " + (err?.message || String(err)),
-    }, 502);
+  const ketQua = await vietVoiDuPhong({
+    env, systemPrompt, userPrompt, productKey, product, soBai: chosenFormats.length,
+  });
+  if (!ketQua.ok) {
+    return jsonResponse({ error: ketQua.error, attempts: ketQua.attempts }, 502);
   }
-
-  // Parse JSON; nếu model kèm text thừa, cố gắng extract block JSON đầu tiên.
-  let parsed;
-  try {
-    parsed = JSON.parse(textOut);
-  } catch {
-    const match = textOut.match(/\{[\s\S]*\}/);
-    if (match) {
-      try {
-        parsed = JSON.parse(match[0]);
-      } catch {
-        return jsonResponse({ error: "Claude trả JSON không hợp lệ.", raw: textOut.slice(0, 500) }, 502);
-      }
-    } else {
-      return jsonResponse({ error: "Claude trả JSON không hợp lệ.", raw: textOut.slice(0, 500) }, 502);
-    }
-  }
-
-  if (!Array.isArray(parsed.variants) || parsed.variants.length === 0) {
-    return jsonResponse({ error: "Claude không trả variants hợp lệ.", raw: parsed }, 502);
-  }
+  const parsed = { variants: ketQua.variants };
+  // Footer do SERVER gắn theo thương hiệu, không tin bản model tự chép.
+  const footer = footerFor(getBrand(product.brand).key);
+  const laDuPhong = ketQua.provider !== "anthropic";
 
   // Truncate to enforce FB limits (safety net).
   // style/style_label lấy từ dạng ĐÃ GIAO theo thứ tự, không tin chuỗi model tự
@@ -244,7 +174,7 @@ export async function onRequestPost(context) {
       style: f.key,
       style_label: f.label,
       headline: cutAtWord(rawHeadline, 40),
-      primary_text: fillUrl(v.primary_text).slice(0, 2200),
+      primary_text: fillUrl(ganFooter(v.primary_text, footer)).slice(0, 2200),
       video_title: cutAtWord(fillUrl(v.video_title), 100),
       description: cutAtWord(rawDesc, 30),
     };
@@ -253,6 +183,10 @@ export async function onRequestPost(context) {
     if (Array.from(rawHeadline).length > 40) cutFields.push("headline");
     if (Array.from(rawDesc).length > 30) cutFields.push("description");
     if (cutFields.length) out.trimmed = cutFields;
+    // Bài do model dự phòng viết (Claude lỗi/hết tiền) — đã qua kiểm tra cấu trúc nhưng
+    // giọng văn kém hơn, người duyệt nên đọc kỹ.
+    out.written_by = ketQua.model;
+    if (laDuPhong) out.fallback_provider = PROVIDERS[ketQua.provider]?.label || ketQua.provider;
     const cw = copyWarnings(`${out.headline}\n${out.primary_text}\n${out.description}`, product.brand === "NOMA");
     if (cw.length) out.copy_warnings = cw;
     // Rà cụm vi phạm brand core bằng regex (không tốn credit AI). Chỉ CẢNH BÁO,
@@ -266,7 +200,11 @@ export async function onRequestPost(context) {
 
   return jsonResponse({
     ok: true,
-    model: CLAUDE_MODEL,
+    model: ketQua.model,
+    provider: ketQua.provider,
+    // true = hết chuỗi mà chỉ đủ một phần số bài đạt; trả đúng các bài đạt.
+    partial: !!ketQua.partial,
+    attempts: ketQua.attempts,
     product: productKey,
     styles: chosenFormats.map((f) => f.key),
     // Cho client biết link đã được gắn hay chưa, để còn tự thay nốt nếu chưa.
