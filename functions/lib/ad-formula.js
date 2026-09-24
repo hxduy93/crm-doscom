@@ -1,14 +1,21 @@
 // CÔNG THỨC VIẾT ADS DOSCOM — nguồn DUY NHẤT cho cách AI viết content quảng cáo.
 //
-// Chắt ra từ 3 vòng chủ dự án duyệt 66 bài AI viết thật (24/09/2026):
-// vòng 1 → 3 Đạt, vòng 2 → 6 Đạt, vòng 3 → 20/22 Đạt. Mỗi luật dưới đây ứng với
-// một lời chê cụ thể; gỡ luật nào là lỗi đó quay lại.
+// Chắt ra từ 4 vòng chủ dự án duyệt 88 bài AI viết thật (24/09/2026):
+// vòng 1 → 3 Đạt, vòng 2 → 6, vòng 3 → 20/22, vòng 4 (công thức này) → 22/22 Đạt.
+// Mỗi luật dưới đây ứng với một lời chê cụ thể; gỡ luật nào là lỗi đó quay lại.
+//
+// AI HIỂU "VIẾT ĐÚNG" QUA 3 LỚP (prompt ghép theo đúng thứ tự ưu tiên này):
+//   1. CONG_THUC            — khung 5 bước + luật tiêu đề/độ dài/giọng (mọi SP)
+//   2. CONG_THUC_SAN_PHAM   — hướng riêng từng SP: câu mở bài mẫu, trọng tâm, điều tránh
+//   3. ad-approved-examples — 22 bài chủ dự án chấm Đạt: AI NHÌN bài đúng trông ra sao
 //
 // MUỐN ĐỔI CÁCH VIẾT:
 //   • Đổi khung bài / luật chung      → sửa CONG_THUC
 //   • Đổi hướng viết của 1 sản phẩm   → sửa CONG_THUC_SAN_PHAM[<mã SP>]
 //   • Thêm sản phẩm mới              → thêm 1 mục vào CONG_THUC_SAN_PHAM (mã trùng
-//     key trong product-catalog.js). Không có mục thì AI chỉ theo công thức chung.
+//     key trong product-catalog.js); duyệt được bài đạt thì thêm vào
+//     ad-approved-examples.js. Không có mục thì AI chỉ theo công thức chung.
+//   • Đổi luật mà bài mẫu cũ không còn đúng → THAY bài mẫu, không thì AI học theo bài cũ.
 // Không cần sửa ad-prompts.js hay ad-formats.js — hai file đó tự đọc từ đây.
 
 export const CONG_THUC = {
@@ -70,7 +77,7 @@ export const CONG_THUC = {
   // Hai trường ngắn đi kèm bài.
   tieuDe: "headline tối đa 40 ký tự, PHẢI có tên SP hoặc giải pháp (vd \"Cặn canxi bám kính? Dùng ngay Noma 911\"). Không nêu vấn đề suông, không giải thích nguyên nhân, không nêu số người đã mua.",
   moTa: "description tối đa 30 ký tự — 3-6 chữ.",
-  doDai: "thân bài 350-650 ký tự (chưa tính footer).",
+  doDai: "thân bài 700-950 ký tự (chưa tính footer) — đúng độ dài 22 bài mẫu đã duyệt.",
 
   // Luật giọng văn áp cho mọi bước.
   luatChung: [

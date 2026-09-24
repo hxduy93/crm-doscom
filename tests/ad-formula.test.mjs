@@ -39,3 +39,27 @@ test("vòng 3: các lời chê cuối cùng đã vào công thức", () => {
   assert.match(c["Noma 880"].tranh.join(), /nằm xưởng, chờ bảo hiểm/);
   assert.doesNotMatch(JSON.stringify(getProduct("Noma 880").painPoints), /xưởng|bảo hiểm/);
 });
+
+test("bài mẫu đã duyệt: đúng mã SP, không kèm footer, không dính luật cấm", async () => {
+  const { BAI_MAU_DA_DUYET } = await import("../functions/lib/ad-approved-examples.js");
+  const cam = [/Đó là lý do/i, /Tình huống quen thuộc/i, /video call/i, /\bDIY\b|detailing/i, /xoáy|mạng nhện/i, /hàng triệu/i];
+  for (const [k, list] of Object.entries(BAI_MAU_DA_DUYET)) {
+    assert.ok(PRODUCTS[k], `bài mẫu cho SP không có trong catalog: ${k}`);
+    for (const m of list) {
+      assert.ok(Array.from(m.headline).length <= 40, `${k}: headline mẫu quá 40`);
+      assert.ok(Array.from(m.description).length <= 30, `${k}: description mẫu quá 30`);
+      assert.doesNotMatch(m.body, /━|Hotline|Công ty TNHH/, `${k}: bài mẫu không được kèm footer`);
+      assert.match(m.body, /\{\{URL\}\}/, `${k}: bài mẫu phải giữ placeholder {{URL}}`);
+      for (const re of cam) assert.doesNotMatch(m.body, re, `${k}: bài mẫu dính ${re}`);
+    }
+  }
+  assert.match(prompt("Noma 911"), /BÀI MẪU ĐÃ DUYỆT CỦA SẢN PHẨM NÀY/);
+  assert.match(prompt("Noma 911"), /KHÔNG chép nguyên câu từ bài mẫu/);
+});
+
+test("prompt đặt công thức lên đầu và nói rõ thứ tự ưu tiên", () => {
+  const i = SYSTEM_PROMPT.indexOf("CÔNG THỨC DOSCOM 5 BƯỚC");
+  assert.ok(i > 0 && i < SYSTEM_PROMPT.indexOf("LUẬT BẤT DI BẤT DỊCH"), "công thức phải đứng trước các luật chi tiết");
+  assert.match(SYSTEM_PROMPT, /ưu tiên theo thứ tự/);
+  assert.doesNotMatch(SYSTEM_PROMPT, /5-7 bullet/, "luật 5-7 bullet cũ mâu thuẫn với công thức 3-5 bullet");
+});

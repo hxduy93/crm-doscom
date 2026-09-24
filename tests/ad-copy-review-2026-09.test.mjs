@@ -34,7 +34,7 @@ test("khung usp_bullet: vấn đề rồi giới thiệu sản phẩm ngay, cấ
   assert.match(s, /GIỚI THIỆU SP NGAY câu tiếp theo/);
   assert.match(s, /KHÔNG dùng câu chuyển kiểu "👉 Đó là lý do…"/);
   assert.match(SYSTEM_PROMPT, /Tình huống quen thuộc/);
-  assert.match(SYSTEM_PROMPT, /thân 350-650 ký tự/);
+  assert.match(SYSTEM_PROMPT, /thân 700-950 ký tự/);
 });
 
 test("cấm trộn tiếng Anh: video call phải thành gọi điện", () => {

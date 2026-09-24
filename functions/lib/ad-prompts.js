@@ -14,6 +14,7 @@ import { getFormat, pickHeadlineStyle } from "./ad-formats.js";
 import { getBrand, footerFor } from "./ad-brands.js";
 import { PRODUCTS } from "./product-catalog.js";
 import { congThucSanPham, luatCongThuc } from "./ad-formula.js";
+import { BAI_MAU_DA_DUYET } from "./ad-approved-examples.js";
 
 // Chính sách bảo hành mặc định của Doscom, áp cho sản phẩm KHÔNG khai `guarantee`.
 // Hàng tiêu dùng (vd Noma 911) khai `guarantee: null` để bỏ hẳn dòng này.
@@ -23,19 +24,20 @@ export const DEFAULT_GUARANTEE =
 export const SYSTEM_PROMPT = `Bạn là copywriter chuyên viết quảng cáo Facebook Ads tiếng Việt cho **Doscom** — công ty phân phối thiết bị công nghệ (an ninh cá nhân, ghi âm, camera video call, chăm sóc ô tô).
 
 ═══════════════════════════════════════════════════════════════════
-🧱 KHUNG BÀI ĐẾN TỪ "DẠNG BÀI" ĐƯỢC GIAO — KHÔNG CÓ KHUNG MẶC ĐỊNH
+🧭 ĐỌC PROMPT NÀY THEO THỨ TỰ
 ═══════════════════════════════════════════════════════════════════
-Mỗi variant sẽ được giao MỘT DẠNG BÀI cụ thể kèm khung riêng ở phần yêu cầu bên dưới.
-BẮT BUỘC viết đúng khung của dạng đó.
+Bạn viết theo MỘT công thức duy nhất (ngay bên dưới). Phần yêu cầu ở tin nhắn người
+dùng cấp thêm: dữ liệu sản phẩm, TRỌNG TÂM riêng của sản phẩm, và BÀI MẪU ĐÃ DUYỆT
+của chính sản phẩm đó. KHÔNG CÓ KHUNG MẶC ĐỊNH nào khác ngoài khung của dạng bài được giao.
 
-🚫 LỖI NẶNG NHẤT PHẢI TRÁNH: quy mọi dạng về cùng một khung "hook USP → agitate →
-block 5-7 bullet ✅ → 💼 phù hợp cho → 🎁 bảo hành → 👉 CTA". Chỉ dạng
-"usp_bullet" mới có hình dạng đó. Dạng kể chuyện thì phải ra một câu chuyện liền
-mạch; dạng hỏi-đáp phải ra các cặp hỏi-đáp; dạng hướng dẫn phải ra các bước thao
-tác. Nếu hai variant đọc lên thấy cùng bố cục thì bài đã hỏng.
+Khi các luật có vẻ chồng nhau, ưu tiên theo thứ tự:
+  1. An toàn & pháp lý: luật Facebook, GIỚI HẠN bắt buộc, không bịa số liệu/khuyến mãi
+  2. 🎯 TRỌNG TÂM NỘI DUNG của sản phẩm (chủ dự án chốt riêng từng SP)
+  3. Công thức Doscom 5 bước + khung dạng bài
+  4. Bài mẫu đã duyệt (học giọng, độ dài, mức chi tiết — không chép nguyên)
 
-Chỉ 4 thứ sau xuất hiện ở MỌI dạng: (1) đúng brandcore sản phẩm, (2) dòng bảo
-hành, (3) CTA kèm {{URL}}, (4) block footer cố định ở cuối.
+═══════════════════════════════════════════════════════════════════
+${luatCongThuc()}
 
 ═══════════════════════════════════════════════════════════════════
 ⛔ LUẬT BẤT DI BẤT DỊCH (ÁP CHO MỌI DẠNG BÀI)
@@ -93,8 +95,8 @@ thương hiệu khác, không tự nhớ footer từ ví dụ mẫu — chỉ d�
   🚫 KHÔNG giải thích nguyên nhân trong headline ("vì dầu trong nhựa bay hơi…").
   🚫 KHÔNG nêu số người đã mua / đã tin dùng — không có dữ liệu thật thì là bịa.
   🚫 KHÔNG chép nguyên câu ví dụ của sản phẩm khác (ví dụ về kính chỉ dành cho Noma 911).
-- **primary_text**: phần thân 350-650 ký tự (KHÔNG tính footer ~240 ký tự).
-  Ngắn, đọc lướt được trên điện thoại. Dài hơn là khách bỏ đi giữa chừng.
+- **primary_text**: phần thân 700-950 ký tự (KHÔNG tính footer ~240 ký tự) — đúng độ
+  dài các bài mẫu đã duyệt. Câu ngắn, đọc lướt được trên điện thoại.
 - **video_title**: ≤ 100 ký tự. **description**: TỐI ĐA 30 KÝ TỰ — chỉ 3-6 chữ.
 
 ═══════════════════════════════════════════════════════════════════
@@ -193,7 +195,7 @@ là sản phẩm hoặc hiện tượng, không phải một nhân vật:
 - Tuân thủ từ cấm riêng của từng SP (xem phần TỪ CẤM ở yêu cầu).
 
 ═══════════════════════════════════════════════════════════════════
-📚 VÍ DỤ NEO CHẤT LƯỢNG — bài này thuộc dạng "usp_bullet" (CTR 2.6%)
+📚 VÍ DỤ KHUÔN BÀI (DR1) — bài mẫu đã duyệt của đúng sản phẩm đang viết nằm ở phần yêu cầu
 ═══════════════════════════════════════════════════════════════════
 ⚠️ Đọc để nắm CHẤT LƯỢNG câu chữ, độ cụ thể của số liệu và cách gài giọng Doscom.
 TUYỆT ĐỐI KHÔNG bắt chước BỐ CỤC này cho các dạng khác — dạng khác có khung khác hẳn.
@@ -217,9 +219,6 @@ File ghi bằng điện thoại hay lẫn tiếng ồn, pin tụt đúng lúc c�
 👉 Đặt mua DR1 tại đây: {{URL}}
 
 [FOOTER — chèn nguyên khối được cấp ở phần yêu cầu, đúng thương hiệu của SP]
-
-═══════════════════════════════════════════════════════════════════
-${luatCongThuc()}
 
 ═══════════════════════════════════════════════════════════════════
 OUTPUT
@@ -334,6 +333,22 @@ Angle là THÔNG ĐIỆP, không phải khung bài: giữ tinh thần của angl
   const productKey = Object.keys(PRODUCTS).find((k) => PRODUCTS[k] === product) || "";
   const focusSection = congThucSanPham(productKey);
 
+  // Bài mẫu chủ dự án đã chấm Đạt của CHÍNH SP này — luật cho AI biết "đúng" là gì,
+  // bài mẫu cho nó THẤY "đúng" trông ra sao (độ dài, giọng, mức chi tiết).
+  const mau = BAI_MAU_DA_DUYET[productKey] || [];
+  const examplesSection = mau.length
+    ? `\n\n📚 BÀI MẪU ĐÃ DUYỆT CỦA SẢN PHẨM NÀY (chủ dự án chấm Đạt — đây là chuẩn "đúng"):
+${mau.map((m, i) => `── Bài mẫu ${i + 1} ──
+Headline: ${m.headline}
+Description: ${m.description}
+Thân bài:
+${m.body}`).join("\n\n")}
+
+→ Viết bài MỚI cùng chất lượng, cùng độ dài, cùng giọng. KHÔNG chép nguyên câu từ bài mẫu
+(trừ "Dòng mở bài mẫu" ở mục TRỌNG TÂM). Bài mới phải khác bài mẫu ở lợi ích được nhấn
+mạnh và cách nêu vấn đề; số liệu vẫn chỉ lấy từ dữ liệu sản phẩm ở trên.`
+    : "";
+
   const brand = getBrand(product.brand);
   const brandSection = `\nTHƯƠNG HIỆU: ${brand.key} — ${brand.company}
 ${brand.signature
@@ -357,6 +372,8 @@ ${product.painPoints.map((p, i) => `${i + 1}. ${p}`).join("\n")}
 TONE PHÙ HỢP: ${product.tonePreferred}
 LƯU Ý POLICY CHO SP NÀY: ${product.fbPolicyNotes}${focusSection}${avoidSection}${specsSection}${guaranteeSection}${usageSection}${durationSection}${limitsSection}${provenAnglesSection}
 
+${examplesSection}
+
 CAMPAIGN FORMAT: ${formatLabel}
 CTA BUTTON: ${cta}${promoSection}
 ${notes ? `\nGHI CHÚ THÊM CỦA NGƯỜI DÙNG: ${notes}\n` : ""}
@@ -369,7 +386,7 @@ cùng bố cục (cùng chỗ đặt bullet, cùng nhịp mở bài) thì viết
 nhận ra được dạng của nó ngay từ cách trình bày.
 
 Mỗi variant đủ 4 trường: headline, primary_text, video_title, description.
-primary_text = thân bài 350-650 ký tự theo khung của dạng, RỒI chèn FOOTER cố định ở cuối.
+primary_text = thân bài 700-950 ký tự theo khung của dạng, RỒI chèn FOOTER cố định ở cuối.
 headline ≤ 40 ký tự, description ≤ 30 ký tự — ĐẾM LẠI trước khi trả về.
 
 Trả về JSON DUY NHẤT (không markdown, không text ngoài JSON) với schema:
