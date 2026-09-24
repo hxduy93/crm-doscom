@@ -43,9 +43,9 @@ export const PRODUCTS = {
     fbPolicyNotes: "Không được ám chỉ xâm phạm quyền riêng tư người khác. Tập trung vào 'bảo vệ bản thân'.",
     // Chủ dự án chốt khi duyệt 22 bài AI viết thật (24/09/2026).
     contentFocus: [
-      "Trọng tâm: dò thiết bị ĐỊNH VỊ GPS gắn lén trên XE và máy NGHE LÉN trong PHÒNG HỌP. Camera quay lén chỉ nhắc lướt 1 lần, không làm chủ đề chính",
-      "Dòng mở bài chỉ 1 ý: D1 Doscom dò định vị, nghe lén — quét 360° không bỏ sót. Pin 12 giờ, nặng 66g đưa xuống bullet",
-      "Phần vấn đề nêu thẳng nỗi lo của khách trong 1-2 câu, không dựng tình huống dài",
+      "Dòng mở bài mẫu (chủ dự án viết): 'D1 Doscom – Máy dò định vị GPS, nghe lén, quay lén chuyên nghiệp'",
+      "Trọng tâm: dò định vị GPS gắn lén trên xe và máy nghe lén trong phòng họp; quay lén chỉ nhắc lướt",
+      "Pin 12 giờ, nặng 66g đưa xuống bullet",
     ],
   },
 
@@ -86,6 +86,10 @@ export const PRODUCTS = {
       "ghi âm lén", "nghe lén", "rình",
     ],
     fbPolicyNotes: "Phải nêu mục đích hợp pháp (tác nghiệp, ghi nhớ). Không được ám chỉ ghi âm bí mật người khác.",
+    // Chủ dự án chốt khi duyệt bài AI viết thật (24/09/2026).
+    contentFocus: [
+      "Dòng mở bài mẫu (chủ dự án viết): 'Thiết bị ghi âm DR1 Doscom – Ghi âm liên tục 30 giờ, lưu trữ đến 192 giờ ghi âm'",
+    ],
   },
 
   // NOMA là thương hiệu RIÊNG (NOMA Technologies LLC), không phải dòng sản phẩm của
@@ -134,8 +138,8 @@ export const PRODUCTS = {
     fbPolicyNotes: "Tránh khẳng định tuyệt đối ('tẩy sạch 100%') — dùng 'hiệu quả lên đến', 'thấy rõ ngay lần đầu'. Nói 'ố do cặn canxi', KHÔNG nói 'mưa axit'. Tuân thủ Brand Core NOMA v3 kèm bên dưới.",
     // Chủ dự án chốt khi duyệt 22 bài AI viết thật (24/09/2026).
     contentFocus: [
-      "Dòng mở bài kiểu: 'Kính xe còn ố trắng sau khi rửa? Dùng ngay dung dịch tẩy ố kính Noma 911' — vấn đề và giải pháp trong cùng một dòng",
-      "Nguyên nhân chỉ nói gọn: cặn canxi có trong nước mưa. KHÔNG dùng cụm 'nước cứng' (khách không hiểu)",
+      "Dòng mở bài mẫu (chủ dự án viết), chọn 1: 'Rửa xe xong mà kính lái vẫn còn ố trắng – Sử dụng ngay dung dịch tẩy ố kính Noma 911' HOẶC 'Dung dịch tẩy ố kính Noma 911 – công thức hạt mài siêu nhỏ đánh bật cặn canxi mà không làm xước kính'",
+      "Nguyên nhân chỉ nói gọn: cặn canxi có trong nước mưa. KHÔNG dùng cụm 'nước cứng'",
       "Không viết 'gara/tiệm chăm xe tin dùng' — chưa có bằng chứng",
     ],
   },
@@ -186,9 +190,9 @@ export const PRODUCTS = {
     fbPolicyNotes: "KHÔNG hứa 'sạch mọi vết bẩn'. Nói rõ vết cứng đầu có thể phải lặp lại 1-2 lần. Tuân thủ Brand Core NOMA v3.",
     // Chủ dự án chốt khi duyệt 22 bài AI viết thật (24/09/2026).
     contentFocus: [
-      "Đánh mạnh vào: SẠCH BONG VẾT BẨN CHỈ SAU 90 GIÂY — bọt tự phá vết bẩn, không phải chà mạnh",
-      "Dòng mở bài mẫu: '🧼 Noma 680 không chỉ là bọt tuyết vệ sinh đa năng – tích hợp bàn chải tiện lợi trên thân chai'",
-      "Viết thẳng 'Noma 680 giải quyết cả 3 điểm đó', KHÔNG viết 'Đó là lý do Noma 680 được thiết kế…'",
+      "Dòng mở bài mẫu (chủ dự án viết): 'Dung dịch vệ sinh đa năng Noma 680 – 1 chai vệ sinh hết nội thất, ngoại thất xe hơi'",
+      "Đánh mạnh vào: sạch bong vết bẩn chỉ sau 90 giây, có bàn chải tích hợp trên thân chai",
+      "Các ý phải nối liền mạch: một chai cho mọi bề mặt → bọt tự phá bẩn sau 90 giây → bàn chải cho khe hốc",
     ],
   },
 
@@ -233,8 +237,8 @@ export const PRODUCTS = {
     ],
     // Chủ dự án chốt khi duyệt 22 bài AI viết thật (24/09/2026).
     contentFocus: [
-      "Mở bài chọn 1 trong 2: (a) tên SP + tính năng: 'Noma 350 – xịt sạch bụi phanh qua khe vành, không tháo bánh'; (b) vấn đề + giải pháp: 'Phanh kêu rít sau khi rửa xe? Xịt ngay Noma 350'",
-      "Nêu vấn đề xong thì câu kế tiếp PHẢI giới thiệu ngay Noma 350",
+      "Dòng mở bài mẫu (chủ dự án viết): 'Phanh kêu rít dù đã rửa xe sạch sẽ – Xịt ngay Noma 350'",
+      "Nêu vấn đề xong thì câu kế tiếp PHẢI giới thiệu ngay dung dịch vệ sinh phanh Noma 350",
       "KHÔNG nêu dung tích chai và số lần dùng (không có số xác minh)",
     ],
     avoidWords: [
@@ -283,8 +287,8 @@ export const PRODUCTS = {
     ],
     // Chủ dự án chốt khi duyệt 22 bài AI viết thật (24/09/2026).
     contentFocus: [
-      "Tiêu đề & mở bài: vấn đề + giải pháp, vd 'Cản, ốp nhựa bạc trắng? Xịt ngay Noma 230'. KHÔNG giải thích vì sao nhựa bạc trong tiêu đề",
-      "Chuyện 'bù lại dầu trong nhựa' chỉ gói trong 1 bullet, nói bằng lời thường",
+      "Dòng mở bài mẫu (chủ dự án viết): 'Noma 230 – Dung dịch làm mới nhựa nhám trên ốp, cản xe'. Hoặc vấn đề + giải pháp ngay sau: 'Ốp, cản nhựa bạc trắng – Xịt ngay Noma 230'",
+      "Bài phải NGẮN: 2 câu vấn đề/giải pháp + 3-4 bullet là đủ. Chuyện 'bù dầu cho nhựa' tối đa 1 bullet",
     ],
     avoidWords: [
       "rẻ", "siêu rẻ", "số 1", "tốt nhất", "đỉnh", "vượt trội", "đột phá",
@@ -343,10 +347,9 @@ export const PRODUCTS = {
       "giữ chữ 'tới', không viết thành cam kết. Không hứa chữa được lỗi cơ khí.",
     // Chủ dự án chốt khi duyệt 22 bài AI viết thật (24/09/2026).
     contentFocus: [
-      "Tiêu đề phải mang ý rõ: vấn đề + Noma 120, vd 'Xe ì, hao xăng? Súc kim phun bằng Noma 120'",
-      "Ngay sau vấn đề là tính năng đặc biệt: Noma 120 súc rửa kim phun và buồng đốt từ bên trong, không tháo máy, không gửi xe",
-      "Chuyện tia phun, piston, xu-páp tối đa 1 câu; KHÔNG nhắc tên hoạt chất PEA ở đầu bài",
-      "Cách dùng 'đổ vào bình xăng' chỉ nói 1 lần, trong bullet — lặp lại làm bài lê thê",
+      "Dòng mở bài mẫu (chủ dự án viết): 'Noma 120 – Dung dịch súc rửa kim phun và buồng đốt ngay từ bên trong. Thao tác cực dễ, tự làm tại nhà trong 3 phút'",
+      "Tiêu đề ngắn gọn; chuyện tia phun, piston, xu-páp tối đa 1 câu; KHÔNG nhắc tên hoạt chất PEA ở đầu bài",
+      "Cách dùng 'đổ vào bình xăng' chỉ nói 1 lần, trong bullet",
     ],
   },
 
@@ -367,14 +370,14 @@ export const PRODUCTS = {
     usps: [
       "Phủ lên sơn gốc một lớp tinh thể cứng — thứ hứng nắng, hứng nước và hứng bụi là lớp phủ chứ không còn là nước sơn của xe",
       "Bề mặt kỵ nước: giọt nước co tròn và lăn đi kéo theo bụi, ít đọng thành vệt ố cặn khoáng",
-      "Lấp vào những rãnh xước li ti nên ánh sáng không tán ra thành mạng nhện — màu sơn nhìn sâu và trong trở lại",
+      "Lấp vào vết xước, vết trầy nhẹ trên bề mặt nên vết xước mờ đi — sơn bóng, đều màu trở lại",
       "Thành phần theo chuẩn chăm sóc xe chuyên nghiệp: nhựa silicone hữu cơ 95-98%, isopropyl titanate 1-2%, perfluorodecyltriethoxysilane 1-3% — không phải xi đánh bóng dạng sáp",
       "Hộp có sẵn pad chà chuyên dụng, tự làm tại nhà, không cần máy đánh bóng hay phòng kín",
       "Một hộp 50ml dùng được 2-3 lần cho toàn xe",
     ],
     painPoints: [
-      "Đỗ nắng nhìn chéo mặt capo là thấy cả mảng xước xoáy như mạng nhện quanh mỗi điểm sáng",
-      "Mỗi lần rửa xe bằng khăn không sạch là thêm một lớp xước mảnh",
+      "Xe dùng một thời gian là sơn có vết xước, vết trầy nhẹ — nhìn rõ nhất lúc ra nắng",
+      "Đem xe đi xử lý vết xước hay chờ bảo hiểm thì mất thời gian, xe nằm ở xưởng",
       "Sơn bị tia UV và bụi mài nhám dần nên màu trông bạc và phẳng lì, mất độ sâu",
       "Nước mưa bám thành giọt, phơi nắng bay hơi để lại cặn khoáng — vệt ố lâu ngày ăn vào lớp sơn bóng",
       "Phủ ceramic ngoài tiệm tính bằng tiền triệu và mất cả ngày gửi xe nên cứ hoãn mãi",
@@ -394,7 +397,7 @@ export const PRODUCTS = {
       "KHÔNG phủ khi sơn còn bẩn hoặc còn ướt (khoá vết bẩn lại bên dưới lớp phủ)",
       "KHÔNG phủ lúc nắng gắt / bề mặt nóng (dung dịch se lại trước khi kịp dàn đều)",
       "KHÔNG phủ khi sắp mưa hoặc phải chạy xe ngay — chưa đủ 12 giờ mà gặp nước là phải làm lại",
-      "Chỉ che lấp xước rất nhỏ, KHÔNG vá được xước sâu tới lớp màu",
+      "Chỉ xử lý vết xước, vết trầy NHẸ trên bề mặt sơn; KHÔNG xử lý được xước sâu tới lớp màu",
       "Chỉ dùng cho bề mặt SƠN BÓNG của thân vỏ. Nhựa nhám là việc của NOMA 250, ron cao su là việc của NOMA 130",
       "Landing hướng dẫn phủ từng vùng 30x30cm và không đổ nhiều cho nhanh — dư dung dịch chỉ làm lớp phủ loang",
     ],
@@ -407,12 +410,14 @@ export const PRODUCTS = {
     ],
     fbPolicyNotes:
       "BẮT BUỘC nêu phải chờ 12 giờ khô ráo sau khi phủ — bỏ qua là khách làm hỏng và khiếu nại. " +
-      "KHÔNG hứa xoá được xước (chỉ che lấp xước rất nhỏ), không gọi là 'phủ ceramic 9H' hay so sánh " +
+      "Được nói xoá vết xước/trầy NHẸ trên bề mặt (chủ dự án chốt 24/09/2026), KHÔNG hứa xử lý xước sâu tới lớp màu; không gọi là 'phủ ceramic 9H' hay so sánh " +
       "với gói phủ ở tiệm bằng con số. Không khẳng định độ bền theo tháng vì tài liệu hãng không nêu.",
     // Chủ dự án chốt khi duyệt 22 bài AI viết thật (24/09/2026).
     contentFocus: [
-      "Tiêu đề & mở bài đánh ngay vào XƯỚC XOÁY trên sơn xe: Noma 880 làm mờ vết xước xoáy li ti, sơn bóng sâu trở lại. Dùng chữ 'làm mờ/che lấp xước li ti', KHÔNG hứa xoá xước sâu",
-      "Chỉ nói đúng công dụng của sản phẩm (lớp phủ tinh thể bảo vệ sơn). Không kể phân chim, nhựa cây, giá bán lại xe",
+      "Đánh THẲNG vào vấn đề: xoá vết xước, vết trầy nhẹ trên sơn xe nhanh chóng, tự làm tại nhà — không phải đem xe đi chờ bảo hiểm xử lý lâu",
+      "KHÔNG mở bằng tình huống dài (đỗ nắng, nhìn chéo capo…). Nêu vấn đề 1 câu rồi vào sản phẩm",
+      "Dùng lời thường 'vết xước, vết trầy' — KHÔNG dùng chữ 'xước xoáy', 'mạng nhện' hay thuật ngữ tự đặt",
+      "Vẫn phải trung thực: xử lý xước/trầy NHẸ trên bề mặt; xước sâu tới lớp màu thì không (nêu 1 câu ở cuối bài)",
     ],
   },
 
@@ -515,8 +520,9 @@ export const PRODUCTS = {
     tonePreferred: "Giọng 'người anh biết xe' — chỉ ra triệu chứng quen thuộc rồi đưa giải pháp Noma 130 ngay câu sau",
     // Chủ dự án chốt khi duyệt 22 bài AI viết thật (24/09/2026).
     contentFocus: [
-      "Câu nêu triệu chứng (ron khô cứng, kính rít, cửa kêu) xong thì câu kế tiếp phải là giải pháp: Noma 130 làm mềm ron, kính lên xuống êm",
-      "Tiêu đề ngắn, có tên Noma 130 hoặc lời giải — tiêu đề dài là khách lướt qua",
+      "Dòng mở bài mẫu (chủ dự án viết): 'Noma 130 – Dung dịch làm mềm ron cao su, tạo ra từ dầu silicone tinh khiết'",
+      "Ghi rõ 'kính xe ô tô', 'ron cửa ô tô' — không viết chung chung 'kính', 'ron'",
+      "Câu nêu triệu chứng (ron khô cứng, kính rít, cửa kêu) xong thì câu kế tiếp là giải pháp Noma 130",
     ],
     avoidWords: [
       "rẻ", "siêu rẻ", "số 1", "tốt nhất", "đỉnh", "vượt trội", "đột phá",
@@ -574,8 +580,8 @@ export const PRODUCTS = {
     ],
     // Chủ dự án chốt khi duyệt 22 bài AI viết thật (24/09/2026).
     contentFocus: [
-      "Trọng tâm: gia đình có ÔNG BÀ / NGƯỜI GIÀ ở nhà — ông bà chỉ bấm 1 nút trên camera là gọi được cho con cháu, không cần smartphone",
-      "Trẻ nhỏ chỉ nhắc ngắn 1 câu hoặc 1 bullet, không làm chủ đề chính",
+      "Dòng mở bài mẫu (chủ dự án viết): 'DA8.1 Doscom – Camera cần thiết cho gia đình có người già và trẻ nhỏ'",
+      "Trọng tâm: ông bà ở nhà chỉ bấm 1 nút trên camera là gọi được cho con cháu, không cần smartphone. Trẻ nhỏ chỉ nhắc ngắn",
       "Viết 'gọi điện, liên lạc với con cháu' — KHÔNG viết 'video call'",
     ],
   },

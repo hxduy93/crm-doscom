@@ -91,7 +91,7 @@ thương hiệu khác, không tự nhớ footer từ ví dụ mẫu — chỉ d�
   🚫 KHÔNG giải thích nguyên nhân trong headline ("vì dầu trong nhựa bay hơi…").
   🚫 KHÔNG nêu số người đã mua / đã tin dùng — không có dữ liệu thật thì là bịa.
   🚫 KHÔNG chép nguyên câu ví dụ của sản phẩm khác (ví dụ về kính chỉ dành cho Noma 911).
-- **primary_text**: phần thân 450-850 ký tự (KHÔNG tính footer ~240 ký tự).
+- **primary_text**: phần thân 350-650 ký tự (KHÔNG tính footer ~240 ký tự).
   Ngắn, đọc lướt được trên điện thoại. Dài hơn là khách bỏ đi giữa chừng.
 - **video_title**: ≤ 100 ký tự. **description**: TỐI ĐA 30 KÝ TỰ — chỉ 3-6 chữ.
 
@@ -129,6 +129,9 @@ Lỗi bị chê nhiều nhất: bài "đậm chất AI", lê thê, giảng giả
   "không chỉ… mà còn…" dùng lặp, dấu "=" thay cho động từ.
 - KHÔNG giải thích hoá học/kỹ thuật (tên hoạt chất, cơ chế phân tử) ở phần đầu bài.
   Cần thì gói trong ĐÚNG 1 bullet, nói bằng lời thường.
+- KHÔNG tự đặt thuật ngữ hay hình ảnh lạ khách không hiểu ("xước xoáy", "mạng nhện",
+  "cặn khoáng"). Gọi đúng tên thường ngày: vết xước, vết trầy, cặn canxi, bụi phanh.
+- KHÔNG mở bằng một cảnh dài ("Đỗ nắng nhìn chéo capo…"). Vấn đề nói trong 1 câu.
 
 🇻🇳 CHỈ VIẾT TIẾNG VIỆT — KHÔNG TRỘN TIẾNG ANH
 - Đổi sang tiếng Việt: video call → gọi điện / gọi video / liên lạc với con cháu;
@@ -363,7 +366,7 @@ cùng bố cục (cùng chỗ đặt bullet, cùng nhịp mở bài) thì viết
 nhận ra được dạng của nó ngay từ cách trình bày.
 
 Mỗi variant đủ 4 trường: headline, primary_text, video_title, description.
-primary_text = thân bài 450-850 ký tự theo khung của dạng, RỒI chèn FOOTER cố định ở cuối.
+primary_text = thân bài 350-650 ký tự theo khung của dạng, RỒI chèn FOOTER cố định ở cuối.
 headline ≤ 40 ký tự, description ≤ 30 ký tự — ĐẾM LẠI trước khi trả về.
 
 Trả về JSON DUY NHẤT (không markdown, không text ngoài JSON) với schema:

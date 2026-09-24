@@ -34,7 +34,7 @@ test("khung usp_bullet: vấn đề rồi giới thiệu sản phẩm ngay, cấ
   assert.match(s, /GIỚI THIỆU SP NGAY câu tiếp theo/);
   assert.match(s, /KHÔNG dùng câu chuyển kiểu "👉 Đó là lý do…"/);
   assert.match(SYSTEM_PROMPT, /Tình huống quen thuộc/);
-  assert.match(SYSTEM_PROMPT, /thân 450-850 ký tự/);
+  assert.match(SYSTEM_PROMPT, /thân 350-650 ký tự/);
 });
 
 test("cấm trộn tiếng Anh: video call phải thành gọi điện", () => {
@@ -46,11 +46,11 @@ test("cấm trộn tiếng Anh: video call phải thành gọi điện", () => {
 
 test("trọng tâm nội dung chủ dự án chốt được đưa vào prompt", () => {
   const cases = {
-    "D1": /ĐỊNH VỊ GPS gắn lén trên XE/,
-    "DA8.1": /ÔNG BÀ \/ NGƯỜI GIÀ/,
-    "Noma 911": /Dùng ngay dung dịch tẩy ố kính Noma 911/,
-    "Noma 680": /SẠCH BONG VẾT BẨN CHỈ SAU 90 GIÂY/,
-    "Noma 880": /XƯỚC XOÁY/,
+    "D1": /Máy dò định vị GPS, nghe lén, quay lén/,
+    "DA8.1": /Camera cần thiết cho gia đình có người già và trẻ nhỏ/,
+    "Noma 911": /Sử dụng ngay dung dịch tẩy ố kính Noma 911/,
+    "Noma 680": /1 chai vệ sinh hết nội thất, ngoại thất/,
+    "Noma 880": /xoá vết xước, vết trầy nhẹ/,
   };
   for (const [k, re] of Object.entries(cases)) {
     const p = prompt(k);
@@ -86,4 +86,18 @@ test("cutAtWord: cắt ở ranh giới từ, không chẻ chữ", () => {
   assert.ok(h.startsWith(c) && h[c.length] === " " || h[c.length] === ",", `cắt giữa chữ: "${c}"`);
   assert.doesNotMatch(c, /[\s,–-]$/);
   assert.equal(cutAtWord("Xịt sạch bụi phanh – bay hơi 30-60 giây", 30), "Xịt sạch bụi phanh – bay hơi");
+});
+
+test("vòng 2: dòng mở bài mẫu của chủ dự án có cho mọi SP bị sửa, khung bắt dùng nó", () => {
+  for (const k of ["D1", "DR1", "DA8.1", "Noma 911", "Noma 680", "Noma 350", "Noma 230", "Noma 120", "Noma 130"]) {
+    assert.match(prompt(k), /Dòng mở bài mẫu \(chủ dự án viết\)/, `${k} thiếu dòng mở bài mẫu`);
+  }
+  assert.match(getFormat("usp_bullet").skeleton, /variant A dùng GẦN NGUYÊN VĂN/);
+  assert.match(getFormat("usp_bullet").skeleton, /BẮT BUỘC gọi tên LOẠI sản phẩm/);
+});
+
+test("vòng 2: NOMA 880 không còn thuật ngữ 'xước xoáy' / 'mạng nhện' trong dữ liệu", () => {
+  const p = getProduct("Noma 880");
+  assert.doesNotMatch(JSON.stringify([p.usps, p.painPoints, p.limits]), /xoáy|mạng nhện/);
+  assert.match(JSON.stringify(p.limits), /KHÔNG xử lý được xước sâu/);
 });

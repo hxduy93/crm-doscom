@@ -108,7 +108,10 @@ async function callClaudeViaGateway(env, systemPrompt, userPrompt) {
     body: JSON.stringify({
       model: CLAUDE_MODEL,
       // Sonnet 5 không nhận `temperature` (API trả 400 "deprecated for this model").
-      max_tokens: 8192,
+      // Để mặc định (effort high) thì có lượt nó dùng hết 8.192 token vào phần suy nghĩ,
+      // không còn chữ nào trả về, mất ~75 giây. effort "low": ~20 giây, đủ bài (đo 24/09/2026).
+      output_config: { effort: "low" },
+      max_tokens: 16000,
       system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: userPrompt }],
     }),
@@ -122,7 +125,11 @@ async function callClaudeViaGateway(env, systemPrompt, userPrompt) {
   }
   const data = await r.json();
   const textBlock = (data.content || []).find(b => b.type === "text");
-  if (!textBlock?.text) throw new Error("Claude trả empty content");
+  if (!textBlock?.text) {
+    throw new Error(data.stop_reason === "max_tokens"
+      ? "Claude dùng hết token vào phần suy nghĩ, chưa kịp viết bài — bấm sinh lại"
+      : `Claude trả empty content (stop_reason: ${data.stop_reason || "?"})`);
+  }
   return textBlock.text;
 }
 
