@@ -911,6 +911,17 @@ $("#btnRestore").addEventListener("click", async () => {
 });
 
 // ───────── Chạy lần lượt từng SP + báo cáo ─────────
+/* Nhịp gọi giữa hai sản phẩm.
+   doscom.vn và noma.vn chạy trên Hostinger, chặn theo IP, KHÔNG qua Cloudflare — còn CRM
+   thì gọi từ dải IP dùng chung của Cloudflare. Trước 24/09/2026 vòng này bắn liên tiếp
+   không nghỉ, mỗi SP tốn 3–4 request sang web, nên chạy được một lúc là ăn 429 hàng loạt
+   ("WC get full 429: {}"). Nghỉ một nhịp ngắn giữa các SP rẻ hơn nhiều so với việc chạy
+   lại cả đợt. Dính 429 thì nghỉ dài hẳn cho host hạ nhiệt. */
+const NGHI_GIUA_SP = 600;      // ms
+const NGHI_SAU_429 = 12000;    // ms
+const doi = (ms) => new Promise((r) => setTimeout(r, ms));
+const la429 = (res) => /429|quá nhanh/i.test(String((res && res.error) || ""));
+
 async function runJobs(title, ids, fn) {
   S.busy = true;
   document.querySelectorAll("#btnMakeApply,#btnUpApply,#btnRestore,#btnLoad").forEach((b) => b.disabled = true);
@@ -944,6 +955,13 @@ async function runJobs(title, ids, fn) {
     }
     $("#runRows").insertAdjacentHTML("beforeend", `<tr>${row}</tr>`);
     $("#runBar").style.width = `${Math.round(((i + 1) / ids.length) * 100)}%`;
+    if (i < ids.length - 1) {
+      const cho = la429(res) ? NGHI_SAU_429 : NGHI_GIUA_SP;
+      if (cho >= 2000) {
+        $("#runInfo").textContent = `Web đang chặn vì gọi quá nhanh — nghỉ ${Math.round(cho / 1000)} giây rồi chạy tiếp…`;
+      }
+      await doi(cho);
+    }
   }
   $("#runInfo").textContent = `Xong ${ids.length} SP.`;
   $("#runStat").innerHTML = `<div class="stat"><div class="b"><div class="n">${ok}</div><div class="l">Thành công</div></div>

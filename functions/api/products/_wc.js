@@ -63,6 +63,12 @@ export function loiWc(site, status, body) {
     return `Consumer key không hợp lệ — tạo lại rồi cập nhật WC_${S}_CK / WC_${S}_CS`;
   }
   if (status === 401 || status === 403) return `không đủ quyền với WC_${S}_CK / WC_${S}_CS`;
+  if (status === 429) {
+    return `${site} chặn vì gọi quá nhanh (429) — đã tự thử lại vài lần vẫn bị. ` +
+           `Không phải lỗi WooCommerce hay sai key: host Hostinger giới hạn theo IP, mà CRM gọi từ ` +
+           `dải IP dùng chung của Cloudflare. Nghỉ vài phút rồi chạy lại, hoặc chạy ít sản phẩm mỗi lượt`;
+  }
+  if (status >= 500) return `${site} đang lỗi phía máy chủ (${status}) — đã thử lại vẫn hỏng, chờ rồi chạy lại`;
   return null;
 }
 
@@ -77,6 +83,57 @@ export function isConfigured(c) {
 
 const wpAuth = (u, p) => "Basic " + btoa(`${u}:${p}`);
 const wcAuth = (ck, cs) => "Basic " + btoa(`${ck}:${cs}`);
+
+/* ───────── Gọi doscom.vn / noma.vn có THỬ LẠI ─────────
+   Hai site chạy trên Hostinger (LiteSpeed), KHÔNG qua Cloudflare, và chặn theo IP.
+   CRM lại chạy trên Cloudflare Pages Functions nên mọi request đi ra từ dải IP DÙNG
+   CHUNG của Cloudflare — rất dễ chạm ngưỡng và ăn 429 với body HTML rỗng. Đọc bằng
+   .json() ra {} nên thông báo cũ hiện đúng chữ "WC get full 429: {}", nhìn như lỗi
+   WooCommerce trong khi thực ra là host chặn.
+
+   Đo thật 24/09/2026 từ máy cá nhân: 20 request liên tiếp + upload ảnh 900KB đều OK,
+   nghĩa là site khoẻ — vấn đề nằm ở nhịp gọi và ở IP nguồn.
+
+   TRƯỚC ĐÂY chỉ uploadMedia() biết thử lại; mọi lời gọi khác chết ngay ở 429 đầu tiên
+   nên menu "Ảnh sale" đổ lỗi hàng loạt. Nay dùng chung wrapper này. */
+const RETRYABLE = new Set([429, 500, 502, 503, 504, 520, 521, 522, 524]);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const CHO_TOI_DA = 15000;   // trần mỗi lần chờ, tránh Worker treo quá lâu
+
+// Host nói rõ chờ bao lâu thì nghe theo; không thì lùi dần 1s → 2s → 4s.
+function choBaoLau(res, lanThu) {
+  const ra = res && res.headers && res.headers.get("Retry-After");
+  if (ra) {
+    const giay = Number(ra);
+    if (Number.isFinite(giay) && giay > 0) return Math.min(giay * 1000, CHO_TOI_DA);
+    const moc = Date.parse(ra);
+    if (Number.isFinite(moc)) return Math.min(Math.max(moc - Date.now(), 0), CHO_TOI_DA);
+  }
+  return Math.min(1000 * Math.pow(2, lanThu), CHO_TOI_DA);
+}
+
+/**
+ * fetch() có thử lại cho các mã tạm thời. Trả về Response cuối cùng (kể cả khi vẫn lỗi)
+ * để chỗ gọi tự dựng thông báo như cũ. Ném lỗi chỉ khi mạng đứt hết mọi lần thử.
+ * Body là chuỗi hoặc Uint8Array nên gửi lại được, không phải stream dùng một lần.
+ */
+export async function wcFetch(url, init, { retries = 3 } = {}) {
+  let loiMang = null;
+  for (let i = 0; i <= retries; i++) {
+    let r;
+    try {
+      r = await fetch(url, init);
+    } catch (e) {
+      loiMang = e;
+      if (i === retries) break;
+      await sleep(choBaoLau(null, i));
+      continue;
+    }
+    if (r.ok || !RETRYABLE.has(r.status) || i === retries) return r;
+    await sleep(choBaoLau(r, i));
+  }
+  throw loiMang || new Error("fetch thất bại");
+}
 
 // Suy ra từ khóa dự phòng từ tên sản phẩm khi AI không trả primary_keyword
 // (để focus keyword Rank Math KHÔNG BAO GIỜ rỗng → không bị N/A).
@@ -186,7 +243,7 @@ export async function fetchCategories(c) {
   const out = [];
   for (let page = 1; page <= 5; page++) {
     const u = `${c.url}/wp-json/wc/v3/products/categories?per_page=100&page=${page}&_fields=id,name,parent,count,slug`;
-    const r = await fetch(u, { headers: { Authorization: wcAuth(c.ck, c.cs) }, signal: AbortSignal.timeout(20000) });
+    const r = await wcFetch(u, { headers: { Authorization: wcAuth(c.ck, c.cs) }, signal: AbortSignal.timeout(20000) });
     if (!r.ok) nemLoiWc("categories", c.site, r.status, await r.text());
     const arr = await r.json();
     out.push(...arr);
@@ -195,38 +252,34 @@ export async function fetchCategories(c) {
   return out;
 }
 
-// Lỗi tạm thời khi upload ảnh: origin WP xử lý ảnh (resize thumbnail) lâu → Cloudflare trả 520/504,
-// hoặc host chập chờn (502/503/429). Các mã này retry được; 4xx (sai quyền, file cấm) thì không.
-const RETRYABLE = new Set([429, 500, 502, 503, 504, 520, 521, 522, 524]);
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-export async function uploadMedia(c, { bytes, filename, mime, alt, caption, title }, { retries = 2 } = {}) {
-  let m, lastErr = "";
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    if (attempt) await sleep(2000 * attempt); // 2s, 4s — cho origin kịp hồi
-    let r;
-    try {
-      r = await fetch(`${c.url}/wp-json/wp/v2/media`, {
-        method: "POST",
-        headers: {
-          Authorization: wpAuth(c.user, c.pwd),
-          "Content-Type": mime || "image/jpeg",
-          "Content-Disposition": `attachment; filename="${filename}"`,
-        },
-        body: bytes,
-        signal: AbortSignal.timeout(60000),
-      });
-    } catch (e) { // timeout/đứt mạng → thử lại
-      lastErr = `WP media (${c.site}): ${String(e.message || e)}`;
-      continue;
-    }
-    if (r.ok) { m = await r.json(); break; }
-    lastErr = `WP media ${r.status} (${c.site}): ${(await r.text()).slice(0, 200)}`;
-    if (!RETRYABLE.has(r.status)) break;
+/* Upload ảnh lên WP Media. Việc chờ + thử lại do wcFetch lo (xem ghi chú ở đầu file):
+   origin WP resize thumbnail lâu nên hay trả 520/504, còn host thì trả 429 khi gọi dồn.
+   TRƯỚC 24/09/2026 hàm này có vòng thử lại RIÊNG; giữ lại thì thành thử lại lồng nhau
+   3×4 lần và Worker treo rất lâu, nên đã bỏ. */
+export async function uploadMedia(c, { bytes, filename, mime, alt, caption, title }, { retries = 3 } = {}) {
+  let r;
+  try {
+    r = await wcFetch(`${c.url}/wp-json/wp/v2/media`, {
+      method: "POST",
+      headers: {
+        Authorization: wpAuth(c.user, c.pwd),
+        "Content-Type": mime || "image/jpeg",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+      },
+      body: bytes,
+      signal: AbortSignal.timeout(60000),
+    }, { retries });
+  } catch (e) {
+    throw new Error(`WP media (${c.site}): ${String(e.message || e)}`);
   }
-  if (!m) throw new Error(lastErr || "WP media: upload thất bại");
+  if (!r.ok) {
+    const txt = (await r.text()).slice(0, 200);
+    const goi = loiWc(c.site, r.status, txt);
+    throw new Error(`WP media ${r.status} (${c.site}): ${goi ? goi + " · " : ""}${txt}`);
+  }
+  const m = await r.json();
   if (alt || caption || title) {
-    await fetch(`${c.url}/wp-json/wp/v2/media/${m.id}`, {
+    await wcFetch(`${c.url}/wp-json/wp/v2/media/${m.id}`, {
       method: "POST",
       headers: { Authorization: wpAuth(c.user, c.pwd), "Content-Type": "application/json" },
       body: JSON.stringify({ alt_text: alt || "", caption: caption || "", title: title || "" }),
@@ -239,7 +292,7 @@ export async function uploadMedia(c, { bytes, filename, mime, alt, caption, titl
 
 // Lấy 1 SP với đúng các trường cần (_fields) — tránh tải cả mô tả dài khi chỉ cần giá/danh mục.
 export async function getProductFields(c, id, fields) {
-  const r = await fetch(`${c.url}/wp-json/wc/v3/products/${id}?_fields=${fields}&_cb=${Date.now()}`, {
+  const r = await wcFetch(`${c.url}/wp-json/wc/v3/products/${id}?_fields=${fields}&_cb=${Date.now()}`, {
     headers: { Authorization: wcAuth(c.ck, c.cs), "Cache-Control": "no-cache" },
     signal: AbortSignal.timeout(25000),
   });
@@ -252,7 +305,7 @@ export async function listVariations(c, productId) {
   const f = "id,sku,status,attributes,regular_price,sale_price,date_on_sale_from_gmt,date_on_sale_to_gmt";
   const out = [];
   for (let page = 1; page <= 3; page++) {
-    const r = await fetch(`${c.url}/wp-json/wc/v3/products/${productId}/variations?per_page=100&page=${page}&_fields=${f}&_cb=${Date.now()}`, {
+    const r = await wcFetch(`${c.url}/wp-json/wc/v3/products/${productId}/variations?per_page=100&page=${page}&_fields=${f}&_cb=${Date.now()}`, {
       headers: { Authorization: wcAuth(c.ck, c.cs), "Cache-Control": "no-cache" },
       signal: AbortSignal.timeout(25000),
     });
@@ -268,7 +321,7 @@ export async function listVariations(c, productId) {
 // Sửa nhiều biến thể 1 lần. Batch trả HTTP 200 KÈM lỗi từng dòng → soi từng phần tử, không ném
 // cho lỗi dòng mà trả { updated:[id], errors:[{id,message}] } để bên gọi hoàn nguyên phần đã ghi.
 export async function updateVariationsBatch(c, productId, updates) {
-  const r = await fetch(`${c.url}/wp-json/wc/v3/products/${productId}/variations/batch`, {
+  const r = await wcFetch(`${c.url}/wp-json/wc/v3/products/${productId}/variations/batch`, {
     method: "POST",
     headers: { Authorization: wcAuth(c.ck, c.cs), "Content-Type": "application/json" },
     body: JSON.stringify({ update: updates }),
@@ -289,7 +342,7 @@ export async function updateVariationsBatch(c, productId, updates) {
 
 // Tạo danh mục SP. Trùng tên → WooCommerce trả term_exists kèm id có sẵn → dùng luôn id đó.
 export async function createCategory(c, name) {
-  const r = await fetch(`${c.url}/wp-json/wc/v3/products/categories`, {
+  const r = await wcFetch(`${c.url}/wp-json/wc/v3/products/categories`, {
     method: "POST",
     headers: { Authorization: wcAuth(c.ck, c.cs), "Content-Type": "application/json" },
     body: JSON.stringify({ name }),
@@ -304,7 +357,7 @@ export async function createCategory(c, name) {
 // Múi giờ cài trong WordPress — lịch giá sale chạy lúc 0h theo giờ NÀY. Lỗi → null (chỉ để cảnh báo).
 export async function siteTimezone(c) {
   try {
-    const r = await fetch(`${c.url}/wp-json/?_fields=gmt_offset,timezone_string`, { signal: AbortSignal.timeout(15000) });
+    const r = await wcFetch(`${c.url}/wp-json/?_fields=gmt_offset,timezone_string`, { signal: AbortSignal.timeout(15000) });
     if (!r.ok) return null;
     const d = await r.json();
     return { gmt_offset: Number(d.gmt_offset), timezone_string: d.timezone_string || "" };
@@ -317,7 +370,7 @@ export async function siteTimezone(c) {
 // 404/410 = file đã không còn → coi như xong. Trả { ok, status, error? }, không ném lỗi.
 export async function deleteMedia(c, id) {
   try {
-    const r = await fetch(`${c.url}/wp-json/wp/v2/media/${id}?force=true`, {
+    const r = await wcFetch(`${c.url}/wp-json/wp/v2/media/${id}?force=true`, {
       method: "DELETE",
       headers: { Authorization: wpAuth(c.user, c.pwd) },
       signal: AbortSignal.timeout(30000),
@@ -348,7 +401,7 @@ export async function listProducts(c, { search = "", perPage = 50, page = 1, sta
   });
   if (search) params.set("search", search);
   if (status) params.set("status", status);
-  const r = await fetch(`${c.url}/wp-json/wc/v3/products?${params}`, {
+  const r = await wcFetch(`${c.url}/wp-json/wc/v3/products?${params}`, {
     headers: { Authorization: wcAuth(c.ck, c.cs), "Cache-Control": "no-cache" },
     signal: AbortSignal.timeout(25000),
   });
@@ -363,7 +416,7 @@ export async function listProducts(c, { search = "", perPage = 50, page = 1, sta
 
 // Lấy 1 sản phẩm đầy đủ (dùng để backup trước khi ghi đè).
 export async function getProduct(c, id) {
-  const r = await fetch(`${c.url}/wp-json/wc/v3/products/${id}?_fields=id,name,permalink,status,description,short_description&_cb=${Date.now()}`, {
+  const r = await wcFetch(`${c.url}/wp-json/wc/v3/products/${id}?_fields=id,name,permalink,status,description,short_description&_cb=${Date.now()}`, {
     headers: { Authorization: wcAuth(c.ck, c.cs), "Cache-Control": "no-cache" },
     signal: AbortSignal.timeout(20000),
   });
@@ -375,7 +428,7 @@ export async function getProduct(c, id) {
 // Lấy 1 sản phẩm ĐẦY ĐỦ (thêm giá + ảnh + danh mục) — dùng cho đồng bộ sang site khác.
 export async function getProductFull(c, id) {
   const f = "id,name,slug,status,description,short_description,regular_price,sale_price,images,categories,stock_quantity,permalink";
-  const r = await fetch(`${c.url}/wp-json/wc/v3/products/${id}?_fields=${f}&_cb=${Date.now()}`, {
+  const r = await wcFetch(`${c.url}/wp-json/wc/v3/products/${id}?_fields=${f}&_cb=${Date.now()}`, {
     headers: { Authorization: wcAuth(c.ck, c.cs), "Cache-Control": "no-cache" },
     signal: AbortSignal.timeout(25000),
   });
@@ -407,7 +460,7 @@ export async function listMedia(c, { maxPages = 12, perPage = 100 } = {}) {
   const out = [];
   for (let page = 1; page <= maxPages; page++) {
     const u = `${c.url}/wp-json/wp/v2/media?per_page=${perPage}&page=${page}&media_type=image&_fields=id,source_url&_cb=${Date.now()}`;
-    const r = await fetch(u, {
+    const r = await wcFetch(u, {
       headers: { Authorization: wpAuth(c.user, c.pwd), "Cache-Control": "no-cache" },
       signal: AbortSignal.timeout(25000),
     });
@@ -437,7 +490,7 @@ export async function imageAlive(url) {
 
 // Cập nhật 1 sản phẩm (PUT). Giữ nguyên status hiện tại nếu payload không đổi status.
 export async function updateProduct(c, id, payload) {
-  const r = await fetch(`${c.url}/wp-json/wc/v3/products/${id}`, {
+  const r = await wcFetch(`${c.url}/wp-json/wc/v3/products/${id}`, {
     method: "PUT",
     headers: { Authorization: wcAuth(c.ck, c.cs), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -449,7 +502,7 @@ export async function updateProduct(c, id, payload) {
 }
 
 export async function createProduct(c, payload) {
-  const r = await fetch(`${c.url}/wp-json/wc/v3/products`, {
+  const r = await wcFetch(`${c.url}/wp-json/wc/v3/products`, {
     method: "POST",
     headers: { Authorization: wcAuth(c.ck, c.cs), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -508,7 +561,7 @@ export function variationPayload(attrName, v, priceFn) {
 }
 
 export async function createVariations(c, productId, variations) {
-  const r = await fetch(`${c.url}/wp-json/wc/v3/products/${productId}/variations/batch`, {
+  const r = await wcFetch(`${c.url}/wp-json/wc/v3/products/${productId}/variations/batch`, {
     method: "POST",
     headers: { Authorization: wcAuth(c.ck, c.cs), "Content-Type": "application/json" },
     body: JSON.stringify({ create: variations }),
