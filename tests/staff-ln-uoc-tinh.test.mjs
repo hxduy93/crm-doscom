@@ -26,22 +26,48 @@ function layHam(ten) {
   throw new Error(`không cắt được thân hàm ${ten}()`);
 }
 
-test("thangTruoc() neo vào ngày BẮT ĐẦU của khoảng lọc", () => {
-  const f = new Function("range", layHam("thangTruoc") + " return thangTruoc();");
-  assert.equal(f({ start: "2026-09-01", end: "2026-09-24" }), "2026-08");
-  // Khoảng vắt qua hai tháng: neo vào ngày kết thúc sẽ lấy nhầm chính tháng đang xem.
-  assert.equal(f({ start: "2026-08-15", end: "2026-09-15" }), "2026-07");
+// thangTruoc() cần cacThangCoDL() và biến D (dữ liệu dashboard) — dựng sandbox tối thiểu.
+function chayThangTruoc(range, thangCoDL) {
+  const D = { revenue: { source_groups: { X: { order_revenue_by_status_by_date: { delivered: {} } } } } };
+  const bd = D.revenue.source_groups.X.order_revenue_by_status_by_date.delivered;
+  for (const ym of thangCoDL) bd[ym + "-15"] = 1000;
+  return new Function("range", "D",
+    "var _thangDL=null;" + layHam("cacThangCoDL") + layHam("thangTruoc") + " return thangTruoc();"
+  )(range, D);
+}
+
+const DU_90_NGAY = ["2026-06", "2026-07", "2026-08", "2026-09"];
+
+/* SỰ CỐ 24/09/2026: bản đầu neo vào ngày BẮT ĐẦU khoảng lọc. Khoảng mặc định trải 90
+   ngày (26/06 → 24/09) nên nó đi tìm tháng 5 — ngoài snapshot, không có dữ liệu — và
+   CẢ CỘT hiện dấu gạch. Neo vào ngày KẾT THÚC thì khoảng rộng hay hẹp đều ra tháng đã
+   chốt gần nhất. */
+test("khoảng lọc RỘNG (90 ngày) vẫn ra tháng đã chốt gần nhất, không ra tháng rỗng", () => {
+  assert.equal(chayThangTruoc({ start: "2026-06-26", end: "2026-09-24" }, DU_90_NGAY), "2026-08");
+});
+
+test("khoảng lọc hẹp trong một tháng cũng ra tháng liền trước", () => {
+  assert.equal(chayThangTruoc({ start: "2026-09-01", end: "2026-09-24" }, DU_90_NGAY), "2026-08");
 });
 
 test("thangTruoc() lùi đúng năm khi đang ở tháng 1", () => {
-  const f = new Function("range", layHam("thangTruoc") + " return thangTruoc();");
-  assert.equal(f({ start: "2026-01-05", end: "2026-01-31" }), "2025-12");
+  assert.equal(chayThangTruoc({ start: "2026-01-05", end: "2026-01-31" },
+    ["2025-11", "2025-12", "2026-01"]), "2025-12");
+});
+
+test("tháng liền trước rỗng thì lùi tiếp tới tháng gần nhất CÓ dữ liệu", () => {
+  // Lọc một khoảng cũ, tháng liền trước nằm ngoài snapshot.
+  assert.equal(chayThangTruoc({ start: "2026-07-01", end: "2026-07-31" },
+    ["2026-05", "2026-08", "2026-09"]), "2026-05");
 });
 
 test("nhãn cột hiện đúng tháng đang lấy làm cơ sở", () => {
-  const f = new Function("range", layHam("thangTruoc") + layHam("nhanThangTruoc") + " return nhanThangTruoc();");
-  assert.equal(f({ start: "2026-09-01", end: "2026-09-24" }), "T8/2026");
-  assert.equal(f({ start: "2026-01-01", end: "2026-01-31" }), "T12/2025");
+  const f = new Function("range", "D",
+    "var _thangDL=null;" + layHam("cacThangCoDL") + layHam("thangTruoc") + layHam("nhanThangTruoc") +
+    " return nhanThangTruoc();");
+  const D = { revenue: { source_groups: { X: { order_revenue_by_status_by_date: { delivered: {
+    "2026-08-15": 1, "2026-09-15": 1 } } } } } };
+  assert.equal(f({ start: "2026-06-26", end: "2026-09-24" }, D), "T8/2026");
   assert.match(html, /thU\.textContent='LN ước tính \(hoàn '\+nhanThangTruoc\(\)\+'\)'/);
 });
 

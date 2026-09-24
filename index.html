@@ -1257,13 +1257,39 @@
   // Cộng theo THÁNG cụ thể ("2026-08"), KHÔNG phụ thuộc khoảng ngày đang lọc.
   function sumByMonth(obj, ym){ var s=0; if(!obj)return 0; for(var d in obj){ if(d.slice(0,7)===ym) s+=Number(obj[d])||0; } return s; }
 
-  /* THÁNG TRƯỚC = tháng liền trước tháng chứa ngày BẮT ĐẦU của khoảng lọc.
-     Lọc 01→24/09 thì lấy 08/2026. Neo vào ngày bắt đầu (không phải ngày kết thúc) để
-     khoảng lọc vắt qua hai tháng không lấy nhầm chính tháng đang xem làm cơ sở. */
+  /* Các tháng CÓ dữ liệu doanh thu trong snapshot. Snapshot chỉ giữ 90 ngày gần nhất
+     nên tháng cũ hơn không có gì — phải biết điều đó để không trỏ vào tháng rỗng. */
+  var _thangDL=null;
+  function cacThangCoDL(){
+    if(_thangDL) return _thangDL;
+    var co={}, sg=((D.revenue||{}).source_groups||{});
+    for(var k in sg){
+      var r=sg[k].order_revenue_by_status_by_date||{};
+      for(var st in r){ for(var d in r[st]){ if(Number(r[st][d])) co[d.slice(0,7)]=1; } }
+    }
+    _thangDL=Object.keys(co).sort();
+    return _thangDL;
+  }
+
+  /* THÁNG TRƯỚC = tháng liền trước tháng chứa ngày KẾT THÚC của khoảng lọc — tức là
+     tháng gần nhất đã đi hết vòng hoàn. Lọc tới 24/09 thì lấy 08/2026.
+
+     SỬA 24/09/2026: bản đầu neo vào ngày BẮT ĐẦU. Khoảng lọc mặc định trải 90 ngày
+     (26/06 → 24/09) nên nó đi tìm tháng 5 — tháng đó nằm ngoài snapshot, không có dữ
+     liệu, và CẢ CỘT hiện dấu gạch. Neo vào ngày kết thúc thì khoảng rộng hay hẹp đều
+     ra tháng đã chốt gần nhất.
+
+     Tháng đó vẫn rỗng (lọc một khoảng rất cũ) thì lùi tiếp về tháng gần nhất CÓ dữ liệu,
+     thay vì trả về một tháng trống rồi để cột trắng trơn. */
   function thangTruoc(){
-    var y=Number(range.start.slice(0,4)), m=Number(range.start.slice(5,7))-1;
+    var y=Number(range.end.slice(0,4)), m=Number(range.end.slice(5,7))-1;
     if(m<1){ m=12; y-=1; }
-    return y+'-'+(m<10?'0':'')+m;
+    var muc=y+'-'+(m<10?'0':'')+m;
+    var ds=cacThangCoDL();
+    if(ds.indexOf(muc)>=0) return muc;
+    var cu=ds.filter(function(x){ return x<muc; });
+    if(cu.length) return cu[cu.length-1];
+    return ds.length?ds[ds.length-1]:muc;
   }
   function nhanThangTruoc(){ var t=thangTruoc(); return 'T'+Number(t.slice(5,7))+'/'+t.slice(0,4); }
 
