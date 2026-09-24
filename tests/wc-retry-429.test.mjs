@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { wcFetch, loiWc } from "../functions/api/products/_wc.js";
+import { wcFetch, loiWc, moTaPhanHoi } from "../functions/api/products/_wc.js";
 
 /* SỰ CỐ 24/09/2026: menu "Ảnh sale" đổ lỗi hàng loạt trên doscom.vn với thông báo
    "WC get full 429: {}" và "WP media 429 (doscom):".
@@ -74,11 +74,26 @@ test("mạng đứt hết mọi lần thử thì mới ném", async () => {
 });
 
 // ── thông báo phải nói đúng chuyện ──
-test("429 giải thích là host chặn, KHÔNG để người đọc tưởng sai key WooCommerce", () => {
+/* 24/09/2026 — ĐÃ BÁC BỎ giả thuyết "Hostinger chặn dải IP Cloudflare": chạy một Worker
+   trên chính mạng Cloudflare, gọi 8 lần liên tiếp sang doscom.vn, không lần nào 429
+   (chỉ 200 và 404 vì ID thử là ID bịa). Từ máy cá nhân 100 request tuần tự cũng 200 hết.
+   Vì vậy thông báo lỗi KHÔNG được khẳng định ai chặn — phải đọc header thật. */
+test("429 nêu dữ kiện, KHÔNG đoán bừa ai chặn", () => {
   const g = loiWc("doscom", 429, "{}");
-  assert.match(g, /gọi quá nhanh/);
-  assert.match(g, /Hostinger/);
-  assert.doesNotMatch(g, /CK\s*\/\s*WC_DOSCOM_CS sai/, "429 không phải lỗi key");
+  assert.match(g, /429/);
+  assert.match(g, /sai key trả 401/i, "phải loại trừ giả thuyết sai key");
+  assert.doesNotMatch(g, /Hostinger/, "đã đo và bác bỏ, đừng khẳng định lại");
+  assert.doesNotMatch(g, /dải IP dùng chung của Cloudflare/, "cùng lý do");
+});
+
+test("thông báo kèm header để biết Cloudflare hay LiteSpeed trả 429", () => {
+  const cfRes = { headers: { get: (k) => ({ server: "cloudflare", "cf-ray": "abc-HKG" })[k.toLowerCase()] ?? null } };
+  const lsRes = { headers: { get: (k) => ({ server: "LiteSpeed", platform: "hostinger" })[k.toLowerCase()] ?? null } };
+  assert.match(moTaPhanHoi(cfRes), /server=cloudflare/);
+  assert.match(moTaPhanHoi(cfRes), /cf-ray=abc-HKG/);
+  assert.match(moTaPhanHoi(lsRes), /platform=hostinger/);
+  assert.equal(moTaPhanHoi(null), "");
+  assert.equal(moTaPhanHoi({}), "");
 });
 
 test("giữ nguyên các gợi ý cũ cho lỗi quyền", () => {
@@ -89,6 +104,13 @@ test("giữ nguyên các gợi ý cũ cho lỗi quyền", () => {
 
 // ── chống tái phát ──
 const wc = readFileSync(new URL("../functions/api/products/_wc.js", import.meta.url), "utf8");
+
+test("lỗi WC đính kèm mô tả nguồn chặn, không chỉ có body rỗng", () => {
+  // Body 429 là HTML nên .json() ra {} — thiếu header thì thông báo trống rỗng như
+  // "WC get full 429: {}" và không ai biết phải gỡ ở đâu.
+  assert.match(wc, /nemLoiWc\("get full", c\.site, r\.status, JSON\.stringify\(d\), r\)/);
+  assert.match(wc, /export function moTaPhanHoi/);
+});
 
 test("mọi lời gọi sang doscom.vn/noma.vn đi qua wcFetch, không gọi fetch trần", () => {
   const tran = [...wc.matchAll(/await fetch\(`\$\{c\.url\}/g)];

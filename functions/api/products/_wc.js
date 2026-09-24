@@ -64,17 +64,35 @@ export function loiWc(site, status, body) {
   }
   if (status === 401 || status === 403) return `không đủ quyền với WC_${S}_CK / WC_${S}_CS`;
   if (status === 429) {
-    return `${site} chặn vì gọi quá nhanh (429) — đã tự thử lại vài lần vẫn bị. ` +
-           `Không phải lỗi WooCommerce hay sai key: host Hostinger giới hạn theo IP, mà CRM gọi từ ` +
-           `dải IP dùng chung của Cloudflare. Nghỉ vài phút rồi chạy lại, hoặc chạy ít sản phẩm mỗi lượt`;
+    /* ĐỪNG đoán ai chặn. Đo 24/09/2026 bác bỏ giả thuyết "Hostinger chặn IP Cloudflare":
+       một Worker chạy trên chính mạng Cloudflare gọi 8 lần liên tiếp sang doscom.vn đều
+       tới được WooCommerce, không lần nào 429. Vì vậy thông báo chỉ nêu dữ kiện, còn
+       danh tính bên chặn lấy từ header thật của phản hồi (xem moTaPhanHoi). */
+    return `${site} trả 429 (quá nhiều yêu cầu) và đã tự thử lại vài lần vẫn bị. ` +
+           `Đây KHÔNG phải sai key — sai key trả 401. Xem phần "nguồn chặn" trong thông báo để biết ai chặn`;
   }
   if (status >= 500) return `${site} đang lỗi phía máy chủ (${status}) — đã thử lại vẫn hỏng, chờ rồi chạy lại`;
   return null;
 }
 
-export function nemLoiWc(nhan, site, status, body) {
+/* Ai trả phản hồi này? 429/5xx với body rỗng thì chỉ header mới phân biệt được:
+   - `server: LiteSpeed` + `platform: hostinger` → chính web doscom.vn/noma.vn chặn
+   - `server: cloudflare` + `cf-ray` mà KHÔNG có `platform` → chặn ở lớp Cloudflare
+   Thiếu dữ kiện này thì chỉ còn nước đoán, và lần trước đã đoán sai. */
+export function moTaPhanHoi(res) {
+  if (!res || !res.headers || typeof res.headers.get !== "function") return "";
+  const p = [];
+  for (const k of ["server", "platform", "cf-ray", "retry-after", "x-litespeed-cache", "content-type"]) {
+    const v = res.headers.get(k);
+    if (v) p.push(`${k}=${String(v).slice(0, 60)}`);
+  }
+  return p.length ? `nguồn chặn: ${p.join(" · ")}` : "";
+}
+
+export function nemLoiWc(nhan, site, status, body, res) {
   const goi = loiWc(site, status, body);
-  throw new Error(`WC ${nhan} ${status}: ${goi ? goi + " · " : ""}${String(body).slice(0, 200)}`);
+  const ai = moTaPhanHoi(res);
+  throw new Error(`WC ${nhan} ${status}: ${goi ? goi + " · " : ""}${ai ? ai + " · " : ""}${String(body).slice(0, 200)}`);
 }
 
 export function isConfigured(c) {
@@ -244,7 +262,7 @@ export async function fetchCategories(c) {
   for (let page = 1; page <= 5; page++) {
     const u = `${c.url}/wp-json/wc/v3/products/categories?per_page=100&page=${page}&_fields=id,name,parent,count,slug`;
     const r = await wcFetch(u, { headers: { Authorization: wcAuth(c.ck, c.cs) }, signal: AbortSignal.timeout(20000) });
-    if (!r.ok) nemLoiWc("categories", c.site, r.status, await r.text());
+    if (!r.ok) nemLoiWc("categories", c.site, r.status, await r.text(), r);
     const arr = await r.json();
     out.push(...arr);
     if (!Array.isArray(arr) || arr.length < 100) break;
@@ -275,7 +293,8 @@ export async function uploadMedia(c, { bytes, filename, mime, alt, caption, titl
   if (!r.ok) {
     const txt = (await r.text()).slice(0, 200);
     const goi = loiWc(c.site, r.status, txt);
-    throw new Error(`WP media ${r.status} (${c.site}): ${goi ? goi + " · " : ""}${txt}`);
+    const ai = moTaPhanHoi(r);
+    throw new Error(`WP media ${r.status} (${c.site}): ${goi ? goi + " · " : ""}${ai ? ai + " · " : ""}${txt}`);
   }
   const m = await r.json();
   if (alt || caption || title) {
@@ -297,7 +316,7 @@ export async function getProductFields(c, id, fields) {
     signal: AbortSignal.timeout(25000),
   });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) nemLoiWc("get", c.site, r.status, JSON.stringify(d));
+  if (!r.ok) nemLoiWc("get", c.site, r.status, JSON.stringify(d), r);
   return d;
 }
 
@@ -405,7 +424,7 @@ export async function listProducts(c, { search = "", perPage = 50, page = 1, sta
     headers: { Authorization: wcAuth(c.ck, c.cs), "Cache-Control": "no-cache" },
     signal: AbortSignal.timeout(25000),
   });
-  if (!r.ok) nemLoiWc("list", c.site, r.status, await r.text());
+  if (!r.ok) nemLoiWc("list", c.site, r.status, await r.text(), r);
   const arr = await r.json();
   return {
     items: Array.isArray(arr) ? arr : [],
@@ -421,7 +440,7 @@ export async function getProduct(c, id) {
     signal: AbortSignal.timeout(20000),
   });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) nemLoiWc("get", c.site, r.status, JSON.stringify(d));
+  if (!r.ok) nemLoiWc("get", c.site, r.status, JSON.stringify(d), r);
   return d;
 }
 
@@ -433,7 +452,7 @@ export async function getProductFull(c, id) {
     signal: AbortSignal.timeout(25000),
   });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) nemLoiWc("get full", c.site, r.status, JSON.stringify(d));
+  if (!r.ok) nemLoiWc("get full", c.site, r.status, JSON.stringify(d), r);
   return d;
 }
 
@@ -497,7 +516,7 @@ export async function updateProduct(c, id, payload) {
     signal: AbortSignal.timeout(30000),
   });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) nemLoiWc("update", c.site, r.status, JSON.stringify(d));
+  if (!r.ok) nemLoiWc("update", c.site, r.status, JSON.stringify(d), r);
   return d;
 }
 
