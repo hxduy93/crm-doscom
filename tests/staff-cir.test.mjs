@@ -15,10 +15,10 @@ test("đã bỏ hẳn ROAS khỏi bảng nhân sự", () => {
   assert.doesNotMatch(html, /\btRoas\b/, "còn sót biến tRoas");
 });
 
-test("số cột thead khớp số ô mỗi hàng (11 cột)", () => {
+test("số cột thead khớp số ô mỗi hàng (12 cột)", () => {
   const head = html.match(/<thead><tr><th>Nhân sự \/ Nguồn<\/th>[\s\S]*?<\/tr><\/thead>/)[0];
   const cols = [...head.matchAll(/<th[ >]/g)].length;
-  assert.equal(cols, 11, "Nhân sự, Chi phí, DT, DT sau hoàn, Giá vốn, GV sau hoàn, CIR, Lead, Đơn, LN, LN sau hoàn");
+  assert.equal(cols, 12, "Nhân sự, Chi phí, DT, DT sau hoàn, Giá vốn, GV sau hoàn, CIR, Lead, Đơn, LN, LN sau hoàn, LN ước tính");
 });
 
 test("thứ tự cột đúng yêu cầu", () => {
@@ -29,6 +29,9 @@ test("thứ tự cột đúng yêu cầu", () => {
     // cột "Giá vốn" (gộp) bên trái — thiếu cột này thì nhìn hàng không cộng ra được số.
     "Chi phí QC", "Doanh thu", "DT sau hoàn", "Giá vốn", "GV sau hoàn", "CIR", "Lead", "Đơn",
     "Lợi nhuận tạm tính (DT−CP−GV)", "LN sau hoàn",
+    // Thêm 24/09/2026 theo yêu cầu chủ dự án. Nhãn trong HTML là "LN ước tính";
+    // lúc chạy, render() ghi đè thành "LN ước tính (hoàn T8/2026)" theo khoảng đang lọc.
+    "LN ước tính",
   ]);
 });
 
