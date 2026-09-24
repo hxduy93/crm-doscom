@@ -205,13 +205,13 @@
           <p class="muted">Ô sản phẩm đang chọn hiện luôn bản xem trước ảnh sale. Ảnh xuất ra 1000×1000.</p>
           <div class="plist" id="makeList"></div>
           <div class="row" style="margin-top:12px;justify-content:flex-end">
-            <label class="chk" title="Web doscom.vn/noma.vn trả 429 khi bị gọi dồn. Chạy chậm thì lâu hơn nhưng ít lỗi hơn nhiều.">
+            <label class="chk" title="Đo 24/09/2026: web chỉ cho ~30 yêu cầu liên tiếp rồi chặn, và mỗi lần gọi trong lúc bị chặn lại làm mới lệnh chặn. Mỗi SP tốn 4–5 yêu cầu, nên 8 giây/SP là mức nằm dưới ngưỡng.">
               Tốc độ chạy
               <select id="tocDo" style="margin-left:6px">
-                <option value="600">Nhanh — 0,6 giây/SP</option>
-                <option value="2500" selected>Vừa — 2,5 giây/SP</option>
-                <option value="5000">Chậm — 5 giây/SP</option>
-                <option value="9000">Rất chậm — 9 giây/SP</option>
+                <option value="2500">Nhanh — 2,5 giây/SP (hay dính chặn)</option>
+                <option value="5000">Vừa — 5 giây/SP</option>
+                <option value="8000" selected>An toàn — 8 giây/SP (khuyến nghị)</option>
+                <option value="12000">Rất chậm — 12 giây/SP</option>
               </select>
             </label>
             <button class="ok" id="btnMakeApply">Gắn ảnh sale lên web</button>
@@ -958,10 +958,30 @@ $("#btnRestore").addEventListener("click", async () => {
    Vì vậy nhịp KHÔNG cố định mà TỰ THÍCH NGHI: gặp 429 thì giãn gấp đôi và GIỮ mức giãn
    đó cho cả lượt chạy, chạy êm một lúc mới rút ngắn dần lại. Một lần nghỉ 12s rồi quay
    về nhịp cũ là không đủ — web vẫn đang ở trạng thái chặn. */
-const NGHI_SAU_429 = 12000;    // nghỉ dài ngay khi vừa dính, cho web hạ nhiệt
-const NHIP_TOI_DA = 30000;     // trần giãn, tránh một lượt chạy kéo dài vô tận
+/* ĐO THẬT 24/09/2026 trên doscom.vn, gọi từ một IP Cloudflare:
+     · 30 request liên tiếp lọt, request thứ 31 trả 429 (header platform=hostinger)
+     · poll lại 5 giây/lần suốt 120 giây → KHÔNG bao giờ nhả
+     · chờ IM LẶNG 75 giây → request kế tiếp 200 ngay
+   Cửa sổ TRƯỢT: gọi trong lúc bị chặn là làm mới lệnh chặn. Nên khi dính 429 phải NGỒI IM
+   đủ lâu, chứ nghỉ 12 giây rồi gọi tiếp (bản trước) chỉ khiến web chặn mãi không thôi. */
+const NGHI_SAU_429 = 90000;    // ngồi im 90s — trên mức 75s đo được, có biên an toàn
+const NHIP_TOI_DA = 20000;     // trần giãn nhịp thường
 const EM_THI_RUT = 5;          // chạy êm liên tiếp bấy nhiêu SP thì rút ngắn nhịp lại
 const doi = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/* Chờ 90 giây mà màn hình đứng im thì người chạy tưởng tool treo rồi F5 — mà F5 giữa
+   chừng là mất dấu phần đang làm. Nên đếm ngược cho thấy nó vẫn sống. */
+function demNguoc(ms, nhan) {
+  const xong = Date.now() + ms;
+  const ve = () => {
+    const con = Math.max(0, Math.round((xong - Date.now()) / 1000));
+    $("#runInfo").textContent = `${nhan} Còn ${con} giây…`;
+    if (con <= 0) clearInterval(t);
+  };
+  ve();
+  const t = setInterval(ve, 1000);
+  setTimeout(() => clearInterval(t), ms + 1200);
+}
 const la429 = (res) => /429/.test(String((res && res.error) || ""));
 const nhipGoc = () => Number(($("#tocDo") && $("#tocDo").value) || 2500);
 
@@ -1004,9 +1024,9 @@ async function runJobs(title, ids, fn) {
     if (la429(res)) {
       loi429.push(ids[i]);
       nhip = Math.min(nhip * 2, NHIP_TOI_DA);   // giãn và GIỮ, không quay lại nhịp cũ ngay
-      cho = Math.max(NGHI_SAU_429, nhip);
+      cho = NGHI_SAU_429;   // im lặng đủ lâu mới có tác dụng, xem ghi chú ở trên
       em = 0;
-      $("#runInfo").textContent = `Web trả 429 — giãn nhịp lên ${(nhip / 1000).toFixed(1)}s/SP, nghỉ ${Math.round(cho / 1000)} giây rồi chạy tiếp…`;
+      demNguoc(cho, `Web chặn vì vượt ngưỡng. Phải ngồi im mới nhả — nhịp mới ${(nhip / 1000).toFixed(1)}s/SP.`);
     } else if (++em >= EM_THI_RUT && nhip > nhipGoc()) {
       nhip = Math.max(nhipGoc(), Math.round(nhip * 0.75));   // chạy êm thì rút ngắn dần
       em = 0;
@@ -1018,9 +1038,9 @@ async function runJobs(title, ids, fn) {
      dữ liệu, nên thử lại ở nhịp chậm nhất thường là xong — đỡ bắt người dùng tự dò xem
      còn thiếu SP nào rồi tick lại bằng tay. */
   if (loi429.length) {
-    const nhipCham = Math.min(Math.max(nhip, NGHI_SAU_429), NHIP_TOI_DA);
-    $("#runInfo").textContent = `Chạy lại ${loi429.length} SP bị web chặn, nhịp ${(nhipCham / 1000).toFixed(1)}s/SP…`;
-    await doi(nhipCham);
+    const nhipCham = Math.max(nhip, 12000);
+    demNguoc(NGHI_SAU_429, `Sắp chạy lại ${loi429.length} SP bị chặn. Ngồi im cho web nhả đã.`);
+    await doi(NGHI_SAU_429);
     for (let k = 0; k < loi429.length; k++) {
       const p = S.byId.get(loi429[k]) || { id: loi429[k], name: "#" + loi429[k] };
       $("#runInfo").textContent = `Chạy lại ${k + 1}/${loi429.length}: ${p.name}`;
@@ -1035,7 +1055,7 @@ async function runJobs(title, ids, fn) {
         $("#runRows").insertAdjacentHTML("beforeend",
           `<tr><td>${link}</td><td><span class="pill red">Lỗi</span></td><td class="err" style="font-size:12px">chạy lại vẫn hỏng: ${esc((res && res.error) || "không rõ")}</td></tr>`);
       }
-      if (k < loi429.length - 1) await doi(nhipCham);
+      if (k < loi429.length - 1) await doi(nhipCham);   // nhipCham đã tính ở trên
     }
   }
   $("#runInfo").textContent = `Xong ${ids.length} SP.`;

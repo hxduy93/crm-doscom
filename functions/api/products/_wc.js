@@ -68,8 +68,9 @@ export function loiWc(site, status, body) {
        một Worker chạy trên chính mạng Cloudflare gọi 8 lần liên tiếp sang doscom.vn đều
        tới được WooCommerce, không lần nào 429. Vì vậy thông báo chỉ nêu dữ kiện, còn
        danh tính bên chặn lấy từ header thật của phản hồi (xem moTaPhanHoi). */
-    return `${site} trả 429 (quá nhiều yêu cầu) và đã tự thử lại vài lần vẫn bị. ` +
-           `Đây KHÔNG phải sai key — sai key trả 401. Xem phần "nguồn chặn" trong thông báo để biết ai chặn`;
+    return `${site} trả 429 — đã vượt ngưỡng ~30 yêu cầu liên tiếp của host. ` +
+           `KHÔNG thử lại ngay: đo được là mỗi lần gọi trong lúc bị chặn lại làm mới lệnh chặn, ` +
+           `phải NGỒI IM khoảng 75–90 giây thì web mới nhả. Đây không phải sai key (sai key trả 401)`;
   }
   if (status >= 500) return `${site} đang lỗi phía máy chủ (${status}) — đã thử lại vẫn hỏng, chờ rồi chạy lại`;
   return null;
@@ -114,7 +115,16 @@ const wcAuth = (ck, cs) => "Basic " + btoa(`${ck}:${cs}`);
 
    TRƯỚC ĐÂY chỉ uploadMedia() biết thử lại; mọi lời gọi khác chết ngay ở 429 đầu tiên
    nên menu "Ảnh sale" đổ lỗi hàng loạt. Nay dùng chung wrapper này. */
-const RETRYABLE = new Set([429, 500, 502, 503, 504, 520, 521, 522, 524]);
+/* 429 CỐ Ý KHÔNG nằm trong đây. Đo 24/09/2026 trên doscom.vn từ một IP Cloudflare:
+     · 30 request liên tiếp lọt, request thứ 31 trả 429 (header có platform=hostinger)
+     · poll lại 5 giây/lần suốt 120 giây → KHÔNG bao giờ nhả
+     · chờ IM LẶNG 75 giây, không gửi gì → request kế tiếp 200 ngay
+   Nghĩa là cửa sổ TRƯỢT: mỗi request gửi trong lúc đang bị chặn lại làm mới lệnh chặn.
+   Thử lại 429 vì vậy KÉO DÀI thời gian chết thay vì rút ngắn — bản 24/09 sáng có thử
+   lại 429 và chính nó giữ cho web chặn mãi. Gặp 429 thì trả về NGAY để phía giao diện
+   ngồi im đủ lâu (xem NGHI_SAU_429 trong sale-images.html).
+   5xx thì vẫn thử lại: đó là lỗi tạm thời của PHP/MySQL, không phải cửa sổ trượt. */
+const RETRYABLE = new Set([500, 502, 503, 504, 520, 521, 522, 524]);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const CHO_TOI_DA = 15000;   // trần mỗi lần chờ, tránh Worker treo quá lâu
 

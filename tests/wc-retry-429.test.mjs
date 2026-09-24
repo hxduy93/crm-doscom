@@ -32,15 +32,6 @@ function gaFetch(chuoi) {
 const fetchGoc = globalThis.fetch;
 test.afterEach(() => { globalThis.fetch = fetchGoc; });
 
-test("429 thì thử lại, không chết ngay lần đầu", async () => {
-  const g = gaFetch([{ status: 429, headers: { "retry-after": "0" } },
-                     { status: 429, headers: { "retry-after": "0" } },
-                     { status: 200 }]);
-  const r = await wcFetch("https://doscom.vn/wp-json/wc/v3/products/1", {}, { retries: 3 });
-  assert.equal(r.status, 200);
-  assert.equal(g.soLan(), 3, "phải gọi lại đủ 3 lần mới thành công");
-});
-
 test("hết lượt thử vẫn 429 thì trả Response để chỗ gọi tự báo lỗi, KHÔNG ném", async () => {
   gaFetch([{ status: 429, headers: { "retry-after": "0" } }]);
   const r = await wcFetch("https://doscom.vn/x", {}, { retries: 2 });
