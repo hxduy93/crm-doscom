@@ -205,14 +205,15 @@
           <p class="muted">Ô sản phẩm đang chọn hiện luôn bản xem trước ảnh sale. Ảnh xuất ra 1000×1000.</p>
           <div class="plist" id="makeList"></div>
           <div class="row" style="margin-top:12px;justify-content:flex-end">
-            <label class="chk" title="Đo 24/09/2026: web chỉ cho ~30 yêu cầu liên tiếp rồi chặn, và mỗi lần gọi trong lúc bị chặn lại làm mới lệnh chặn. Mỗi SP tốn 4–5 yêu cầu, nên 8 giây/SP là mức nằm dưới ngưỡng.">
+            <label class="chk" title="Đo 24/09/2026 trên doscom.vn: ~14 yêu cầu/phút chạy 90 giây liên tục không dính lần nào, còn ~21 yêu cầu/phút thì chặn từ yêu cầu thứ 12. Mỗi SP tốn 3–4 yêu cầu, nên 15 giây/SP nằm dưới ngưỡng an toàn.">
               Tốc độ chạy
               <select id="tocDo" style="margin-left:6px">
-                <option value="2500">Nhanh — 2,5 giây/SP (hay dính chặn)</option>
-                <option value="5000">Vừa — 5 giây/SP</option>
-                <option value="8000" selected>An toàn — 8 giây/SP (khuyến nghị)</option>
-                <option value="12000">Rất chậm — 12 giây/SP</option>
+                <option value="8000">Nhanh — 8 giây/SP (hay dính chặn)</option>
+                <option value="12000">Vừa — 12 giây/SP</option>
+                <option value="15000" selected>An toàn — 15 giây/SP (khuyến nghị)</option>
+                <option value="20000">Rất chậm — 20 giây/SP</option>
               </select>
+              <span class="muted" id="uocThoiGian" style="margin-left:8px;font-size:12px"></span>
             </label>
             <button class="ok" id="btnMakeApply">Gắn ảnh sale lên web</button>
           </div>
@@ -674,6 +675,7 @@ function renderMake() {
     </div>`;
   }).join("") || `<p class="muted">Không có sản phẩm khớp.</p>`;
   $("#makeSelInfo").textContent = S.makeSel.size ? `· đã chọn ${S.makeSel.size}` : "";
+  veUocThoiGian();
   $("#btnMakeApply").textContent = `Gắn ảnh sale lên web (${S.makeSel.size} SP)`;
   $("#btnMakeApply").disabled = !S.makeSel.size || S.busy;
   schedulePreview();
@@ -686,6 +688,7 @@ $("#makeList").addEventListener("click", (e) => {
   renderMake();
 });
 $("#makeSearch").addEventListener("input", renderMake);
+$("#tocDo").addEventListener("change", veUocThoiGian);
 $("#hideDone").addEventListener("change", () => {
   // Bật ẩn thì bỏ luôn khỏi vùng chọn, tránh nút "Gắn (N SP)" đếm cả SP không nhìn thấy.
   if ($("#hideDone").checked) {
@@ -946,6 +949,16 @@ $("#btnRestore").addEventListener("click", async () => {
 });
 
 // ───────── Chạy lần lượt từng SP + báo cáo ─────────
+/* Báo trước lượt chạy mất bao lâu — 85 SP ở nhịp an toàn là hơn 20 phút, biết trước
+   thì người chạy còn sắp xếp, không bỏ giữa chừng rồi phải chạy lại từ đầu. */
+function veUocThoiGian() {
+  const el = $("#uocThoiGian"); if (!el) return;
+  const n = S.makeSel.size;
+  if (!n) { el.textContent = ""; return; }
+  const phut = Math.ceil((n * nhipGoc()) / 60000);
+  el.textContent = `≈ ${phut} phút cho ${n} SP`;
+}
+
 /* NHỊP GỌI GIỮA HAI SẢN PHẨM — vì sao phải có.
    Mỗi SP tốn 3–4 request sang doscom.vn/noma.vn (đọc SP → upload ảnh → cập nhật SP →
    xoá ảnh sale cũ). Bắn liên tiếp không nghỉ thì web trả 429 hàng loạt.
@@ -959,11 +972,14 @@ $("#btnRestore").addEventListener("click", async () => {
    đó cho cả lượt chạy, chạy êm một lúc mới rút ngắn dần lại. Một lần nghỉ 12s rồi quay
    về nhịp cũ là không đủ — web vẫn đang ở trạng thái chặn. */
 /* ĐO THẬT 24/09/2026 trên doscom.vn, gọi từ một IP Cloudflare:
-     · 30 request liên tiếp lọt, request thứ 31 trả 429 (header platform=hostinger)
-     · poll lại 5 giây/lần suốt 120 giây → KHÔNG bao giờ nhả
-     · chờ IM LẶNG 75 giây → request kế tiếp 200 ngay
-   Cửa sổ TRƯỢT: gọi trong lúc bị chặn là làm mới lệnh chặn. Nên khi dính 429 phải NGỒI IM
-   đủ lâu, chứ nghỉ 12 giây rồi gọi tiếp (bản trước) chỉ khiến web chặn mãi không thôi. */
+     · bắn dồn: request thứ 31 trả 429 (header platform=hostinger → chính web trả)
+     · ~21 request/phút: chặn ngay từ request thứ 12
+     · ~14 request/phút: 30 request liên tục trong 90 giây, KHÔNG dính lần nào
+     · đang bị chặn mà poll 5 giây/lần suốt 120 giây → không bao giờ nhả
+     · chờ IM LẶNG 75–100 giây → request kế tiếp 200 ngay
+   Cửa sổ TRƯỢT: gọi trong lúc bị chặn là làm mới lệnh chặn.
+   Mỗi SP tốn 3–4 request (đọc SP → upload ảnh → cập nhật SP → xoá ảnh sale cũ nếu có),
+   nên nhịp an toàn là 15 giây/SP ≈ 14 request/phút. */
 const NGHI_SAU_429 = 90000;    // ngồi im 90s — trên mức 75s đo được, có biên an toàn
 const NHIP_TOI_DA = 20000;     // trần giãn nhịp thường
 const EM_THI_RUT = 5;          // chạy êm liên tiếp bấy nhiêu SP thì rút ngắn nhịp lại

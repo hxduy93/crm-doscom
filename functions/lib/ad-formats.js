@@ -1,4 +1,5 @@
 // Thư viện DẠNG BÀI quảng cáo + cách xoay vòng dạng.
+import { khungBai } from "./ad-formula.js";
 //
 // VÌ SAO CÓ FILE NÀY: trước đây prompt ép MỌI bài đi đúng 1 khung 8 bước
 // (hook USP → agitate → 5-7 bullet ✅ → 💼 phù hợp cho → 🎁 bảo hành → 👉 CTA),
@@ -31,25 +32,8 @@ export const AD_FORMATS = [
     // ra mùi AI. Khung mới: vấn đề → sản phẩm ngay câu kế tiếp, ngắn hơn.
     // Vòng 2 (24/09/2026): chủ dự án tự viết lại dòng mở bài cho 10/11 SP, tất cả cùng
     // một khuôn — nêu RÕ LOẠI sản phẩm ("dung dịch tẩy ố kính", "thiết bị ghi âm"…).
-    skeleton: `1. DÒNG MỞ BÀI (1 dòng, tối đa ~100 ký tự, emoji đầu dòng) — dòng quan trọng nhất bài.
-   Có "Dòng mở bài mẫu (chủ dự án viết)" ở mục TRỌNG TÂM → variant A dùng GẦN NGUYÊN VĂN câu
-   đó; variant sau giữ đúng khuôn, chỉ đổi lợi ích. Không có câu mẫu → chọn 1 trong 2 khuôn:
-   a) [TÊN SP] – [LOẠI SẢN PHẨM gọi đầy đủ] + 1 lợi ích chính:
-      "Dung dịch tẩy ố kính Noma 911 – hạt mài siêu nhỏ đánh bật cặn canxi mà không xước kính"
-      "Thiết bị ghi âm DR1 Doscom – ghi âm liên tục 30 giờ, lưu trữ đến 192 giờ"
-   b) [Vấn đề cụ thể, rõ ràng] – [Dùng/Xịt ngay + LOẠI SP + TÊN SP]:
-      "Rửa xe xong mà kính lái vẫn còn ố trắng – Sử dụng ngay dung dịch tẩy ố kính Noma 911"
-   BẮT BUỘC gọi tên LOẠI sản phẩm (dung dịch…, thiết bị…, máy dò…, camera…), không chỉ tên mã.
-   CHỈ 1 ý chính. KHÔNG nhồi 3-4 thông số vào dòng này (pin, cân nặng… để xuống bullet).
-2. VẤN ĐỀ: 1-2 câu ngắn, nói thẳng điều khách đang gặp bằng lời thường. KHÔNG giảng cơ chế
-   hoá học/kỹ thuật dài dòng, KHÔNG mở bằng "Tình huống quen thuộc:", "Bạn có bao giờ…".
-3. GIỚI THIỆU SP NGAY câu tiếp theo: tên SP + tính năng đặc biệt nhất giải quyết đúng vấn đề đó.
-   KHÔNG dùng câu chuyển kiểu "👉 Đó là lý do…", "…được thiết kế để…", "Giải pháp gọn nhẹ:".
-4. TÍNH NĂNG: 3-5 bullet ✅, mỗi bullet 1 dòng = "Tính năng – lợi ích cho khách". Có số liệu thật.
-   Các ý phải NỐI LIỀN MẠCH theo một mạch: công dụng chính → cách nó làm được → tiện ở chỗ nào.
-5. ĐỐI TƯỢNG: 1 dòng "💼 Phù hợp cho: [3-4 nhóm cụ thể]".
-6. CAM KẾT (chỉ khi SP có; + khuyến mãi nếu có).
-7. CTA + {{URL}}.`,
+    // Khung lấy từ CÔNG THỨC DOSCOM (lib/ad-formula.js) — sửa ở đó, không sửa ở đây.
+    skeleton: khungBai(),
   },
   {
     key: "cau_chuyen",

@@ -12,6 +12,8 @@
 
 import { getFormat, pickHeadlineStyle } from "./ad-formats.js";
 import { getBrand, footerFor } from "./ad-brands.js";
+import { PRODUCTS } from "./product-catalog.js";
+import { congThucSanPham, luatCongThuc } from "./ad-formula.js";
 
 // Chính sách bảo hành mặc định của Doscom, áp cho sản phẩm KHÔNG khai `guarantee`.
 // Hàng tiêu dùng (vd Noma 911) khai `guarantee: null` để bỏ hẳn dòng này.
@@ -217,6 +219,9 @@ File ghi bằng điện thoại hay lẫn tiếng ồn, pin tụt đúng lúc c�
 [FOOTER — chèn nguyên khối được cấp ở phần yêu cầu, đúng thương hiệu của SP]
 
 ═══════════════════════════════════════════════════════════════════
+${luatCongThuc()}
+
+═══════════════════════════════════════════════════════════════════
 OUTPUT
 ═══════════════════════════════════════════════════════════════════
 Trả về JSON DUY NHẤT, KHÔNG kèm markdown, KHÔNG giải thích ngoài JSON.
@@ -324,12 +329,10 @@ ${product.provenAngles.map((a, i) => `${i + 1}. ${a}`).join("\n")}
 Angle là THÔNG ĐIỆP, không phải khung bài: giữ tinh thần của angle nhưng vẫn phải viết đúng KHUNG của dạng được giao, và viết lại tươi mới (không copy nguyên câu cũ).`
     : "";
 
-  // Hướng nội dung do chủ dự án chốt khi duyệt bài (24/09/2026). Đặt riêng một mục
-  // để THẮNG thứ tự USP/pain point — AI hay lấy ý đầu danh sách làm trọng tâm.
-  const focusSection = (product.contentFocus && product.contentFocus.length)
-    ? `\n🎯 TRỌNG TÂM NỘI DUNG (chủ dự án chốt — ưu tiên hơn thứ tự USP/pain point ở trên):
-${product.contentFocus.map((f) => `• ${f}`).join("\n")}`
-    : "";
+  // Hướng viết riêng của SP (câu mở bài mẫu, trọng tâm, điều tránh) — nguồn ở
+  // lib/ad-formula.js. Tra mã SP từ catalog vì object sản phẩm không mang key.
+  const productKey = Object.keys(PRODUCTS).find((k) => PRODUCTS[k] === product) || "";
+  const focusSection = congThucSanPham(productKey);
 
   const brand = getBrand(product.brand);
   const brandSection = `\nTHƯƠNG HIỆU: ${brand.key} — ${brand.company}

@@ -285,16 +285,23 @@ export async function fetchCategories(c) {
    TRƯỚC 24/09/2026 hàm này có vòng thử lại RIÊNG; giữ lại thì thành thử lại lồng nhau
    3×4 lần và Worker treo rất lâu, nên đã bỏ. */
 export async function uploadMedia(c, { bytes, filename, mime, alt, caption, title }, { retries = 3 } = {}) {
+  /* Gửi MULTIPART để nhét luôn alt/caption/title vào CÙNG một request.
+     Trước 24/09/2026 hàm này gửi ảnh dạng body nhị phân rồi POST lần hai để sửa metadata
+     — tức 2 request cho mỗi ảnh. Với hạn mức đo được của host (~14 request/phút an toàn)
+     thì mỗi request tiết kiệm được là thêm sản phẩm chạy lọt, nên gộp lại thành một. */
+  const fd = new FormData();
+  fd.append("file", new Blob([bytes], { type: mime || "image/jpeg" }), filename);
+  if (alt) fd.append("alt_text", alt);
+  if (caption) fd.append("caption", caption);
+  if (title) fd.append("title", title);
+
   let r;
   try {
     r = await wcFetch(`${c.url}/wp-json/wp/v2/media`, {
       method: "POST",
-      headers: {
-        Authorization: wpAuth(c.user, c.pwd),
-        "Content-Type": mime || "image/jpeg",
-        "Content-Disposition": `attachment; filename="${filename}"`,
-      },
-      body: bytes,
+      // KHÔNG tự đặt Content-Type: fetch phải tự sinh boundary của multipart.
+      headers: { Authorization: wpAuth(c.user, c.pwd) },
+      body: fd,
       signal: AbortSignal.timeout(60000),
     }, { retries });
   } catch (e) {
@@ -307,13 +314,6 @@ export async function uploadMedia(c, { bytes, filename, mime, alt, caption, titl
     throw new Error(`WP media ${r.status} (${c.site}): ${goi ? goi + " · " : ""}${ai ? ai + " · " : ""}${txt}`);
   }
   const m = await r.json();
-  if (alt || caption || title) {
-    await wcFetch(`${c.url}/wp-json/wp/v2/media/${m.id}`, {
-      method: "POST",
-      headers: { Authorization: wpAuth(c.user, c.pwd), "Content-Type": "application/json" },
-      body: JSON.stringify({ alt_text: alt || "", caption: caption || "", title: title || "" }),
-    }).catch(() => {});
-  }
   return { id: m.id, source_url: m.source_url };
 }
 

@@ -162,3 +162,31 @@ test("SP đã gắn cũng rời khỏi vùng chọn, để nút không đếm SP
   const l = html.slice(html.indexOf("async function load()"), html.indexOf("const noImg"));
   assert.match(l, /daGan\(p\)/, "tải lại danh sách cũng phải bỏ SP vừa gắn xong khỏi vùng chọn");
 });
+
+/* ĐO 24/09/2026 (lần hai, chi tiết hơn) trên doscom.vn từ một IP Cloudflare:
+     ~14 request/phút → 30 request liên tục trong 90 giây, KHÔNG dính lần nào
+     ~21 request/phút → chặn ngay từ request thứ 12, rồi không nhả
+   Nên mỗi request tiết kiệm được đều đáng giá. */
+test("upload ảnh chỉ tốn MỘT request — metadata đi kèm multipart", () => {
+  const u = wc.slice(wc.indexOf("export async function uploadMedia"),
+                     wc.indexOf("// ---------- Menu \"Giảm giá hàng loạt\" ----------"));
+  assert.match(u, /new FormData\(\)/, "phải gửi multipart");
+  assert.match(u, /fd\.append\("alt_text"/, "alt đi cùng request upload");
+  assert.match(u, /fd\.append\("title"/, "title đi cùng request upload");
+  assert.doesNotMatch(u, /wp\/v2\/media\/\$\{m\.id\}/,
+    "POST lần hai để sửa metadata = tốn gấp đôi request cho mỗi ảnh");
+  assert.doesNotMatch(u, /"Content-Type": mime/,
+    "đặt tay Content-Type là mất boundary của multipart");
+});
+
+test("nhịp mặc định đủ chậm cho ngưỡng ~14 request/phút", () => {
+  const ms = Number(html.match(/<option value="(\d+)" selected>/)[1]);
+  // Mỗi SP tốn 3–4 request. 15s/SP ≈ 14 req/phút, đúng mức đo được là an toàn.
+  assert.ok(ms >= 15000,
+    `mặc định ${ms}ms: với 3–4 request mỗi SP thì nhanh hơn 15s/SP là vượt ~14 req/phút`);
+});
+
+test("báo trước lượt chạy mất bao lâu", () => {
+  assert.match(html, /function veUocThoiGian\(\)/);
+  assert.match(html, /≈ \$\{phut\} phút cho \$\{n\} SP/);
+});
