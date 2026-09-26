@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-26 12:35",
+  "generated_at": "2026-09-26 18:51",
   "source_data_date_range": {
     "start_7d": "2026-09-19",
     "end": "2026-09-25",
@@ -60,8 +60,8 @@
     "orders_30d": 138,
     "by_status": {
       "delivered": {
-        "revenue": 184973000.0,
-        "orders": 101
+        "revenue": 185207000.0,
+        "orders": 102
       },
       "returning": {
         "revenue": 15547000.0,
@@ -76,8 +76,8 @@
         "orders": 6
       },
       "other": {
-        "revenue": 38395000.0,
-        "orders": 20
+        "revenue": 38161000.0,
+        "orders": 19
       }
     },
     "by_source": {
@@ -1429,6 +1429,19 @@
     },
     "top_converting_terms": [
       {
+        "search_term": "camera",
+        "spend_30d": 3012129.0,
+        "clicks_30d": 260,
+        "conversions_30d": 6.0,
+        "ctr_30d": 0.0363,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
         "search_term": "doscom",
         "spend_30d": 97809.0,
         "clicks_30d": 87,
@@ -1439,19 +1452,6 @@
         ],
         "statuses": [
           "ADDED"
-        ]
-      },
-      {
-        "search_term": "camera",
-        "spend_30d": 3012129.0,
-        "clicks_30d": 260,
-        "conversions_30d": 5.0,
-        "ctr_30d": 0.0363,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
-          "NONE"
         ]
       },
       {
@@ -2091,7 +2091,7 @@
       "BROAD": {
         "spend_30d": 13004525.0,
         "clicks_30d": 1420,
-        "conversions_30d": 22.69,
+        "conversions_30d": 23.69,
         "term_count": 2481
       },
       "NEAR_PHRASE": {
@@ -2110,7 +2110,7 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 9399,
+      "total_unique_placements": 9404,
       "total_spend_30d": 11309511.0
     },
     "network_breakdown": {
@@ -2135,9 +2135,9 @@
       "WEBSITE": {
         "spend_30d": 11309511.0,
         "clicks_30d": 3470,
-        "impressions_30d": 291408,
+        "impressions_30d": 291460,
         "ctr_30d": 0.0119,
-        "placement_count": 9399
+        "placement_count": 9404
       }
     },
     "top_waste_placements": [],
