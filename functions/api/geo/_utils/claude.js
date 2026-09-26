@@ -43,7 +43,13 @@ export async function callClaude(env, opts) {
       console.error("Claude lỗi, chuyển sang OpenAI:", msg.slice(0, 200));
       // BỎ opts.model: chỗ gọi truyền alias của Anthropic ("haiku"/"sonnet"), ném thẳng
       // sang OpenAI là 404 "model haiku does not exist". Để openai-chat.js tự chọn model.
-      const out = await callOpenAIChat(env, { ...opts, model: undefined });
+      let out;
+      try {
+        out = await callOpenAIChat(env, { ...opts, model: undefined });
+      } catch (e2) {
+        // Cả hai cùng hỏng: phải thấy lỗi Claude, không thì chỉ còn lỗi OpenAI và không biết gốc ở đâu.
+        throw new Error(`${String(e2?.message || e2)} | trước đó Claude lỗi: ${msg.slice(0, 300)}`);
+      }
       // Ghi lại lý do phải đi đường vòng, để log/DB còn truy được vì sao bài này do OpenAI viết.
       return { ...out, fallback_from: msg.slice(0, 200) };
     }

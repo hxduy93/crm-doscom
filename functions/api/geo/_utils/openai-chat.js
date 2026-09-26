@@ -30,6 +30,17 @@ function getBaseUrl(env) {
   return "https://api.openai.com/v1";
 }
 
+function toOpenAIPart(b) {
+  if (b?.type === "image" && b.source) {
+    const url = b.source.type === "base64"
+      ? `data:${b.source.media_type || "image/jpeg"};base64,${b.source.data}`
+      : b.source.url;
+    return { type: "image_url", image_url: { url } };
+  }
+  if (b?.type === "text") return { type: "text", text: b.text };
+  return b;
+}
+
 export async function callOpenAIChat(env, {
   systemPrompt,
   userPrompt,
@@ -51,11 +62,17 @@ export async function callOpenAIChat(env, {
   /* Nhắc lại độ dài ở DÒNG CUỐI user prompt. Đo thật 19/08/2026: cùng prompt yêu cầu 2000 từ,
      Claude Haiku ra trung bình 1.872 từ (158 bài) còn GPT-4o/4o-mini chỉ ~700-800 từ — model
      OpenAI ở JSON mode có xu hướng nén nội dung. Câu chốt cuối prompt là chỗ model nghe rõ nhất. */
-  const user = minWords
-    ? `${userPrompt}
-
-NHẮC LẠI YÊU CẦU BẮT BUỘC: trường content_markdown phải dài TỐI THIỂU ${minWords} từ. Viết đủ mọi mục trong dàn ý, mỗi mục khai triển trọn vẹn. KHÔNG tóm tắt, KHÔNG rút gọn. Nếu thấy chưa đủ ${minWords} từ thì viết tiếp cho đủ rồi mới đóng JSON.`
-    : userPrompt;
+  const lengthNote = `NHẮC LẠI YÊU CẦU BẮT BUỘC: trường content_markdown phải dài TỐI THIỂU ${minWords} từ. Viết đủ mọi mục trong dàn ý, mỗi mục khai triển trọn vẹn. KHÔNG tóm tắt, KHÔNG rút gọn. Nếu thấy chưa đủ ${minWords} từ thì viết tiếp cho đủ rồi mới đóng JSON.`;
+  let user;
+  if (Array.isArray(userPrompt)) {
+    /* Chỗ gọi dựng content theo khối của Anthropic (text + image base64, vd products/generate.js).
+       OpenAI không nhận `type: "image"` — trả 400 "Invalid value: 'image'" (26/09/2026) — nên
+       đổi sang `image_url` dạng data URL. */
+    user = userPrompt.map(toOpenAIPart);
+    if (minWords) user.push({ type: "text", text: lengthNote });
+  } else {
+    user = minWords ? `${userPrompt}\n\n${lengthNote}` : userPrompt;
+  }
 
   const body = {
     model: modelId,
