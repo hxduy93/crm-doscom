@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-29 13:16",
+  "generated_at": "2026-09-29 20:23",
   "source_data_date_range": {
     "start_7d": "2026-09-22",
     "end": "2026-09-28",
@@ -49,19 +49,19 @@
   },
   "roas_proxy": {
     "google_ads_spend_30d": 77310890.0,
-    "website_revenue_30d_vnd": 224476000.0,
-    "roas_overall": 2.9,
+    "website_revenue_30d_vnd": 225726000.0,
+    "roas_overall": 2.92,
     "target_roas": 3.0,
     "status": "borderline",
     "note": "ROAS = Pancake Website revenue (30d) / Google Ads spend (30d). Proxy — mua qua Zalo/Hotline sau khi thay Google Ads khong count vao day."
   },
   "website_revenue_pancake": {
-    "total_30d": 224476000.0,
-    "orders_30d": 133,
+    "total_30d": 225726000.0,
+    "orders_30d": 134,
     "by_status": {
       "delivered": {
-        "revenue": 107536000.0,
-        "orders": 50
+        "revenue": 110620000.0,
+        "orders": 53
       },
       "returning": {
         "revenue": 8024000.0,
@@ -76,8 +76,8 @@
         "orders": 4
       },
       "other": {
-        "revenue": 94104000.0,
-        "orders": 68
+        "revenue": 92270000.0,
+        "orders": 66
       }
     },
     "by_source": {
@@ -90,8 +90,8 @@
         "orders": 12
       },
       "HOTLINE": {
-        "revenue": 104698000.0,
-        "orders": 49
+        "revenue": 105948000.0,
+        "orders": 50
       }
     },
     "note": "Gộp 3 nguồn POS: WEBSITE + ZALO_OA + HOTLINE (filter 'Website' trên POS). Loại DUY + PHUONG_NAM (team FB Ads). Match: delivered + other. Excluded returning/returned/canceled/refunded."
@@ -2100,13 +2100,13 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 9320,
-      "total_spend_30d": 11581449.0
+      "total_unique_placements": 9329,
+      "total_spend_30d": 11578488.0
     },
     "network_breakdown": {
       "CONTENT": {
-        "spend_30d": 11581452.0,
-        "clicks_30d": 3516,
+        "spend_30d": 11578492.0,
+        "clicks_30d": 3515,
         "impressions_30d": 298215,
         "ctr_30d": 0.0118,
         "cpc_30d": 3294.0,
@@ -2123,11 +2123,11 @@
     },
     "placement_type_breakdown": {
       "WEBSITE": {
-        "spend_30d": 11581449.0,
-        "clicks_30d": 3516,
-        "impressions_30d": 282814,
+        "spend_30d": 11578488.0,
+        "clicks_30d": 3515,
+        "impressions_30d": 282885,
         "ctr_30d": 0.0124,
-        "placement_count": 9320
+        "placement_count": 9329
       }
     },
     "top_waste_placements": [],
