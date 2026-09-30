@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chốt chưa lên đơn · CRM Doscom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap">
+<style>
+  :root{
+    --bg:#F5F7FB; --surface:#FFFFFF; --surface-2:#EEF2FA; --line:#E1E7F2;
+    --text:#111A2E; --text-2:#55607B; --primary:#3257E6; --primary-soft:#E7ECFD;
+    --good:#0F7B4F; --good-soft:#E3F5EC; --bad:#C0342F; --bad-soft:#FBEAE9;
+    --warn:#9A5B00; --warn-soft:#FBF0DE;
+    --font:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.6;
+       padding:20px 16px 56px;font-variant-numeric:tabular-nums}
+  .wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+  h1{margin:0;font-size:24px;font-weight:900}
+  h2{margin:0 0 8px;font-size:16px;font-weight:900}
+  p{margin:0;max-width:86ch}
+  .sub{color:var(--text-2);font-size:14px}
+  .head{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;justify-content:space-between}
+  .stamp{font-size:12.5px;color:var(--text-2);font-weight:700}
+  .stamp.old{color:var(--warn)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px}
+  .kpi span{display:block;font-size:11.5px;font-weight:800;color:var(--text-2);text-transform:uppercase;letter-spacing:.04em}
+  .kpi b{font-size:26px;font-weight:900}
+  .kpi small{display:block;font-size:12.5px;color:var(--text-2);font-weight:700}
+  .kpi.bad b{color:var(--bad)} .kpi.warn b{color:var(--warn)}
+  .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--surface);border:1px solid var(--line);
+       border-radius:14px;padding:12px 14px}
+  .bar label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;font-weight:800;color:var(--text-2);text-transform:uppercase;letter-spacing:.04em}
+  .bar select,.bar input{font:700 14px var(--font);color:var(--text);background:var(--surface-2);border:1px solid var(--line);
+       border-radius:9px;padding:7px 9px;max-width:240px}
+  .bar input{min-width:200px}
+  .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .seg button{font:800 13px var(--font);color:var(--text-2);background:transparent;border:0;border-radius:8px;padding:6px 12px;cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--surface);color:var(--primary);box-shadow:0 1px 3px rgba(17,26,46,.12)}
+  .btn{font:800 13.5px var(--font);color:#fff;background:var(--primary);border:0;border-radius:9px;padding:9px 16px;cursor:pointer}
+  .btn.ghost{color:var(--text-2);background:transparent;border:1px solid var(--line)}
+  .bar .push{margin-left:auto;display:flex;gap:8px}
+  button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px}
+  .tbl{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .panel .tbl{border:0;border-radius:0}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{padding:8px 11px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th.n,td.n{text-align:right;white-space:nowrap}
+  thead th{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:var(--text-2);background:var(--surface-2);
+           position:sticky;top:0;z-index:1}
+  tr:last-child td{border-bottom:0}
+  tbody tr.click{cursor:pointer} tbody tr.click:hover td{background:var(--primary-soft)}
+  tbody tr.sel td{background:var(--primary-soft);font-weight:800}
+  #list{max-height:70vh}
+  #list table{min-width:1080px}
+  .ph{font-weight:800;white-space:nowrap}
+  .ph button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:copy}
+  .ph button:hover{color:var(--primary)}
+  .chip{display:inline-block;font-size:11.5px;font-weight:800;border-radius:999px;padding:2px 9px;white-space:nowrap}
+  .chip.none{background:var(--bad-soft);color:var(--bad)}
+  .chip.cancel_only{background:var(--warn-soft);color:var(--warn)}
+  .note{max-width:360px;color:var(--text-2);font-size:12.5px}
+  .muted{color:var(--text-2);font-size:12.5px}
+  .count{font-size:13px;font-weight:800;color:var(--text-2)}
+  .msg{background:var(--warn-soft);border-left:3px solid var(--warn);border-radius:0 10px 10px 0;padding:11px 13px;font-size:13.5px;font-weight:700}
+  .msg.err{background:var(--bad-soft);border-color:var(--bad)}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;font-weight:800;
+         font-size:13px;border-radius:10px;padding:8px 14px;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.on{opacity:1}
+  .empty{padding:28px;text-align:center;color:var(--text-2);font-weight:700}
+  @media (max-width:640px){ .bar .push{margin-left:0} .bar input{min-width:0;width:100%} .grid2{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div>
+      <h1>Chốt chưa lên đơn</h1>
+      <p class="sub">SĐT mà CRM Pancake ghi <b>“Chốt đơn”</b> nhưng Pancake POS chưa có đơn nào, hoặc chỉ có đơn đã huỷ.
+        So theo SĐT trên toàn bộ lịch sử đơn. Tháng tính theo ngày tạo contact.</p>
+    </div>
+    <span class="stamp" id="stamp">Đang tải…</span>
+  </div>
+
+  <div id="msg"></div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="bar" role="search">
+    <label>Loại
+      <div class="seg" id="kind">
+        <button type="button" data-v="" aria-pressed="true">Tất cả</button>
+        <button type="button" data-v="none" aria-pressed="false">Chưa có đơn</button>
+        <button type="button" data-v="cancel_only" aria-pressed="false">Chỉ đơn huỷ</button>
+      </div>
+    </label>
+    <label>Tháng <select id="f-month"></select></label>
+    <label>Sale <select id="f-sale"></select></label>
+    <label>Người chạy QC <select id="f-runner"></select></label>
+    <label>Tìm <input id="f-q" type="search" placeholder="SĐT, tên, ghi chú…" autocomplete="off"></label>
+    <div class="push">
+      <button type="button" class="btn ghost" id="reset">Bỏ lọc</button>
+      <button type="button" class="btn" id="csv">Tải Excel (CSV)</button>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel"><h2>Theo sale phụ trách</h2><div class="tbl" id="by-sale"></div></div>
+    <div class="panel"><h2>Theo tháng tạo contact</h2><div class="tbl" id="by-month"></div></div>
+  </div>
+
+  <div>
+    <div class="head" style="margin-bottom:8px"><h2 style="margin:0">Danh sách</h2><span class="count" id="count"></span></div>
+    <div class="tbl" id="list"></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script type="module">
+import { locDong, giaTri, tongHop, xuatCsv, KIND_LABEL } from "./js/chot-khong-don.js";
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = (n) => Number(n || 0).toLocaleString("vi-VN");
+const pct = (a, b) => (b ? (a / b * 100).toLocaleString("vi-VN", { maximumFractionDigits: 1 }) + "%" : "–");
+const thang = (m) => (m ? m.slice(5) + "/" + m.slice(0, 4) : "");
+
+let D = null;
+const f = { kind: "", month: "", sale: "", runner: "", q: "" };
+
+async function load() {
+  let r;
+  try {
+    r = await fetch("/data/chot-khong-don.json?t=" + Date.now(), { cache: "no-store", redirect: "manual" });
+  } catch (e) {
+    return fail("Không tải được dữ liệu: " + e.message);
+  }
+  if (r.type === "opaqueredirect") return fail("Phiên đăng nhập Cloudflare Access đã hết hạn — tải lại trang để đăng nhập lại.");
+  if (r.status === 404) return fail("Chưa có dữ liệu. Báo cáo được dựng tự động lúc 7h15 và 13h15 (T2–T7); lần chạy đầu tiên chưa hoàn tất.", true);
+  if (!r.ok) return fail("Không tải được dữ liệu (HTTP " + r.status + ").");
+  D = await r.json();
+  renderStamp();
+  renderKpis();
+  fillSelects();
+  render();
+}
+
+function fail(text, soft) {
+  $("stamp").textContent = "";
+  $("msg").innerHTML = '<div class="msg' + (soft ? "" : " err") + '">' + esc(text) + "</div>";
+}
+
+function renderStamp() {
+  const t = new Date(D.generated_at);
+  const gio = (Date.now() - t) / 36e5;
+  const el = $("stamp");
+  el.textContent = "Cập nhật " + t.toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" }) +
+    (gio > 30 ? " · dữ liệu cũ " + Math.round(gio) + " giờ" : "");
+  el.classList.toggle("old", gio > 30);
+}
+
+function renderKpis() {
+  const t = D.totals;
+  const box = (cls, label, val, small) => '<div class="kpi ' + cls + '"><span>' + label + "</span><b>" + val + "</b>" + (small ? "<small>" + small + "</small>" : "") + "</div>";
+  $("kpis").innerHTML =
+    box("", "SĐT ở “Chốt đơn”", fmt(t.phones), fmt(t.contacts_chot) + " contact") +
+    box("bad", "Chưa có đơn", fmt(t.none), pct(t.none, t.phones) + " số chốt") +
+    box("warn", "Chỉ có đơn huỷ", fmt(t.cancel_only), pct(t.cancel_only, t.phones) + " số chốt") +
+    box("", "Đã lên đơn", fmt(t.has_order), pct(t.has_order, t.phones) + (t.unknown ? " · " + fmt(t.unknown) + " số chưa tra được" : ""));
+}
+
+function fillSelects() {
+  const opt = (sel, list, all, lbl = (v) => v) => {
+    $(sel).innerHTML = '<option value="">' + all + "</option>" +
+      list.map((x) => '<option value="' + esc(x.v) + '">' + esc(lbl(x.v)) + " (" + x.n + ")</option>").join("");
+  };
+  opt("f-month", giaTri(D.rows, "month"), "Tất cả tháng", thang);
+  opt("f-sale", giaTri(D.rows, "sale"), "Tất cả sale");
+  opt("f-runner", giaTri(D.rows, "runner"), "Tất cả");
+}
+
+function bangTongHop(el, rows, field, lbl = (k) => k) {
+  const g = tongHop(rows, field);
+  if (!g.length) { $(el).innerHTML = '<div class="empty">Không có dòng nào</div>'; return; }
+  const tot = g.reduce((a, x) => ({ none: a.none + x.none, c: a.c + x.cancel_only, t: a.t + x.total }), { none: 0, c: 0, t: 0 });
+  const cur = f[field];
+  $(el).innerHTML = "<table><thead><tr><th>" + (field === "sale" ? "Sale" : "Tháng") +
+    '</th><th class="n">Chưa có đơn</th><th class="n">Chỉ đơn huỷ</th><th class="n">Tổng</th></tr></thead><tbody>' +
+    g.map((x) => '<tr class="click' + (cur === x.key ? " sel" : "") + '" data-k="' + esc(x.key) + '"><td>' + esc(lbl(x.key)) +
+      '</td><td class="n">' + fmt(x.none) + '</td><td class="n">' + fmt(x.cancel_only) + '</td><td class="n"><b>' + fmt(x.total) + "</b></td></tr>").join("") +
+    '<tr><td><b>Tổng</b></td><td class="n"><b>' + fmt(tot.none) + '</b></td><td class="n"><b>' + fmt(tot.c) + '</b></td><td class="n"><b>' + fmt(tot.t) + "</b></td></tr>" +
+    "</tbody></table>";
+  $(el).querySelectorAll("tr.click").forEach((tr) => tr.addEventListener("click", () => {
+    const k = tr.dataset.k;
+    f[field] = f[field] === k ? "" : k;
+    $("f-" + field).value = f[field];
+    render();
+  }));
+}
+
+function render() {
+  if (!D) return;
+  const rows = locDong(D.rows, f);
+  // Bảng tổng hợp theo một chiều thì bỏ chính bộ lọc chiều đó để còn so sánh được.
+  bangTongHop("by-sale", locDong(D.rows, { ...f, sale: "" }), "sale");
+  bangTongHop("by-month", locDong(D.rows, { ...f, month: "" }), "month", thang);
+  $("count").textContent = fmt(rows.length) + " / " + fmt(D.rows.length) + " SĐT";
+  if (!rows.length) { $("list").innerHTML = '<div class="empty">Không có SĐT nào khớp bộ lọc</div>'; return; }
+  $("list").innerHTML = '<table><thead><tr><th>SĐT</th><th>Tên khách</th><th>Loại</th><th>Ngày tạo</th><th>Cập nhật</th>' +
+    "<th>Sale</th><th>Người chạy QC</th><th>Ghi chú</th><th>Đơn huỷ</th></tr></thead><tbody>" +
+    rows.map((r) => "<tr>" +
+      '<td class="ph"><button type="button" data-copy="' + esc(r.phone) + '" title="Bấm để chép">' + esc(r.phone) + "</button>" +
+        (r.contacts > 1 ? '<div class="muted">' + r.contacts + " contact</div>" : "") + "</td>" +
+      "<td>" + esc(r.name) + "</td>" +
+      '<td><span class="chip ' + r.kind + '">' + esc(KIND_LABEL[r.kind] || r.kind) + "</span></td>" +
+      '<td style="white-space:nowrap">' + esc(r.created) + "</td>" +
+      '<td style="white-space:nowrap" class="muted">' + esc(r.modified) + "</td>" +
+      "<td>" + esc(r.sale || "(trống)") + "</td>" +
+      "<td>" + esc(r.runner || "(trống)") + "</td>" +
+      '<td class="note">' + esc(r.note) + "</td>" +
+      '<td class="muted">' + (r.orders || []).map((o) => esc(o.id) + "<br>" + esc(o.date)).join("<hr style='border:0;border-top:1px dashed var(--line);margin:3px 0'>") + "</td>" +
+      "</tr>").join("") + "</tbody></table>";
+}
+
+function toast(t) { const el = $("toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove("on"), 1400); }
+
+$("kind").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  f.kind = b.dataset.v;
+  $("kind").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  render();
+});
+for (const k of ["month", "sale", "runner"]) $("f-" + k).addEventListener("change", (e) => { f[k] = e.target.value; render(); });
+let tq; $("f-q").addEventListener("input", (e) => { clearTimeout(tq); tq = setTimeout(() => { f.q = e.target.value; render(); }, 150); });
+$("reset").addEventListener("click", () => {
+  Object.assign(f, { kind: "", month: "", sale: "", runner: "", q: "" });
+  for (const k of ["month", "sale", "runner", "q"]) $("f-" + k).value = "";
+  $("kind").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.v === "")));
+  render();
+});
+$("csv").addEventListener("click", () => {
+  if (!D) return;
+  const rows = locDong(D.rows, f);
+  const blob = new Blob([xuatCsv(rows)], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "chot-chua-len-don-" + (f.month || "tat-ca") + "-" + new Date().toISOString().slice(0, 10) + ".csv";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+$("list").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-copy]"); if (!b) return;
+  try { await navigator.clipboard.writeText(b.dataset.copy); toast("Đã chép " + b.dataset.copy); } catch { toast("Không chép được"); }
+});
+
+load();
+</script>
+</body>
+</html>

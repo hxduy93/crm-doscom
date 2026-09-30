@@ -44,6 +44,8 @@ cp functions/lib/sale-images.js dist/js/
 cp functions/lib/bulk-sale.js dist/js/
 # Công cụ "ROAS mục tiêu": mô hình tính dùng chung với bộ test (tests/roas-model.test.mjs).
 cp functions/lib/roas-model.js dist/js/
+# Menu "Chốt chưa lên đơn": lọc/tổng hợp/xuất CSV dùng chung với tests/chot-khong-don.test.mjs.
+cp functions/lib/chot-khong-don.js dist/js/
 # Bảng giá vốn từng SKU cho công cụ đó (cost-source/ không được đẩy lên web).
 node scripts/build-sku-costs.mjs
 [ -d demos ] && cp -r demos dist/demos
@@ -53,9 +55,11 @@ node scripts/build-sku-costs.mjs
 # pancake-crm-contacts.json ~4MB và chứa SĐT khách; cost-source là file gốc giá nhập.
 rm -f dist/data/pancake-crm-contacts.json
 rm -rf dist/data/cost-source
+# Cache tra đơn của menu "Chốt chưa lên đơn": ~24k SĐT khách, chỉ script dựng dữ liệu đọc.
+rm -f dist/data/chot-khong-don-cache.json
 
 # Trang standalone (nhúng iframe trong CRM) — phải copy thủ công.
-PAGES="agent-geo-doscom.html ads-creator.html roas-tool.html product-publisher.html brandcore-fix.html fix-images.html sync-us.html thai-social.html thai-repost.html sale-images.html bulk-sale.html"
+PAGES="agent-geo-doscom.html ads-creator.html roas-tool.html product-publisher.html brandcore-fix.html fix-images.html sync-us.html thai-social.html thai-repost.html sale-images.html bulk-sale.html chot-khong-don.html"
 for page in $PAGES; do
   [ -f "$page" ] && cp "$page" dist/
 done

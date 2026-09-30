@@ -1,0 +1,58 @@
+name: Build Chốt chưa lên đơn
+
+# Menu "Chốt chưa lên đơn": SĐT CRM Pancake ghi "Chốt đơn" mà POS chưa có đơn / chỉ đơn huỷ.
+# Chạy 07:15 + 13:15 giờ VN, T2–T7 (chủ dự án chốt 22/08/2026: 2 lần/ngày, chủ nhật nghỉ).
+# Phải XONG trước mốc Worker doscom-cron dựng lại dashboard (09:00 / 15:00) — bước đó
+# deploy cả thư mục data/ nên file mới lên web theo. Đừng dời muộn hơn.
+on:
+  schedule:
+    - cron: "15 0,6 * * 1-6"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-chot-khong-don
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Quét hết ~36k contact CRM bằng cursor (Pancake không cho lọc/nhảy trang): local ~15 phút,
+    # runner GitHub gọi Pancake chậm hơn → để dư. Tra đơn theo SĐT dùng cache nên chỉ vài trăm lượt.
+    timeout-minutes: 55
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dựng danh sách chốt chưa lên đơn
+        env:
+          PANCAKE_CRM_API_KEY: ${{ secrets.PANCAKE_CRM_API_KEY }}
+          PANCAKE_API_KEY: ${{ secrets.PANCAKE_API_KEY }}
+          PANCAKE_SHOP_ID: ${{ secrets.PANCAKE_SHOP_ID }}
+        run: python scripts/build_chot_khong_don.py
+
+      - name: Commit dữ liệu
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain data/chot-khong-don.json data/chot-khong-don-cache.json)" ]; then
+            git add data/chot-khong-don.json data/chot-khong-don-cache.json
+            git commit -m "chore: auto-build chốt chưa lên đơn"
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin master && git push && exit 0
+              echo "[retry $i] push bị reject, chờ $((i*5))s rồi rebase lại..."
+              sleep $((i*5))
+            done
+            echo "Push vẫn fail sau 5 lần retry"
+            exit 1
+          else
+            echo "Không có thay đổi."
+          fi

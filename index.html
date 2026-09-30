@@ -274,6 +274,7 @@
     <button class="nav-item" data-view="geo"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></span><span class="lb">GEO Monitor</span></button>
     <button class="nav-item" data-view="landing"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span><span class="lb">Landing Builder</span></button>
     <div class="nav-label">Vận hành</div>
+    <button class="nav-item" data-view="chot-khong-don"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/><path d="M8 17h5"/></svg></span><span class="lb">Chốt chưa lên đơn</span></button>
     <button class="nav-item" data-view="warehouse"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><span class="lb">Kho tổng Doscom</span></button>
     <button class="nav-item" data-view="health"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="lb">Sức khỏe API &amp; Token</span></button>
     <div class="sidebar-foot"><b>CRM Doscom</b> · v0.4<br/>Menu phân nhóm · số thật<br/><span id="foot-fresh">…</span></div>
@@ -565,6 +566,9 @@
       <div class="view" id="view-bulk-sale">
         <iframe id="bulksale-frame" title="Giảm giá hàng loạt" style="width:100%;height:calc(100vh - 96px);border:0;border-radius:14px;background:var(--bg-1,#fff)" loading="lazy"></iframe>
       </div><!-- /view-bulk-sale -->
+      <div class="view" id="view-chot-khong-don">
+        <iframe id="ckd-frame" title="Chốt chưa lên đơn" style="width:100%;height:calc(100vh - 96px);border:0;border-radius:14px;background:var(--bg-1,#fff)" loading="lazy"></iframe>
+      </div><!-- /view-chot-khong-don -->
       <div class="view" id="view-sync-us">
         <iframe id="syncus-frame" title="Đồng bộ web US" style="width:100%;height:calc(100vh - 96px);border:0;border-radius:14px;background:var(--bg-1,#fff)" loading="lazy"></iframe>
       </div><!-- /view-sync-us -->
@@ -971,7 +975,7 @@
 
   // ===== Menu chính: chuyển VIEW (trang) + sub-nav cuộn trong Dashboard =====
   (function(){
-    var TITLES={'dashboard':'Tổng quan Dashboard','agent-fb':'Agent Facebook Ads','agent-gg':'Agent Google Ads','heatmap':'Heatmap sản phẩm','tiktok':'TikTok Shop','ads-creator':'Tạo Ads tự động','product-pub':'Đăng sản phẩm','brandcore-fix':'Sửa brandcore','fix-images':'Sửa ảnh hỏng','roas-tool':'ROAS mục tiêu theo sản phẩm','sale-images':'Ảnh đại diện sale','bulk-sale':'Giảm giá hàng loạt','sync-us':'Đồng bộ web US','geo':'GEO Monitor','landing':'Landing Builder','warehouse':'Kho tổng Doscom','health':'Sức khỏe API & Token','thailand':'Thị trường Thái Lan','thai-social':'Đăng fanpage Thái','thai-repost':'Dịch bài sang Thái'};
+    var TITLES={'dashboard':'Tổng quan Dashboard','agent-fb':'Agent Facebook Ads','agent-gg':'Agent Google Ads','heatmap':'Heatmap sản phẩm','tiktok':'TikTok Shop','ads-creator':'Tạo Ads tự động','product-pub':'Đăng sản phẩm','brandcore-fix':'Sửa brandcore','fix-images':'Sửa ảnh hỏng','roas-tool':'ROAS mục tiêu theo sản phẩm','sale-images':'Ảnh đại diện sale','bulk-sale':'Giảm giá hàng loạt','chot-khong-don':'Chốt chưa lên đơn','sync-us':'Đồng bộ web US','geo':'GEO Monitor','landing':'Landing Builder','warehouse':'Kho tổng Doscom','health':'Sức khỏe API & Token','thailand':'Thị trường Thái Lan','thai-social':'Đăng fanpage Thái','thai-repost':'Dịch bài sang Thái'};
     var DESC={'agent-gg':'Phân tích keyword / banner / category Google Ads bằng AI — chuyển từ dashboard cũ.','ads-creator':'Tự sinh & đăng campaign theo mẫu, gợi ý ngân sách + đối tượng.','geo':'Theo dõi thứ hạng GEO/SEO, đối thủ và nội dung.','landing':'Dựng landing page kéo-thả, xuất bản nhanh.','warehouse':'Tồn kho, nhập–xuất, định giá vốn toàn Doscom.'};
     function comingHtml(v){ return '<div class="hero"><h2>'+TITLES[v]+'</h2><p>Module sắp được chuyển sang CRM</p></div>'+
       '<div class="coming"><div class="coming-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg></div>'+
@@ -990,6 +994,7 @@
     lazyFrame('roas-tool','roas-frame','/roas-tool');
     lazyFrame('sale-images','saleimg-frame','/sale-images');
     lazyFrame('bulk-sale','bulksale-frame','/bulk-sale');
+    lazyFrame('chot-khong-don','ckd-frame','/chot-khong-don');
     lazyFrame('sync-us','syncus-frame','/sync-us');
 
     var navItems=Array.prototype.slice.call(document.querySelectorAll('.sidebar .nav-item[data-view]'));
