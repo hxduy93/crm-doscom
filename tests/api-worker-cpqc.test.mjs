@@ -22,7 +22,10 @@ const D = {
       daily: [{ date: "2026-09-02", spend: 30, impressions: 5, clicks: 1, registrations: 0 }] },
   ],
 };
-const q = (s) => ({ ...parseQuery(new URLSearchParams(s)) });
+// Ghim "hôm nay" = 17/09/2026: khoảng mặc định là đầu tháng→hôm nay, để lịch thật thì
+// sang tháng 10 dữ liệu mẫu tháng 9 rơi khỏi khoảng → test đỏ, chặn cả refresh lẫn deploy.
+const NOW = Date.parse("2026-09-17T03:00:00Z");
+const q = (s) => ({ ...parseQuery(new URLSearchParams(s), NOW) });
 
 test("mặc định: từ đầu tháng tới hôm nay, nhóm theo nhân sự × sản phẩm", () => {
   const p = parseQuery(new URLSearchParams(""), Date.parse("2026-09-17T03:00:00Z"));
