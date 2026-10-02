@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-02 13:18",
+  "generated_at": "2026-10-02 20:14",
   "source_data_date_range": {
     "start_7d": "2026-09-25",
     "end": "2026-10-01",
@@ -60,24 +60,24 @@
     "orders_30d": 154,
     "by_status": {
       "delivered": {
-        "revenue": 119225000.0,
-        "orders": 58
+        "revenue": 132116000.0,
+        "orders": 71
       },
       "returning": {
-        "revenue": 13024000.0,
-        "orders": 7
+        "revenue": 6315000.0,
+        "orders": 3
       },
       "returned": {
-        "revenue": 8998000.0,
-        "orders": 5
+        "revenue": 15707000.0,
+        "orders": 9
       },
       "canceled": {
         "revenue": 2014000.0,
         "orders": 3
       },
       "other": {
-        "revenue": 103172000.0,
-        "orders": 81
+        "revenue": 90281000.0,
+        "orders": 68
       }
     },
     "by_source": {
@@ -1429,8 +1429,8 @@
   "search_term_insights": {
     "summary": {
       "total_unique_terms": 4666,
-      "terms_with_conversions": 44,
-      "conv_rate_terms": 0.009,
+      "terms_with_conversions": 45,
+      "conv_rate_terms": 0.01,
       "total_spend_30d": 33997675.0
     },
     "top_converting_terms": [
@@ -1438,7 +1438,7 @@
         "search_term": "camera",
         "spend_30d": 2833434.0,
         "clicks_30d": 257,
-        "conversions_30d": 6.0,
+        "conversions_30d": 7.0,
         "ctr_30d": 0.0377,
         "match_types": [
           "BROAD"
@@ -1503,25 +1503,25 @@
         ]
       },
       {
-        "search_term": "camera không dây",
-        "spend_30d": 333924.0,
-        "clicks_30d": 40,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0946,
-        "match_types": [
-          "BROAD",
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
         "search_term": "camera mini",
         "spend_30d": 357360.0,
         "clicks_30d": 72,
         "conversions_30d": 1.0,
         "ctr_30d": 0.1175,
+        "match_types": [
+          "EXACT",
+          "PHRASE"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm mini",
+        "spend_30d": 824908.0,
+        "clicks_30d": 72,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1006,
         "match_types": [
           "EXACT",
           "PHRASE"
@@ -2084,23 +2084,23 @@
       }
     ],
     "match_type_breakdown": {
-      "BROAD": {
-        "spend_30d": 13291117.0,
-        "clicks_30d": 1450,
-        "conversions_30d": 23.22,
-        "term_count": 2613
-      },
-      "PHRASE": {
-        "spend_30d": 13340430.0,
-        "clicks_30d": 1333,
-        "conversions_30d": 18.67,
-        "term_count": 764
-      },
       "EXACT": {
         "spend_30d": 4929128.0,
         "clicks_30d": 575,
         "conversions_30d": 15.24,
         "term_count": 53
+      },
+      "PHRASE": {
+        "spend_30d": 13340430.0,
+        "clicks_30d": 1333,
+        "conversions_30d": 19.67,
+        "term_count": 764
+      },
+      "BROAD": {
+        "spend_30d": 13291117.0,
+        "clicks_30d": 1450,
+        "conversions_30d": 24.22,
+        "term_count": 2613
       },
       "NEAR_PHRASE": {
         "spend_30d": 11938823.0,
@@ -2118,7 +2118,7 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 9197,
+      "total_unique_placements": 9199,
       "total_spend_30d": 11442731.0
     },
     "network_breakdown": {
@@ -2143,9 +2143,9 @@
       "WEBSITE": {
         "spend_30d": 11442731.0,
         "clicks_30d": 3481,
-        "impressions_30d": 279450,
+        "impressions_30d": 279462,
         "ctr_30d": 0.0125,
-        "placement_count": 9197
+        "placement_count": 9199
       }
     },
     "top_waste_placements": [],
