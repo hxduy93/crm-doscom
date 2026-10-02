@@ -434,3 +434,26 @@ test("user prompt: thiếu dạng bài thì báo lỗi thay vì im lặng viết
     /thiếu danh sách dạng bài/
   );
 });
+
+test("chỉ 1 dạng bật: các video trong lô vẫn được giao GÓC BÀI khác nhau (sự cố 02/10/2026)", async () => {
+  const { pickAngle } = await import("../functions/lib/ad-formats.js");
+  const { buildUserPrompt } = await import("../functions/lib/ad-prompts.js");
+  const p = getProduct("Noma 911");
+  const goc = [0, 1, 2, 3].map((i) => pickAngle({ product: p, seed: "Noma 911", slot: i }));
+  // 4 video → 4 cặp (nỗi đau, lợi ích) khác nhau, khuôn mở bài xen kẽ.
+  assert.equal(new Set(goc.map((g) => `${g.painPoint}|${g.usp}`)).size, 4);
+  assert.deepEqual(goc.map((g) => g.khuon), ["A", "B", "A", "B"]);
+  // Chỉ video đầu được chép câu mở bài mẫu của chủ dự án.
+  assert.deepEqual(goc.map((g) => g.dungMoBaiMau), [true, false, false, false]);
+  // Đi qua đủ mọi USP sau usps.length lượt.
+  const n = p.usps.length;
+  const seen = new Set(Array.from({ length: n }, (_, i) => pickAngle({ product: p, seed: "x", slot: i }).usp));
+  assert.equal(seen.size, n);
+  // Prompt của 2 video liền nhau phải khác nhau ở phần góc bài.
+  const mk = (rotate) => buildUserPrompt({ product: p, format: "OUTCOME_SALES", formatLabel: "Doanh số",
+    cta: "Mua ngay", notes: "", promotion: "", formats: ["usp_bullet"], seed: "Noma 911", rotate });
+  const a = mk(0), b = mk(1);
+  assert.notEqual(a, b);
+  assert.match(a, /bài số 1 trong lô/);
+  assert.match(b, /KHÔNG dùng lại nguyên văn "Dòng mở bài mẫu"/);
+});

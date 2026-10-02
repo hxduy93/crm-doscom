@@ -92,7 +92,7 @@ test("vòng 2: dòng mở bài mẫu của chủ dự án có cho mọi SP bị 
   for (const k of ["D1", "DR1", "DA8.1", "Noma 911", "Noma 680", "Noma 350", "Noma 230", "Noma 120", "Noma 130"]) {
     assert.match(prompt(k), /Dòng mở bài mẫu \(chủ dự án viết\)/, `${k} thiếu dòng mở bài mẫu`);
   }
-  assert.match(getFormat("usp_bullet").skeleton, /variant A dùng GẦN NGUYÊN VĂN/);
+  assert.match(getFormat("usp_bullet").skeleton, /CHỈ bài được giao "dùng gần nguyên văn"/);
   assert.match(getFormat("usp_bullet").skeleton, /BẮT BUỘC gọi tên LOẠI sản phẩm/);
 });
 

@@ -33,7 +33,7 @@ export const CONG_THUC = {
         "     vd: \"Thiết bị ghi âm DR1 Doscom – ghi âm liên tục 30 giờ, lưu trữ đến 192 giờ ghi âm\"",
         "  Khuôn B: [VẤN ĐỀ cụ thể, có thật] – [Dùng/Xịt ngay + LOẠI SẢN PHẨM + TÊN SP]",
         "     vd: \"Rửa xe xong mà kính lái vẫn còn ố trắng – Sử dụng ngay dung dịch tẩy ố kính Noma 911\"",
-        "Sản phẩm có \"Dòng mở bài mẫu (chủ dự án viết)\" → variant A dùng GẦN NGUYÊN VĂN câu đó; variant sau giữ đúng khuôn, chỉ đổi lợi ích.",
+        "Sản phẩm có \"Dòng mở bài mẫu (chủ dự án viết)\" → CHỈ bài được giao \"dùng gần nguyên văn\" (bài đầu lô) mới chép câu đó; các bài khác giữ cách gọi LOẠI SP nhưng đổi vấn đề/lợi ích theo GÓC BÀI được giao.",
         "BẮT BUỘC gọi tên LOẠI sản phẩm (dung dịch…, thiết bị…, máy dò…, camera…), không chỉ tên mã.",
         "CHỈ 1 ý chính. KHÔNG nhồi 3-4 thông số vào dòng này (pin, cân nặng… để xuống bullet).",
       ],

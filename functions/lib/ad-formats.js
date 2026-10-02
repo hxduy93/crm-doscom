@@ -320,6 +320,41 @@ export function pickFormats({ seed = "", rotate = 0, count = 3, allowed = null }
 }
 
 /**
+ * GÓC BÀI cho 1 bài (slot = vị trí bài trong cả lô: rotate * count + i).
+ *
+ * VÌ SAO: chỉ bật 1 dạng bài thì mọi video ăn cùng khung, cùng dòng mở bài mẫu,
+ * cùng thứ tự USP/pain point → cả lô ra các bài gần như một (sự cố 02/10/2026).
+ * Góc bài ép mỗi slot xoáy vào MỘT nỗi đau + MỘT lợi ích khác nhau và đổi khuôn
+ * mở bài, nên cùng dạng vẫn ra nội dung khác. Deterministic như pickFormats.
+ */
+export function pickAngle({ product, seed = "", slot = 0 } = {}) {
+  const pains = (product && product.painPoints) || [];
+  const usps = (product && product.usps) || [];
+  const s = Math.max(0, Number(slot) || 0);
+  // Slot 0 giữ đúng thứ tự gốc (pain/USP chủ dự án đặt lên đầu).
+  const painPoint = pains.length ? pains[s % pains.length] : null;
+  // USP lệch pha với pain point (bước nhảy theo hash, nguyên tố cùng nhau với độ dài)
+  // để cặp pain/USP không lặp cùng nhịp mà vẫn đi qua đủ mọi USP.
+  let step = 1;
+  if (usps.length > 2) {
+    const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+    const cands = [];
+    for (let k = 1; k < usps.length; k++) if (gcd(k, usps.length) === 1) cands.push(k);
+    step = cands[hashSeed(`ang:${seed}`) % cands.length];
+  }
+  const usp = usps.length ? usps[(s * step) % usps.length] : null;
+  return {
+    slot: s,
+    painPoint,
+    usp,
+    // Xen kẽ khuôn A (loại SP – lợi ích) / B (vấn đề – dùng ngay SP).
+    khuon: s % 2 === 0 ? "A" : "B",
+    // Câu mở bài chủ dự án viết chỉ dùng nguyên văn cho bài đầu tiên của lô.
+    dungMoBaiMau: s === 0,
+  };
+}
+
+/**
  * Chọn kiểu headline cho 1 variant. Cùng cơ chế xoay vòng như pickFormats.
  * Cố ý lệch pha bằng chuỗi seed khác ("hl:") để dạng bài và kiểu headline không
  * đi cùng nhịp — nếu không thì dạng A luôn dính kiểu headline A, lại thành cố định.

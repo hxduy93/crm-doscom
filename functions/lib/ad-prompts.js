@@ -10,7 +10,7 @@
 // "USP-first, chỉ khác nhau ở bước Agitate" → chạy 10 video ra 10 bài giống hệt
 // nhau về cấu trúc. Người lướt Facebook thấy vậy là mù quảng cáo, CTR tụt.
 
-import { getFormat, pickHeadlineStyle } from "./ad-formats.js";
+import { getFormat, pickHeadlineStyle, pickAngle } from "./ad-formats.js";
 import { getBrand, footerFor } from "./ad-brands.js";
 import { PRODUCTS } from "./product-catalog.js";
 import { congThucSanPham, luatCongThuc } from "./ad-formula.js";
@@ -229,7 +229,7 @@ LUẬT BẤT DI BẤT DỊCH ở trên.`;
 
 // Khối mô tả 1 dạng bài, chèn vào user prompt.
 // hl = kiểu headline được giao cho lượt này (null nếu dạng có headline gắn cứng).
-function formatBlock(f, idx, hl) {
+function formatBlock(f, idx, hl, angle = null) {
   const id = String.fromCharCode(65 + idx); // A, B, C…
   const headlineRule = hl
     ? `Kiểu headline lượt này: **${hl.label}**
@@ -238,9 +238,22 @@ Ví dụ: ${hl.example}
 ⚠ PHẢI viết headline theo đúng kiểu này. KHÔNG mặc định quay về "USP ngắn" —
 tiêu đề mà lượt nào cũng một kiểu thì chạy nhiều video sẽ thấy na ná nhau.`
     : `Kiểu headline: ${f.headline}`;
+  const angleRule = angle
+    ? `
+GÓC BÀI RIÊNG CỦA BÀI NÀY (bài số ${angle.slot + 1} trong lô — các bài khác trong lô
+dùng góc khác, nên bài này PHẢI đọc khác hẳn chúng):
+${angle.painPoint ? `• Nỗi đau chính cho dòng mở bài/đoạn VẤN ĐỀ: ${angle.painPoint}
+` : ""}${angle.usp ? `• Lợi ích nhấn mạnh nhất (đoạn GIẢI PHÁP + bullet đầu tiên): ${angle.usp}
+` : ""}• Dòng mở bài dùng KHUÔN ${angle.khuon}${angle.dungMoBaiMau
+    ? ` (được dùng gần nguyên văn "Dòng mở bài mẫu" nếu SP có).`
+    : `. KHÔNG dùng lại nguyên văn "Dòng mở bài mẫu" — chỉ giữ cách gọi đúng LOẠI sản phẩm,
+  còn vấn đề/lợi ích trong dòng mở bài phải theo góc ở trên.`}
+• Câu VẤN ĐỀ, câu GIẢI PHÁP, thứ tự bullet và headline đều xoay quanh góc này — không chép
+  lại cách viết của bài mẫu đã duyệt.`
+    : "";
   return `── VARIANT ${id} — DẠNG "${f.key}" (${f.label}) ──
 Hợp khi: ${f.bestFor}
-${headlineRule}
+${headlineRule}${angleRule}
 KHUNG BÀI BẮT BUỘC:
 ${f.skeleton}${f.guard ? `\n⚠ Rủi ro riêng của dạng này: ${f.guard}` : ""}`;
 }
@@ -268,6 +281,11 @@ export function buildUserPrompt({ product, format, formatLabel, cta, notes, prom
   // (gắn liền cấu trúc bài hoặc đã được chủ dự án chốt) → không xoay.
   const headlineStyles = chosen.map((f, i) =>
     f.headlineFixed ? null : pickHeadlineStyle({ seed: seed || product.name, rotate, offset: i })
+  );
+  // Góc bài theo vị trí của bài trong CẢ LÔ (rotate = lượt/video thứ mấy) → mỗi bài
+  // một nỗi đau + lợi ích + khuôn mở bài khác nhau, kể cả khi chỉ bật 1 dạng bài.
+  const angles = chosen.map((_, i) =>
+    pickAngle({ product, seed: seed || product.name, slot: (Number(rotate) || 0) * chosen.length + i })
   );
 
   const avoidSection = product.avoidWords.length > 0
@@ -379,7 +397,7 @@ CTA BUTTON: ${cta}${promoSection}
 ${notes ? `\nGHI CHÚ THÊM CỦA NGƯỜI DÙNG: ${notes}\n` : ""}
 YÊU CẦU: Viết ${chosen.length} variant. MỖI VARIANT MỘT DẠNG BÀI RIÊNG, khung khác hẳn nhau:
 
-${chosen.map((f, i) => formatBlock(f, i, headlineStyles[i])).join("\n\n")}
+${chosen.map((f, i) => formatBlock(f, i, headlineStyles[i], angles[i])).join("\n\n")}
 
 ⚠️ KIỂM TRA TRƯỚC KHI TRẢ VỀ: đọc lướt ${chosen.length} bài, nếu thấy chúng có
 cùng bố cục (cùng chỗ đặt bullet, cùng nhịp mở bài) thì viết lại — mỗi bài phải
