@@ -88,6 +88,9 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+// Số bài gần nhất của mỗi SP đưa cho AI để né viết trùng.
+export const RECENT_KEEP = 8;
+
 export async function onRequestPost(context) {
   const { request, env } = context;
 
@@ -99,7 +102,7 @@ export async function onRequestPost(context) {
   }
 
   const { product: productKey, format, formatLabel, cta, notes, promotion,
-          styles, count, seed, rotate, link } = body;
+          styles, count, seed, rotate, link, continueRotation } = body;
 
   // Link đích: thay thẳng vào chỗ {{URL}} để bài trả về dùng được ngay.
   // Không truyền link thì giữ nguyên placeholder (client tự thay sau).
@@ -135,7 +138,23 @@ export async function onRequestPost(context) {
     return jsonResponse({ error: "Không chọn được dạng bài nào." }, 400);
   }
 
+  // Nối tiếp góc bài giữa các lần upload: bộ đếm theo SẢN PHẨM ở KV. Trước đây
+  // rotate đếm lại từ 0 mỗi lô → lô hôm sau lặp đúng góc bài lô hôm trước.
+  // Lỗi KV không chặn việc viết bài — rơi về cách xoay theo lô như cũ.
+  const kv = continueRotation ? env.INVENTORY : null;
+  const keyDem = `adangle:${productKey}`;
+  const keyGanDay = `adrecent:${productKey}`;
+  let slotBase = null, recent = [];
+  if (kv) {
+    try {
+      const [dem, ganDay] = await Promise.all([kv.get(keyDem), kv.get(keyGanDay, "json")]);
+      slotBase = Math.max(0, parseInt(dem, 10) || 0);
+      recent = Array.isArray(ganDay) ? ganDay : [];
+    } catch { slotBase = null; recent = []; }
+  }
+
   const userPrompt = buildUserPrompt({
+    slotBase, recent,
     product, format, formatLabel, cta, notes, promotion, formats: chosenFormats,
     // Cùng seed/rotate với việc chọn dạng bài → kiểu headline cũng xoay theo video,
     // vẫn deterministic (chạy lại lô cũ ra đúng bộ headline cũ).
@@ -197,6 +216,20 @@ export async function onRequestPost(context) {
     }
     return out;
   });
+
+  // Ghi bộ đếm + bài vừa viết (chỉ khi bài viết thành công). Giữ 8 bài gần nhất.
+  if (kv && slotBase != null) {
+    try {
+      const moi = parsed.variants.map((v) => ({
+        headline: v.headline,
+        opening: String(v.primary_text || "").split("\n").map((l) => l.trim()).find(Boolean)?.slice(0, 140) || "",
+      }));
+      await Promise.all([
+        kv.put(keyDem, String(slotBase + chosenFormats.length)),
+        kv.put(keyGanDay, JSON.stringify([...moi, ...recent].slice(0, RECENT_KEEP))),
+      ]);
+    } catch { /* không có KV thì lần sau lặp góc — không đáng chặn bài */ }
+  }
 
   return jsonResponse({
     ok: true,

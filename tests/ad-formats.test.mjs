@@ -445,10 +445,6 @@ test("chỉ 1 dạng bật: các video trong lô vẫn được giao GÓC BÀI k
   assert.deepEqual(goc.map((g) => g.khuon), ["A", "B", "A", "B"]);
   // Chỉ video đầu được chép câu mở bài mẫu của chủ dự án.
   assert.deepEqual(goc.map((g) => g.dungMoBaiMau), [true, false, false, false]);
-  // Đi qua đủ mọi USP sau usps.length lượt.
-  const n = p.usps.length;
-  const seen = new Set(Array.from({ length: n }, (_, i) => pickAngle({ product: p, seed: "x", slot: i }).usp));
-  assert.equal(seen.size, n);
   // Prompt của 2 video liền nhau phải khác nhau ở phần góc bài.
   const mk = (rotate) => buildUserPrompt({ product: p, format: "OUTCOME_SALES", formatLabel: "Doanh số",
     cta: "Mua ngay", notes: "", promotion: "", formats: ["usp_bullet"], seed: "Noma 911", rotate });

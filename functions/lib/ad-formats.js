@@ -320,7 +320,8 @@ export function pickFormats({ seed = "", rotate = 0, count = 3, allowed = null }
 }
 
 /**
- * GÓC BÀI cho 1 bài (slot = vị trí bài trong cả lô: rotate * count + i).
+ * GÓC BÀI cho 1 bài. slot = số thứ tự bài của SẢN PHẨM qua mọi lần upload
+ * (bộ đếm lưu KV, xem generate-ad-copy.js) — không reset theo lô.
  *
  * VÌ SAO: chỉ bật 1 dạng bài thì mọi video ăn cùng khung, cùng dòng mở bài mẫu,
  * cùng thứ tự USP/pain point → cả lô ra các bài gần như một (sự cố 02/10/2026).
@@ -330,26 +331,26 @@ export function pickFormats({ seed = "", rotate = 0, count = 3, allowed = null }
 export function pickAngle({ product, seed = "", slot = 0 } = {}) {
   const pains = (product && product.painPoints) || [];
   const usps = (product && product.usps) || [];
-  const s = Math.max(0, Number(slot) || 0);
-  // Slot 0 giữ đúng thứ tự gốc (pain/USP chủ dự án đặt lên đầu).
-  const painPoint = pains.length ? pains[s % pains.length] : null;
-  // USP lệch pha với pain point (bước nhảy theo hash, nguyên tố cùng nhau với độ dài)
-  // để cặp pain/USP không lặp cùng nhịp mà vẫn đi qua đủ mọi USP.
-  let step = 1;
-  if (usps.length > 2) {
-    const gcd = (a, b) => (b ? gcd(b, a % b) : a);
-    const cands = [];
-    for (let k = 1; k < usps.length; k++) if (gcd(k, usps.length) === 1) cands.push(k);
-    step = cands[hashSeed(`ang:${seed}`) % cands.length];
-  }
-  const usp = usps.length ? usps[(s * step) % usps.length] : null;
+  const p = Math.max(1, pains.length), u = Math.max(1, usps.length);
+  const total = p * u;
+  const raw = Math.max(0, Math.floor(Number(slot) || 0));
+  const s = raw % total;
+  // Duyệt ĐỦ p×u cặp rồi mới lặp. Bản 02/10/2026 xoay pain và USP độc lập nên
+  // p = u (vd NOMA 350: 5×5) chỉ ra 5 cặp — pain i luôn dính USP i.
+  // pain đổi mỗi slot; USP = (vòng thứ mấy + i*step) — với pain cố định, k chạy
+  // 0..u-1 đi qua đủ u USP, nên s ↦ (pain, USP) là song ánh trên [0, p*u).
+  const i = s % p;
+  const k = Math.floor(s / p);
+  const step = u > 1 ? 1 + (hashSeed(`ang:${seed}`) % (u - 1)) : 0;
+  const ui = (k + i * step) % u;
   return {
-    slot: s,
-    painPoint,
-    usp,
+    slot: raw,
+    total,
+    painPoint: pains.length ? pains[i] : null,
+    usp: usps.length ? usps[ui] : null,
     // Xen kẽ khuôn A (loại SP – lợi ích) / B (vấn đề – dùng ngay SP).
-    khuon: s % 2 === 0 ? "A" : "B",
-    // Câu mở bài chủ dự án viết chỉ dùng nguyên văn cho bài đầu tiên của lô.
+    khuon: raw % 2 === 0 ? "A" : "B",
+    // Câu mở bài chủ dự án viết chỉ chép nguyên văn ở bài đầu mỗi vòng.
     dungMoBaiMau: s === 0,
   };
 }

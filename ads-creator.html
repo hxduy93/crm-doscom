@@ -641,7 +641,7 @@ function AdsCreatorPanel() {
           promotion: aiPromotion.trim(),
           // Link đích của chính ad đang sinh content → bài trả về gắn link sẵn.
           link: (ads.find(a => a.id === targetAdId) || {}).link || "",
-          ...(aiStyle ? { styles: [aiStyle], count: 1 } : { count: 3, seed: product, rotate: round }),
+          ...(aiStyle ? { styles: [aiStyle], count: 1, continueRotation: true } : { count: 3, seed: product, rotate: round, continueRotation: true }),
         }),
       })
       const data = await res.json()
@@ -1201,6 +1201,9 @@ function AdsCreatorPanel() {
                   count: 1,
                   seed: `${autoCopyProduct}:${g.product}`,
                   rotate: i,
+                  // Góc bài nối tiếp theo sản phẩm qua các lần upload (bộ đếm ở server),
+                  // để lô hôm sau không lặp đúng góc bài của lô hôm trước.
+                  continueRotation: true,
                   // Gắn thẳng link đích vào bài — người chạy ads không phải tự
                   // tìm chỗ {{URL}} mà thay tay nữa.
                   link: autoLink,

@@ -271,7 +271,7 @@ ${f.skeleton}${f.guard ? `\n⚠ Rủi ro riêng của dạng này: ${f.guard}` :
  *                                       mỗi dạng ra 1 variant
  */
 export function buildUserPrompt({ product, format, formatLabel, cta, notes, promotion, formats,
-                                 seed = "", rotate = 0 }) {
+                                 seed = "", rotate = 0, slotBase = null, recent = [] }) {
   const chosen = (Array.isArray(formats) && formats.length ? formats : [])
     .map((f) => (typeof f === "string" ? getFormat(f) : f))
     .filter(Boolean);
@@ -285,7 +285,11 @@ export function buildUserPrompt({ product, format, formatLabel, cta, notes, prom
   // Góc bài theo vị trí của bài trong CẢ LÔ (rotate = lượt/video thứ mấy) → mỗi bài
   // một nỗi đau + lợi ích + khuôn mở bài khác nhau, kể cả khi chỉ bật 1 dạng bài.
   const angles = chosen.map((_, i) =>
-    pickAngle({ product, seed: seed || product.name, slot: (Number(rotate) || 0) * chosen.length + i })
+    pickAngle({
+      product, seed: seed || product.name,
+      // slotBase = bộ đếm của SP lưu KV (nối tiếp giữa các lần upload); không có thì theo lô.
+      slot: (slotBase != null ? Number(slotBase) || 0 : (Number(rotate) || 0) * chosen.length) + i,
+    })
   );
 
   const avoidSection = product.avoidWords.length > 0
@@ -367,6 +371,17 @@ ${m.body}`).join("\n\n")}
 mạnh và cách nêu vấn đề; số liệu vẫn chỉ lấy từ dữ liệu sản phẩm ở trên.`
     : "";
 
+  // Bài đã viết gần đây cho SP này (KV adrecent:*). Đưa cho AI để né — kể cả khi
+  // góc bài đã quay hết một vòng, câu chữ vẫn không lặp lại bài cũ.
+  const recentList = (Array.isArray(recent) ? recent : []).filter((r) => r && (r.headline || r.opening));
+  const recentSection = recentList.length
+    ? `
+
+🚫 BÀI ĐÃ CHẠY GẦN ĐÂY CỦA SẢN PHẨM NÀY — KHÔNG được viết lại giống (tiêu đề, dòng mở
+bài, câu vấn đề phải khác hẳn; không chỉ đảo vài chữ):
+${recentList.map((r, i) => `${i + 1}. Tiêu đề: "${r.headline || ""}" | Mở bài: "${r.opening || ""}"`).join("\n")}`
+    : "";
+
   const brand = getBrand(product.brand);
   const brandSection = `\nTHƯƠNG HIỆU: ${brand.key} — ${brand.company}
 ${brand.signature
@@ -390,7 +405,7 @@ ${product.painPoints.map((p, i) => `${i + 1}. ${p}`).join("\n")}
 TONE PHÙ HỢP: ${product.tonePreferred}
 LƯU Ý POLICY CHO SP NÀY: ${product.fbPolicyNotes}${focusSection}${avoidSection}${specsSection}${guaranteeSection}${usageSection}${durationSection}${limitsSection}${provenAnglesSection}
 
-${examplesSection}
+${examplesSection}${recentSection}
 
 CAMPAIGN FORMAT: ${formatLabel}
 CTA BUTTON: ${cta}${promoSection}
