@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-03 12:49",
+  "generated_at": "2026-10-03 19:05",
   "source_data_date_range": {
     "start_7d": "2026-09-26",
     "end": "2026-10-02",
@@ -60,12 +60,12 @@
     "orders_30d": 153,
     "by_status": {
       "delivered": {
-        "revenue": 133716000.0,
-        "orders": 72
+        "revenue": 139430000.0,
+        "orders": 75
       },
       "returning": {
-        "revenue": 6315000.0,
-        "orders": 3
+        "revenue": 8815000.0,
+        "orders": 4
       },
       "returned": {
         "revenue": 15707000.0,
@@ -76,8 +76,8 @@
         "orders": 2
       },
       "other": {
-        "revenue": 88220000.0,
-        "orders": 67
+        "revenue": 80006000.0,
+        "orders": 63
       }
     },
     "by_source": {
@@ -1426,7 +1426,7 @@
   "search_term_insights": {
     "summary": {
       "total_unique_terms": 4735,
-      "terms_with_conversions": 47,
+      "terms_with_conversions": 49,
       "conv_rate_terms": 0.01,
       "total_spend_30d": 34888601.0
     },
@@ -1500,34 +1500,6 @@
         ]
       },
       {
-        "search_term": "camera không dây",
-        "spend_30d": 333924.0,
-        "clicks_30d": 40,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.0913,
-        "match_types": [
-          "BROAD",
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera mini",
-        "spend_30d": 365976.0,
-        "clicks_30d": 75,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1149,
-        "match_types": [
-          "EXACT",
-          "PHRASE"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
         "search_term": "máy dò thiết bị nghe lén",
         "spend_30d": 511054.0,
         "clicks_30d": 38,
@@ -1539,6 +1511,19 @@
         ],
         "statuses": [
           "ADDED",
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "máy dò camera ghi âm",
+        "spend_30d": 195239.0,
+        "clicks_30d": 11,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.2245,
+        "match_types": [
+          "NEAR_PHRASE"
+        ],
+        "statuses": [
           "NONE"
         ]
       },
@@ -1557,13 +1542,28 @@
         ]
       },
       {
-        "search_term": "máy ghi âm cellphones",
-        "spend_30d": 47740.0,
-        "clicks_30d": 3,
+        "search_term": "camera mini",
+        "spend_30d": 365976.0,
+        "clicks_30d": 75,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.15,
+        "ctr_30d": 0.1149,
         "match_types": [
+          "EXACT",
           "PHRASE"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
+        "search_term": "camera không dây",
+        "spend_30d": 333924.0,
+        "clicks_30d": 40,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.0913,
+        "match_types": [
+          "BROAD",
+          "NEAR_PHRASE"
         ],
         "statuses": [
           "NONE"
@@ -1712,23 +1712,6 @@
         ]
       },
       {
-        "search_term": "máy dò camera ghi âm",
-        "spend_30d": 195239.0,
-        "clicks_30d": 11,
-        "conversions_30d": 0.0,
-        "ctr_30d": 0.2245,
-        "match_types": [
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ],
-        "campaigns": [
-          "8/5/2025 Search - TB Chống Ghi Âm",
-          "8/5/2025 Search - TB Dò Nghe Lén"
-        ]
-      },
-      {
         "search_term": "máy dò thiết bị ghi âm",
         "spend_30d": 194752.0,
         "clicks_30d": 3,
@@ -1823,6 +1806,25 @@
           "NONE"
         ],
         "campaigns": [
+          "Search - Doscom Xả Kho"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm doscom",
+        "spend_30d": 163889.0,
+        "clicks_30d": 9,
+        "conversions_30d": 0.0,
+        "ctr_30d": 0.2195,
+        "match_types": [
+          "BROAD",
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Chống Ghi Âm",
+          "8/5/2025 Search - TB Ghi Âm",
           "Search - Doscom Xả Kho"
         ]
       }
@@ -1927,22 +1929,6 @@
           "NONE"
         ],
         "campaigns": [
-          "8/5/2025 Search - TB Dò Nghe Lén"
-        ]
-      },
-      {
-        "search_term": "máy dò camera ghi âm",
-        "spend_30d": 195239.0,
-        "clicks_30d": 11,
-        "conversions_30d": 0.0,
-        "match_types": [
-          "NEAR_PHRASE"
-        ],
-        "statuses": [
-          "NONE"
-        ],
-        "campaigns": [
-          "8/5/2025 Search - TB Chống Ghi Âm",
           "8/5/2025 Search - TB Dò Nghe Lén"
         ]
       },
@@ -2075,20 +2061,29 @@
         "campaigns": [
           "8/5/2025 Search - TB Chống Ghi Âm"
         ]
+      },
+      {
+        "search_term": "dò định vị xe ô tô",
+        "spend_30d": 141517.0,
+        "clicks_30d": 5,
+        "conversions_30d": 0.0,
+        "match_types": [
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ],
+        "campaigns": [
+          "8/5/2025 Search - TB Dò Nghe Lén"
+        ]
       }
     ],
     "match_type_breakdown": {
-      "BROAD": {
-        "spend_30d": 13443954.0,
-        "clicks_30d": 1474,
-        "conversions_30d": 25.22,
-        "term_count": 2634
-      },
-      "NEAR_PHRASE": {
-        "spend_30d": 12343588.0,
-        "clicks_30d": 1124,
-        "conversions_30d": 14.83,
-        "term_count": 1774
+      "EXACT": {
+        "spend_30d": 5029333.0,
+        "clicks_30d": 589,
+        "conversions_30d": 15.24,
+        "term_count": 53
       },
       "PHRASE": {
         "spend_30d": 13831369.0,
@@ -2096,11 +2091,17 @@
         "conversions_30d": 20.67,
         "term_count": 778
       },
-      "EXACT": {
-        "spend_30d": 5029333.0,
-        "clicks_30d": 589,
-        "conversions_30d": 15.24,
-        "term_count": 53
+      "BROAD": {
+        "spend_30d": 13443954.0,
+        "clicks_30d": 1474,
+        "conversions_30d": 26.22,
+        "term_count": 2634
+      },
+      "NEAR_PHRASE": {
+        "spend_30d": 12343588.0,
+        "clicks_30d": 1124,
+        "conversions_30d": 15.83,
+        "term_count": 1774
       },
       "NEAR_EXACT": {
         "spend_30d": 613022.0,
@@ -2112,7 +2113,7 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 9504,
+      "total_unique_placements": 9514,
       "total_spend_30d": 11630895.0
     },
     "network_breakdown": {
@@ -2137,9 +2138,9 @@
       "WEBSITE": {
         "spend_30d": 11630895.0,
         "clicks_30d": 3582,
-        "impressions_30d": 286350,
+        "impressions_30d": 286435,
         "ctr_30d": 0.0125,
-        "placement_count": 9504
+        "placement_count": 9514
       }
     },
     "top_waste_placements": [],
