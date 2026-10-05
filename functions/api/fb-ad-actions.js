@@ -26,7 +26,7 @@
  * header X-Optimizer-Token (red-line: endpoint GHI phải có token).
  */
 import { getIdentity, canAccess } from "../lib/access.js";
-import { groupName, parseGroupName } from "../lib/fb-groups.js";
+import { parseGroupName, spNgan, tenCampaign, ngayThang } from "../lib/fb-groups.js";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
@@ -66,13 +66,21 @@ const ADSET_CLONE_FIELDS = [
   "destination_type", "pacing_type", "campaign_id", "start_time",
 ].join(",");
 
+// Hộp SCALE của sản phẩm = nhóm QC ĐANG HOẠT ĐỘNG nằm trong campaign mà tên đọc ra
+// (sản phẩm này, SCALE) — nhận cả tên mới "5/10 - Noma911 - camp 2 scale" lẫn tên cũ
+// "<SP> - SCALE" (05/10/2026). Hộp đã tắt thì bỏ qua: bê vào hộp tắt là ad không chạy.
 async function timHopScale(acct, product, token) {
-  const ten = groupName(product, "SCALE");
+  const sp = spNgan(product).toLowerCase();
   const d = await fbGet(`/act_${acct}/adsets`, {
-    fields: "id,name,status,campaign_id,daily_budget",
+    fields: "id,name,effective_status,campaign_id,daily_budget,campaign{name,effective_status}",
+    effective_status: '["ACTIVE"]',
     limit: "200",
   }, token);
-  const found = (d.data || []).find(a => String(a.name || "").trim() === ten);
+  const found = (d.data || []).find(a => {
+    if (a.effective_status !== "ACTIVE" || (a.campaign || {}).effective_status !== "ACTIVE") return false;
+    const g = parseGroupName((a.campaign || {}).name);
+    return !!g && g.group === "SCALE" && g.product.toLowerCase() === sp;
+  });
   return found || null;
 }
 
@@ -111,7 +119,7 @@ export async function onRequestPost(context) {
       if (!adId) return json({ ok: false, error: "thiếu ad_id" }, 400);
 
       const ad = await fbGet(`/${adId}`, {
-        fields: "id,name,account_id,adset{id,name,campaign_id},creative{effective_object_story_id,url_tags}",
+        fields: "id,name,account_id,adset{id,name,campaign_id},campaign{name},creative{effective_object_story_id,url_tags}",
       }, token);
       const acct = String(ad.account_id || "").replace(/^act_/, "");
       if (!canAccess(id, acct)) return json({ ok: false, error: "Không có quyền trên tài khoản của ad này" }, 403);
@@ -121,9 +129,9 @@ export async function onRequestPost(context) {
         return json({ ok: false, error: "Ad này không có post ID (bài viết) để dùng lại — có thể vẫn đang xử lý, thử lại sau" }, 409);
       }
 
-      // Sản phẩm: lấy từ tên ad set nguồn ("<SP> - TEST"), cho phép ghi đè bằng body.
-      const tuTen = parseGroupName((ad.adset || {}).name || "");
-      const product = String(body.product || (tuTen && tuTen.product) || "").trim();
+      // Sản phẩm: lấy từ tên campaign nguồn (kiểu mới hoặc cũ), cho phép ghi đè bằng body.
+      const tuTen = parseGroupName((ad.campaign || {}).name || "") || parseGroupName((ad.adset || {}).name || "");
+      const product = spNgan(String(body.product || (tuTen && tuTen.product) || "").trim());
       if (!product) {
         return json({ ok: false, error: "Không suy được tên sản phẩm từ ad set nguồn — truyền thêm product" }, 400);
       }
@@ -134,8 +142,10 @@ export async function onRequestPost(context) {
       if (!scale) {
         // Chưa có hộp SCALE → dựng mới bằng đúng cấu hình của ad set TEST.
         const src = await fbGet(`/${(ad.adset || {}).id}`, { fields: ADSET_CLONE_FIELDS }, token);
+        // Tên theo cấu trúc mới: "<ngày/tháng> - <SP> - scale" — campaign và nhóm QC trùng tên.
+        const tenMoi = tenCampaign(ngayThang(), product, body.camp_label || "scale", "SCALE");
         const camp = await fbPost(`/act_${acct}/campaigns`, {
-          name: groupName(product, "SCALE"),
+          name: tenMoi,
           objective: "OUTCOME_SALES",
           status: "PAUSED",
           buying_type: "AUCTION",
@@ -148,7 +158,7 @@ export async function onRequestPost(context) {
         const nsTest = Number(src.daily_budget) || 0;
         const ns = Math.max(Number(body.daily_budget) || 0, 0) || (nsTest ? nsTest * 2 : 0);
         const adsetBody = {
-          name: groupName(product, "SCALE"),
+          name: tenMoi,
           campaign_id: camp.id,
           status: "PAUSED",
           optimization_goal: src.optimization_goal,

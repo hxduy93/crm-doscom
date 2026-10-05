@@ -8,8 +8,8 @@
 // thoát nổi giai đoạn máy học (Meta cần ~50/tuần). Tên campaign/ad set vì vậy phải
 // CỐ ĐỊNH (không kèm ngày) để lần chạy sau tìm lại được đúng hộp cũ.
 //
-// Ngày/tháng + tên KOC vẫn nằm ở TÊN AD (xem ads-creator.html) — đó mới là thứ
-// thay đổi theo từng video.
+// ⚠ 05/10/2026: luật tên cố định ở trên ĐÃ THAY bằng cấu trúc "ngày/tháng - SP - camp"
+// (xem spNgan()/tenCampaign() bên dưới). Hai hộp TEST/SCALE vẫn còn, chỉ đổi cách đặt tên.
 
 export const GROUPS = ["TEST", "SCALE"];
 
@@ -19,21 +19,76 @@ export const GROUPS = ["TEST", "SCALE"];
 // dưới đây đã biết chấm đúng nhưng chỉ được dùng để tô màu bảng. Chủ dự án quyết bỏ hẳn:
 // số creative mỗi nhóm do người chạy tự quyết bên Trình quản lý QC.
 
-// Tên hộp. Sản phẩm giữ nguyên chữ người dùng nhập, chỉ gọn khoảng trắng.
-export function groupName(product, group) {
-  const p = String(product || "").trim().replace(/\s+/g, " ");
-  const g = String(group || "").trim().toUpperCase();
-  if (!p) throw new Error("thiếu tên sản phẩm");
-  if (!GROUPS.includes(g)) throw new Error(`nhóm phải là TEST hoặc SCALE (nhận "${group}")`);
-  return `${p} - ${g}`;
+// ── CẤU TRÚC TÊN MỚI (chủ dự án chốt 05/10/2026) ──────────────────────────────
+//   Campaign + nhóm QC : "<ngày/tháng> - <sản phẩm> - <camp số mấy>"   vd "5/10 - Noma911 - 3 creative test"
+//   Quảng cáo          : "<ngày/tháng> - <sản phẩm> - KOC <tên KOC>"   vd "5/10 - Noma911 - KOC chongsally"
+// Thay cho tên hộp cố định "<SP> - TEST/SCALE" của QUYẾT 05/08/2026. Hộp vẫn được neo
+// theo ID trong sổ D1 `ad_boxes`, nên tên kèm ngày không làm lạc hộp nữa.
+// TEST hay SCALE đọc từ phần cuối tên campaign: có chữ "scale" → SCALE, còn lại → TEST.
+
+// Mã sản phẩm ngắn dùng trong tên: "NOMA 880 · Phu Tinh The…" → "Noma880", "noma911" →
+// "Noma911", "Máy dò D2 Pro" → "D2Pro". Cũng là KHOÁ so sản phẩm giữa hàng đợi TikTok,
+// tên campaign mới và tên hộp kiểu cũ — ads-creator.html giữ một bản sao y hệt
+// (tests/fb-groups.test.mjs canh hai bản cho ra cùng kết quả).
+export function spNgan(product) {
+  const s = String(product || "").trim();
+  if (!s) return "";
+  const noma = s.match(/noma\s*[-_]?\s*(\d{3})/i);
+  if (noma) return "Noma" + noma[1];
+  const dos = s.match(/(?:^|[^a-z0-9])(d[a-z]?\d+(?:\.\d+)?)((?:\s*(?:pro|plus|max|mini))*)(?![a-z0-9])/i);
+  if (dos) {
+    const duoi = (dos[2].match(/pro|plus|max|mini/gi) || [])
+      .map(w => w[0].toUpperCase() + w.slice(1).toLowerCase()).join("");
+    return dos[1].toUpperCase() + duoi;
+  }
+  return s.split(/\s*·\s*/)[0].replace(/\s+/g, " ").trim();
 }
 
-// Tách ngược tên campaign/ad set → { product, group }. Không khớp thì trả null
-// (campaign cũ đặt tên kiểu "5/8 - NOMA 680 - quangteo" sẽ rơi vào đây, cố ý).
+// "d/m" theo giờ Việt Nam.
+export function ngayThang(now = Date.now()) {
+  const d = new Date(now + 7 * 3600 * 1000);
+  return `${d.getUTCDate()}/${d.getUTCMonth() + 1}`;
+}
+
+// Phần cuối tên campaign phải nói được nó là TEST hay SCALE, vì đó là thứ duy nhất
+// parseGroupName() dựa vào. Thiếu chữ của nhóm thì gắn thêm vào cuối.
+export function nhanCamp(label, group) {
+  const g = String(group || "TEST").trim().toLowerCase();
+  let l = String(label || "").trim().replace(/\s+/g, " ");
+  if (!l) return g;
+  const coScale = /scale/i.test(l);
+  if (g === "scale" && !coScale) l += " scale";
+  if (g === "test" && coScale) l = l.replace(/scale/gi, "").trim() + " test";
+  return l;
+}
+
+export function tenCampaign(dm, product, label, group) {
+  const sp = spNgan(product);
+  if (!sp) throw new Error("thiếu tên sản phẩm");
+  return `${dm} - ${sp} - ${nhanCamp(label, group)}`;
+}
+
+export function tenAd(dm, product, koc) {
+  return `${dm} - ${spNgan(product)} - KOC ${String(koc || "").trim() || "NA"}`;
+}
+
+// Tách ngược tên campaign → { product (mã ngắn), group }. Nhận cả hai kiểu:
+//   mới : "5/10 - Noma911 - 3 creative test"  (có "scale" ở phần cuối → SCALE)
+//   cũ  : "NOMA 911 · Co Qua Tang - TEST"      (hộp cố định trước 05/10/2026)
+// Không khớp kiểu nào thì trả null.
 export function parseGroupName(name) {
-  const m = String(name || "").trim().match(/^(.*\S)\s+-\s+(TEST|SCALE)$/i);
-  if (!m) return null;
-  return { product: m[1].replace(/\s+/g, " "), group: m[2].toUpperCase() };
+  const t = String(name || "").trim();
+  const cu = t.match(/^(.*\S)\s+-\s+(TEST|SCALE)$/i);
+  if (cu && !/^\d{1,2}\/\d{1,2}\s*-/.test(t)) {
+    const sp = spNgan(cu[1]);
+    return sp ? { product: sp, group: cu[2].toUpperCase() } : null;
+  }
+  const moi = t.match(/^\d{1,2}\/\d{1,2}\s*-\s*(.+?)\s+-\s+(.+)$/);
+  if (moi) {
+    const sp = spNgan(moi[1]);
+    return sp ? { product: sp, group: /scale/i.test(moi[2]) ? "SCALE" : "TEST" } : null;
+  }
+  return null;
 }
 
 // Số kết quả (lượt hoàn tất đăng ký) từ mảng actions của Insights API.

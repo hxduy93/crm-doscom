@@ -2,27 +2,51 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  groupName, parseGroupName, demKetQua, soNgayChay, chamDiem,
+  parseGroupName, spNgan, tenCampaign, tenAd, nhanCamp, ngayThang, demKetQua, soNgayChay, chamDiem,
 } from "../functions/lib/fb-groups.js";
 
-// QUYẾT 2026-08-05: mỗi sản phẩm có ĐÚNG 2 hộp sống lâu dài "<SP> - TEST" và
-// "<SP> - SCALE". Tên phải CỐ ĐỊNH (không kèm ngày) thì lần chạy sau mới tìm lại
-// được hộp cũ để đổ creative vào — nếu không sẽ quay lại cảnh ~19 ad set cùng tệp,
-// mỗi cái ~7 chuyển đổi/tuần, không cái nào thoát giai đoạn máy học.
+// 05/10/2026 (chủ dự án): THAY tên hộp cố định "<SP> - TEST/SCALE" bằng cấu trúc
+//   campaign + nhóm QC : "<d/m> - <SP> - <camp số mấy>"  vd "5/10 - Noma911 - 3 creative test"
+//   quảng cáo          : "<d/m> - <SP> - KOC <tên>"     vd "5/10 - Noma911 - KOC chongsally"
+// Hộp vẫn neo theo ID trong sổ D1 nên tên kèm ngày không làm lạc hộp.
 
-test("tên hộp cố định, không kèm ngày tháng", () => {
-  assert.equal(groupName("NOMA 911", "TEST"), "NOMA 911 - TEST");
-  assert.equal(groupName("  NOMA   911 ", "scale"), "NOMA 911 - SCALE");
-  assert.throws(() => groupName("NOMA 911", "SCALEE"), /TEST hoặc SCALE/);
-  assert.throws(() => groupName("", "TEST"), /thiếu tên sản phẩm/);
+test("mã sản phẩm ngắn dùng trong tên và làm khoá so sản phẩm", () => {
+  assert.equal(spNgan("NOMA 880 · Phu Tinh The Lam Moi Xoa ..."), "Noma880");
+  assert.equal(spNgan("noma911"), "Noma911");
+  assert.equal(spNgan("NOMA 911 · Co Qua Tang"), "Noma911");
+  assert.equal(spNgan("Máy dò D2 Pro"), "D2Pro");
+  assert.equal(spNgan("DR4 PRO"), "DR4Pro");
+  assert.equal(spNgan("Camera DA8.1"), "DA8.1");
+  assert.equal(spNgan("D1"), "D1");
+  assert.equal(spNgan(""), "");
 });
 
-test("đọc ngược tên hộp; campaign đặt tên kiểu cũ thì KHÔNG nhận nhầm", () => {
-  assert.deepEqual(parseGroupName("NOMA 911 - TEST"), { product: "NOMA 911", group: "TEST" });
-  assert.deepEqual(parseGroupName("NOMA 680 - scale"), { product: "NOMA 680", group: "SCALE" });
-  assert.equal(parseGroupName("5/8 - NOMA 680 - quangteo"), null);
-  assert.equal(parseGroupName("4/8 - Noma911 - Đồ chơi xe 7979"), null);
+test("tên campaign + ad đúng ví dụ chủ dự án", () => {
+  assert.equal(tenCampaign("5/10", "noma911", "3 creative test", "TEST"), "5/10 - Noma911 - 3 creative test");
+  assert.equal(tenAd("5/10", "NOMA 911 · Co Qua Tang", "chongsally"), "5/10 - Noma911 - KOC chongsally");
+  assert.throws(() => tenCampaign("5/10", "", "x", "TEST"), /thiếu tên sản phẩm/);
+});
+
+test("phần cuối tên campaign luôn nói đúng nhóm: SCALE phải có chữ scale, TEST thì không", () => {
+  assert.equal(nhanCamp("camp 2", "SCALE"), "camp 2 scale");
+  assert.equal(nhanCamp("camp 2 scale", "SCALE"), "camp 2 scale");
+  assert.equal(nhanCamp("3 creative", "TEST"), "3 creative");
+  assert.equal(nhanCamp("scale thử", "TEST"), "thử test");
+  assert.equal(nhanCamp("", "SCALE"), "scale");
+});
+
+test("đọc ngược tên campaign: kiểu mới lẫn kiểu cũ, không nhận nhầm tên lạ", () => {
+  assert.deepEqual(parseGroupName("5/10 - noma911 - 3 creative test"), { product: "Noma911", group: "TEST" });
+  assert.deepEqual(parseGroupName("5/10 - Noma911 - camp 2 scale"), { product: "Noma911", group: "SCALE" });
+  assert.deepEqual(parseGroupName("NOMA 911 · Co Qua Tang - TEST"), { product: "Noma911", group: "TEST" });
+  assert.deepEqual(parseGroupName("NOMA 680 - scale"), { product: "Noma680", group: "SCALE" });
+  assert.equal(parseGroupName("Chương trình đại lý"), null);
   assert.equal(parseGroupName(""), null);
+});
+
+test("ngày/tháng theo giờ Việt Nam, không số 0 đầu", () => {
+  // 04/10 17:30 UTC = 05/10 00:30 giờ VN
+  assert.equal(ngayThang(Date.UTC(2026, 9, 4, 17, 30)), "5/10");
 });
 
 test("đếm kết quả: ưu tiên sự kiện pixel, KHÔNG cộng dồn tên trùng nghĩa", () => {
@@ -95,17 +119,40 @@ test("KHÔNG phán bừa khi chưa có CPL chuẩn", () => {
 // ── Luồng tự động phải dùng lại hộp, không đẻ ad set mới ────────────────────
 const html = readFileSync(new URL("../ads-creator.html", import.meta.url), "utf8");
 
-test("tên CAMPAIGN là tên hộp cố định, KHÔNG kèm ngày", () => {
-  assert.match(html, /campaign_name: tenHop/, "campaign phải mang tên hộp");
-  assert.match(html, /const tenHop = `\$\{g\.product\} - \$\{autoGroup\}`/);
-  assert.doesNotMatch(html, /campaign_name: `\$\{dm\} - \$\{g\.product\}/,
-    "quay lại đặt tên campaign theo ngày là mỗi lần chạy lại đẻ hộp mới");
+test("campaign + nhóm QC mới đặt tên <d/m> - <SP> - <camp>, cùng một tên", () => {
+  assert.match(html, /campaign_name: tenHop,/);
+  assert.match(html, /adset_name: tenHop,/);
+  assert.match(html, /const tenHop = `\$\{dm\} - \$\{spTen\} - \$\{nhanCamp\(/);
 });
 
-// Nhóm QC ĐẦU TIÊN mang đúng tên hộp; nhóm thứ hai trở đi trong cùng campaign phải có
-// tên khác để còn phân biệt trên Ads Manager — danh tính hộp neo ở sổ D1 nên không sao.
-test("ad set đầu mang tên hộp, ad set thêm vào campaign cũ mới kèm ngày", () => {
-  assert.match(html, /adset_name: dich\.loai === "adset_moi" \? `\$\{tenHop\} · \$\{dm\}` : tenHop/);
+test("spNgan/nhanCamp trong trang cho CÙNG kết quả với bản server", () => {
+  const cat = (ten) => {
+    const i = html.indexOf(`function ${ten}(`);
+    let k = html.indexOf("{", i), d = 0;
+    for (; k < html.length; k++) { if (html[k] === "{") d++; else if (html[k] === "}" && --d === 0) break; }
+    return html.slice(i, k + 1);
+  };
+  const trang = new Function(cat("spNgan") + cat("nhanCamp") + " return { spNgan, nhanCamp };")();
+  for (const x of ["NOMA 880 · Phu Tinh", "noma911", "Máy dò D2 Pro", "DR4 PRO", "DA8.1", "D1 thái lan", "Xyz abc"]) {
+    assert.equal(trang.spNgan(x), spNgan(x), x);
+  }
+  for (const [l, g] of [["camp 2", "SCALE"], ["3 creative", "TEST"], ["scale x", "TEST"], ["", "SCALE"]]) {
+    assert.equal(trang.nhanCamp(l, g), nhanCamp(l, g), `${l}|${g}`);
+  }
+});
+
+const api = readFileSync(new URL("../functions/api/fb-groups.js", import.meta.url), "utf8");
+test("bảng + danh sách đích CHỈ lấy campaign và nhóm QC đang hoạt động", () => {
+  assert.match(api, /camp\.effective_status !== "ACTIVE" \|\| \(ad\.adset \|\| \{\}\)\.effective_status !== "ACTIVE"\) continue/);
+  assert.match(api, /campaign\{id,name,status,effective_status\}/);
+  // ad tắt cũ bị ẩn, ad mới tạo (PAUSED chờ duyệt) vẫn hiện
+  assert.match(api, /if \(!item\.dang_chay && item\.days >= 2\) continue;/);
+});
+
+test("bê sang SCALE chỉ tìm hộp SCALE đang hoạt động, tạo mới thì theo tên mới", () => {
+  assert.match(act, /effective_status !== "ACTIVE" \|\| \(a\.campaign \|\| \{\}\)\.effective_status !== "ACTIVE"/);
+  assert.match(act, /tenCampaign\(ngayThang\(\), product/);
+  assert.doesNotMatch(act, /groupName\(/);
 });
 
 // 23/09/2026: đích KHÔNG còn tự dò theo tên (timHop) mà do người chạy chọn ở dropdown.

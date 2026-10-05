@@ -16,21 +16,29 @@ const grab = (re, name) => {
 
 // ── Đặt tên campaign / ad ────────────────────────────────────────────────────
 const nameBlock = grab(/const kocOf = \(f\) =>[\s\S]*?const campKoc = [^\n]*\n/, "khối đặt tên KOC");
+const spNganSrc = grab(/function spNgan\(product\) \{[\s\S]*?\n\}/, "hàm spNgan");
 const datNhomTen = new Function("files", "runner", "dm", "g", `
+  ${spNganSrc}
   ${nameBlock}
   return { adNames, campKoc };
 `);
 
-test("mỗi KOC được đánh số theo thứ tự video của chính họ", () => {
+// 05/10/2026: tên ad = "<d/m> - <SP ngắn> - KOC <tên>"; video thứ 2 trở đi của cùng KOC thêm số.
+test("tên ad theo cấu trúc ngày/tháng - SP - KOC tên, KOC lặp thì đánh số từ video thứ 2", () => {
   const r = datNhomTen(
     [{ koc: "quangteo" }, { koc: "khanhmexe" }, { koc: "quangteo" }, { koc: "quangteo" }],
-    "duy", "5/8", { product: "NOMA 680" });
+    "duy", "5/8", { product: "NOMA 680 · Bot Tuyet" });
   assert.deepEqual(r.adNames, [
-    "5/8 - NOMA 680 - quangteo1",
-    "5/8 - NOMA 680 - khanhmexe1",
-    "5/8 - NOMA 680 - quangteo2",
-    "5/8 - NOMA 680 - quangteo3",
+    "5/8 - Noma680 - KOC quangteo",
+    "5/8 - Noma680 - KOC khanhmexe",
+    "5/8 - Noma680 - KOC quangteo 2",
+    "5/8 - Noma680 - KOC quangteo 3",
   ]);
+});
+
+test("đúng ví dụ chủ dự án: 5/10 - Noma911 - KOC chongsally", () => {
+  const r = datNhomTen([{ koc: "chongsally" }], "duy", "5/10", { product: "NOMA 911 · Co Qua Tang" });
+  assert.deepEqual(r.adNames, ["5/10 - Noma911 - KOC chongsally"]);
 });
 
 test("1 KOC → tên campaign ghi thẳng tên KOC", () => {
@@ -45,7 +53,7 @@ test("nhiều KOC → tên campaign ghi số lượng KOC", () => {
 
 test("video từ folder (không có KOC) lùi về tên người chạy", () => {
   const r = datNhomTen([{ name: "v1.mp4" }, { name: "v2.mp4" }], "duy", "5/8", { product: "NOMA 680" });
-  assert.deepEqual(r.adNames, ["5/8 - NOMA 680 - duy1", "5/8 - NOMA 680 - duy2"]);
+  assert.deepEqual(r.adNames, ["5/8 - Noma680 - KOC duy", "5/8 - Noma680 - KOC duy 2"]);
   assert.equal(r.campKoc, "duy");
 });
 
@@ -53,9 +61,6 @@ test("tên ad KHÔNG còn lấy theo tên/nội dung video", () => {
   assert.match(html, /ad_name: adNames\[i\]/, "tên ad phải theo công thức KOC + số thứ tự");
   assert.doesNotMatch(html, /ad_name: `\$\{dm\} - \$\{g\.product\} - \$\{baseName\}`/,
     "vẫn còn đặt tên ad theo tên video");
-  // Ngày/tháng + KOC nằm ở TÊN AD. Tên campaign/ad set từ 05/08/2026 là tên hộp cố
-  // định "<SP> - TEST/SCALE" (xem tests/fb-groups.test.mjs) — kèm ngày vào tên
-  // campaign là mỗi lần chạy lại đẻ hộp mới, đúng thứ đang phải chữa.
   assert.match(html, /const adNames = files\.map/, "phải dựng danh sách tên ad theo KOC");
 });
 

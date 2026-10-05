@@ -129,7 +129,8 @@ test("ad set đã biến mất thì lùi về tạo mới, không gửi ID chế
 });
 
 test("ghi sổ hộp được gửi kèm mỗi lần tạo", () => {
-  assert.match(html, /box: \{ product: g\.product, group: autoGroup \}/);
+  // 05/10/2026: sổ ghi theo MÃ NGẮN sản phẩm ("Noma911"), cùng khoá với tên campaign mới.
+  assert.match(html, /box: \{ product: spTen, group: autoGroup \}/);
   const cc = readFileSync(new URL("../functions/api/create-campaign.js", import.meta.url), "utf8");
   assert.match(cc, /async function ghiSoHop\(/);
   // Ghi cả ở nhánh dùng lại ad set — đó mới là lúc người chạy tự tay chọn đích.

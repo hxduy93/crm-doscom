@@ -47,6 +47,39 @@ const DOSCOM_COUNTRIES = [
 
 // Giờ VN (UTC+7) theo định dạng input datetime-local: "YYYY-MM-DDTHH:MM".
 // (Bị bỏ sót khi copy panel từ dashboard cũ → thiếu hàm này khiến trang trắng.)
+/* ── CẤU TRÚC TÊN (chủ dự án chốt 05/10/2026) ─────────────────────────────────────
+   Campaign + nhóm QC : "<ngày/tháng> - <SP> - <camp số mấy>"  vd "5/10 - Noma911 - 3 creative test"
+   Quảng cáo          : "<ngày/tháng> - <SP> - KOC <tên KOC>"  vd "5/10 - Noma911 - KOC chongsally"
+   BẢN SAO của spNgan()/nhanCamp() trong functions/lib/fb-groups.js — server đọc ngược tên
+   bằng bản kia, nên hai bản phải cho cùng kết quả (tests/fb-groups.test.mjs canh). */
+function spNgan(product) {
+  const s = String(product || "").trim();
+  if (!s) return "";
+  const noma = s.match(/noma\s*[-_]?\s*(\d{3})/i);
+  if (noma) return "Noma" + noma[1];
+  const dos = s.match(/(?:^|[^a-z0-9])(d[a-z]?\d+(?:\.\d+)?)((?:\s*(?:pro|plus|max|mini))*)(?![a-z0-9])/i);
+  if (dos) {
+    const duoi = (dos[2].match(/pro|plus|max|mini/gi) || [])
+      .map(w => w[0].toUpperCase() + w.slice(1).toLowerCase()).join("");
+    return dos[1].toUpperCase() + duoi;
+  }
+  return s.split(/\s*·\s*/)[0].replace(/\s+/g, " ").trim();
+}
+function nhanCamp(label, group) {
+  const g = String(group || "TEST").trim().toLowerCase();
+  let l = String(label || "").trim().replace(/\s+/g, " ");
+  if (!l) return g;
+  const coScale = /scale/i.test(l);
+  if (g === "scale" && !coScale) l += " scale";
+  if (g === "test" && coScale) l = l.replace(/scale/gi, "").trim() + " test";
+  return l;
+}
+// "d/m" theo giờ Việt Nam (toISOString là giờ UTC — trước 7h sáng sẽ ra ngày hôm qua).
+function ngayThangVn() {
+  const d = new Date(Date.now() + 7 * 3600 * 1000);
+  return `${d.getUTCDate()}/${d.getUTCMonth() + 1}`;
+}
+
 function nowVnDatetime() {
   const d = new Date(Date.now() + 7 * 3600 * 1000); // dời sang giờ VN rồi đọc theo UTC
   const pad = (n) => String(n).padStart(2, "0");
@@ -188,6 +221,9 @@ function AdsCreatorPanel() {
   // Đích đổ creative do người chạy chọn, khoá "<sản phẩm>|<nhóm>" -> mã đích.
   // Không có khoá = dùng gợi ý mặc định của server (xem mucMacDinh).
   const [autoTarget, setAutoTarget] = useState({})
+  // Phần cuối tên campaign ("camp số mấy") cho từng sản phẩm, khoá như autoTarget.
+  // Bỏ trống → "<n> creative test|scale" (05/10/2026).
+  const [autoCampLabel, setAutoCampLabel] = useState({})
   // 23/09/2026 — BỎ TRẦN 4 CREATIVE (quyết của chủ dự án). Trước đây hộp TEST chỉ cho 4 ad
   // sống cùng lúc và luồng tự động TỰ TẮT ad CŨ NHẤT để nhường chỗ. Hai chỗ sai:
   //   · xét TUỔI chứ không xét HIỆU QUẢ, nên creative đang thắng vẫn bị tắt vì nó già nhất,
@@ -697,10 +733,11 @@ function AdsCreatorPanel() {
 
   // ── Build publish summary ──
   const buildSummary = () => {
-    const today = new Date().toISOString().slice(0, 10)
     const objCfg = OBJECTIVES[objective]
-    const finalCampaignName = campaignName || `${product} - ${objCfg.label} - ${today}`
-    const finalAdsetName = adsetName || `${product} - AdSet - ${today}`
+    // Mặc định theo cấu trúc "<d/m> - <SP> - <camp>" (05/10/2026); người dùng gõ tay thì giữ nguyên.
+    const tenMacDinh = `${ngayThangVn()} - ${spNgan(product) || product} - ${ads.length} creative`
+    const finalCampaignName = campaignName || tenMacDinh
+    const finalAdsetName = adsetName || tenMacDinh
 
     return {
       campaign_name: finalCampaignName,
@@ -748,7 +785,7 @@ function AdsCreatorPanel() {
       age_max: Number(ageMax) || 65,
       countries: countries.length ? countries : ["VN"],
       ads: ads.map((a, idx) => ({
-        ad_name: a.adName || `${finalCampaignName} - Ad ${idx + 1}`,
+        ad_name: a.adName || `${ngayThangVn()} - ${spNgan(product) || product} - KOC ${idx + 1}`,
         headline: a.headline,
         // Chặn cuối trước khi đẩy lên Meta: link sửa sau lúc sinh content thì
         // bài vẫn còn {{URL}}, thay nốt ở đây.
@@ -1125,10 +1162,8 @@ function AdsCreatorPanel() {
       return
     }
     setAutoBusy(true); setAutoResults([]); setAutoLog([])
-    const today = new Date().toISOString().slice(0, 10)
-    // dd/m (không leading zero, không năm) — khớp cấu trúc UTM đang dùng, vd "6/7".
-    const [, mmStr, ddStr] = today.split("-")
-    const dm = `${parseInt(ddStr, 10)}/${parseInt(mmStr, 10)}`
+    // d/m (không leading zero, không năm) theo giờ VN — khớp cấu trúc UTM + tên, vd "6/7".
+    const dm = ngayThangVn()
     // slug gọn: bỏ dấu tiếng Việt + mọi ký tự không phải chữ/số → "NOMA 911" → "noma911".
     const slugCompact = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase().replace(/[^a-z0-9]+/g, "")
     const runner = (autoRunner || "").trim()
@@ -1157,12 +1192,14 @@ function AdsCreatorPanel() {
         // KOC = username TikTok của người quay video. Cùng một KOC có nhiều video
         // thì đánh số: KOC1, KOC2, KOC3 — nhìn tên ad là biết video nào của ai.
         // Video tải từ folder không có KOC → lùi về tên người chạy.
+        // 05/10/2026: "<d/m> - <SP ngắn> - KOC <tên>"; video thứ 2 trở đi của cùng KOC thêm số.
         const kocOf = (f) => (f && f.koc) || runner || "NA"
         const kocSeq = {}
+        const spTen = spNgan(g.product)
         const adNames = files.map(f => {
           const k = kocOf(f)
           kocSeq[k] = (kocSeq[k] || 0) + 1
-          return `${dm} - ${g.product} - ${k}${kocSeq[k]}`
+          return `${dm} - ${spTen} - KOC ${k}${kocSeq[k] > 1 ? " " + kocSeq[k] : ""}`
         })
         // Tên campaign: 1 KOC thì ghi thẳng tên, nhiều KOC thì ghi số lượng (tên
         // campaign không nhét được hết mà cũng không nên dài).
@@ -1269,7 +1306,9 @@ function AdsCreatorPanel() {
                 hộp mới mỗi lần — đó là thứ đã sinh ra ~19 ad set cùng tệp ở tài khoản Noma
                 Việt Nam, không cái nào đủ ~50 chuyển đổi/tuần để thoát máy học. Khác ở chỗ
                 nay nó là GỢI Ý hiện rõ trên màn hình, không phải suy đoán ngầm. */
-          const tenHop = `${g.product} - ${autoGroup}`
+          // Tên campaign + nhóm QC: "<d/m> - <SP ngắn> - <camp số mấy>" (05/10/2026).
+          // Phần cuối do người chạy gõ; bỏ trống thì "<n> creative test|scale".
+          const tenHop = `${dm} - ${spTen} - ${nhanCamp(autoCampLabel[khoaDich(g.product)] || `${files.length} creative`, autoGroup)}`
           const dich = dichCua(g.product, gdNow)
           let cauHinhDich = {}
           if (dich.loai === "adset") {
@@ -1284,15 +1323,13 @@ function AdsCreatorPanel() {
             pushLog(`  • Tạo CAMPAIGN MỚI "${tenHop}" — 1 nhóm QC, ${adsArr.length} creative...`)
           }
           const config = {
-            // Tên hộp CỐ ĐỊNH (không kèm ngày) để lần chạy sau tìm lại đúng chỗ.
-            // Ngày/tháng + KOC nằm ở TÊN AD (adNames) — xem ghi chú phía trên.
+            // Campaign và nhóm QC cùng cấu trúc "<d/m> - <SP> - <camp>". Lần sau tìm lại hộp
+            // theo ID trong sổ D1 (box bên dưới), không theo tên.
             campaign_name: tenHop,
-            // Nhóm QC thứ hai trở đi trong cùng campaign phải có tên KHÁC để còn phân biệt
-            // trên Ads Manager. Tên hộp chuẩn vẫn nằm ở campaign nên việc dò tên không hỏng.
-            adset_name: dich.loai === "adset_moi" ? `${tenHop} · ${dm}` : tenHop,
+            adset_name: tenHop,
             ...cauHinhDich,
             // Ghi sổ D1: lần sau tra theo ID, khỏi phụ thuộc tên.
-            box: { product: g.product, group: autoGroup },
+            box: { product: spTen, group: autoGroup },
             objective: "OUTCOME_SALES",
             buying_type: "AUCTION",
             account_id: autoAccount,
@@ -1393,7 +1430,9 @@ function AdsCreatorPanel() {
   // ══════════ NHÓM CHẠY TEST / SCALE ══════════
   // Tên sản phẩm ở hai đầu (hàng đợi TikTok vs tên campaign trên Meta) phải so được
   // với nhau — gọn khoảng trắng, bỏ phân biệt hoa thường.
-  const chuanSP = (s) => String(s || "").trim().replace(/\s+/g, " ").toLowerCase()
+  // So theo MÃ NGẮN: "NOMA 911 · Co Qua Tang" (hàng đợi TikTok) và "Noma911" (tên campaign
+  // mới) là cùng một sản phẩm (05/10/2026).
+  const chuanSP = (s) => spNgan(s).toLowerCase()
 
   /* ── ĐÍCH ĐỔ CREATIVE ────────────────────────────────────────────────────────
      Mã đích lưu trong autoTarget:
@@ -2128,7 +2167,7 @@ function AdsCreatorPanel() {
                           value={ma} onChange={e => dat(e.target.value)}>
                           {dsAdset.map(a => (
                             <option key={a.adset_id} value={`as:${a.adset_id}`}>
-                              {(a.adset_status === "ACTIVE" ? "▶ " : "⏸ ") + a.adset_name}
+                              {"▶ " + a.adset_name}
                               {` · ${a.so_ad_dang_chay || 0} creative đang chạy`}
                               {a.daily_budget ? ` · ${Number(a.daily_budget).toLocaleString("vi-VN")}đ/ngày` : ""}
                               {a.la_so ? " · đã dùng lần trước" : ""}
@@ -2136,7 +2175,7 @@ function AdsCreatorPanel() {
                           ))}
                           {campIds.map(cid => {
                             const ten = (dsAdset.find(a => String(a.campaign_id) === cid) || {}).campaign_name || cid
-                            return <option key={"nas" + cid} value={`nas:${cid}`}>➕ Nhóm QC mới trong campaign "{ten}"</option>
+                            return <option key={"nas" + cid} value={`nas:${cid}`}>➕ Nhóm QC mới trong campaign đang chạy "{ten}"</option>
                           })}
                           <option value="new">➕ Campaign + nhóm QC mới hoàn toàn</option>
                         </select>
@@ -2151,18 +2190,37 @@ function AdsCreatorPanel() {
                             Không ad nào bị tắt.
                           </p>
                         )
+                        // Tên campaign/nhóm QC mới theo cấu trúc "<d/m> - <SP> - <camp số mấy>".
+                        const k = khoaDich(g.product)
+                        const tenMoi = `${ngayThangVn()} - ${spNgan(g.product)} - ${nhanCamp(autoCampLabel[k] || `${newCnt || g.files.length} creative`, autoGroup)}`
+                        const oTen = (
+                          <div className="mt-1.5 flex items-center gap-1.5">
+                            <span className="text-[11px] text-indigo-900 whitespace-nowrap">Tên camp:</span>
+                            <span className="text-[11px] text-gray-500 whitespace-nowrap">{ngayThangVn()} - {spNgan(g.product)} -</span>
+                            <input className="flex-1 min-w-0 text-[12px] px-2 py-1 rounded-md border border-indigo-200 bg-white"
+                              placeholder={`${newCnt || g.files.length} creative ${autoGroup.toLowerCase()}`}
+                              value={autoCampLabel[k] || ""}
+                              onChange={e => { const v = e.target.value; setAutoCampLabel(c => ({ ...c, [k]: v })) }} />
+                          </div>
+                        )
                         if (d.loai === "adset_moi") return (
-                          <p className="text-[11px] text-gray-600 mt-1">
-                            → nhóm QC mới <b>{`${g.product} - ${autoGroup} · ${new Date().getDate()}/${new Date().getMonth() + 1}`}</b> trong campaign cũ,
-                            ngân sách {Number(autoBudget).toLocaleString("vi-VN")}đ/ngày. Nhóm cũ không bị đụng.
-                          </p>
+                          <>
+                            {oTen}
+                            <p className="text-[11px] text-gray-600 mt-1">
+                              → nhóm QC mới <b>{tenMoi}</b> trong campaign "{d.campaign_name}",
+                              ngân sách {Number(autoBudget).toLocaleString("vi-VN")}đ/ngày. Nhóm cũ không bị đụng.
+                            </p>
+                          </>
                         )
                         return (
-                          <p className="text-[11px] text-gray-600 mt-1">
-                            → campaign mới <b>{`${g.product} - ${autoGroup}`}</b> + 1 nhóm QC,
-                            ngân sách {Number(autoBudget).toLocaleString("vi-VN")}đ/ngày.
-                            {dsAdset.length > 0 && <span className="text-amber-700"> Lưu ý: sản phẩm này đã có {dsAdset.length} nhóm QC, thêm campaign nữa là các nhóm tự đấu giá với nhau.</span>}
-                          </p>
+                          <>
+                            {oTen}
+                            <p className="text-[11px] text-gray-600 mt-1">
+                              → campaign mới <b>{tenMoi}</b> + 1 nhóm QC cùng tên,
+                              ngân sách {Number(autoBudget).toLocaleString("vi-VN")}đ/ngày.
+                              {dsAdset.length > 0 && <span className="text-amber-700"> Lưu ý: sản phẩm này đã có {dsAdset.length} nhóm QC đang chạy, thêm campaign nữa là các nhóm tự đấu giá với nhau.</span>}
+                            </p>
+                          </>
                         )
                       })()}
                       {nhom && nhom.so_lac && (
@@ -2247,6 +2305,7 @@ function AdsCreatorPanel() {
               </button>
             </div>
             <p className="text-[11px] text-gray-500 mb-3">
+              <b>Chỉ hiện campaign + nhóm QC đang hoạt động</b> (cái đã tắt bị bỏ qua). Tên campaign có chữ "scale" là nhóm SCALE, còn lại là TEST.
               CPL mục tiêu lấy từ chính nhóm SCALE của sản phẩm đó. Bê sang SCALE là <b>dùng lại đúng bài viết cũ</b> nên
               giữ nguyên like/comment/share; ad mới luôn ở trạng thái tạm dừng để bạn xem trước khi bật.
             </p>
@@ -2280,8 +2339,8 @@ function AdsCreatorPanel() {
             {!groups && !groupsBusy && !groupsErr && <p className="text-xs text-gray-500">Bấm "Tải lại" để đọc trạng thái hai nhóm của tài khoản đang chọn.</p>}
             {groups && (groups.products || []).length === 0 && (
               <p className="text-xs text-gray-500">
-                Tài khoản này chưa có hộp nào đặt tên theo chuẩn <b>&lt;sản phẩm&gt; - TEST/SCALE</b>.
-                Campaign cũ (kiểu "5/8 - NOMA 680 - quangteo") không nằm trong bảng này — lần chạy tới sẽ dựng hộp mới.
+                Tài khoản này không có campaign nào <b>đang hoạt động</b> đặt tên theo cấu trúc
+                <b>"ngày/tháng - sản phẩm - camp"</b> (vd "5/10 - Noma911 - 3 creative test"). Campaign đã tắt không hiện ở đây.
               </p>
             )}
             {(groups && groups.products || []).map(p => (
@@ -2367,7 +2426,7 @@ function AdsCreatorPanel() {
                                 {a.verdict === "kill" && <span className="text-red-700 font-bold">Nên tắt</span>}
                                 {a.verdict === "watch" && <span className="text-amber-600 font-semibold">Theo dõi thêm</span>}
                                 {a.verdict === "wait" && <span className="text-gray-500">Chưa đủ dữ liệu</span>}
-                                {a.verdict === "off" && <span className="text-gray-400">Đã tắt</span>}
+                                {a.verdict === "off" && <span className="text-amber-600">Mới tạo, chưa bật</span>}
                                 <span className="text-gray-400"> · {a.ly_do}</span>
                               </td>
                               <td className="px-2 py-1 whitespace-nowrap text-right">
@@ -3163,10 +3222,10 @@ function AdsCreatorPanel() {
 
             <div className="space-y-1 text-sm">
               {[
-                ["Chiến dịch", campaignName || `${product} - ${(OBJECTIVES[objective] || {}).label} - ${new Date().toISOString().slice(0,10)}`],
+                ["Chiến dịch", campaignName || `${ngayThangVn()} - ${spNgan(product) || product} - ${ads.length} creative`],
                 ["Mục tiêu", (OBJECTIVES[objective] || {}).label],
                 ["Loại hình mua", (BUYING_TYPES.find(b => b.value === buyingType) || {}).label],
-                ["Nhóm QC", adsetName || `${product} - AdSet - ${new Date().toISOString().slice(0,10)}`],
+                ["Nhóm QC", adsetName || `${ngayThangVn()} - ${spNgan(product) || product} - ${ads.length} creative`],
                 ["Tối ưu hóa", GOAL_LABELS[optGoal] || optGoal],
                 ["Điểm đến", DESTINATION_LABELS[destType] || destType],
                 ["Tính phí", (BILLING_EVENTS.find(b => b.value === billingEvent) || {}).label],

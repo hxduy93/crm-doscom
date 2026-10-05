@@ -31,6 +31,12 @@
  *     mac_dinh_adset_id,        // ad set chọn sẵn trong dropdown (chỉ là gợi ý)
  *     adset_id_theo_so,         // ad set mà sổ D1 đang trỏ tới, null nếu chưa ghi sổ
  *   } | null
+ *
+ * 05/10/2026 — CHỈ CAMPAIGN + NHÓM QC ĐANG HOẠT ĐỘNG (chủ dự án yêu cầu). Campaign hoặc
+ * nhóm QC đã tắt bị bỏ khỏi cả bảng lẫn danh sách đích đổ creative. Trong nhóm đang chạy,
+ * ad đã tắt cũng ẩn — trừ ad mới tạo < 2 ngày (luồng tự động tạo ad ở PAUSED để duyệt).
+ * Tên campaign đọc theo cả kiểu mới "5/10 - Noma911 - 3 creative test" lẫn kiểu cũ
+ * "<SP> - TEST"; sản phẩm gộp theo mã ngắn spNgan() ("Noma911").
  */
 import { getIdentity, canAccess } from "../lib/access.js";
 import { parseGroupName, demKetQua, soNgayChay, chamDiem } from "../lib/fb-groups.js";
@@ -80,8 +86,8 @@ export async function onRequestGet(context) {
     const ads = await fbGetAll("/act_" + acct + "/ads", {
       fields: [
         "name,status,effective_status,created_time",
-        "adset{id,name,status,daily_budget,optimization_goal}",
-        "campaign{id,name,status}",
+        "adset{id,name,status,effective_status,daily_budget,optimization_goal}",
+        "campaign{id,name,status,effective_status}",
         // video_id để đối chiếu ĐÚNG video nào đang thắng; object_story_spec là
         // đường lùi khi creative không trả thẳng video_id.
         "creative{effective_object_story_id,video_id,object_story_spec}",
@@ -99,8 +105,11 @@ export async function onRequestGet(context) {
 
     for (const ad of ads) {
       const camp = ad.campaign || {};
-      const g = parseGroupName(camp.name) || parseGroupName((ad.adset || {}).name);
-      if (!g) continue;   // campaign đặt tên kiểu cũ → không thuộc hộp nào, bỏ qua
+      // Chỉ campaign + nhóm QC đang hoạt động. effective_status chứ không phải status:
+      // nhóm QC bật nhưng campaign tắt thì effective_status của nhóm là CAMPAIGN_PAUSED.
+      if (camp.effective_status !== "ACTIVE" || (ad.adset || {}).effective_status !== "ACTIVE") continue;
+      const g = parseGroupName(camp.name);
+      if (!g) continue;   // tên không theo cấu trúc nào ("Chương trình đại lý"…) → bỏ qua
 
       const ins = ((ad.insights || {}).data || [])[0] || {};
       const spend = Number(ins.spend) || 0;
@@ -136,15 +145,17 @@ export async function onRequestGet(context) {
         nhom[key].set(asId, {
           campaign_id: camp.id || null,
           campaign_name: camp.name || null,
-          campaign_status: camp.status || null,
+          campaign_status: camp.effective_status || camp.status || null,
           adset_id: asId,
           adset_name: as.name || null,
-          adset_status: as.status || null,
+          adset_status: as.effective_status || as.status || null,
           daily_budget: Number(as.daily_budget) || null,
           optimization_goal: as.optimization_goal || null,
           ads: [],
         });
       }
+      // Nhóm QC vẫn có mặt làm đích dù mọi ad trong đó đã tắt; chỉ dòng ad tắt cũ bị ẩn.
+      if (!item.dang_chay && item.days >= 2) continue;
       nhom[key].get(asId).ads.push(item);
     }
 
@@ -223,7 +234,7 @@ export async function onRequestGet(context) {
         for (const a of test.ads) {
           const d = chamDiem(a, { target_cpl: target });
           a.verdict = a.dang_chay ? d.verdict : "off";
-          a.ly_do = a.dang_chay ? d.ly_do : "ad đang tắt";
+          a.ly_do = a.dang_chay ? d.ly_do : "ad mới tạo ở trạng thái tạm dừng — bật bên Ads Manager";
         }
       }
       products.push({ product, target_cpl: target || null, test, scale });
