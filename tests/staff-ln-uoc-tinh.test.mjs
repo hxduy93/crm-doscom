@@ -111,48 +111,9 @@ test("tooltip viết hẳn phép tính để kiểm bằng tay", () => {
   assert.match(khoi, /CP '\+vnd\(sp\)/);
 });
 
-/* ── Kiểm trên dữ liệu thật: lý do cột này tồn tại ───────────────────────── */
-const rev = JSON.parse(readFileSync(new URL("../data/product-revenue.json", import.meta.url), "utf8"));
-const NHOM = {
-  Duy: ["DUY"],
-  "Phương Nam": ["PHUONG_NAM"],
-  "Website / Hotline": ["WEBSITE", "ZALO_OA", "HOTLINE"],
-  "Page Facebook": ["FB_PAGE"],
-};
-const HOAN = new Set(["returning", "returned"]);
-
-function tiLeHoan(keys, ym) {
-  let tong = 0, hoan = 0;
-  for (const k of keys) {
-    const g = (rev.source_groups || {})[k];
-    if (!g) continue;
-    const r = g.order_revenue_by_status_by_date || {};
-    for (const st of Object.keys(r)) {
-      let v = 0;
-      for (const d of Object.keys(r[st] || {})) if (d.slice(0, 7) === ym) v += Number(r[st][d]) || 0;
-      tong += v;
-      if (HOAN.has(st)) hoan += v;
-    }
-  }
-  return tong > 0 ? hoan / tong : null;
-}
-
-test("tỉ lệ hoàn tháng 9 THẤP HƠN tháng 8 ở mọi nhóm — đúng lý do cần cột ước tính", () => {
-  for (const [ten, keys] of Object.entries(NHOM)) {
-    const t8 = tiLeHoan(keys, "2026-08");
-    const t9 = tiLeHoan(keys, "2026-09");
-    assert.ok(t8 !== null && t9 !== null, `${ten}: thiếu dữ liệu một trong hai tháng`);
-    assert.ok(t9 < t8,
-      `${ten}: hoàn T9 ${(t9 * 100).toFixed(1)}% không thấp hơn T8 ${(t8 * 100).toFixed(1)}% — ` +
-      `nếu số này đảo chiều thì tiền đề "đơn tháng này chưa hoàn xong" cần xem lại`);
-  }
-});
-
-test("tỉ lệ hoàn T8/2026 nằm trong khoảng đã đo, không lệch bất thường", () => {
-  const moc = { Duy: 0.181, "Phương Nam": 0.198, "Website / Hotline": 0.100, "Page Facebook": 0.267 };
-  for (const [ten, keys] of Object.entries(NHOM)) {
-    const r = tiLeHoan(keys, "2026-08");
-    assert.ok(Math.abs(r - moc[ten]) < 0.01,
-      `${ten}: hoàn T8 = ${(r * 100).toFixed(1)}%, đo ngày 24/09 là ${(moc[ten] * 100).toFixed(1)}%`);
-  }
-});
+/* ── Số đo thật ngày 24/09/2026 (lý do cột này tồn tại) — CHỈ GHI LẠI, KHÔNG ASSERT ──
+   Hoàn T8 đã chốt: Duy 18,1% · Phương Nam 19,8% · Website/Hotline 10,0% · Page FB 26,7%;
+   T9 lúc đó thấp hơn ở mọi nhóm vì đơn chưa hoàn xong.
+   Từng assert hai điều này trên data/product-revenue.json → pipeline refresh-data gãy
+   04–05/10/2026: T9 ngấm hoàn đủ (Website/Hotline 10,3% > 10,0%) nên test đỏ, dữ liệu
+   không lên web. Dữ liệu thật trôi theo cửa sổ 90 ngày, không được dùng làm điều kiện test. */
