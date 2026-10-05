@@ -211,3 +211,31 @@ test("ba landing mới 880/998/130 gán đúng sản phẩm ngay từ khi mở b
     assert.ok(src.includes(`"${path}"`), `phải khai tường minh path ${path}, đừng chỉ dựa vào luật tên miền`);
   }
 });
+
+test("D2 Pro (03/10/2026) gán về mã D2 — cả doscom.click lẫn pages.dev", { skip }, () => {
+  const cases = [
+    ["https://www.doscom.click/d2prod", "D2"],
+    ["https://doscom.click/d2protpn?fbclid=x", "D2"],
+    ["https://doscom-d2pro-lp.pages.dev/d2prod", "D2"],
+    // path D1 cùng domain vẫn là D1
+    ["https://www.doscom.click/d1tpn", "D1"],
+  ];
+  const got = call("_product_from_link", cases.map((c) => c[0]));
+  cases.forEach(([u, want], i) => assert.equal(got[i], want, u));
+});
+
+test("thị trường đọc từ LINK: landing Thái → th, landing Việt → vn, lạ → null", { skip }, () => {
+  const cases = [
+    ["https://www.noma955.click/", "th"],
+    ["https://noma955.click/d1th?utm=1", "th"],
+    ["https://doscom-d1-th.pages.dev/", "th"],
+    ["https://noma911-th.pages.dev/", "th"],
+    ["https://www.doscom.click/d1tpn", "vn"],
+    ["https://www.doscom.click/d2prod", "vn"],
+    // noma120.asia lẫn Việt (/d, /tpn = NOMA 120) — KHÔNG được coi là landing Thái
+    ["https://noma120.asia/d", "vn"],
+    ["https://example.com/", null],
+  ];
+  const got = call("_market_from_link", cases.map((c) => c[0]));
+  cases.forEach(([u, want], i) => assert.equal(got[i], want, u));
+});

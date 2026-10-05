@@ -1537,11 +1537,16 @@
     function productFromSource(name){
       var n=String(name||'').replace(/^\s*(duy|phương nam|phuong nam)\s*[-–]\s*/i,'')
               .toLowerCase().replace(/[_\-]/g,' ').replace(/\s+/g,' ').trim();
-      var m=n.match(/noma\s*(911|922|250|310|120|130|230|350|680|692)/);
+      /* 05/10/2026: nhận đủ 17 mã NOMA + DR4 Pro/Plus + D2 Pro. Trước đó thiếu 880/998/DR4 PRO
+         nên nguồn đặt ĐÚNG quy ước ("DUY - NOMA 880") vẫn rơi xuống "Nguồn khác" (~37tr T9–10). */
+      var m=n.match(/noma\s*(911|922|250|310|120|130|230|350|680|692|998|110|880|686|620|890|955)/);
       if(m) return 'Noma '+m[1];
+      if(/(^|\s)dr4 ?pro(\s|$)/.test(n)) return 'DR4 Pro';
+      if(/(^|\s)dr4 ?plus(\s|$)/.test(n)) return 'DR4 Plus';
       if(/(^|\s)dr1(\s|$)/.test(n)) return 'DR1';
       if(/(^|\s)d1 pro(\s|$)/.test(n)) return 'D1 Pro';
       if(/(^|\s)d1(\s|$)/.test(n)) return 'D1';
+      if(/(^|\s)d2( ?pro)?(\s|$)/.test(n)) return 'D2';   // D2 Pro: CPQC cũng gán về "D2"
       if(/(^|\s)da8\.?1(\s|$)/.test(n)) return 'DA8.1';
       return null;
     }

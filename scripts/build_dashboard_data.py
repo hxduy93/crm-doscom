@@ -338,6 +338,11 @@ LANDING_TO_PRODUCT = {
     "noma130.io.vn/n130tpn":        "Noma 130",
     "noma880-lp.pages.dev/n880d":   "Noma 880",
     "noma880-lp.pages.dev/n880tpn": "Noma 880",
+    # Máy dò D2 Pro (03/10/2026) — nằm nhờ trên doscom.click (project D1) + bản pages.dev.
+    # Gán vào "D2": đây là mã D2 có sẵn giá vốn + doanh thu Pancake, và campaign
+    # "3/10 - D2 Pro - …" vốn đã được tên campaign gán về "D2".
+    "doscom.click/d2prod":          "D2",
+    "doscom.click/d2protpn":        "D2",
 }
 
 # Domain chỉ bán MỘT sản phẩm → mọi path trên domain đó (kể cả biến thể theo nhân
@@ -364,6 +369,7 @@ LANDING_HOST_TO_PRODUCT = {
     "noma911-phuongnam.pages.dev":   "Noma 911",
     "doscom-d1-lp.pages.dev":        "D1",
     "dr1-lp.pages.dev":              "DR1",
+    "doscom-d2pro-lp.pages.dev":     "D2",
     # Thị trường Thái — campaign 'th' được tách rổ riêng từ trước bước này, map ở
     # đây chỉ để rổ Thái hiện đúng tên SP thay vì "(chưa rõ SP)".
     "noma955.click":                 "D1",
@@ -378,6 +384,26 @@ LANDING_HOST_TO_PRODUCT = {
     # mà bảng map này sinh ra để chặn.
     "noma120.asia":                  "Noma 911",
 }
+
+# Landing CHỈ phục vụ thị trường THÁI LAN (yêu cầu chủ dự án 05/10/2026: "lọc camp D1
+# Thái bằng link noma955.click"). Campaign có link trỏ về đây được xếp sang rổ Thái kể cả
+# khi tên campaign quên ghi "Thái Lan" — trước đó thị trường CHỈ do tên quyết định.
+# KHÔNG thêm noma120.asia: domain đó còn hai path /d, /tpn của NOMA 120 bản Việt.
+TH_LANDING_HOSTS = {"noma955.click", "doscom-d1-th.pages.dev", "noma911-th.pages.dev"}
+
+# {campaign_id: {"th"|"vn"}} — thị trường đọc từ link, điền bởi fetch_campaign_products_from_links.
+LINK_MARKETS = {}
+
+
+def _market_from_link(url):
+    """'th' nếu link là landing Thái, 'vn' nếu là landing Việt đã biết, None nếu không rõ."""
+    key = _norm_url(url)
+    if not key:
+        return None
+    if key.split("/", 1)[0] in TH_LANDING_HOSTS:
+        return "th"
+    return "vn" if _product_from_link(url) else None
+
 
 _AD_CREATIVE_FIELDS = (
     "id,campaign_id,"
@@ -500,6 +526,9 @@ def fetch_campaign_products_from_links(account_id: str):
                 prod = _product_from_link(link)
                 if prod:
                     found.setdefault(cid, set()).add(prod)
+                mk = _market_from_link(link)
+                if mk:
+                    LINK_MARKETS.setdefault(cid, set()).add(mk)
         paging = data.get("paging") or {}
         after = (paging.get("cursors") or {}).get("after")
         if not paging.get("next") or not after:
@@ -735,6 +764,24 @@ def build_data():
             a["daily"].sort(key=lambda x: x["date"])
             data["ads"].append(a)
 
+    # --- LINK LANDING: sản phẩm + thị trường --------------------------
+    # Đọc TRƯỚC mọi bước dùng c["market"] (gộp sản phẩm ngay dưới + tách rổ Thái).
+    link_products = {}
+    for a in ACCOUNTS:
+        link_products.update(fetch_campaign_products_from_links(a["id"]))
+    print(f"   ✓ đọc link landing: {len(link_products)} campaign suy được SP từ link")
+
+    # Thị trường theo LINK: mọi link landing đọc được của campaign đều là landing Thái
+    # → rổ Thái, dù tên không ghi "Thái Lan". Link lẫn Việt + Thái thì giữ theo tên.
+    th_by_link = []
+    for c in data["campaigns"]:
+        if c.get("market") != "th" and LINK_MARKETS.get(str(c.get("id") or "")) == {"th"}:
+            c["market"] = "th"
+            th_by_link.append(c.get("name", "")[:46])
+    if th_by_link:
+        print(f"   ↪ {len(th_by_link)} campaign xếp sang THÁI nhờ link (tên không ghi Thái Lan): "
+              f"{', '.join(th_by_link[:6])}")
+
     # --- PRODUCT AGGREGATES (from campaigns) ---
     for p in ("D1", "Noma911", "DR1"):
         bucket = {}
@@ -773,11 +820,6 @@ def build_data():
     # được in ra cuối bước này để còn soát, KHÔNG im lặng.
     account_to_staff = {f"act_{a['id']}": a["staff"] for a in ACCOUNTS}
 
-    link_products = {}
-    for a in ACCOUNTS:
-        if f"act_{a['id']}" in {f"act_{x['id']}" for x in ACCOUNTS}:
-            link_products.update(fetch_campaign_products_from_links(a["id"]))
-    print(f"   ✓ đọc link landing: {len(link_products)} campaign suy được SP từ link")
 
     ad_spend_by_staff = {"DUY": {}, "PHUONG_NAM": {}}
     excluded = {"DUY": {"_total": 0.0, "by_date": {}}, "PHUONG_NAM": {"_total": 0.0, "by_date": {}}}
