@@ -40,7 +40,13 @@ test("đọc ngược tên campaign: kiểu mới lẫn kiểu cũ, không nhậ
   assert.deepEqual(parseGroupName("5/10 - Noma911 - camp 2 scale"), { product: "Noma911", group: "SCALE" });
   assert.deepEqual(parseGroupName("NOMA 911 · Co Qua Tang - TEST"), { product: "Noma911", group: "TEST" });
   assert.deepEqual(parseGroupName("NOMA 680 - scale"), { product: "Noma680", group: "SCALE" });
+  // campaign đang chạy thật, đặt lệch khuôn nhưng có mã SP (đo 05/10/2026)
+  assert.deepEqual(parseGroupName("2/10-Noma350-PhươngNam-thaithucthoi"), { product: "Noma350", group: "TEST" });
+  assert.deepEqual(parseGroupName("Doscom-14/9-Noma911-Nam-GiaThau123"), { product: "Noma911", group: "TEST" });
+  assert.deepEqual(parseGroupName("17/5 - D1 Thái Lan"), { product: "D1", group: "TEST" });
+  assert.deepEqual(parseGroupName("3/10 - D2 Pro - Content nhà"), { product: "D2Pro", group: "TEST" });
   assert.equal(parseGroupName("Chương trình đại lý"), null);
+  assert.equal(parseGroupName("Chương trình hợp tác của sale"), null);
   assert.equal(parseGroupName(""), null);
 });
 

@@ -72,23 +72,33 @@ export function tenAd(dm, product, koc) {
   return `${dm} - ${spNgan(product)} - KOC ${String(koc || "").trim() || "NA"}`;
 }
 
-// Tách ngược tên campaign → { product (mã ngắn), group }. Nhận cả hai kiểu:
-//   mới : "5/10 - Noma911 - 3 creative test"  (có "scale" ở phần cuối → SCALE)
-//   cũ  : "NOMA 911 · Co Qua Tang - TEST"      (hộp cố định trước 05/10/2026)
-// Không khớp kiểu nào thì trả null.
+// Mã sản phẩm CHẮC CHẮN có trong tên (NOMA ### hoặc mã Doscom D1/DR1/DA8.1…); null nếu không
+// có. Khác spNgan(): KHÔNG lùi về "chữ đầu tên", vì tên như "Chương trình đại lý" không
+// được biến thành một sản phẩm.
+export function maSP(name) {
+  const s = String(name || "");
+  if (/noma\s*[-_]?\s*\d{3}/i.test(s)) return spNgan(s);
+  if (/(?:^|[^a-z0-9])d[a-z]?\d+(?:\.\d+)?(?![0-9])/i.test(s)) return spNgan(s);
+  return null;
+}
+
+// Tách ngược tên campaign → { product (mã ngắn), group }. Nhận:
+//   mới : "5/10 - Noma911 - 3 creative test"      (có "scale" → SCALE, còn lại TEST)
+//   cũ  : "NOMA 911 · Co Qua Tang - TEST"          (hộp cố định trước 05/10/2026)
+//   lệch khuôn nhưng có mã SP: "2/10-Noma350-PhươngNam-…", "Doscom-14/9-Noma911-…",
+//         "17/5 - D1 Thái Lan" — campaign ĐANG CHẠY của cả hai nhân sự đặt tên đủ kiểu
+//         (đo 05/10/2026: 9/9 campaign đang chạy của Phương Nam không khớp khuôn cứng).
+// Tên không có mã sản phẩm ("Chương trình đại lý") → null, không vào bảng.
 export function parseGroupName(name) {
   const t = String(name || "").trim();
+  if (!t) return null;
   const cu = t.match(/^(.*\S)\s+-\s+(TEST|SCALE)$/i);
   if (cu && !/^\d{1,2}\/\d{1,2}\s*-/.test(t)) {
     const sp = spNgan(cu[1]);
     return sp ? { product: sp, group: cu[2].toUpperCase() } : null;
   }
-  const moi = t.match(/^\d{1,2}\/\d{1,2}\s*-\s*(.+?)\s+-\s+(.+)$/);
-  if (moi) {
-    const sp = spNgan(moi[1]);
-    return sp ? { product: sp, group: /scale/i.test(moi[2]) ? "SCALE" : "TEST" } : null;
-  }
-  return null;
+  const sp = maSP(t);
+  return sp ? { product: sp, group: /scale/i.test(t) ? "SCALE" : "TEST" } : null;
 }
 
 // Số kết quả (lượt hoàn tất đăng ký) từ mảng actions của Insights API.
