@@ -583,9 +583,15 @@ function cleanHtml(){ return $('longDesc').innerHTML.replace(/<figure[\s\S]*?<\/
 function collectTags(){ return Array.prototype.map.call($('tagChips').querySelectorAll('.chip'), c=>c.childNodes[0].textContent.trim()).filter(Boolean); }
 // Ảnh gửi đi tối đa 1600px cạnh dài. Ảnh gốc từ máy ảnh/điện thoại (4000px, vài MB) làm origin
 // noma.vn resize thumbnail quá lâu → Cloudflare cắt bằng lỗi 520. 1600px vẫn dư cho WooCommerce.
-// Giữ PNG là PNG (ảnh nền trong suốt), còn lại xuất JPEG.
+// Xuất WebP: giữ được nền trong suốt như PNG mà nhẹ hơn nhiều (thumbnail PNG 450–760KB từng làm
+// trang Khuyến mãi doscom.vn nặng 9MB trên mobile — đo 08/10/2026). Trình duyệt không mã hoá được
+// WebP (toDataURL trả về PNG) thì quay về cách cũ: PNG giữ PNG, còn lại JPEG.
 const PUB_MAXDIM = 1600;
+const PUB_WEBP_QUALITY = 0.85;
+function encodeImage(dataURL, maxDim, type, quality){ return new Promise(res=>{ const img=new Image(); img.onload=()=>{ let {width:w,height:h}=img; const sc=Math.min(1,maxDim/Math.max(w,h)); w=Math.round(w*sc); h=Math.round(h*sc); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h); res(cv.toDataURL(type,quality)); }; img.onerror=()=>res(null); img.src=dataURL; }); }
 async function toPubImage(im){
+  const webp = await encodeImage(im.url, PUB_MAXDIM, 'image/webp', PUB_WEBP_QUALITY);
+  if (webp && webp.startsWith('data:image/webp')) return { data: webp.split(',')[1], media_type: 'image/webp' };
   const png = (im.media_type||'').includes('png');
   return { data: await downscale(im.url, PUB_MAXDIM, png?'image/png':'image/jpeg'), media_type: png?'image/png':'image/jpeg' };
 }
