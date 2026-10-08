@@ -59,7 +59,7 @@ rm -rf dist/data/cost-source
 rm -f dist/data/chot-khong-don-cache.json
 
 # Trang standalone (nhúng iframe trong CRM) — phải copy thủ công.
-PAGES="agent-geo-doscom.html ads-creator.html roas-tool.html product-publisher.html brandcore-fix.html fix-images.html sync-us.html thai-social.html thai-repost.html sale-images.html bulk-sale.html chot-khong-don.html"
+PAGES="agent-geo-doscom.html ads-creator.html roas-tool.html product-publisher.html brandcore-fix.html sync-us.html thai-social.html thai-repost.html chot-khong-don.html"
 for page in $PAGES; do
   [ -f "$page" ] && cp "$page" dist/
 done
