@@ -158,18 +158,12 @@ test("proxy GET: link ngoài 2 web → 400 JSON", async () => {
 });
 
 // ── Menu riêng + đường deploy ──
-test("menu Ảnh sale được nối đủ: nav, iframe, build, không cache", () => {
+test("menu Ảnh sale ĐÃ GỠ khỏi CRM (chủ dự án chốt 08/10/2026)", () => {
   const root = new URL("../", import.meta.url);
   const index = readFileSync(new URL("index.html", root), "utf8");
   const build = readFileSync(new URL("scripts/build-dist.sh", root), "utf8");
-  const headers = readFileSync(new URL("_headers", root), "utf8");
-  const page = readFileSync(new URL("sale-images.html", root), "utf8");
-  assert.match(index, /data-view="sale-images"/);
-  assert.match(index, /id="view-sale-images"/);
-  assert.match(index, /lazyFrame\('sale-images','saleimg-frame','\/sale-images'\)/);
-  assert.match(build, /PAGES=.*sale-images\.html/);
-  assert.match(build, /cp functions\/lib\/sale-images\.js dist\/js\//);
-  assert.match(headers, /^\/sale-images$/m);
-  assert.match(page, /\.\/js\/sale-images\.js/);
-  assert.match(page, /\/api\/products\/sale-images/);
+  assert.ok(!/data-view="sale-images"/.test(index), "nav Ảnh sale đã gỡ");
+  assert.ok(!/id="view-sale-images"/.test(index), "view Ảnh sale đã gỡ");
+  assert.ok(!/lazyFrame\('sale-images'/.test(index), "loader Ảnh sale đã gỡ");
+  assert.ok(!/PAGES=.*sale-images\.html/.test(build), "sale-images.html không còn trong PAGES");
 });

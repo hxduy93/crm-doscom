@@ -42,9 +42,10 @@ test("build-dist.sh có copy đủ những thứ web cần", () => {
   for (const must of ["index.html", "data", "demos", "_headers"]) {
     assert.match(buildSh, new RegExp(must.replace(".", "\\.")), "thiếu " + must);
   }
-  // 6 trang standalone nhúng iframe trong CRM
+  // Trang standalone nhúng iframe trong CRM. fix-images.html đã GỠ khỏi CRM
+  // 08/10/2026 (file còn trong repo nhưng không deploy nữa) nên không có ở đây.
   for (const page of ["agent-geo-doscom.html", "ads-creator.html", "product-publisher.html",
-    "brandcore-fix.html", "fix-images.html", "sync-us.html"]) {
+    "brandcore-fix.html", "sync-us.html"]) {
     assert.match(buildSh, new RegExp(page.replace(/\./g, "\\.")), "thiếu trang " + page);
   }
 });

@@ -127,18 +127,14 @@ test("endpoint: có token nhưng web chưa cấu hình → 400 JSON", async () =
   assert.match(data.error, /chưa cấu hình/);
 });
 
-test("menu Giảm giá hàng loạt được nối đủ: nav, iframe, build, không cache", () => {
+test("menu Giảm giá hàng loạt ĐÃ GỠ khỏi CRM (chủ dự án chốt 08/10/2026)", () => {
+  // Trang và API vẫn còn trong repo để đảo lại được, nhưng KHÔNG còn đường vào
+  // từ CRM. Test này canh chiều ngược: ai nối lại mà không có yêu cầu thì bị bắt.
   const root = new URL("../", import.meta.url);
   const index = readFileSync(new URL("index.html", root), "utf8");
   const build = readFileSync(new URL("scripts/build-dist.sh", root), "utf8");
-  const headers = readFileSync(new URL("_headers", root), "utf8");
-  const page = readFileSync(new URL("bulk-sale.html", root), "utf8");
-  assert.match(index, /data-view="bulk-sale"/);
-  assert.match(index, /id="view-bulk-sale"/);
-  assert.match(index, /lazyFrame\('bulk-sale','bulksale-frame','\/bulk-sale'\)/);
-  assert.match(build, /PAGES=.*bulk-sale\.html/);
-  assert.match(build, /cp functions\/lib\/bulk-sale\.js dist\/js\//);
-  assert.match(headers, /^\/bulk-sale$/m);
-  assert.match(page, /\.\/js\/bulk-sale\.js/);
-  assert.match(page, /\/api\/products\/bulk-sale/);
+  assert.ok(!/data-view="bulk-sale"/.test(index), "nav Giảm giá hàng loạt đã gỡ");
+  assert.ok(!/id="view-bulk-sale"/.test(index), "view Giảm giá hàng loạt đã gỡ");
+  assert.ok(!/lazyFrame\('bulk-sale'/.test(index), "loader Giảm giá hàng loạt đã gỡ");
+  assert.ok(!/PAGES=.*bulk-sale\.html/.test(build), "bulk-sale.html không còn trong PAGES");
 });

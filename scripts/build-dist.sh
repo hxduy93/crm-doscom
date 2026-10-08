@@ -39,9 +39,7 @@ cp -r data dist/data
 mkdir -p dist/js
 cp functions/lib/price-discount.js dist/js/
 # Menu "Ảnh sale": khớp file ↔ SP + tem % giảm (import ./price-discount.js cùng thư mục).
-cp functions/lib/sale-images.js dist/js/
 # Menu "Giảm giá hàng loạt": tính giá sale + ngày hẹn giờ (import ./price-discount.js).
-cp functions/lib/bulk-sale.js dist/js/
 # Công cụ "ROAS mục tiêu": mô hình tính dùng chung với bộ test (tests/roas-model.test.mjs).
 cp functions/lib/roas-model.js dist/js/
 # Menu "Chốt chưa lên đơn": lọc/tổng hợp/xuất CSV dùng chung với tests/chot-khong-don.test.mjs.
