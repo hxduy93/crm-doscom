@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nhắn lại khách · CRM Doscom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap">
+<style>
+  :root{
+    --bg:#F5F7FB; --surface:#FFFFFF; --surface-2:#EEF2FA; --line:#E1E7F2;
+    --text:#111A2E; --text-2:#55607B; --primary:#3257E6; --primary-soft:#E7ECFD;
+    --good:#0F7B4F; --good-soft:#E3F5EC; --bad:#C0342F; --bad-soft:#FBEAE9;
+    --warn:#9A5B00; --warn-soft:#FBF0DE;
+    --font:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.6;
+       padding:20px 16px 56px;font-variant-numeric:tabular-nums}
+  .wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+  h1{margin:0;font-size:24px;font-weight:900}
+  h2{margin:0 0 8px;font-size:16px;font-weight:900}
+  p{margin:0;max-width:92ch}
+  .sub{color:var(--text-2);font-size:14px}
+  .head{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;justify-content:space-between}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px}
+  .kpi span{display:block;font-size:11.5px;font-weight:800;color:var(--text-2);text-transform:uppercase;letter-spacing:.04em}
+  .kpi b{font-size:26px;font-weight:900}
+  .kpi small{display:block;font-size:12.5px;color:var(--text-2);font-weight:700}
+  .kpi.g b{color:var(--good)} .kpi.w b{color:var(--warn)} .kpi.b b{color:var(--bad)}
+  .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--surface);border:1px solid var(--line);
+       border-radius:14px;padding:12px 14px}
+  label.f{display:flex;flex-direction:column;gap:3px;font-size:11.5px;font-weight:800;color:var(--text-2);text-transform:uppercase;letter-spacing:.04em}
+  select,input[type=text],input[type=search],textarea{font:700 14px var(--font);color:var(--text);background:var(--surface-2);
+       border:1px solid var(--line);border-radius:9px;padding:7px 9px}
+  .bar select{max-width:320px}
+  textarea{width:100%;min-height:110px;resize:vertical;font-weight:600;line-height:1.5}
+  .seg{display:inline-flex;flex-wrap:wrap;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .seg button{font:800 13px var(--font);color:var(--text-2);background:transparent;border:0;border-radius:8px;padding:6px 12px;cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--surface);color:var(--primary);box-shadow:0 1px 3px rgba(17,26,46,.12)}
+  .btn{font:800 13.5px var(--font);color:#fff;background:var(--primary);border:0;border-radius:9px;padding:9px 16px;cursor:pointer}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.ghost{color:var(--text-2);background:transparent;border:1px solid var(--line)}
+  .btn.danger{background:var(--bad)}
+  button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+  .grid2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;align-items:start}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+  .tbl{overflow:auto;border:1px solid var(--line);border-radius:12px;max-height:62vh}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  thead th{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:var(--text-2);background:var(--surface-2);
+           position:sticky;top:0;z-index:1}
+  tr:last-child td{border-bottom:0}
+  td.cb,th.cb{width:34px}
+  .snip{color:var(--text-2);font-size:12.5px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chip{display:inline-block;font-size:11.5px;font-weight:800;border-radius:999px;padding:2px 9px;white-space:nowrap}
+  .chip.n24h{background:var(--good-soft);color:var(--good)}
+  .chip.n7d{background:var(--warn-soft);color:var(--warn)}
+  .chip.ncu{background:var(--bad-soft);color:var(--bad)}
+  .st{font-size:12px;font-weight:800;white-space:nowrap}
+  .st.ok{color:var(--good)} .st.err{color:var(--bad)} .st.skip{color:var(--warn)}
+  .muted{color:var(--text-2);font-size:12.5px}
+  .msg{background:var(--warn-soft);border-left:3px solid var(--warn);border-radius:0 10px 10px 0;padding:11px 13px;font-size:13.5px;font-weight:700}
+  .msg.err{background:var(--bad-soft);border-color:var(--bad)}
+  .msg.ok{background:var(--good-soft);border-color:var(--good)}
+  .rule{font-size:13px;color:var(--text-2);display:grid;gap:6px}
+  .rule b{color:var(--text)}
+  .chk{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;font-weight:700}
+  .chk input{margin-top:4px}
+  .plan{font-size:13.5px;font-weight:700;display:grid;gap:3px}
+  .plan .x{color:var(--warn)}
+  details summary{cursor:pointer;font-weight:800;font-size:13.5px;color:var(--primary)}
+  details .inner{display:grid;gap:8px;margin-top:8px}
+  progress{width:100%;height:10px}
+  .empty{padding:28px;text-align:center;color:var(--text-2);font-weight:700}
+  @media (max-width:900px){ .grid2{grid-template-columns:1fr} .bar select{max-width:100%} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div>
+      <h1>Nhắn lại khách Messenger</h1>
+      <p class="sub">Gửi tin cho những người đã nhắn Fanpage, chia theo luật Messenger của Meta.
+        Gửi tin không tốn phí. Riêng mẫu Utility, Meta chưa công bố giá cho Messenger.</p>
+    </div>
+  </div>
+
+  <div class="panel rule">
+    <div><b>Trong 24 giờ</b> kể từ tin cuối của khách: gửi tin tự do, kể cả ưu đãi.</div>
+    <div><b>Từ 24 giờ đến 7 ngày</b>: chỉ gửi với thẻ HUMAN_AGENT, dành cho nhân viên trả lời khách bị sót. Không dùng thẻ này để gửi quảng cáo hàng loạt.</div>
+    <div><b>Quá 7 ngày</b>: chỉ gửi được mẫu Utility do Meta duyệt (cập nhật đơn hàng, bảo hành, hướng dẫn dùng). Mẫu không được chứa quảng cáo.</div>
+    <div>Gửi sai luật thì Page có thể bị chặn nhắn tin. Nên thử trước với vài khách.</div>
+  </div>
+
+  <div id="msg"></div>
+
+  <div class="bar">
+    <label class="f">Fanpage <select id="page"><option value="">Đang tải…</option></select></label>
+    <label class="f">Khách nhắn trong
+      <select id="days">
+        <option value="1">1 ngày</option><option value="7">7 ngày</option>
+        <option value="30" selected>30 ngày</option><option value="90">90 ngày</option>
+        <option value="180">180 ngày</option><option value="365">365 ngày</option>
+      </select>
+    </label>
+    <button type="button" class="btn" id="load">Tải danh sách khách</button>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="grid2">
+    <div class="panel">
+      <div class="head">
+        <h2 style="margin:0">Khách đã nhắn Page</h2>
+        <span class="muted" id="count"></span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <div class="seg" id="seg">
+          <button type="button" data-v="" aria-pressed="true">Tất cả</button>
+          <button type="button" data-v="24h" aria-pressed="false">Trong 24 giờ</button>
+          <button type="button" data-v="7d" aria-pressed="false">24 giờ – 7 ngày</button>
+          <button type="button" data-v="cu" aria-pressed="false">Quá 7 ngày</button>
+        </div>
+        <input type="search" id="q" placeholder="Tìm tên…" autocomplete="off" style="flex:1;min-width:140px">
+      </div>
+      <div class="tbl" id="list"><div class="empty">Chọn Fanpage rồi bấm “Tải danh sách khách”.</div></div>
+    </div>
+
+    <div class="panel">
+      <h2 style="margin:0">Soạn tin</h2>
+      <label class="f">Nội dung tin tự do (khách trong 24 giờ, hoặc 7 ngày nếu bật HUMAN_AGENT)
+        <textarea id="text" placeholder="Chào {ten}, Doscom xin hỏi thăm sản phẩm anh/chị đã nhận có dùng ổn không ạ?"></textarea>
+      </label>
+      <div class="muted">Gõ <b>{ten}</b> để tự thay bằng tên Facebook của khách. Tối đa 2.000 ký tự.</div>
+      <label class="chk"><input type="checkbox" id="ha">
+        <span>Gửi cho khách từ 24 giờ đến 7 ngày bằng thẻ <b>HUMAN_AGENT</b>. Chỉ bật khi đây là nhân viên trả lời câu hỏi khách bị sót.</span></label>
+
+      <label class="f">Mẫu Utility (cho khách quá 7 ngày)
+        <select id="tpl"><option value="">Không gửi nhóm quá 7 ngày</option></select>
+      </label>
+      <div class="muted" id="tpl-body"></div>
+      <details id="tpl-new">
+        <summary>Tạo mẫu Utility mới</summary>
+        <div class="inner">
+          <label class="f">Tên mẫu (chữ thường không dấu, số, gạch dưới)
+            <input type="text" id="tn-name" placeholder="cham_soc_sau_mua_noma"></label>
+          <label class="f">Nội dung (chỉ được dùng tham số {{customer_name}})
+            <textarea id="tn-body" placeholder="Chào {{customer_name}}, đơn hàng của anh/chị đã được giao. Nếu cần hướng dẫn sử dụng hoặc bảo hành, anh/chị nhắn lại Page nhé."></textarea></label>
+          <div><button type="button" class="btn ghost" id="tn-go">Gửi Meta duyệt</button></div>
+        </div>
+      </details>
+
+      <div class="plan" id="plan"></div>
+      <progress id="prog" max="1" value="0" hidden></progress>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn danger" id="send" disabled>Gửi cho khách đã chọn</button>
+        <button type="button" class="btn ghost" id="stop" hidden>Dừng</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { phanNhom, taoPayload, demNhom, NHOM_LABEL } from "./js/nhan-tin-lai.js";
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = (n) => Number(n || 0).toLocaleString("vi-VN");
+const LO = 25;
+
+let rows = [];          // [{psid,name,last_customer,snippet,updated}]
+let templates = [];
+const chon = new Set(); // psid đã tick
+const ketQua = {};      // psid → {ok, skipped, error}
+let loc = "";
+let dangGui = false, dungLai = false;
+
+function bao(html, kind = "") { $("msg").innerHTML = html ? `<div class="msg ${kind}">${html}</div>` : ""; }
+
+async function api(url, init) {
+  const r = await fetch(url, init);
+  const d = await r.json().catch(() => ({ ok: false, error: `HTTP ${r.status}` }));
+  if (!d.ok) throw new Error(d.error || `HTTP ${r.status}`);
+  return d;
+}
+
+function thoiGian(iso) {
+  if (!iso) return "—";
+  const t = new Date(iso);
+  return t.toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
+}
+
+function hienThi() {
+  const now = Date.now();
+  const q = $("q").value.trim().toLowerCase();
+  const view = rows.filter((r) => (!loc || phanNhom(r.last_customer, now) === loc) && (!q || r.name.toLowerCase().includes(q)));
+  const c = demNhom(rows, now);
+  $("kpis").innerHTML = rows.length ? `
+    <div class="kpi g"><span>${NHOM_LABEL["24h"]}</span><b>${fmt(c["24h"])}</b><small>Gửi tin tự do</small></div>
+    <div class="kpi w"><span>${NHOM_LABEL["7d"]}</span><b>${fmt(c["7d"])}</b><small>Chỉ dùng HUMAN_AGENT</small></div>
+    <div class="kpi b"><span>${NHOM_LABEL.cu}</span><b>${fmt(c.cu)}</b><small>Chỉ dùng mẫu Utility</small></div>` : "";
+  $("count").textContent = rows.length ? `${fmt(view.length)} / ${fmt(rows.length)} khách · đã chọn ${fmt(chon.size)}` : "";
+  if (!rows.length) return;
+  const all = view.length && view.every((r) => chon.has(r.psid));
+  $("list").innerHTML = `<table><thead><tr>
+      <th class="cb"><input type="checkbox" id="all" ${all ? "checked" : ""} aria-label="Chọn tất cả đang hiện"></th>
+      <th>Khách</th><th>Tin cuối của khách</th><th>Nhóm</th><th>Trạng thái</th></tr></thead><tbody>${
+    view.map((r) => {
+      const n = phanNhom(r.last_customer, now);
+      const k = ketQua[r.psid];
+      const st = !k ? "" : k.ok ? `<span class="st ok">Đã gửi</span>` :
+        `<span class="st ${k.skipped ? "skip" : "err"}" title="${esc(k.error)}">${k.skipped ? "Bỏ qua" : "Lỗi"}: ${esc(k.error).slice(0, 60)}</span>`;
+      return `<tr><td class="cb"><input type="checkbox" data-p="${esc(r.psid)}" ${chon.has(r.psid) ? "checked" : ""}></td>
+        <td><b>${esc(r.name || "(không tên)")}</b><div class="snip" title="${esc(r.snippet)}">${esc(r.snippet)}</div></td>
+        <td>${thoiGian(r.last_customer)}</td>
+        <td><span class="chip n${n}">${NHOM_LABEL[n]}</span></td><td>${st}</td></tr>`;
+    }).join("") || `<tr><td colspan="5" class="empty">Không có khách khớp bộ lọc.</td></tr>`
+  }</tbody></table>`;
+  $("all").onchange = (e) => { view.forEach((r) => e.target.checked ? chon.add(r.psid) : chon.delete(r.psid)); hienThi(); };
+  $("list").querySelectorAll("input[data-p]").forEach((el) => el.onchange = () => {
+    el.checked ? chon.add(el.dataset.p) : chon.delete(el.dataset.p); keHoach(); $("count").textContent =
+      `${fmt(view.length)} / ${fmt(rows.length)} khách · đã chọn ${fmt(chon.size)}`;
+  });
+  keHoach();
+}
+
+function luaChon() {
+  const t = templates.find((x) => x.id === $("tpl").value);
+  return {
+    text: $("text").value,
+    humanAgent: $("ha").checked,
+    template: t ? { name: t.name, language: t.language, params: t.params } : null,
+  };
+}
+
+// Xem trước: bao nhiêu khách sẽ nhận tin, bao nhiêu bị bỏ qua và vì sao — trước khi bấm gửi.
+function keHoach() {
+  const opts = luaChon();
+  const now = Date.now();
+  const gui = { "24h": 0, "7d": 0, cu: 0 };
+  const boQua = {};
+  for (const r of rows) {
+    if (!chon.has(r.psid) || (ketQua[r.psid] && ketQua[r.psid].ok)) continue;
+    const n = phanNhom(r.last_customer, now);
+    const p = taoPayload(r, n, opts);
+    if (p.skip) boQua[p.skip] = (boQua[p.skip] || 0) + 1; else gui[n]++;
+  }
+  const tong = gui["24h"] + gui["7d"] + gui.cu;
+  $("plan").innerHTML = chon.size ? `
+    <div>Sẽ gửi: <b>${fmt(tong)}</b> khách (${fmt(gui["24h"])} tin tự do · ${fmt(gui["7d"])} HUMAN_AGENT · ${fmt(gui.cu)} mẫu Utility)</div>
+    ${Object.entries(boQua).map(([k, v]) => `<div class="x">Bỏ qua ${fmt(v)}: ${esc(k)}</div>`).join("")}` : "";
+  $("send").disabled = dangGui || !tong;
+  $("send").textContent = tong ? `Gửi cho ${fmt(tong)} khách` : "Gửi cho khách đã chọn";
+}
+
+async function taiPage() {
+  try {
+    const d = await api("/api/messenger/pages");
+    $("page").innerHTML = `<option value="">Chọn Fanpage…</option>` +
+      d.pages.map((p) => `<option value="${esc(p.id)}">${esc(p.name)} (${esc(p.id)})</option>`).join("");
+    if (!d.pages.length) bao("Token không quản trị Fanpage nào có quyền nhắn tin.", "err");
+  } catch (e) { $("page").innerHTML = `<option value="">Lỗi tải Fanpage</option>`; bao(esc(e.message), "err"); }
+}
+
+async function taiMau() {
+  templates = [];
+  $("tpl").innerHTML = `<option value="">Không gửi nhóm quá 7 ngày</option>`;
+  $("tpl-body").textContent = "";
+  const pid = $("page").value;
+  if (!pid) return;
+  try {
+    const d = await api(`/api/messenger/templates?page_id=${pid}`);
+    templates = d.templates.filter((t) => !t.status || t.status === "APPROVED");
+    $("tpl").innerHTML += templates.map((t) => `<option value="${esc(t.id)}">${esc(t.name)} (${esc(t.language)})</option>`).join("");
+    if (d.templates.length > templates.length) $("tpl-body").textContent = `${d.templates.length - templates.length} mẫu chưa được duyệt/bị từ chối đã ẩn.`;
+  } catch (e) {
+    $("tpl-body").textContent = "Không đọc được mẫu Utility: " + e.message;
+  }
+}
+
+async function taiKhach() {
+  const pid = $("page").value;
+  if (!pid) { bao("Chọn Fanpage trước.", "err"); return; }
+  bao("Đang đọc hội thoại từ Facebook…");
+  $("load").disabled = true;
+  try {
+    const d = await api(`/api/messenger/conversations?page_id=${pid}&days=${$("days").value}`);
+    rows = d.rows; chon.clear(); Object.keys(ketQua).forEach((k) => delete ketQua[k]);
+    bao(d.truncated ? `Chỉ đọc được ${fmt(d.count)} hội thoại gần nhất (giới hạn mỗi lần). Chọn khoảng ngày ngắn hơn nếu cần đủ.` : "");
+    if (!rows.length) $("list").innerHTML = `<div class="empty">Không có khách nào nhắn trong khoảng này.</div>`;
+    hienThi();
+  } catch (e) { bao(esc(e.message), "err"); }
+  finally { $("load").disabled = false; }
+}
+
+async function gui() {
+  const opts = luaChon();
+  const now = Date.now();
+  const ds = rows.filter((r) => chon.has(r.psid) && !(ketQua[r.psid] && ketQua[r.psid].ok)
+    && !taoPayload(r, phanNhom(r.last_customer, now), opts).skip);
+  if (!ds.length) return;
+  const page = $("page").selectedOptions[0].textContent;
+  if (!confirm(`Gửi tin cho ${ds.length} khách từ Fanpage “${page}”?\nTin đã gửi không thu hồi được.`)) return;
+  dangGui = true; dungLai = false; keHoach();
+  $("stop").hidden = false; $("prog").hidden = false; $("prog").max = ds.length; $("prog").value = 0;
+  let ok = 0, loi = 0;
+  try {
+    for (let i = 0; i < ds.length && !dungLai; i += LO) {
+      const lo = ds.slice(i, i + LO);
+      const d = await api("/api/messenger/send", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          page_id: $("page").value, text: opts.text, human_agent: opts.humanAgent, template: opts.template,
+          items: lo.map((r) => ({ psid: r.psid, name: r.name, last_customer: r.last_customer })),
+        }),
+      });
+      for (const k of d.results) { ketQua[k.psid] = k; k.ok ? ok++ : loi++; }
+      $("prog").value = Math.min(ds.length, i + LO);
+      hienThi();
+      if (d.stop) { bao(`Đã dừng giữa chừng: ${esc(d.stop)}`, "err"); break; }
+    }
+    bao(`Đã gửi <b>${fmt(ok)}</b> tin${loi ? `, <b>${fmt(loi)}</b> lỗi/bỏ qua (xem cột Trạng thái)` : ""}.`, loi ? "" : "ok");
+  } catch (e) { bao(`Lỗi khi gửi: ${esc(e.message)}. Đã gửi ${fmt(ok)} tin trước đó.`, "err"); }
+  finally { dangGui = false; $("stop").hidden = true; keHoach(); }
+}
+
+async function taoMau() {
+  const body = { page_id: $("page").value, name: $("tn-name").value.trim(), body: $("tn-body").value.trim(), language: "vi" };
+  if (!body.page_id) { bao("Chọn Fanpage trước khi tạo mẫu.", "err"); return; }
+  try {
+    const d = await api("/api/messenger/templates", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    bao(`Đã gửi mẫu “${esc(body.name)}” — Meta trả trạng thái <b>${esc(d.status || "?")}</b>.`, d.status === "APPROVED" ? "ok" : "");
+    await taiMau();
+  } catch (e) { bao("Tạo mẫu lỗi: " + esc(e.message), "err"); }
+}
+
+$("load").onclick = taiKhach;
+$("page").onchange = () => { rows = []; chon.clear(); $("kpis").innerHTML = ""; $("count").textContent = "";
+  $("list").innerHTML = `<div class="empty">Bấm “Tải danh sách khách”.</div>`; taiMau(); keHoach(); };
+$("seg").querySelectorAll("button").forEach((b) => b.onclick = () => {
+  $("seg").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  loc = b.dataset.v; hienThi();
+});
+$("q").oninput = hienThi;
+$("text").oninput = keHoach;
+$("ha").onchange = keHoach;
+$("tpl").onchange = () => { const t = templates.find((x) => x.id === $("tpl").value); $("tpl-body").textContent = t ? t.body : ""; keHoach(); };
+$("send").onclick = gui;
+$("stop").onclick = () => { dungLai = true; };
+$("tn-go").onclick = taoMau;
+taiPage();
+</script>
+</body>
+</html>

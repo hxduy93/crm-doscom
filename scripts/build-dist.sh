@@ -44,6 +44,8 @@ cp functions/lib/price-discount.js dist/js/
 cp functions/lib/roas-model.js dist/js/
 # Menu "Chốt chưa lên đơn": lọc/tổng hợp/xuất CSV dùng chung với tests/chot-khong-don.test.mjs.
 cp functions/lib/chot-khong-don.js dist/js/
+# Menu "Nhắn lại khách": chia nhóm 24h/7 ngày/Utility dùng chung với functions/api/messenger.
+cp functions/lib/nhan-tin-lai.js dist/js/
 # Bảng giá vốn từng SKU cho công cụ đó (cost-source/ không được đẩy lên web).
 node scripts/build-sku-costs.mjs
 [ -d demos ] && cp -r demos dist/demos
@@ -57,7 +59,7 @@ rm -rf dist/data/cost-source
 rm -f dist/data/chot-khong-don-cache.json
 
 # Trang standalone (nhúng iframe trong CRM) — phải copy thủ công.
-PAGES="agent-geo-doscom.html ads-creator.html roas-tool.html product-publisher.html brandcore-fix.html sync-us.html thai-social.html thai-repost.html chot-khong-don.html"
+PAGES="agent-geo-doscom.html ads-creator.html roas-tool.html product-publisher.html brandcore-fix.html sync-us.html thai-social.html thai-repost.html chot-khong-don.html nhan-tin-lai.html"
 for page in $PAGES; do
   [ -f "$page" ] && cp "$page" dist/
 done
