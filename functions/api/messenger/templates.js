@@ -1,7 +1,7 @@
 // GET  /api/messenger/templates?page_id=…  — mẫu Utility của Page (để gửi khách quá 7 ngày)
 // POST /api/messenger/templates            — tạo mẫu mới { page_id, name, body, language }
 // Mẫu Utility = tin cập nhật đơn/tài khoản, Meta duyệt ngay khi tạo, CẤM nội dung quảng cáo
-// (bị từ chối với lý do TAG_SHOULD_BE_MARKETING). Cần scope page_utility_messaging.
+// (bị từ chối với lý do TAG_SHOULD_BE_MARKETING). Cần scope pages_utility_messaging.
 import { getIdentity } from "../../lib/access.js";
 import { thamSoMau, tenMauHopLe } from "../../lib/nhan-tin-lai.js";
 import { json, graph, pageToken, giaiThichLoi } from "./_graph.js";

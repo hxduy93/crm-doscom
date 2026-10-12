@@ -4,7 +4,7 @@
 // viên Page; từ nó lấy PAGE TOKEN của từng fanpage qua /me/accounts (Messenger bắt buộc page
 // token). Token phải có scope:
 //   pages_messaging          — đọc hội thoại + gửi tin (THIẾU là lỗi #200 khi đọc conversations)
-//   page_utility_messaging   — chỉ cần cho nhóm "quá 7 ngày" (mẫu Utility)
+//   pages_utility_messaging   — chỉ cần cho nhóm "quá 7 ngày" (mẫu Utility)
 // Kiểm 12/10/2026: FB_ACCESS_TOKEN hiện tại CHƯA có pages_messaging → phải cấp token mới.
 // KHÔNG BAO GIỜ trả page token ra trình duyệt.
 
@@ -35,7 +35,7 @@ export function giaiThichLoi(err) {
   const msg = String((err && err.message) || err || "");
   if (code === 190) return "Token Facebook hết hạn hoặc bị thu hồi — cấp token mới (FB_MESSAGING_TOKEN).";
   if (/pages_messaging/.test(msg)) return "Token chưa có quyền pages_messaging — cấp lại token có quyền này (FB_MESSAGING_TOKEN).";
-  if (/page_utility_messaging/.test(msg)) return "Token chưa có quyền page_utility_messaging — cần quyền này để gửi mẫu Utility.";
+  if (/pages_utility_messaging/.test(msg)) return "Token chưa có quyền pages_utility_messaging — cần quyền này để gửi mẫu Utility.";
   if (code === 10 && /outside of allowed window|24 hour/i.test(msg)) return "Khách đã quá cửa sổ cho phép — tin tự do không gửi được.";
   if (code === 551 || /isn't available|not available right now/i.test(msg)) return "Khách đã chặn Page hoặc không nhận tin được.";
   if (code === 4 || code === 613 || code === 32) return "Facebook giới hạn tốc độ — dừng vài phút rồi gửi tiếp.";
