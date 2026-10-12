@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-12 13:37",
+  "generated_at": "2026-10-12 23:10",
   "source_data_date_range": {
     "start_7d": "2026-10-05",
     "end": "2026-10-11",
@@ -60,8 +60,8 @@
     "orders_30d": 134,
     "by_status": {
       "delivered": {
-        "revenue": 145612000.0,
-        "orders": 89
+        "revenue": 149645000.0,
+        "orders": 91
       },
       "returning": {
         "revenue": 7948000.0,
@@ -76,8 +76,8 @@
         "orders": 3
       },
       "other": {
-        "revenue": 52932000.0,
-        "orders": 33
+        "revenue": 48899000.0,
+        "orders": 31
       }
     },
     "by_source": {
@@ -1446,6 +1446,19 @@
     },
     "top_converting_terms": [
       {
+        "search_term": "camera",
+        "spend_30d": 2637290.0,
+        "clicks_30d": 246,
+        "conversions_30d": 6.0,
+        "ctr_30d": 0.0385,
+        "match_types": [
+          "BROAD"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
         "search_term": "doscom",
         "spend_30d": 114681.0,
         "clicks_30d": 91,
@@ -1457,19 +1470,6 @@
         ],
         "statuses": [
           "ADDED",
-          "NONE"
-        ]
-      },
-      {
-        "search_term": "camera",
-        "spend_30d": 2637290.0,
-        "clicks_30d": 246,
-        "conversions_30d": 6.0,
-        "ctr_30d": 0.0385,
-        "match_types": [
-          "BROAD"
-        ],
-        "statuses": [
           "NONE"
         ]
       },
@@ -1504,58 +1504,6 @@
         ]
       },
       {
-        "search_term": "mua máy ghi âm",
-        "spend_30d": 142795.0,
-        "clicks_30d": 19,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.25,
-        "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
-        "search_term": "camera doscom",
-        "spend_30d": 134123.0,
-        "clicks_30d": 20,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.3226,
-        "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
-        "search_term": "máy chống ghi âm",
-        "spend_30d": 358204.0,
-        "clicks_30d": 22,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.2785,
-        "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
-        "search_term": "máy ghi âm",
-        "spend_30d": 431294.0,
-        "clicks_30d": 34,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1214,
-        "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED_EXCLUDED"
-        ]
-      },
-      {
         "search_term": "máy dò thiết bị nghe lén",
         "spend_30d": 510562.0,
         "clicks_30d": 31,
@@ -1571,6 +1519,19 @@
         ]
       },
       {
+        "search_term": "mua máy ghi âm",
+        "spend_30d": 142795.0,
+        "clicks_30d": 19,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.25,
+        "match_types": [
+          "EXACT"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
         "search_term": "may ghi am",
         "spend_30d": 159698.0,
         "clicks_30d": 16,
@@ -1581,6 +1542,47 @@
         ],
         "statuses": [
           "NONE"
+        ]
+      },
+      {
+        "search_term": "máy ghi âm tốt",
+        "spend_30d": 220655.0,
+        "clicks_30d": 13,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.2321,
+        "match_types": [
+          "PHRASE"
+        ],
+        "statuses": [
+          "ADDED",
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "thiết bị nghe lén ghi âm",
+        "spend_30d": 19828.0,
+        "clicks_30d": 5,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.1852,
+        "match_types": [
+          "NEAR_PHRASE",
+          "PHRASE"
+        ],
+        "statuses": [
+          "NONE"
+        ]
+      },
+      {
+        "search_term": "camera doscom",
+        "spend_30d": 134123.0,
+        "clicks_30d": 20,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.3226,
+        "match_types": [
+          "EXACT"
+        ],
+        "statuses": [
+          "ADDED"
         ]
       }
     ],
@@ -2115,17 +2117,17 @@
         "conversions_30d": 12.75,
         "term_count": 54
       },
-      "PHRASE": {
-        "spend_30d": 13211526.0,
-        "clicks_30d": 1394,
-        "conversions_30d": 17.78,
-        "term_count": 771
-      },
       "NEAR_PHRASE": {
         "spend_30d": 13421838.0,
         "clicks_30d": 1211,
         "conversions_30d": 14.33,
         "term_count": 1835
+      },
+      "PHRASE": {
+        "spend_30d": 13211526.0,
+        "clicks_30d": 1394,
+        "conversions_30d": 17.78,
+        "term_count": 771
       },
       "BROAD": {
         "spend_30d": 13230870.0,
@@ -2143,7 +2145,7 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 9353,
+      "total_unique_placements": 9360,
       "total_spend_30d": 11038997.0
     },
     "network_breakdown": {
@@ -2168,9 +2170,9 @@
       "WEBSITE": {
         "spend_30d": 11038997.0,
         "clicks_30d": 3584,
-        "impressions_30d": 265049,
+        "impressions_30d": 265118,
         "ctr_30d": 0.0135,
-        "placement_count": 9353
+        "placement_count": 9360
       }
     },
     "top_waste_placements": [],
