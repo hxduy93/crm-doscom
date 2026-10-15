@@ -51,15 +51,32 @@ function json(obj, status = 200) {
   });
 }
 
-async function fbGetAll(path, params, token, maxPages = 10) {
-  const p = new URLSearchParams({ ...params, access_token: token, limit: params.limit || "200" });
+/* Meta trả "Please reduce the amount of data you're asking for" khi một trang quá nặng
+   (ad kèm object_story_spec + insights lồng nhau). 15/10/2026 lỗi này làm danh sách nhóm
+   QC không tải được → ô chọn đích kẹt "Đang đọc…". Gặp lỗi đó thì chia đôi limit rồi
+   hỏi lại đúng trang đó, xuống tới 5 mới chịu thua. */
+const LOI_QUA_NANG = /reduce the amount of data/i;
+
+async function fbGetAll(path, params, token, maxPages = 60) {
+  let limit = Number(params.limit) || 50;
+  const p = new URLSearchParams({ ...params, access_token: token, limit: String(limit) });
   let next = `${GRAPH}${path}?${p}`;
   const out = [];
   let guard = 0;
   while (next && guard++ < maxPages) {
     const r = await fetch(next, { signal: AbortSignal.timeout(25000) });
     const d = await r.json().catch(() => ({ error: { message: `Non-JSON (status ${r.status})` } }));
-    if (!r.ok || d.error) throw new Error(d.error?.message || `HTTP ${r.status}`);
+    if (!r.ok || d.error) {
+      const msg = d.error?.message || `HTTP ${r.status}`;
+      if (LOI_QUA_NANG.test(msg) && limit > 5) {
+        limit = Math.max(5, Math.floor(limit / 2));
+        const u = new URL(next);
+        u.searchParams.set("limit", String(limit));
+        next = u.toString();
+        continue;
+      }
+      throw new Error(msg);
+    }
     out.push(...(d.data || []));
     next = d.paging?.next || null;
   }

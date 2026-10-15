@@ -122,10 +122,21 @@ test("có dropdown chọn nhóm QC đích cho từng sản phẩm", () => {
   assert.match(html, /value="new"/, "phải có lựa chọn tạo campaign mới");
 });
 
-test("ad set đã biến mất thì lùi về tạo mới, không gửi ID chết xuống Meta", () => {
+test("ad set đã biến mất thì BỎ QUA sản phẩm, không tự đổi sang tạo mới cũng không gửi ID chết", () => {
   const khoi = html.slice(html.indexOf("const dichCua = "), html.indexOf("const loadGroups"));
   assert.match(khoi, /return h \? \{ loai: "adset"/);
-  assert.match(khoi, /\{ loai: "moi" \}/);
+  assert.match(khoi, /: \{ loai: "mat" \}/);
+  assert.match(html, /dichCua\(g\.product, gdNow\)\.loai === "mat"/, "vòng chạy phải bỏ qua đích đã mất");
+});
+
+// 15/10/2026: tưởng tạo camp mới mà creative đổ vào camp cũ — vì ô chọn tự chọn sẵn nhóm cũ.
+test("không có đích mặc định: chưa chọn campaign cũ/mới thì không chạy", () => {
+  assert.match(html, /const maDich = \(product\) => autoTarget\[khoaDich\(product\)\] \|\| ""/);
+  assert.doesNotMatch(html, /mucMacDinh\(/, "gợi ý server không được thành lựa chọn ngầm");
+  assert.match(html, /if \(!ma \|\| ma === "chon_cu"\) return \{ loai: "chua_chon" \}/);
+  assert.match(html, /dichCua\(g\.product\)\.loai === "chua_chon"\)/, "handleAutoRun phải chặn sản phẩm chưa chọn");
+  assert.match(html, /Đổ vào campaign CŨ/);
+  assert.match(html, /Tạo campaign MỚI riêng/);
 });
 
 test("ghi sổ hộp được gửi kèm mỗi lần tạo", () => {
