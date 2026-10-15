@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-15 12:19",
+  "generated_at": "2026-10-15 19:10",
   "source_data_date_range": {
     "start_7d": "2026-10-08",
     "end": "2026-10-14",
@@ -60,8 +60,8 @@
     "orders_30d": 129,
     "by_status": {
       "delivered": {
-        "revenue": 149274000.0,
-        "orders": 94
+        "revenue": 149989000.0,
+        "orders": 95
       },
       "returning": {
         "revenue": 12615000.0,
@@ -72,8 +72,8 @@
         "orders": 4
       },
       "other": {
-        "revenue": 37926000.0,
-        "orders": 23
+        "revenue": 37211000.0,
+        "orders": 22
       },
       "canceled": {
         "revenue": 1300000.0,
@@ -1433,7 +1433,7 @@
         "search_term": "doscom",
         "spend_30d": 148051.0,
         "clicks_30d": 93,
-        "conversions_30d": 7.0,
+        "conversions_30d": 8.0,
         "ctr_30d": 0.4627,
         "match_types": [
           "BROAD",
@@ -1515,32 +1515,6 @@
         ]
       },
       {
-        "search_term": "mua máy ghi âm",
-        "spend_30d": 151095.0,
-        "clicks_30d": 20,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.2564,
-        "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED"
-        ]
-      },
-      {
-        "search_term": "máy ghi âm",
-        "spend_30d": 106767.0,
-        "clicks_30d": 8,
-        "conversions_30d": 1.0,
-        "ctr_30d": 0.1127,
-        "match_types": [
-          "EXACT"
-        ],
-        "statuses": [
-          "ADDED_EXCLUDED"
-        ]
-      },
-      {
         "search_term": "máy dò thiết bị nghe lén",
         "spend_30d": 492336.0,
         "clicks_30d": 29,
@@ -1557,16 +1531,42 @@
         ]
       },
       {
-        "search_term": "may ghi am",
-        "spend_30d": 106461.0,
-        "clicks_30d": 15,
+        "search_term": "máy dò camera",
+        "spend_30d": 206495.0,
+        "clicks_30d": 18,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.1042,
+        "ctr_30d": 0.2308,
         "match_types": [
-          "PHRASE"
+          "NEAR_PHRASE"
+        ],
+        "statuses": [
+          "ADDED"
+        ]
+      },
+      {
+        "search_term": "máy dò camera ghi âm",
+        "spend_30d": 351766.0,
+        "clicks_30d": 20,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.3704,
+        "match_types": [
+          "NEAR_PHRASE"
         ],
         "statuses": [
           "NONE"
+        ]
+      },
+      {
+        "search_term": "mua máy ghi âm",
+        "spend_30d": 151095.0,
+        "clicks_30d": 20,
+        "conversions_30d": 1.0,
+        "ctr_30d": 0.2564,
+        "match_types": [
+          "EXACT"
+        ],
+        "statuses": [
+          "ADDED"
         ]
       }
     ],
@@ -2098,7 +2098,7 @@
       "EXACT": {
         "spend_30d": 4342475.0,
         "clicks_30d": 531,
-        "conversions_30d": 13.25,
+        "conversions_30d": 14.25,
         "term_count": 53
       },
       "PHRASE": {
@@ -2116,7 +2116,7 @@
       "BROAD": {
         "spend_30d": 12221936.0,
         "clicks_30d": 1411,
-        "conversions_30d": 27.08,
+        "conversions_30d": 28.08,
         "term_count": 2672
       },
       "NEAR_EXACT": {
@@ -2129,16 +2129,16 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 8833,
-      "total_spend_30d": 9740537.0
+      "total_unique_placements": 8840,
+      "total_spend_30d": 9739284.0
     },
     "network_breakdown": {
       "CONTENT": {
-        "spend_30d": 9740533.0,
-        "clicks_30d": 3446,
+        "spend_30d": 9739281.0,
+        "clicks_30d": 3444,
         "impressions_30d": 255060,
         "ctr_30d": 0.0135,
-        "cpc_30d": 2827.0,
+        "cpc_30d": 2828.0,
         "campaign_count": 5
       },
       "SEARCH": {
@@ -2152,11 +2152,11 @@
     },
     "placement_type_breakdown": {
       "WEBSITE": {
-        "spend_30d": 9740537.0,
-        "clicks_30d": 3446,
-        "impressions_30d": 240528,
+        "spend_30d": 9739284.0,
+        "clicks_30d": 3444,
+        "impressions_30d": 240590,
         "ctr_30d": 0.0143,
-        "placement_count": 8833
+        "placement_count": 8840
       }
     },
     "top_waste_placements": [],
@@ -2171,10 +2171,10 @@
       },
       {
         "placement": "xskt.com.vn/xsmb",
-        "spend_30d": 60394.0,
-        "clicks_30d": 59,
+        "spend_30d": 59883.0,
+        "clicks_30d": 58,
         "impressions_30d": 16031,
-        "ctr_30d": 0.0037,
+        "ctr_30d": 0.0036,
         "placement_type": "WEBSITE"
       },
       {
@@ -2301,9 +2301,9 @@
       },
       {
         "placement": "a2.hoopgame.net/app/YouTube-TV-Live-TV--more",
-        "spend_30d": 226714.0,
-        "clicks_30d": 124,
-        "ctr_30d": 0.0396,
+        "spend_30d": 225972.0,
+        "clicks_30d": 123,
+        "ctr_30d": 0.0392,
         "placement_type": "WEBSITE",
         "ad_network_type": "CONTENT"
       },
