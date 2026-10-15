@@ -384,6 +384,22 @@ export async function onRequestPost(context) {
   const accountIdRaw = String(cfg.account_id).replace(/^act_/, "");
   const partial = {};
 
+  /* Step 0 (15/10/2026): Page CHƯA ĐĂNG thì Meta chỉ từ chối ở bước create_adcreative —
+     lúc đó campaign + ad set đã tạo xong, để lại campaign RỖNG trên tài khoản. Hỏi trước.
+     Không đọc được Page (token thiếu quyền…) thì bỏ qua, để Meta tự xử như cũ. */
+  if (cfg.page_id) {
+    let page = null;
+    try { page = await fbGet(`/${cfg.page_id}`, { fields: "name,is_published" }, token); } catch { /* bỏ qua */ }
+    if (page && page.is_published === false) {
+      return json({
+        success: false,
+        step: "check_page",
+        error: `Page "${page.name || cfg.page_id}" (${cfg.page_id}) đang ở trạng thái CHƯA ĐĂNG (unpublished) — `
+          + "Meta không cho chạy quảng cáo từ Page này. Chọn Page khác hoặc đăng Page lên rồi chạy lại. Chưa tạo gì trên tài khoản.",
+      }, 400);
+    }
+  }
+
   try {
     // ── Step 1: Upload all media (HOẶC dùng media đã upload trước qua /api/fb-upload-media) ──
     // 2026-05-06: split flow để tránh CF 30s timeout. Frontend nên upload qua
