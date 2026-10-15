@@ -1038,6 +1038,13 @@ function AdsCreatorPanel() {
       rateLimited = RATE_LIMIT_RE.test(lastMsg)
       if (!rateLimited) break   // lỗi thật (video riêng tư, bị xoá…) → thử lại vô ích
     }
+    // "Url parsing is failed" KHÔNG phải link sai: đo 15/10/2026, 3 video @toanmanshop báo lỗi này
+    // trong khi chính trang TikTok trả statusCode 10204 "author_status" — kênh bị hạn chế / video
+    // riêng tư / đang duyệt nên không ai tải công khai được. Nói rõ cho người chạy biết đường lùi.
+    if (/url parsing is failed/i.test(lastMsg)) {
+      lastMsg = "TikTok không cho xem công khai video này (kênh bị hạn chế, video riêng tư hoặc đang duyệt)"
+        + " — xin file gốc từ KOC rồi chọn bằng ô folder bên dưới"
+    }
     throw new Error(rateLimited
       ? "dịch vụ giải link đang quá tải (có thể người khác đang lấy video cùng lúc) — đợi một lát rồi bấm lại"
       : lastMsg)
