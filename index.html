@@ -3368,6 +3368,11 @@
   // thấy được ai đang giữ video nào.
   var claims=new Map();           // video_key → { staff, staff_name, claimed_at }
   var inCamp=new Set();           // video_key đã có ad (từ sổ uploaded_videos)
+  // video_key TikTok chặn xem công khai — Tạo Ads giải link lỗi thì ghi sổ /api/video-unavailable
+  // (15/10/2026). Tự loại khỏi bảng + giỏ: tick vào chỉ để lỗi thêm lần nữa. Hết hạn sổ thì hiện lại.
+  var khongLay=new Map();         // video_key → lý do
+  var anKhongLay=0;               // số video bị loại trong lần lọc gần nhất (để báo ra)
+  function khongLayDuoc(v){ var k=videoKey(v&&v.link); return !!(k&&khongLay.has(k)); }
   var STAFF_NAME={ DUY:'Duy', PHUONG_NAM:'Nam' };
   var lastClaim=null;             // { staff, keys, at } — để hiện nút gỡ trong 60s
   var RELEASE_S=60;
@@ -3527,8 +3532,10 @@
   function applyFilters(){
     var sortKey=sortSel.value||'gmv', fCamp=fCampSel.value, fStaff=fStaffSel.value;
     var poolN=0;
+    anKhongLay=0;
     shown=lastVideos.filter(function(v){
       if(activeSP && spKeyOf(v)!==activeSP) return false;
+      if(khongLayDuoc(v)){ anKhongLay++; return false; }
       poolN++;
       var k=videoKey(v.link), c=k?claims.get(k):null;
       var h=nhomCua(v);
@@ -3554,6 +3561,7 @@
       ? 'Hiện tất cả '+poolN+' video'
       : 'Hiện '+shown.length+'/'+poolN+' video')+
       (activeSP ? ' trong sản phẩm này' : '')+
+      (anKhongLay ? ' · <span title="TikTok chặn xem công khai (kênh bị hạn chế / riêng tư / đang duyệt) — tự hiện lại sau 3 ngày">đã loại '+anKhongLay+' video không lấy được link</span>' : '')+
       (claimsErr ? ' · <span style="color:#b3261e">'+esc(claimsErr)+'</span>' : '');
   }
 
@@ -3631,7 +3639,7 @@
   // Video vừa bị người khác nhận (do tải lại sổ) → bỏ khỏi giỏ, không để lỡ tay chạy.
   function dropLockedFromCart(){
     var gone=[];
-    picked.forEach(function(v,k){ if(lockedByOther(v)) gone.push(k); });
+    picked.forEach(function(v,k){ if(lockedByOther(v) || khongLayDuoc(v)) gone.push(k); });
     gone.forEach(function(k){ picked.delete(k); });
     return gone.length;
   }
@@ -4037,7 +4045,24 @@
       .catch(function(){ inCamp=new Set(); });
   }
 
-  function loadMarks(){ return Promise.all([loadClaims(),loadInCamp()]).then(renderVideos); }
+  function loadKhongLay(){
+    return fetch('/api/video-unavailable',{credentials:'same-origin'})
+      .then(function(r){return r.json();})
+      .then(function(j){
+        if(!j.ok) throw new Error(j.error||'lỗi');
+        khongLay=new Map((j.videos||[]).map(function(x){ return [String(x.video_key), x.reason||'']; }));
+      })
+      .catch(function(){ khongLay=new Map(); });   // sổ hỏng → hiện đủ như cũ, không chặn bảng
+  }
+
+  function loadMarks(){
+    return Promise.all([loadClaims(),loadInCamp(),loadKhongLay()])
+      .then(function(){ dropLockedFromCart(); renderVideos(); });
+  }
+  // Tạo Ads vừa ghi thêm video lỗi (và gỡ nhận chúng) → đọc lại sổ ngay, khỏi phải F5.
+  window.addEventListener('message',function(e){
+    if(e.origin===location.origin && e.data && e.data.type==='tt-unavailable-updated') loadMarks();
+  });
 
   function syncOwn(){
     var n=ownSet().size;
@@ -4086,7 +4111,7 @@
   function nhomCua(v){
     var k=videoKey(v.link);
     return {
-      chua: !(k&&inCamp.has(k)) && !(k&&claims.get(k)),
+      chua: !(k&&inCamp.has(k)) && !(k&&claims.get(k)) && !(k&&khongLay.has(k)),
       moi: coTruoc && !TRUOC[khoaVid(v)] && (v.orders||0)>0,
       capnhat: (v.last_date&&MOC_DATA) ? v.last_date>=MOC_DATA : false,
       kenhnha: isOwn(v.username),

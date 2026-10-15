@@ -1045,9 +1045,13 @@ function AdsCreatorPanel() {
       lastMsg = "TikTok không cho xem công khai video này (kênh bị hạn chế, video riêng tư hoặc đang duyệt)"
         + " — xin file gốc từ KOC rồi chọn bằng ô folder bên dưới"
     }
-    throw new Error(rateLimited
+    const err = new Error(rateLimited
       ? "dịch vụ giải link đang quá tải (có thể người khác đang lấy video cùng lúc) — đợi một lát rồi bấm lại"
       : lastMsg)
+    // Dịch vụ trả lời hẳn hoi mà vẫn không giải được (không phải quá tải, không phải
+    // rớt mạng) → video hỏng thật, ghi sổ để menu TikTok Shop tự ẩn (runTikTokIngest).
+    err.khongLayDuoc = !rateLimited
+    throw err
   }
 
   // Chốt chặn chạy trùng: hàng đợi tới bằng CẢ HAI đường (sessionStorage lúc iframe
@@ -1074,6 +1078,7 @@ function AdsCreatorPanel() {
 
     const byProduct = {}
     const errs = []
+    const hong = []   // video dịch vụ giải link trả lời "không được" (không phải quá tải)
     for (let i = 0; i < vids.length; i++) {
       const v = vids[i]
       setTtFetch(s => ({ ...s, done: i, msg: `Đang lấy link ${i + 1}/${vids.length}: ${String(v.title || "").slice(0, 42)}…` }))
@@ -1099,6 +1104,28 @@ function AdsCreatorPanel() {
         ;(byProduct[product] = byProduct[product] || []).push({ name, url, size, remote: true, koc: kocName(v.username) })
       } catch (e) {
         errs.push(`${String(v.title || v.link).slice(0, 40)}: ${e.message}`)
+        if (e.khongLayDuoc) hong.push({ link: v.link, title: String(v.title || "").slice(0, 200), reason: e.message })
+      }
+    }
+
+    // Ghi sổ video không lấy được → menu TikTok Shop tự ẩn + tự gỡ nhận (15/10/2026).
+    // Hỏng sổ không ảnh hưởng lô đang chạy, chỉ báo thêm một dòng.
+    let soHong = ""
+    if (hong.length) {
+      try {
+        const tok = (() => { try { return localStorage.getItem("doscom_opt_token") || "" } catch { return "" } })()
+        const r = await fetch("/api/video-unavailable", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Optimizer-Token": tok },
+          body: JSON.stringify({ videos: hong }),
+        })
+        const d = await r.json()
+        if (!r.ok || !d.ok) throw new Error(d.error || `HTTP ${r.status}`)
+        soHong = ` ${hong.length} video lỗi đã được loại khỏi menu TikTok Shop`
+          + (d.released && d.released.length ? ` và gỡ nhận (${d.released.length} video)` : "") + "."
+        try { window.parent && window.parent.postMessage({ type: "tt-unavailable-updated" }, location.origin) } catch { /* không có parent */ }
+      } catch (e) {
+        soHong = ` (Chưa ghi được sổ video lỗi: ${e.message})`
       }
     }
 
@@ -1108,8 +1135,8 @@ function AdsCreatorPanel() {
     setTtFetch({
       busy: false, done: okN, total: vids.length, err: errs,
       msg: okN
-        ? `Đã lấy ${okN}/${vids.length} video từ TikTok Shop. Chọn tài khoản/Page/Pixel bên dưới rồi bấm "Quét" và chạy.`
-        : "Không lấy được video nào.",
+        ? `Đã lấy ${okN}/${vids.length} video từ TikTok Shop. Chọn tài khoản/Page/Pixel bên dưới rồi bấm "Quét" và chạy.${soHong}`
+        : `Không lấy được video nào.${soHong}`,
     })
   }
 

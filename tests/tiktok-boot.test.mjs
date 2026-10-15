@@ -48,7 +48,7 @@ function domGia() {
 test("khối TikTok Shop khởi động được, không ném ReferenceError", () => {
   const { document, daGan } = domGia();
   const ctx = {
-    document, window: { location: { origin: "https://x" } },
+    document, window: { location: { origin: "https://x" }, addEventListener(su) { daGan.push(`window:${su}`); } },
     localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
     sessionStorage: { getItem: () => null, setItem() {} },
     fetch: () => new Promise(() => {}),      // treo mãi — khởi động không được phụ thuộc mạng
