@@ -67,7 +67,8 @@ async function fbGetAll(path, params, token, maxPages = 60) {
     const r = await fetch(next, { signal: AbortSignal.timeout(25000) });
     const d = await r.json().catch(() => ({ error: { message: `Non-JSON (status ${r.status})` } }));
     if (!r.ok || d.error) {
-      const msg = d.error?.message || `HTTP ${r.status}`;
+      const e = d.error || {};
+      const msg = e.message || `HTTP ${r.status}`;
       if (LOI_QUA_NANG.test(msg) && limit > 5) {
         limit = Math.max(5, Math.floor(limit / 2));
         const u = new URL(next);
@@ -75,7 +76,10 @@ async function fbGetAll(path, params, token, maxPages = 60) {
         next = u.toString();
         continue;
       }
-      throw new Error(msg);
+      // "Invalid parameter" trơn không nói gì (15/10/2026) — chi tiết thật nằm ở
+      // error_user_msg / error_subcode, kèm limit để biết có dính vòng chia đôi không.
+      const chiTiet = [e.error_user_title, e.error_user_msg].filter(Boolean).join(": ");
+      throw new Error(`${msg}${chiTiet ? ` — ${chiTiet}` : ""} (code ${e.code ?? "?"}/${e.error_subcode ?? "-"}, limit ${limit})`);
     }
     out.push(...(d.data || []));
     next = d.paging?.next || null;

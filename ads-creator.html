@@ -74,6 +74,25 @@ function nhanCamp(label, group) {
   if (g === "test" && coScale) l = l.replace(/scale/gi, "").trim() + " test";
   return l;
 }
+/* 15/10/2026: GỘP các nhóm cùng MÃ SẢN PHẨM thành 1 nhóm = 1 campaign. TikTok Shop có nhiều
+   listing cho cùng một SP ("NOMA 911 · Kem Tay O Kinh…" và "NOMA 911 · Dung Dich Tay O Kinh…")
+   → trước đây mỗi listing đẻ một campaign riêng, cả hai lại trùng tên "15/10 - Noma911 - 1 creative".
+   Đích đổ (autoTarget) vốn đã khoá theo mã SP nên hai ô chọn kia thực chất là MỘT lựa chọn.
+   Mỗi file giữ tên listing gốc ở .sp để AI viết caption vẫn biết video thuộc listing nào. */
+function gopTheoSP(groups) {
+  const m = new Map()
+  for (const g of groups) {
+    const k = spNgan(g.product).toLowerCase()
+    for (const f of g.files) { if (!f.sp) f.sp = g.product }
+    const cu = m.get(k)
+    if (!cu) { m.set(k, { product: g.product, files: [...g.files], nguon: [g.product] }); continue }
+    cu.files.push(...g.files)
+    cu.nguon.push(g.product)
+    // Nhiều listing → đặt tên theo phần chung trước dấu "·" ("NOMA 911").
+    cu.product = String(cu.nguon[0]).split(/\s*·\s*/)[0].trim() || cu.nguon[0]
+  }
+  return [...m.values()]
+}
 // "d/m" theo giờ Việt Nam (toISOString là giờ UTC — trước 7h sáng sẽ ra ngày hôm qua).
 function ngayThangVn() {
   const d = new Date(Date.now() + 7 * 3600 * 1000);
@@ -966,7 +985,7 @@ function AdsCreatorPanel() {
       const folder = parts.length > 1 ? parts[parts.length - 2] : "(gốc)"
       ;(byFolder[folder] = byFolder[folder] || []).push(f)
     }
-    setAutoGroups(Object.entries(byFolder).map(([product, fs]) => ({ product, files: fs })))
+    setAutoGroups(gopTheoSP(Object.entries(byFolder).map(([product, fs]) => ({ product, files: fs }))))
     setAutoResults([])
     setAutoLog([])
     setAutoExisting(null) // folder đổi → phải quét lại
@@ -1076,7 +1095,7 @@ function AdsCreatorPanel() {
       }
     }
 
-    const groups = Object.entries(byProduct).map(([product, files]) => ({ product, files }))
+    const groups = gopTheoSP(Object.entries(byProduct).map(([product, files]) => ({ product, files })))
     setAutoGroups(groups)
     const okN = groups.reduce((n, g) => n + g.files.length, 0)
     setTtFetch({
@@ -1245,7 +1264,7 @@ function AdsCreatorPanel() {
                   cta: autoCta,
                   // Đưa hotline vào ghi chú để AI dùng ĐÚNG số này, khỏi bịa số khác.
                   // (Chèn lại lần nữa ở withHotline — AI quên thì vẫn có số trong bài.)
-                  notes: `Tên video: ${baseName} | Nhóm sản phẩm: ${g.product}`
+                  notes: `Tên video: ${baseName} | Nhóm sản phẩm: ${file.sp || g.product}`
                     + (phone ? ` | Hotline (dùng đúng số này, đặt cuối bài): ${phone}` : ""),
                   promotion: "",
                   count: 1,
@@ -2178,6 +2197,9 @@ function AdsCreatorPanel() {
                       <span className="font-normal text-gray-400"> — {g.files.length} video</span>
                       {autoExisting && <span className={"ml-2 text-[11px] font-bold " + (newCnt > 0 ? "text-green-700" : "text-gray-400")}>({newCnt} mới)</span>}
                     </p>
+                    {(g.nguon || []).length > 1 && (
+                      <p className="text-[11px] text-gray-500 mt-0.5">Gộp {g.nguon.length} listing → 1 campaign: {g.nguon.join(" · ")}</p>
+                    )}
 
                     {/* ĐÍCH ĐẾN — thứ trước đây hệ thống tự đoán và không nói ra.
                         Liệt kê TỪNG nhóm QC thật trong hộp, kèm trạng thái/ngân sách/số creative. */}
