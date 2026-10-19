@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-19 12:23",
+  "generated_at": "2026-10-19 21:03",
   "source_data_date_range": {
     "start_7d": "2026-10-12",
     "end": "2026-10-18",
@@ -60,8 +60,8 @@
     "orders_30d": 126,
     "by_status": {
       "delivered": {
-        "revenue": 149893000.0,
-        "orders": 94
+        "revenue": 150363000.0,
+        "orders": 95
       },
       "returning": {
         "revenue": 13265000.0,
@@ -72,8 +72,8 @@
         "orders": 1
       },
       "other": {
-        "revenue": 39548000.0,
-        "orders": 21
+        "revenue": 39078000.0,
+        "orders": 20
       },
       "canceled": {
         "revenue": 3850000.0,
@@ -1541,13 +1541,13 @@
         ]
       },
       {
-        "search_term": "máy ghi âm điện máy xanh",
-        "spend_30d": 46015.0,
+        "search_term": "kbvision",
+        "spend_30d": 26671.0,
         "clicks_30d": 4,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.0455,
+        "ctr_30d": 0.25,
         "match_types": [
-          "PHRASE"
+          "BROAD"
         ],
         "statuses": [
           "EXCLUDED"
@@ -2079,17 +2079,17 @@
       }
     ],
     "match_type_breakdown": {
-      "EXACT": {
-        "spend_30d": 4318190.0,
-        "clicks_30d": 548,
-        "conversions_30d": 12.25,
-        "term_count": 53
-      },
       "PHRASE": {
         "spend_30d": 11785913.0,
         "clicks_30d": 1343,
         "conversions_30d": 22.58,
         "term_count": 757
+      },
+      "BROAD": {
+        "spend_30d": 11915041.0,
+        "clicks_30d": 1423,
+        "conversions_30d": 28.08,
+        "term_count": 2640
       },
       "NEAR_PHRASE": {
         "spend_30d": 14123770.0,
@@ -2097,11 +2097,11 @@
         "conversions_30d": 21.33,
         "term_count": 1812
       },
-      "BROAD": {
-        "spend_30d": 11915041.0,
-        "clicks_30d": 1423,
-        "conversions_30d": 28.08,
-        "term_count": 2640
+      "EXACT": {
+        "spend_30d": 4318190.0,
+        "clicks_30d": 548,
+        "conversions_30d": 12.25,
+        "term_count": 53
       },
       "NEAR_EXACT": {
         "spend_30d": 155118.0,
@@ -2113,16 +2113,16 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 8257,
-      "total_spend_30d": 9121986.0
+      "total_unique_placements": 8262,
+      "total_spend_30d": 9117226.0
     },
     "network_breakdown": {
       "CONTENT": {
-        "spend_30d": 9121985.0,
-        "clicks_30d": 3319,
-        "impressions_30d": 232750,
-        "ctr_30d": 0.0143,
-        "cpc_30d": 2748.0,
+        "spend_30d": 9117225.0,
+        "clicks_30d": 3316,
+        "impressions_30d": 232749,
+        "ctr_30d": 0.0142,
+        "cpc_30d": 2749.0,
         "campaign_count": 5
       },
       "SEARCH": {
@@ -2136,11 +2136,11 @@
     },
     "placement_type_breakdown": {
       "WEBSITE": {
-        "spend_30d": 9121986.0,
-        "clicks_30d": 3319,
-        "impressions_30d": 218676,
+        "spend_30d": 9117226.0,
+        "clicks_30d": 3316,
+        "impressions_30d": 218741,
         "ctr_30d": 0.0152,
-        "placement_count": 8257
+        "placement_count": 8262
       }
     },
     "top_waste_placements": [],
