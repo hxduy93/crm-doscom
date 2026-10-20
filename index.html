@@ -2470,7 +2470,13 @@
     // 120 dùng đường rút gọn /d và /tpn (không lặp lại số SP trong path như 4 landing kia)
     // vì tên miền riêng noma120.asia gắn ngày 14/08/2026 đã mang sẵn số hiệu sản phẩm.
     { key:'noma120', ten:'NOMA 120', mo:'Vệ sinh kim phun & buồng đốt', mau:'#DC2626',
-      link:{ duy:'noma120.asia/d', pn:'noma120.asia/tpn' } }
+      link:{ duy:'noma120.asia/d', pn:'noma120.asia/tpn' } },
+    // 922 (20/10/2026) KHÔNG có bảng D1 riêng: landing đẩy đơn thẳng vào Pancake. pos:true =
+    // số dựng từ ĐƠN POS nguồn "DUY - NOMA 922" / "PHƯƠNG NAM - NOMA 922"
+    // (D.revenue.landing_pos_orders, gói suy từ sản phẩm trong đơn — fetch_pancake_revenue.py),
+    // DT = doanh số COD. Vì là đơn đã lên POS nên thường ÍT hơn lượt điền form.
+    { key:'noma922', ten:'NOMA 922', mo:'Phủ nano kính · số từ đơn POS', mau:'#14B8A6', pos:true,
+      link:{ duy:'noma.io.vn/n922d', pn:'noma.io.vn/n922tpn' } }
   ];
   var DK_DATA={};   // key -> response | {__loading:true} | {__failed:true}
   var DK_STAFF=[{k:'duy',ten:'Duy'},{k:'pn',ten:'Phương Nam'}];
@@ -2509,6 +2515,8 @@
       '<div style="font-size:11.5px;color:var(--text-2);font-weight:600;margin-top:2px">'+sp.mo+'</div>';
     if(!N || N.__loading)
       return '<tr><td style="vertical-align:top">'+ten+'</td><td colspan="5" style="color:var(--text-2);font-weight:600">Đang tải…</td></tr>';
+    if((N.__failed || !N.summary) && sp.pos)
+      return '<tr><td style="vertical-align:top">'+ten+'</td><td colspan="5" style="font-size:12.5px;color:#B45309;font-weight:700;line-height:1.6">⚠ Snapshot Pancake chưa có mục <code>landing_pos_orders.'+sp.key+'</code> — chờ lượt cập nhật dữ liệu kế tiếp (9h/15h). <span style="font-weight:600;color:var(--text-2)">Đây là thiếu dữ liệu, không phải “0 đơn”.</span></td></tr>';
     if(N.__failed || !N.summary)
       return '<tr><td style="vertical-align:top">'+ten+'</td><td colspan="5" style="font-size:12.5px;color:#B45309;font-weight:700;line-height:1.6">⚠ Không đọc được <code>/api/'+sp.key+'/stats</code> — '+dkLyDo(N)+' <span style="font-weight:600;color:var(--text-2)">Đơn vẫn có thể đang về D1, đây là lỗi đọc chứ không phải “0 đơn”.</span></td></tr>';
 
@@ -2516,7 +2524,9 @@
     (N.by_staff||[]).forEach(function(r){ byS[r.staff]=r; });
     var tomTat='<div style="font-size:11.5px;color:var(--text-2);font-weight:700;margin-top:6px;line-height:1.75">'+
       num(s.orders)+' đơn · '+num(s.unique_customers)+' khách<br>'+vnd(s.revenue)+
-      '<br><span title="Đơn đã giao thành công, đối chiếu POS Pancake">Đã giao '+num(a.orders_delivered||0)+' · '+(a.conversion_rate||0)+'%</span></div>';
+      '<br><span title="Đơn đã giao thành công, đối chiếu POS Pancake">Đã giao '+num(a.orders_delivered||0)+' · '+(a.conversion_rate||0)+'%</span>'+
+      (sp.pos?'<br><span title="Đơn POS nguồn DUY - '+sp.ten+' / PHƯƠNG NAM - '+sp.ten+' (mọi trạng thái, kể cả huỷ — khớp doanh số Pancake). Doanh thu = tiền COD.">đơn POS · DT = doanh số COD</span>':'')+
+      '</div>';
 
     return DK_STAFF.map(function(ns,i){
       var r=byS[ns.k]||{orders:0,revenue:0};
@@ -2598,6 +2608,29 @@
       rows+tongRow+'</tbody></table>'+canhBao;
   }
 
+  // Landing pos:true → dựng response CÙNG HÌNH DẠNG /api/<sp>/stats từ đơn POS trong
+  // snapshot, để mọi chỗ vẽ (dòng sản phẩm, khối combo, dòng Tổng) dùng lại nguyên xi.
+  // Đã giao = trạng thái 3 trên POS, cùng nghĩa khối `actual` của các landing D1.
+  function dkTuDonPos(key,from,to){
+    var all=((D&&D.revenue)||{}).landing_pos_orders;
+    if(!all||!all[key]) return {__failed:true};
+    var rows=all[key].filter(function(r){ return r.d>=from && r.d<=to; });
+    var khach={}, combo={}, staff={}, giao=0, dt=0;
+    rows.forEach(function(r){
+      khach[r.c]=1; dt+=r.cod||0; if(r.st===3) giao++;
+      var c=combo[r.combo]||(combo[r.combo]={combo:r.combo,combo_label:r.label,orders:0,revenue:0});
+      c.orders++; c.revenue+=r.cod||0;
+      var s=staff[r.s]||(staff[r.s]={staff:r.s,orders:0,revenue:0});
+      s.orders++; s.revenue+=r.cod||0;
+    });
+    var vals=function(o){ return Object.keys(o).map(function(k){return o[k];}); };
+    return {
+      summary:{ orders:rows.length, unique_customers:Object.keys(khach).length, revenue:dt },
+      by_combo:vals(combo), by_staff:vals(staff),
+      actual:{ orders_delivered:giao, conversion_rate:rows.length?Math.round(giao/rows.length*1000)/10:0 }
+    };
+  }
+
   function loadDangKy(from,to){
     var rng=document.getElementById('dk-range'); if(rng) rng.textContent=from+' → '+to;
     DK_LIST.forEach(function(sp){ DK_DATA[sp.key]={__loading:true}; });
@@ -2610,6 +2643,7 @@
     // type='opaqueredirect' (status 0) → biết chắc là hết phiên đăng nhập, bảo người dùng
     // tải lại trang thay vì đi tìm lỗi trong D1.
     DK_LIST.forEach(function(sp){
+      if(sp.pos){ dkNhan(sp.key, dkTuDonPos(sp.key,from,to)); return; }
       fetch('/api/'+sp.key+'/stats?from='+from+'&to='+to,{cache:'no-store',redirect:'manual'})
         .then(function(r){
           if(r.type==='opaqueredirect'||r.status===0) return {__failed:true,__ly:'access'};

@@ -697,6 +697,77 @@ def fetch_orders_by_group(start_dt, end_dt):
     return by_group, failed_chunks
 
 
+# Landing gửi đơn THẲNG vào Pancake, không qua D1 của CRM như 680/350/230/120 — nên
+# bảng "Đơn đăng ký landing" đọc gói của nó từ đơn POS (nguồn "DUY - NOMA 922",
+# "PHƯƠNG NAM - NOMA 922"). Gói suy từ SẢN PHẨM trong đơn (combo Pancake đã bung ra
+# thành phần qua PRODUCT_MAPPING), không suy từ giá: 911+922 và 2×922 cùng 438K.
+#   combos — {(số chai main, số chai partner): (mã gói landing, nhãn)}; khớp bảng
+#            PRICING của landing (noma922-landing/functions/api/order.js).
+#   gifts  — chai tặng theo luật quà 24/09/2026, bỏ ra khi xét gói.
+# Đơn có thêm sản phẩm khác (sale bán kèm) → gói "khac", vẫn tính đơn + doanh thu.
+LANDING_POS = {
+    "noma922": {
+        "source_re": r"noma\s*922",
+        "main": "Noma 922",
+        "partner": "Noma 911",
+        "gifts": ["Noma 955", "Noma 110"],
+        "combos": {
+            (1, 0): ("le-922",        "1 chai NOMA 922 phủ nano kính"),
+            (2, 0): ("combo-2x922",   "2 chai NOMA 922 phủ nano kính"),
+            (1, 1): ("combo-911-922", "NOMA 911 tẩy ố kính + NOMA 922 phủ nano kính"),
+            (0, 1): ("le-911",        "1 chai NOMA 911 tẩy ố kính"),
+        },
+    },
+}
+
+
+def landing_combo_of_order(order, cfg):
+    """→ (mã gói, nhãn gói, có quà) của 1 đơn POS theo bảng gói của landing."""
+    units, gift = Counter(), False
+    for code, qty, _rev, name in extract_items(order):
+        for label, per, *rest in (_resolve_pancake_item(code, name) or [("?" + (name or code), 1)]):
+            if (rest and rest[0]) or label in cfg["gifts"]:
+                gift = True
+                continue
+            units[label] += qty * per
+    m, p = units.pop(cfg["main"], 0), units.pop(cfg["partner"], 0)
+    if not units and (m, p) in cfg["combos"]:
+        k, lbl = cfg["combos"][(m, p)]
+        return k, lbl, gift
+    return "khac", "Gói khác (sale bán kèm / sửa đơn)", gift
+
+
+def build_landing_pos_orders(orders, cfg):
+    """Đơn POS của landing (lọc theo tên nguồn) → list gọn {d, s, st, cod, combo, label, gift, c}.
+
+    c = số thứ tự khách theo SĐT (để đếm khách duy nhất), KHÔNG ghi SĐT ra file web.
+    """
+    rx = re.compile(cfg["source_re"], re.I)
+    out, khach = [], {}
+    for o in orders:
+        src = o.get("order_sources_name") or ""
+        if not rx.search(src):
+            continue
+        try:
+            dt = datetime.fromisoformat((o.get("inserted_at") or "")[:26]).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+        combo, label, gift = landing_combo_of_order(o, cfg)
+        p9 = extract_order_phone(o) or ("#" + str(o.get("id")))
+        out.append({
+            "c": khach.setdefault(p9, len(khach) + 1),
+            "d": (dt + timedelta(hours=7)).date().isoformat(),
+            "s": "pn" if _norm_source(src).startswith("phuong nam") else "duy",
+            "st": o.get("status"),
+            "cod": order_revenue(o),
+            "combo": combo,
+            "label": label,
+            "gift": gift,
+        })
+    out.sort(key=lambda r: r["d"])
+    return out
+
+
 def phone_last9(s):
     """Lấy 9 số cuối của phone — dùng làm key join với CRM contact.
     Trùng logic với scripts/fetch_pancake_crm_contacts.py."""
@@ -1492,6 +1563,17 @@ def main():
             })
     print(f"\n[INFO] web_items_flat: {len(web_items_flat)} items exported cho JS dynamic compute")
 
+    # ── Đơn POS theo GÓI cho landing không ghi đơn về D1 của CRM (NOMA 922) ──
+    landing_pos_orders = {
+        key: build_landing_pos_orders(
+            per_group_orders.get("DUY", []) + per_group_orders.get("PHUONG_NAM", []), cfg)
+        for key, cfg in LANDING_POS.items()
+    }
+    for key, rows in landing_pos_orders.items():
+        print(f"\n[INFO] landing_pos_orders[{key}]: {len(rows)} đơn, "
+              f"{sum(r['cod'] for r in rows):,.0f}đ, gói: "
+              f"{dict(Counter(r['combo'] for r in rows))}")
+
     # ── Build orders_minimal — phục vụ join lead→order trong build_lead_to_order.py ──
     # Mỗi đơn 1 entry: phone9 + status + cod + sources_name + inserted_at (VN date).
     # KHÔNG dump tên khách / địa chỉ — chỉ phone_last9 đủ để join.
@@ -1564,6 +1646,9 @@ def main():
         # MỚI (2026-05-12): orders_minimal — phone9 + status + cod per đơn,
         # để build_lead_to_order.py join với CRM contacts theo phone_last9.
         "orders_minimal": orders_minimal,
+        # MỚI (2026-10-20): đơn POS kèm gói của landing chỉ đẩy đơn vào Pancake (NOMA 922),
+        # cho bảng "Đơn đăng ký landing". Không có tên/SĐT khách.
+        "landing_pos_orders": landing_pos_orders,
     }
 
     out_path = os.path.join(os.path.dirname(__file__), "..", "data", "product-revenue.json")

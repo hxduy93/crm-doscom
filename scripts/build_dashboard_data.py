@@ -343,6 +343,10 @@ LANDING_TO_PRODUCT = {
     # "3/10 - D2 Pro - …" vốn đã được tên campaign gán về "D2".
     "doscom.click/d2prod":          "D2",
     "doscom.click/d2protpn":        "D2",
+    # NOMA 922 phủ nano kính (16/10/2026) — nằm TRONG project noma-landings của 911 nên
+    # PHẢI khai theo path; bản xem thử noma922-lp.pages.dev khai ở bảng host bên dưới.
+    "noma.io.vn/n922d":             "Noma 922",
+    "noma.io.vn/n922tpn":           "Noma 922",
 }
 
 # Domain chỉ bán MỘT sản phẩm → mọi path trên domain đó (kể cả biến thể theo nhân
@@ -363,6 +367,7 @@ LANDING_HOST_TO_PRODUCT = {
     "noma130-lp.pages.dev":       "Noma 130",
     # NOMA 880 CHƯA có tên miền riêng — chỉ chạy trên *.pages.dev (xem README landing).
     "noma880-lp.pages.dev":       "Noma 880",   # NOMA 880 phủ tinh thể bảo vệ sơn
+    "noma922-lp.pages.dev":       "Noma 922",   # NOMA 922 phủ nano kính (bản xem thử)
     # Bản *.pages.dev của các landing ở trên (ad thường dán link pages.dev lúc test)
     "noma-landings.pages.dev":       "Noma 911",
     "noma911.pages.dev":             "Noma 911",

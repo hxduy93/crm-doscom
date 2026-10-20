@@ -128,3 +128,29 @@ test("hết phiên Access thì tự tải lại trang một lần, có chốt ch
   assert.match(html, /function dkNhan\(key,N\)\{\s*if\(N&&N\.__ly==='access'&&dkTaiLaiKhiHetPhien\(\)\) return;/,
     "dkNhan phải gọi tự tải lại khi lỗi là 'access'");
 });
+
+// 2026-10-20: NOMA 922 không có bảng D1 riêng — dòng của nó dựng từ đơn POS trong snapshot
+// (D.revenue.landing_pos_orders.noma922). Canh: lọc đúng khoảng ngày, đếm khách theo mã
+// ẩn danh, gói/nhân sự/đã giao ra đúng hình dạng response /api/<sp>/stats.
+test("NOMA 922 lấy số từ đơn POS, đúng hình dạng stats", async () => {
+  const { runInNewContext } = await import("node:vm");
+  const list = html.match(/var DK_LIST=\[[\s\S]*?\n  \];/)[0];
+  assert.match(list, /key:'noma922'[^}]*pos:true/, "922 phải đánh dấu pos:true");
+  assert.match(list, /n922d/); assert.match(list, /n922tpn/);
+  const fn = html.match(/function dkTuDonPos\(key,from,to\)\{[\s\S]*?\n  \}/)[0];
+  const D = { revenue: { landing_pos_orders: { noma922: [
+    { d: "2026-10-17", s: "duy", st: 3, cod: 234000, combo: "le-922", label: "1 chai", c: 1 },
+    { d: "2026-10-18", s: "duy", st: 3, cod: 453000, combo: "combo-911-922", label: "911+922", c: 2 },
+    { d: "2026-10-18", s: "pn",  st: 6, cod: 453000, combo: "combo-911-922", label: "911+922", c: 2 },
+    { d: "2026-10-19", s: "pn",  st: 0, cod: 234000, combo: "le-911", label: "911", c: 3 },
+  ] } } };
+  const N = runInNewContext(fn + "; dkTuDonPos('noma922','2026-10-18','2026-10-19')", { D });
+  assert.deepEqual({ ...N.summary }, { orders: 3, unique_customers: 2, revenue: 1140000 });
+  const cb = Object.fromEntries(N.by_combo.map((c) => [c.combo, c.orders]));
+  assert.deepEqual(cb, { "combo-911-922": 2, "le-911": 1 });
+  const st = Object.fromEntries(N.by_staff.map((s) => [s.staff, s.revenue]));
+  assert.deepEqual(st, { duy: 453000, pn: 687000 });
+  assert.equal(N.actual.orders_delivered, 1);
+  const thieu = runInNewContext(fn + "; dkTuDonPos('noma922','2026-10-01','2026-10-31')", { D: { revenue: {} } });
+  assert.equal(thieu.__failed, true, "snapshot cũ chưa có mục này thì báo thiếu, KHÔNG ra 0 đơn");
+});
