@@ -2634,9 +2634,25 @@
       .catch(function(){ OTHER_LEADS={__failed:true}; fillStaffLeads(NOMA_LEADS||{__failed:true}); });
   }
 
+  // Hết phiên Access (tab mở lâu) → tự tải lại trang MỘT lần: điều hướng cấp trang thì
+  // Access đăng nhập lại được (thường im lặng qua SSO), còn fetch() thì không bao giờ —
+  // trước đây người dùng phải tự F5 mỗi lần thấy 4 dòng lỗi (680/350/230/120; 911 được
+  // Bypass nên vẫn ra số). Mốc thời gian trong sessionStorage chặn vòng lặp reload nếu
+  // endpoint thật sự bị chặn chứ không phải hết phiên — khi đó vẫn hiện thông báo lỗi.
+  function dkTaiLaiKhiHetPhien(){
+    try{
+      var t=+sessionStorage.getItem('dk-reauth-at')||0;
+      if(Date.now()-t<120000) return false;
+      sessionStorage.setItem('dk-reauth-at',String(Date.now()));
+    }catch(e){ return false; }
+    location.reload();
+    return true;
+  }
+
   // Nhận kết quả 1 endpoint. Riêng 911 còn nuôi cột "Lead" ở bảng theo nhân sự và
   // bảng "Lead theo landing & nhân sự" — nên cập nhật NOMA_LEADS ngay khi có.
   function dkNhan(key,N){
+    if(N&&N.__ly==='access'&&dkTaiLaiKhiHetPhien()) return;
     DK_DATA[key]=N;
     if(key==='noma911'){ NOMA_LEADS=N; fillStaffLeads(NOMA_LEADS); }
     renderDangKy();

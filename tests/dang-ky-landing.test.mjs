@@ -116,3 +116,15 @@ test("% đơn SP lấy mẫu số là tổng đơn CỦA SẢN PHẨM, mỗi kh�
   const tong = combos.reduce((t, c) => t + Math.round(c.orders / tongSP * 1000) / 10, 0);
   assert.equal(tong, 100);
 });
+
+// 2026-10-20: tab mở lâu → phiên Cloudflare Access hết hạn → 4 endpoint stats không được
+// Bypass (680/350/230/120) bị 302, chỉ 911 ra số. Trang phải TỰ tải lại một lần để đăng
+// nhập lại, có chốt chống vòng lặp, thay vì bắt người dùng tự F5.
+test("hết phiên Access thì tự tải lại trang một lần, có chốt chống lặp", () => {
+  const fn = html.match(/function dkTaiLaiKhiHetPhien\(\)\{[\s\S]*?\n  \}/);
+  assert.ok(fn, "thiếu hàm dkTaiLaiKhiHetPhien");
+  assert.match(fn[0], /sessionStorage/, "phải nhớ mốc reload để không lặp vô hạn");
+  assert.match(fn[0], /location\.reload\(\)/);
+  assert.match(html, /function dkNhan\(key,N\)\{\s*if\(N&&N\.__ly==='access'&&dkTaiLaiKhiHetPhien\(\)\) return;/,
+    "dkNhan phải gọi tự tải lại khi lỗi là 'access'");
+});
