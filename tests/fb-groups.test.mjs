@@ -195,7 +195,7 @@ test("bê sang SCALE phải dùng lại bài viết cũ, không upload lại vid
 const grp = readFileSync(new URL("../functions/api/fb-groups.js", import.meta.url), "utf8");
 
 test("bảng trả kèm UID video để đối chiếu đúng video nào đang thắng", () => {
-  assert.match(grp, /creative\{effective_object_story_id,video_id,object_story_spec\}/,
+  assert.match(grp, /creative\{id,effective_object_story_id,video_id,object_story_spec\}/,
     "phải xin video_id của creative");
   assert.match(grp, /tiktok_id/, "phải map sang ID video gốc trên TikTok");
   assert.match(grp, /FROM uploaded_videos WHERE account_id = \?/,
