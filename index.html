@@ -703,6 +703,7 @@
 
         <div class="tt-boxes" id="tt-boxes">
           <button class="tt-box" type="button" data-f="chua" aria-pressed="true"><span class="k">Chưa lên camp</span><span class="v" id="bx-chua">—</span></button>
+          <button class="tt-box" type="button" data-f="dalen" aria-pressed="false" title="Video đã có người nhận hoặc đã lên camp — bật để xem lại và chọn chạy tiếp"><span class="k">Đã lên camp / đã nhận</span><span class="v" id="bx-dalen">—</span></button>
           <button class="tt-box" type="button" data-f="moi" aria-pressed="false"><span class="k">Mới ra đơn</span><span class="v" id="bx-moi">—</span></button>
           <button class="tt-box" type="button" data-f="capnhat" aria-pressed="false"><span class="k">Mới cập nhật</span><span class="v" id="bx-capnhat">—</span></button>
           <button class="tt-box" type="button" data-f="kenhnha" aria-pressed="false"><span class="k">Kênh nhà</span><span class="v" id="bx-kenhnha">—</span></button>
@@ -731,6 +732,7 @@
           </select>
           <input class="tt-ip tt-q" id="tt-q" placeholder="Tìm nhanh theo tên video, kênh hoặc sản phẩm…">
           <input class="tt-ip tt-own" id="tt-own" placeholder="Kênh nhà của công ty, cách nhau dấu phẩy…">
+          <button class="btn-cl" id="tt-pick-all" type="button" title="Tick mọi video đang hiện trong danh sách (trừ video người khác đang giữ hoặc không có link)">☑ Chọn tất cả</button>
           <span id="tt-filter-n" class="tt-sub"></span>
           <span id="tt-own-n" class="tt-sub"></span>
         </div>
@@ -3409,7 +3411,10 @@
   var picked=new Map();           // link video → bản ghi đã chọn (giữ khi đổi khoảng ngày)
   // 4 hộp lọc trên đầu. Bật nhiều hộp thì điều kiện CỘNG DỒN (và), không phải hoặc —
   // "chưa lên camp" + "kênh nhà" = video kênh nhà chưa ai chạy.
-  var HOP={chua:true,moi:false,capnhat:false,kenhnha:false};
+  // "chua" và "dalen" là hai nửa ngược nhau → bật cái này thì tắt cái kia (xem boxesEl),
+  // không thì AND của hai hộp luôn ra danh sách rỗng.
+  var HOP={chua:true,dalen:false,moi:false,capnhat:false,kenhnha:false};
+  var HOP_NGUOC={chua:'dalen',dalen:'chua'};
   var timKiem='';
 
   // ── Sổ NHẬN video (server) ─────────────────────────────────────────────────
@@ -4162,6 +4167,8 @@
     var k=videoKey(v.link);
     return {
       chua: !(k&&inCamp.has(k)) && !(k&&claims.get(k)) && !(k&&khongLay.has(k)),
+      // Đã tick + nhận (hoặc đã lên camp) thì rơi khỏi "chua" — hộp này để xem lại chúng.
+      dalen: !!(k && (inCamp.has(k) || claims.get(k)) && !khongLay.has(k)),
       moi: coTruoc && !TRUOC[khoaVid(v)] && (v.orders||0)>0,
       capnhat: (v.last_date&&MOC_DATA) ? v.last_date>=MOC_DATA : false,
       kenhnha: isOwn(v.username),
@@ -4171,7 +4178,7 @@
   // Con số trên hộp = SỐ VIDEO thuộc nhóm. Mũi tên = chênh lệch ĐƠN của chính nhóm đó
   // giữa kỳ này và kỳ trước (trạng thái camp không có lịch sử nên không so được theo video).
   function veHop(){
-    ['chua','moi','capnhat','kenhnha'].forEach(function(id){
+    ['chua','dalen','moi','capnhat','kenhnha'].forEach(function(id){
       var el=document.getElementById('bx-'+id); if(!el) return;
       var ds=lastVideos.filter(function(v){ return nhomCua(v)[id]; });
       var nay=ds.reduce(function(t,v){ return t+(v.orders||0); },0);
@@ -4207,6 +4214,20 @@
     var id=b.getAttribute('data-f');
     HOP[id]=!HOP[id];
     b.setAttribute('aria-pressed',HOP[id]?'true':'false');
+    var nguoc=HOP_NGUOC[id];
+    if(HOP[id] && nguoc && HOP[nguoc]){
+      HOP[nguoc]=false;
+      var bn=boxesEl.querySelector('button[data-f="'+nguoc+'"]'); if(bn) bn.setAttribute('aria-pressed','false');
+    }
+    renderVideos();
+  });
+  // Chọn tất cả = tick mọi video ĐANG HIỆN mà tick được (có link, không bị người khác giữ,
+  // không nằm sổ lỗi) — đúng điều kiện ô checkbox đang cho phép, không lách được khoá.
+  document.getElementById('tt-pick-all').addEventListener('click',function(){
+    shown.forEach(function(v){
+      if(!v.link || lockedByOther(v) || khongLayDuoc(v)) return;
+      picked.set(v.link||v.title,v);
+    });
     renderVideos();
   });
   refreshBtn.addEventListener('click',function(){ loadVideos(); loadMarks(); });
