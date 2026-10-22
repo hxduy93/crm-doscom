@@ -219,7 +219,7 @@ export const CONG_THUC_SAN_PHAM = {
       "Không nhắc tên hoạt chất (Alkyl Glycoside, Polysorbate) trong bài",
     ],
     batBuoc: [
-      { re: "da lộn|nubuck|rách", msg: "không dùng cho da lộn/nubuck, không phục hồi da đã rách" },
+      { re: "da lộn|rách", msg: "không dùng cho da lộn, không phục hồi da đã rách" },
     ],
   },
 };

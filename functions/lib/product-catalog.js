@@ -561,7 +561,7 @@ export const PRODUCTS = {
       "Lớp bảo vệ 1-3 tháng, tuỳ điều kiện sử dụng",
       "Không nhờn rít, thơm nhẹ — dùng vừa đủ và lau phần dư là mặt da khô ráo",
       "Mở hộp là làm được: có sẵn khăn microfiber và mút chà",
-      "Dùng cho da thật nhẵn (kể cả Nappa, Full Grain) và da simili chất lượng cao",
+      "Dùng cho da thật nhẵn (kể cả da cao cấp) và da simili chất lượng cao",
     ],
     painPoints: [
       "Ghế da dùng lâu khô, cứng dần, sờ vào thấy khô ráp",
@@ -580,7 +580,7 @@ export const PRODUCTS = {
     effectDuration: "Lớp bảo vệ 1-3 tháng; xe dùng thường xuyên dưỡng 1-2 tháng/lần, xe ít dùng 2-3 tháng/lần",
     limits: [
       "Luôn đúng thứ tự: chai 1 làm sạch TRƯỚC, chai 2 dưỡng SAU — dưỡng trước là khoá bẩn vào da",
-      "KHÔNG dùng cho da lộn (suede), da nubuck, vải nỉ",
+      "KHÔNG dùng cho da lộn, da nhung, vải nỉ",
       "KHÔNG phục hồi được da đã rách, bong tróc nặng — việc đó cần thợ",
       "Da thật cao cấp, da màu sáng: thử trước ở vùng nhỏ khuất",
       "Không đổ trực tiếp lên ghế, không chà mạnh",
@@ -594,7 +594,7 @@ export const PRODUCTS = {
     ],
     fbPolicyNotes:
       "Không hứa phục hồi da đã rách, bong tróc hay làm biến mất vết nứt — 686 chỉ làm sạch và dưỡng da còn nguyên vẹn, " +
-      "dưỡng giúp HẠN CHẾ nứt nẻ. Con số 1-3 tháng phải kèm 'tuỳ điều kiện sử dụng'. Không dùng cho da lộn/nubuck/vải.",
+      "dưỡng giúp HẠN CHẾ nứt nẻ. Con số 1-3 tháng phải kèm 'tuỳ điều kiện sử dụng'. Không dùng cho da lộn, da nhung, vải nỉ. Không chèn tên tiếng Anh của loại da.",
   },
 
   "DA8.1": {
