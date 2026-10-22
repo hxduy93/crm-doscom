@@ -104,18 +104,43 @@ export async function onRequestGet(context) {
   try {
     // Một lượt: mọi ad ACTIVE/PAUSED kèm ad set + campaign + số liệu. Tài khoản
     // của mình cỡ vài chục ad nên không cần lọc phía Meta.
-    const ads = await fbGetAll("/act_" + acct + "/ads", {
+    const docAds = (kemOss) => fbGetAll("/act_" + acct + "/ads", {
       fields: [
         "name,status,effective_status,created_time",
         "adset{id,name,status,effective_status,daily_budget,optimization_goal}",
         "campaign{id,name,status,effective_status}",
         // video_id để đối chiếu ĐÚNG video nào đang thắng; object_story_spec là
         // đường lùi khi creative không trả thẳng video_id.
-        "creative{effective_object_story_id,video_id,object_story_spec}",
+        kemOss ? "creative{id,effective_object_story_id,video_id,object_story_spec}"
+               : "creative{id,effective_object_story_id,video_id}",
         `insights.date_preset(last_${days}d){spend,actions,impressions}`,
       ].join(","),
       effective_status: '["ACTIVE","PAUSED","CAMPAIGN_PAUSED","ADSET_PAUSED","PENDING_REVIEW","DISAPPROVED","WITH_ISSUES","IN_PROCESS"]',
     }, token);
+
+    /* 22/10/2026: MỘT creative hỏng phía Meta (asset_feed_spec lệch object_story_spec,
+       subcode 2446211 "Giá trị Dof đầu tiên phải khớp…") làm Meta từ chối CẢ trang khi
+       hỏi object_story_spec → cả bảng TEST→SCALE của tkqc 927390616363424 sập, dù ad
+       hỏng nằm ở campaign đã tắt. Gặp lỗi đó: đọc lại không kèm object_story_spec, rồi
+       chỉ hỏi riêng từng creative còn thiếu video_id của ad ĐANG CHẠY, hỏng cái nào bỏ cái đó. */
+    let ads;
+    try {
+      ads = await docAds(true);
+    } catch (e) {
+      if (!/2446211|Asset Feed Spec|\bDof\b/i.test(String(e.message))) throw e;
+      ads = await docAds(false);
+      const canBu = ads.filter((a) => (a.campaign || {}).effective_status === "ACTIVE"
+        && (a.adset || {}).effective_status === "ACTIVE"
+        && a.creative && a.creative.id && !a.creative.video_id);
+      await Promise.all(canBu.map(async (a) => {
+        try {
+          const r = await fetch(`${GRAPH}/${a.creative.id}?fields=object_story_spec&access_token=${encodeURIComponent(token)}`,
+            { signal: AbortSignal.timeout(15000) });
+          const d = await r.json();
+          if (d && d.object_story_spec) a.creative.object_story_spec = d.object_story_spec;
+        } catch { /* creative hỏng → coi như không có video_id, ad vẫn hiện */ }
+      }));
+    }
 
     const now = Date.now();
     // product -> { test: Map<adset_id, hop>, scale: Map<adset_id, hop> }
