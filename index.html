@@ -4233,8 +4233,15 @@
   refreshBtn.addEventListener('click',function(){ loadVideos(); loadMarks(); });
   // Lọc/sắp xếp chạy trên dữ liệu đã tải — không gọi lại API.
   sortSel.addEventListener('change',renderVideos);
-  fCampSel.addEventListener('change',renderVideos);
-  fStaffSel.addEventListener('change',renderVideos);
+  // Ô "Đã lên camp" / "Duy|Nam nhận" mà hộp "Chưa lên camp" vẫn bật thì AND ra rỗng
+  // (user gặp 22/10/2026: 0/13 video NOMA 686) → chọn ô loại đó là tự tắt hộp kia.
+  function tatHopChua(){
+    if(!HOP.chua) return;
+    HOP.chua=false;
+    var b=boxesEl.querySelector('button[data-f="chua"]'); if(b) b.setAttribute('aria-pressed','false');
+  }
+  fCampSel.addEventListener('change',function(){ if(fCampSel.value==='yes') tatHopChua(); renderVideos(); });
+  fStaffSel.addEventListener('change',function(){ if(fStaffSel.value && fStaffSel.value!=='free') tatHopChua(); renderVideos(); });
   try{ ownEl.value=localStorage.getItem('tt_own_accounts')||''; }catch(e){}
   ownEl.addEventListener('input',function(){
     try{ localStorage.setItem('tt_own_accounts',ownEl.value); }catch(e){}

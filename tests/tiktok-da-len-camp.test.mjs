@@ -19,3 +19,8 @@ test("Chọn tất cả bỏ qua video không link / người khác giữ / sổ
   assert.ok(fn, "thiếu handler nút Chọn tất cả");
   assert.match(fn[0], /!v\.link \|\| lockedByOther\(v\) \|\| khongLayDuoc\(v\)/);
 });
+
+test("chọn 'Đã lên camp' hoặc người nhận thì tự tắt hộp Chưa lên camp", () => {
+  assert.match(html, /fCampSel\.addEventListener\('change',function\(\)\{ if\(fCampSel\.value==='yes'\) tatHopChua\(\);/);
+  assert.match(html, /fStaffSel\.addEventListener\('change',function\(\)\{ if\(fStaffSel\.value && fStaffSel\.value!=='free'\) tatHopChua\(\);/);
+});
