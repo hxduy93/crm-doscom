@@ -184,6 +184,44 @@ export const CONG_THUC_SAN_PHAM = {
       { re: "không săm", msg: "chỉ dùng cho lốp không săm" },
     ],
   },
+  // 922 + 686 (22/10/2026): CHƯA qua vòng duyệt nào — câu mở bài viết theo khuôn chủ dự án
+  // đã duyệt ("[Tên SP] – [LOẠI SP đầy đủ] + lợi ích" / "[vấn đề] – [dùng ngay LOẠI SP + tên]").
+  // Duyệt được bài đạt thì thêm vào ad-approved-examples.js.
+  "Noma 922": {
+    dongMoBai: [
+      "Trời mưa kính lái mờ, nước không trôi – Phủ ngay dung dịch phủ nano kính Noma 922",
+      "Dung dịch phủ nano kính Noma 922 – nước mưa co thành giọt và tự trôi khi xe chạy, tự phủ tại nhà",
+    ],
+    trongTam: [
+      "Vấn đề: trời mưa nước loang thành màng trên kính, gạt mưa không xuể, lái đêm bị chói đèn",
+      "Cơ chế lá sen chỉ 1 câu; lợi ích chính là nhìn rõ đường khi mưa",
+    ],
+    tranh: [
+      "Không lẫn với NOMA 911: 911 là TẨY Ố kính, 922 là PHỦ NANO kính",
+      "Không viết 'bỏ được gạt mưa', 'khô trong 20 phút'",
+    ],
+    batBuoc: [
+      { re: "4 tiếng|qua đêm", msg: "đợi tối thiểu 4 tiếng (nên để qua đêm) sau khi phủ" },
+      { re: "lửa|dễ cháy", msg: "sản phẩm dễ cháy, tránh xa lửa" },
+    ],
+  },
+  "Noma 686": {
+    dongMoBai: [
+      "Ghế da khô cứng, xỉn màu – Dùng ngay bộ vệ sinh & dưỡng ghế da Noma 686",
+      "Bộ vệ sinh & dưỡng ghế da Noma 686 – làm sạch rồi dưỡng mềm da trong 2 bước, tự làm tại nhà",
+    ],
+    trongTam: [
+      "Điểm khác biệt: có CẢ bước dưỡng (chai 2), không chỉ làm sạch",
+      "Thứ tự 2 bước (làm sạch trước, dưỡng sau) nói gọn trong 1 bullet",
+    ],
+    tranh: [
+      "Không hứa phục hồi da rách, bong tróc hay làm hết vết nứt — chỉ HẠN CHẾ nứt nẻ",
+      "Không nhắc tên hoạt chất (Alkyl Glycoside, Polysorbate) trong bài",
+    ],
+    batBuoc: [
+      { re: "da lộn|nubuck|rách", msg: "không dùng cho da lộn/nubuck, không phục hồi da đã rách" },
+    ],
+  },
 };
 
 /** Khung bài (skeleton) dạng chữ, dùng cho dạng usp_bullet trong ad-formats.js. */

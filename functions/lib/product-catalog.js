@@ -483,6 +483,120 @@ export const PRODUCTS = {
       "Không hứa sửa được mô-tơ nâng kính hay lỗi cơ khí.",
   },
 
+  // ── Hai SKU landing tháng 10 (thêm 22/10/2026) ─────────────────────────────
+  // NGUỒN: công dụng + HDSD lấy từ noma-sku-specs.js (mã 922, 686); giá + quà lấy từ
+  // PRICING trong noma922-landing / noma686-landing (functions/api/order.js); cảnh báo,
+  // thành phần, chỗ được/không được dùng lấy NGUYÊN từ landing đang chạy (n922d, n686d).
+
+  "Noma 922": {
+    name: "Noma 922",
+    brand: "NOMA",
+    fullName: "Dung dịch phủ nano kính ô tô Noma 922 — chai 100ml có pad chà gắn sẵn",
+    priceRange: "219.000đ / chai 100ml (1 chai không kèm quà) — 2 chai 438.000đ hoặc combo NOMA 911 tẩy ố kính + NOMA 922 438.000đ, cả hai tặng 1 chai NOMA 955 xoá vết trầy sơn xe",
+    category: "Chăm sóc ô tô — kính (phủ nano chống bám nước)",
+    source: "noma-sku-specs.js mã 922 + PRICING + nội dung landing noma922 n922d (đối chiếu 2026-10-22)",
+    guarantee: null,
+    usps: [
+      "Tạo lớp phủ nano trong suốt trên mặt ngoài kính: nước mưa co lại thành giọt và trôi nhanh khi xe chạy (hiệu ứng lá sen)",
+      "Đỡ phụ thuộc gạt mưa — nước tự trôi nên gạt mưa không phải chạy liên tục, lớp phủ còn giảm ma sát khi gạt",
+      "Hạn chế bám bụi, cặn nước và màng dầu nên kính sạch lâu hơn, lau rửa nhanh hơn",
+      "Hiệu quả 2-5 tháng một lần phủ, tuỳ điều kiện sử dụng",
+      "Pad chà gắn sẵn trên chai, tự phủ tại nhà, không cần mua thêm mút hay máy",
+      "Chai 100ml phủ được kính lái 6-8 lần, hoặc toàn bộ kính ô tô 2-3 lần",
+      "Trong suốt sau khi khô, không để lại vệt mờ nếu lau sạch phần dư",
+    ],
+    painPoints: [
+      "Trời mưa nước không trôi mà loang thành màng trên kính lái, nhìn đường như qua tấm kính mờ",
+      "Mưa to, gạt mưa chạy tốc độ cao nhất mà kính vẫn không rõ",
+      "Lái đêm dưới mưa, nước đọng làm ánh đèn xe ngược chiều loe thành vệt sáng, phải căng mắt",
+      "Chạy cao tốc, đường dài gặp mưa là lúc khó quan sát nhất",
+      "Mưa tạnh để lại đốm cặn nước trên kính, rửa xe vài hôm lại như cũ",
+    ],
+    usage: [
+      "Làm sạch kính, tẩy ố và lớp nano cũ (dùng NOMA 911), lau thật khô",
+      "Kiểm tra quanh chỗ làm không có lửa, nguồn nhiệt; mở cửa xe cho thoáng rồi lắc kỹ chai",
+      "Bóp lượng vừa đủ trực tiếp lên kính",
+      "Chà bằng pad trên đầu chai theo vòng tròn nhỏ, phủ một lớp mỏng",
+      "Đợi TỐI THIỂU 4 TIẾNG cho dung dịch khô và thẩm thấu — nên để qua đêm, tránh nước trong thời gian này",
+      "Lau phần dư bằng khăn mềm sạch, té nước thử: nước vón thành giọt là lớp phủ đã bám",
+    ],
+    effectDuration: "Hiệu quả 2-5 tháng; cần đợi tối thiểu 4 tiếng (nên để qua đêm) sau khi phủ",
+    // Hai điều kiện dưới là AN TOÀN, không phải chi tiết phụ: 922 chứa 92-97% cồn
+    // isopropyl (dễ cháy mạnh, H225), và ảnh hãng in "khô 20 phút" — sai so với hồ sơ.
+    limits: [
+      "Sản phẩm DỄ CHÁY (92-97% cồn isopropyl): tránh xa lửa, tia lửa, không hút thuốc khi dùng, làm nơi thông thoáng",
+      "Bảo quản dưới 37°C, không để trong xe hay cốp xe khi đỗ ngoài nắng",
+      "KHÔNG phủ mặt trong kính có dán film — cồn có thể làm bong keo film",
+      "KHÔNG phủ khi kính đang nóng hoặc dưới nắng gắt",
+      "Phải đợi tối thiểu 4 tiếng — KHÔNG viết 'khô trong 20 phút' hay 'xong ngay' (ảnh hãng in sai)",
+      "Phủ dày không chống nước tốt hơn, chỉ để lại vệt mờ",
+      "Đeo kính bảo hộ và găng tay khi phủ (dung dịch gây kích ứng mắt)",
+    ],
+    targetAudience: "Chủ ô tô hay chạy đường dài, cao tốc, đi đêm, sống ở vùng mưa nhiều; người tự chăm xe tại nhà",
+    tonePreferred: "Đi thẳng vào chuyện mưa là kính mờ, nước không trôi — rồi giới thiệu lớp phủ nano làm nước co giọt và trôi. Nói rõ phải đợi 4 tiếng",
+    avoidWords: [
+      "rẻ", "siêu rẻ", "số 1", "tốt nhất", "đỉnh", "vượt trội", "đột phá",
+      "100%", "tuyệt đối", "hoàn toàn", "vĩnh viễn", "không cần gạt mưa",
+      "khô trong 20 phút", "xong trong 5 phút",
+      "Made in USA", "chính hãng Mỹ", "công nghệ Mỹ", "sản xuất tại Mỹ", "nhập khẩu từ Mỹ",
+    ],
+    fbPolicyNotes:
+      "BẮT BUỘC nêu phải đợi tối thiểu 4 tiếng (nên để qua đêm) sau khi phủ, và nhắc tránh xa lửa vì sản phẩm dễ cháy. " +
+      "Con số 2-5 tháng phải kèm 'tuỳ điều kiện sử dụng', không viết thành cam kết. " +
+      "Không nói 'bỏ được gạt mưa' — lớp phủ chỉ giúp nước trôi nhanh, gạt mưa vẫn cần. NOMA 911 là TẨY Ố kính, NOMA 922 là PHỦ NANO kính — đừng lẫn.",
+  },
+
+  "Noma 686": {
+    name: "Noma 686",
+    brand: "NOMA",
+    fullName: "Bộ vệ sinh & dưỡng ghế da ô tô Noma 686 — 2 chai × 200ml (làm sạch + dưỡng), kèm khăn microfiber và mút chà",
+    priceRange: "399.000đ / bộ 2 chai (1 bộ không kèm quà) — combo cộng thẳng giá lẻ: NOMA 686 + NOMA 911 hoặc + NOMA 922 618.000đ, NOMA 686 + NOMA 310 598.000đ, 2 bộ 798.000đ — mọi combo tặng 1 chai NOMA 955 xoá vết trầy sơn xe",
+    category: "Chăm sóc ô tô — nội thất (ghế da)",
+    source: "noma-sku-specs.js mã 686 + PRICING + nội dung landing noma686 n686d (đối chiếu 2026-10-22)",
+    guarantee: null,
+    usps: [
+      "Bộ 2 bước đúng quy trình detailing: chai 1 làm sạch, chai 2 dưỡng — không gộp chung một chai",
+      "Chai 1 làm sạch bụi, dầu, mồ hôi với công thức pH trung tính, không làm khô da",
+      "Chai 2 phục hồi độ ẩm, làm mềm da và tạo lớp bảo vệ chống UV giúp giữ màu, hạn chế nứt nẻ",
+      "Lớp bảo vệ 1-3 tháng, tuỳ điều kiện sử dụng",
+      "Không nhờn rít, thơm nhẹ — dùng vừa đủ và lau phần dư là mặt da khô ráo",
+      "Mở hộp là làm được: có sẵn khăn microfiber và mút chà",
+      "Dùng cho da thật nhẵn (kể cả Nappa, Full Grain) và da simili chất lượng cao",
+    ],
+    painPoints: [
+      "Ghế da dùng lâu khô, cứng dần, sờ vào thấy khô ráp",
+      "Nứt chân chim ở chỗ ngồi nhiều nhất — mép đệm, chỗ lên xuống xe",
+      "Chỗ hay ngồi bạc màu hơn phần còn lại, ghế không còn đều màu",
+      "Mồ hôi, dầu, bụi bám vào nếp da và đường may, lau khăn thường không sạch",
+      "Nhiều sản phẩm chỉ làm sạch mà không dưỡng nên da ngày càng khô",
+    ],
+    usage: [
+      "Hút bụi mặt ghế và khe ghế",
+      "Lắc đều chai 1, cho vừa đủ lên mút/khăn (không đổ trực tiếp lên ghế), chà nhẹ vòng tròn nhỏ tới khi sạch",
+      "Lau lại bằng khăn mềm, chờ ghế khô hẳn 5-10 phút",
+      "Lắc đều chai 2, cho lên mút/khăn sạch khác, thoa đều khắp mặt da",
+      "Chờ khoảng 1 phút rồi lau nhẹ phần dư; tránh ngồi lên ghế 30-60 phút đầu",
+    ],
+    effectDuration: "Lớp bảo vệ 1-3 tháng; xe dùng thường xuyên dưỡng 1-2 tháng/lần, xe ít dùng 2-3 tháng/lần",
+    limits: [
+      "Luôn đúng thứ tự: chai 1 làm sạch TRƯỚC, chai 2 dưỡng SAU — dưỡng trước là khoá bẩn vào da",
+      "KHÔNG dùng cho da lộn (suede), da nubuck, vải nỉ",
+      "KHÔNG phục hồi được da đã rách, bong tróc nặng — việc đó cần thợ",
+      "Da thật cao cấp, da màu sáng: thử trước ở vùng nhỏ khuất",
+      "Không đổ trực tiếp lên ghế, không chà mạnh",
+    ],
+    targetAudience: "Chủ ô tô có ghế da, người tự chăm nội thất tại nhà thay vì ra tiệm detailing định kỳ",
+    tonePreferred: "Nói thẳng vấn đề ghế da khô, xỉn, bẩn rồi giới thiệu ngay bộ 2 bước làm sạch + dưỡng. Nhấn điểm khác biệt: có cả bước dưỡng, không chỉ làm sạch",
+    avoidWords: [
+      "rẻ", "siêu rẻ", "số 1", "tốt nhất", "đỉnh", "vượt trội", "đột phá",
+      "100%", "tuyệt đối", "hoàn toàn", "như mới 100%", "phục hồi da rách", "hết nứt",
+      "Made in USA", "chính hãng Mỹ", "công nghệ Mỹ", "sản xuất tại Mỹ", "nhập khẩu từ Mỹ",
+    ],
+    fbPolicyNotes:
+      "Không hứa phục hồi da đã rách, bong tróc hay làm biến mất vết nứt — 686 chỉ làm sạch và dưỡng da còn nguyên vẹn, " +
+      "dưỡng giúp HẠN CHẾ nứt nẻ. Con số 1-3 tháng phải kèm 'tuỳ điều kiện sử dụng'. Không dùng cho da lộn/nubuck/vải.",
+  },
+
   "DA8.1": {
     name: "Camera DA8.1",
     brand: "DOSCOM",
