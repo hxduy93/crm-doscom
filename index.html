@@ -2492,7 +2492,11 @@
     // (D.revenue.landing_pos_orders, gói suy từ sản phẩm trong đơn — fetch_pancake_revenue.py),
     // DT = doanh số COD. Vì là đơn đã lên POS nên thường ÍT hơn lượt điền form.
     { key:'noma922', ten:'NOMA 922', mo:'Phủ nano kính · số từ đơn POS', mau:'#14B8A6', pos:true,
-      link:{ duy:'noma.io.vn/n922d', pn:'noma.io.vn/n922tpn' } }
+      link:{ duy:'noma.io.vn/n922d', pn:'noma.io.vn/n922tpn' } },
+    // 880 (26/10/2026) cũng lấy từ đơn POS: landing 880 chỉ ghi lead (landing_leads, không có
+    // gói) nên tỉ lệ combo 1 hộp / 2 hộp phải đọc từ sản phẩm trong đơn Pancake.
+    { key:'noma880', ten:'NOMA 880', mo:'Phủ tinh thể bảo vệ sơn · số từ đơn POS', mau:'#F59E0B', pos:true,
+      link:{ duy:'noma880.io.vn/n880d', pn:'noma880.io.vn/n880tpn' } }
   ];
   var DK_DATA={};   // key -> response | {__loading:true} | {__failed:true}
   var DK_STAFF=[{k:'duy',ten:'Duy'},{k:'pn',ten:'Phương Nam'}];

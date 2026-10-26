@@ -718,6 +718,20 @@ LANDING_POS = {
             (0, 1): ("le-911",        "1 chai NOMA 911 tẩy ố kính"),
         },
     },
+    # NOMA 880 (26/10/2026): landing chỉ bán theo SỐ HỘP 880, không ghép SP khác. Quà đổi
+    # qua các đợt 250 → 692 → 120 → 955 (luật 24/09/2026) — đều là quà, không tính vào gói.
+    # Gói 3 hộp đã bỏ từ 29/08/2026, giữ để đơn cũ vẫn xếp đúng.
+    "noma880": {
+        "source_re": r"noma\s*880",
+        "main": "Noma 880",
+        "partner": None,
+        "gifts": ["Noma 955", "Noma 110", "Noma 250", "Noma 692", "Noma 120"],
+        "combos": {
+            (1, 0): ("le-880",      "1 hộp NOMA 880 phủ tinh thể bảo vệ sơn xe"),
+            (2, 0): ("combo-2x880", "2 hộp NOMA 880 phủ tinh thể bảo vệ sơn xe"),
+            (3, 0): ("combo-3x880", "3 hộp NOMA 880 (gói cũ, bỏ 29/08)"),
+        },
+    },
 }
 
 

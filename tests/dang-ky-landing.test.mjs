@@ -154,3 +154,11 @@ test("NOMA 922 lấy số từ đơn POS, đúng hình dạng stats", async () =
   const thieu = runInNewContext(fn + "; dkTuDonPos('noma922','2026-10-01','2026-10-31')", { D: { revenue: {} } });
   assert.equal(thieu.__failed, true, "snapshot cũ chưa có mục này thì báo thiếu, KHÔNG ra 0 đơn");
 });
+
+test("NOMA 880 có trong bảng đơn đăng ký, lấy từ đơn POS", () => {
+  const list = html.match(/var DK_LIST=\[[\s\S]*?\n  \];/)[0];
+  assert.match(list, /key:'noma880'[^}]*pos:true/);
+  assert.match(list, /noma880\.io\.vn\/n880d/); assert.match(list, /noma880\.io\.vn\/n880tpn/);
+  const py = readFileSync(new URL("../scripts/fetch_pancake_revenue.py", import.meta.url), "utf8");
+  assert.match(py, /"noma880": \{[\s\S]*?"le-880"[\s\S]*?"combo-2x880"/, "LANDING_POS phải có gói 880");
+});
