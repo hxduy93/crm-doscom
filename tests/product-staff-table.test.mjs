@@ -19,7 +19,9 @@ function grab(re, name) {
   return m[0].trim();
 }
 
-const start = html.indexOf("  function renderProductStaff(){");
+// 26/10/2026: productFromSource dời ra phạm vi chung (dùng chung với bảng brand), nằm ngay
+// trước renderProductStaff → cắt từ đó để hàm vẽ bảng vẫn có nó.
+const start = html.indexOf("  function productFromSource(name){");
 const end = html.indexOf("  function renderBrandCost(){");
 if (start < 0 || end < 0 || end < start) throw new Error("Không tìm thấy renderProductStaff/renderBrandCost");
 const fnSrc = html.slice(start, end).trim();

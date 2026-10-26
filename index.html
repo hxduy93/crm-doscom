@@ -1543,30 +1543,33 @@
         POS. Đơn HUỶ không phải hoàn. Tỉ lệ tính theo TIỀN (tiền hoàn ÷ doanh thu gộp), tooltip
         kèm tỉ lệ theo SỐ ĐƠN — hai con số này lệch nhau là bình thường và cần cả hai: hoàn
         nhiều tiền ≠ hoàn nhiều đơn. */
+  /* Tên nguồn Pancake → sản phẩm. Bỏ tiền tố nhân sự rồi đọc mã SP; hậu tố tự do
+     ("DUY - NOMA 911 MESSENGER") vẫn về đúng Noma 911. Tên nguồn không suy được thì
+     trả null → dồn vào hàng "Nguồn khác", tuyệt đối không bỏ rơi doanh thu.
+     Dùng chung cho bảng "SP × nhân sự" VÀ bảng "brand × nhân sự" (26/10/2026) — hai bảng
+     từng lệch nhau vì bảng brand tách theo mã SP trong đơn (D2 Pro mã D-013 chưa map → dồn NOMA). */
+  function productFromSource(name){
+    var n=String(name||'').replace(/^\s*(duy|phương nam|phuong nam)\s*[-–]\s*/i,'')
+            .toLowerCase().replace(/[_\-]/g,' ').replace(/\s+/g,' ').trim();
+    /* 05/10/2026: nhận đủ 17 mã NOMA + DR4 Pro/Plus + D2 Pro. Trước đó thiếu 880/998/DR4 PRO
+       nên nguồn đặt ĐÚNG quy ước ("DUY - NOMA 880") vẫn rơi xuống "Nguồn khác" (~37tr T9–10). */
+    var m=n.match(/noma\s*(911|922|250|310|120|130|230|350|680|692|998|110|880|686|620|890|955)/);
+    if(m) return 'Noma '+m[1];
+    if(/(^|\s)dr4 ?pro(\s|$)/.test(n)) return 'DR4 Pro';
+    if(/(^|\s)dr4 ?plus(\s|$)/.test(n)) return 'DR4 Plus';
+    if(/(^|\s)dr1(\s|$)/.test(n)) return 'DR1';
+    if(/(^|\s)d1 pro(\s|$)/.test(n)) return 'D1 Pro';
+    if(/(^|\s)d1(\s|$)/.test(n)) return 'D1';
+    if(/(^|\s)d2( ?pro)?(\s|$)/.test(n)) return 'D2';   // D2 Pro: CPQC cũng gán về "D2"
+    if(/(^|\s)da8\.?1(\s|$)/.test(n)) return 'DA8.1';
+    return null;
+  }
+
   function renderProductStaff(){
     var el=document.getElementById('product-staff-rows'); if(!el||!D) return;
     var GR=[{label:'Duy',ad:'DUY',key:'DUY'},{label:'Phương Nam',ad:'PHUONG_NAM',key:'PHUONG_NAM'}];
     var NO_LINK='(không đọc được link)';
 
-    /* Tên nguồn Pancake → sản phẩm. Bỏ tiền tố nhân sự rồi đọc mã SP; hậu tố tự do
-       ("DUY - NOMA 911 MESSENGER") vẫn về đúng Noma 911. Tên nguồn không suy được thì
-       trả null → dồn vào hàng "Nguồn khác", tuyệt đối không bỏ rơi doanh thu. */
-    function productFromSource(name){
-      var n=String(name||'').replace(/^\s*(duy|phương nam|phuong nam)\s*[-–]\s*/i,'')
-              .toLowerCase().replace(/[_\-]/g,' ').replace(/\s+/g,' ').trim();
-      /* 05/10/2026: nhận đủ 17 mã NOMA + DR4 Pro/Plus + D2 Pro. Trước đó thiếu 880/998/DR4 PRO
-         nên nguồn đặt ĐÚNG quy ước ("DUY - NOMA 880") vẫn rơi xuống "Nguồn khác" (~37tr T9–10). */
-      var m=n.match(/noma\s*(911|922|250|310|120|130|230|350|680|692|998|110|880|686|620|890|955)/);
-      if(m) return 'Noma '+m[1];
-      if(/(^|\s)dr4 ?pro(\s|$)/.test(n)) return 'DR4 Pro';
-      if(/(^|\s)dr4 ?plus(\s|$)/.test(n)) return 'DR4 Plus';
-      if(/(^|\s)dr1(\s|$)/.test(n)) return 'DR1';
-      if(/(^|\s)d1 pro(\s|$)/.test(n)) return 'D1 Pro';
-      if(/(^|\s)d1(\s|$)/.test(n)) return 'D1';
-      if(/(^|\s)d2( ?pro)?(\s|$)/.test(n)) return 'D2';   // D2 Pro: CPQC cũng gán về "D2"
-      if(/(^|\s)da8\.?1(\s|$)/.test(n)) return 'DA8.1';
-      return null;
-    }
     function costOf(ad,p){ var o=((D.ad_spend_by_staff||{})[ad]||{})[p]; return o?sumByDate(o.by_date):0; }
 
     // {sản phẩm|'?': {rev, ret, ord, ordRet}} của 1 nhóm nhân sự.
@@ -1683,18 +1686,29 @@
     // CÁCH LÀM: quy tỉ lệ per-SP về đúng giá trị đơn thật rồi mới tách. Chiết khấu được phân bổ
     // đều theo tỉ trọng doanh thu từng brand trong nguồn đó. Nhờ vậy noma + doscom = tổng đơn
     // THẬT, không cần kẹp, và bảng brand cộng lại KHỚP TUYỆT ĐỐI bảng theo nhân sự.
+    // 26/10/2026: TRƯỚC HẾT tách theo TÊN NGUỒN đơn (cùng luật bảng "SP × nhân sự"): nguồn
+    // "DUY - D2 PRO" là hàng Doscom dù mã SP trong đơn (D-013) chưa có trong danh mục — trước
+    // đây cả 11,4tr D2 Pro của Duy bị dồn về NOMA. Chỉ phần doanh thu của nguồn KHÔNG đọc được
+    // sản phẩm (Website, Hotline, Zalo, Page…) mới tách theo tỉ lệ dòng SP như cũ.
     function brandSplit(key,excl){
       var g=((D.revenue||{}).source_groups||{})[key]; if(!g) return {noma:0,doscom:0};
       var ord=0,r=g.order_revenue_by_status_by_date||{};
       for(var st in r){ if(EXCL[st]||excl[st])continue; ord+=sumByDate(r[st]); }
+      var noma=0,doscom=0,srcs=g.sources||{};
+      for(var name in srcs){ var p=productFromSource(name); if(!p) continue;
+        var byRev=srcs[name].revenue_by_status_by_date||{},v=0;
+        for(var s3 in byRev){ if(EXCL[s3]||excl[s3])continue; v+=sumByDate(byRev[s3]); }
+        if(isNomaP(p)) noma+=v; else doscom+=v; }
+      var rest=ord-noma-doscom;   // phần của nguồn không đọc được tên
+      if(rest<=0.5) return {noma:noma, doscom:doscom};
       var pbs=g.products_by_status||{},dos=0,nom=0;
       for(var st2 in pbs){ if(EXCL[st2]||excl[st2])continue; var prods=pbs[st2];
-        for(var p in prods){ var x=sumByDate((prods[p]||{}).by_date); if(isNomaP(p)) nom+=x; else dos+=x; } }
+        for(var p2 in prods){ var x=sumByDate((prods[p2]||{}).by_date); if(isNomaP(p2)) nom+=x; else dos+=x; } }
+      // Phần dư tách theo tỉ lệ dòng SP (đã quy về giá trị đơn thật) — chiết khấu cấp đơn
+      // phân bổ đều theo brand. Không có dòng SP nào → dồn về Noma như quy tắc cũ.
       var tot=dos+nom;
-      // Không có dòng SP nào (đơn bán SP ngoài danh mục) → dồn hết về Noma như quy tắc phần dư cũ.
-      if(tot<=0) return {noma:Math.max(0,ord), doscom:0};
-      var f=ord/tot;
-      return {noma:nom*f, doscom:dos*f};
+      if(tot<=0) return {noma:noma+rest, doscom:doscom};
+      return {noma:noma+rest*nom/tot, doscom:doscom+rest*dos/tot};
     }
     // Giá vốn sau hoàn tách theo brand (per-SKU, không cần phần dư vì đơn vị tính là sản phẩm).
     function srcCogsNetBrand(key,wantNoma){ var g=((D.revenue||{}).source_groups||{})[key]; if(!g)return 0; var pbs=g.products_by_status||{},pc=D.product_costs||{},s=0; for(var st in pbs){ if(EXCL[st]||EXCL_RET[st])continue; var prods=pbs[st]; for(var p in prods){ if(isNomaP(p)!==wantNoma)continue; var cost=Number((pc[p]||{}).gia_nhap_vnd)||0; if(!cost)continue; s+=cost*sumByDate((prods[p]||{}).units_by_date); } } return s; }
