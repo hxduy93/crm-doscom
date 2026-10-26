@@ -2501,7 +2501,9 @@
   var DK_DATA={};   // key -> response | {__loading:true} | {__failed:true}
   var DK_STAFF=[{k:'duy',ten:'Duy'},{k:'pn',ten:'Phương Nam'}];
   // Mã combo quy ước: 'le-…' = mua lẻ, còn lại là combo (dùng chung cho cả 4 landing).
-  function dkLaCombo(c){ return !/^le-/.test(String(c||'')); }
+  // 'khac' (landing pos:true — sale ghi SP khác vào nguồn) KHÔNG phải combo của landing:
+  // tính vào là tỉ lệ combo 880 đội từ 1,7% lên 3,3% (26/10/2026).
+  function dkLaCombo(c){ c=String(c||''); return !/^le-/.test(c) && c!=='khac'; }
 
   function dkTong(){
     var t={don:0,khach:0,dt:0,giao:0,ok:0,loi:0,dangTai:0};
@@ -2589,7 +2591,7 @@
           var isC=dkLaCombo(c.combo);
           var pct=tongSP?(c.orders/tongSP*100):0;
           var nhan=isC? ' <span style="font-size:10px;font-weight:800;color:#8B5CF6;background:color-mix(in srgb,#8B5CF6 14%,transparent);padding:1px 6px;border-radius:999px;margin-left:4px">combo</span>'
-                      : ' <span style="font-size:10px;font-weight:800;color:var(--text-2);background:var(--muted);padding:1px 6px;border-radius:999px;margin-left:4px">lẻ</span>';
+                      : ' <span style="font-size:10px;font-weight:800;color:var(--text-2);background:var(--muted);padding:1px 6px;border-radius:999px;margin-left:4px">'+(c.combo==='khac'?'khác':'lẻ')+'</span>';
           return '<div class="bar"><div class="bt">'+
             '<span class="nm">'+(c.combo_label||c.combo)+nhan+'</span>'+
             '<span class="sl tnum">'+num(c.orders)+' đơn · '+vnd(c.revenue)+'</span>'+

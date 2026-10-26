@@ -162,3 +162,11 @@ test("NOMA 880 có trong bảng đơn đăng ký, lấy từ đơn POS", () => {
   const py = readFileSync(new URL("../scripts/fetch_pancake_revenue.py", import.meta.url), "utf8");
   assert.match(py, /"noma880": \{[\s\S]*?"le-880"[\s\S]*?"combo-2x880"/, "LANDING_POS phải có gói 880");
 });
+
+test("'Gói khác' không tính vào tỉ lệ combo", () => {
+  const fn = html.match(/function dkLaCombo\(c\)\{[^\n]*\}/)[0];
+  const dkLaCombo = new Function(fn + "; return dkLaCombo;")();
+  assert.equal(dkLaCombo("combo-2x880"), true);
+  assert.equal(dkLaCombo("le-880"), false);
+  assert.equal(dkLaCombo("khac"), false);
+});
