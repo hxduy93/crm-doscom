@@ -4197,10 +4197,13 @@
 
   // Con số trên hộp = SỐ VIDEO thuộc nhóm. Mũi tên = chênh lệch ĐƠN của chính nhóm đó
   // giữa kỳ này và kỳ trước (trạng thái camp không có lịch sử nên không so được theo video).
+  // 29/10/2026: hộp tính theo ĐÚNG sản phẩm đang chọn (cùng phạm vi với danh sách bên dưới).
+  // Trước đó hộp đếm cả shop → chọn NOMA 230 mà "Mới ra đơn" báo +2.784 đơn của mọi SP.
   function veHop(){
+    var pham=lastVideos.filter(function(v){ return (!activeSP || spKeyOf(v)===activeSP) && !khongLayDuoc(v); });
     ['chua','dalen','moi','capnhat','kenhnha'].forEach(function(id){
       var el=document.getElementById('bx-'+id); if(!el) return;
-      var ds=lastVideos.filter(function(v){ return nhomCua(v)[id]; });
+      var ds=pham.filter(function(v){ return nhomCua(v)[id]; });
       var nay=ds.reduce(function(t,v){ return t+(v.orders||0); },0);
       var truoc=coTruoc?ds.reduce(function(t,v){ return t+(TRUOC[khoaVid(v)]||0); },0):null;
       var d=(truoc===null)?'':(nay-truoc);

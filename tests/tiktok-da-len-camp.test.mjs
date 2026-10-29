@@ -24,3 +24,10 @@ test("chọn 'Đã lên camp' hoặc người nhận thì tự tắt hộp Chưa
   assert.match(html, /fCampSel\.addEventListener\('change',function\(\)\{ if\(fCampSel\.value==='yes'\) tatHopChua\(\);/);
   assert.match(html, /fStaffSel\.addEventListener\('change',function\(\)\{ if\(fStaffSel\.value && fStaffSel\.value!=='free'\) tatHopChua\(\);/);
 });
+
+// 29/10/2026: chọn NOMA 230 mà hộp "Mới ra đơn" báo +2.784 đơn (của cả shop).
+test("hộp tổng quan tính theo sản phẩm đang chọn", () => {
+  const fn = html.match(/function veHop\(\)\{[\s\S]*?\n  \}/)[0];
+  assert.match(fn, /!activeSP \|\| spKeyOf\(v\)===activeSP/);
+  assert.match(fn, /var ds=pham\.filter/);
+});
