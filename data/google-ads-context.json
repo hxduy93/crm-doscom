@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-31 13:21",
+  "generated_at": "2026-10-31 20:07",
   "source_data_date_range": {
     "start_7d": "2026-10-24",
     "end": "2026-10-30",
@@ -60,8 +60,8 @@
     "orders_30d": 106,
     "by_status": {
       "delivered": {
-        "revenue": 141103000.0,
-        "orders": 80
+        "revenue": 145103000.0,
+        "orders": 81
       },
       "returning": {
         "revenue": 10114000.0,
@@ -76,8 +76,8 @@
         "orders": 5
       },
       "other": {
-        "revenue": 21412000.0,
-        "orders": 12
+        "revenue": 17412000.0,
+        "orders": 11
       }
     },
     "by_source": {
@@ -1522,29 +1522,30 @@
         ]
       },
       {
-        "search_term": "máy dò định vị xe ô tô",
-        "spend_30d": 191876.0,
-        "clicks_30d": 10,
+        "search_term": "mua máy ghi âm",
+        "spend_30d": 109717.0,
+        "clicks_30d": 14,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.4348,
+        "ctr_30d": 0.2154,
         "match_types": [
-          "NEAR_PHRASE",
-          "PHRASE"
+          "EXACT"
         ],
         "statuses": [
-          "NONE"
+          "ADDED"
         ]
       },
       {
-        "search_term": "thiết bị dò tìm camera quay lén",
-        "spend_30d": 77800.0,
-        "clicks_30d": 6,
+        "search_term": "máy ghi âm kết nối điện thoại từ xa",
+        "spend_30d": 89115.0,
+        "clicks_30d": 17,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.3158,
+        "ctr_30d": 0.1932,
         "match_types": [
+          "EXACT",
           "PHRASE"
         ],
         "statuses": [
+          "ADDED",
           "NONE"
         ]
       }
@@ -2064,17 +2065,17 @@
         "conversions_30d": 10.5,
         "term_count": 55
       },
-      "NEAR_PHRASE": {
-        "spend_30d": 13674959.0,
-        "clicks_30d": 1339,
-        "conversions_30d": 30.17,
-        "term_count": 1715
-      },
       "PHRASE": {
         "spend_30d": 12243236.0,
         "clicks_30d": 1392,
         "conversions_30d": 31.67,
         "term_count": 705
+      },
+      "NEAR_PHRASE": {
+        "spend_30d": 13674959.0,
+        "clicks_30d": 1339,
+        "conversions_30d": 30.17,
+        "term_count": 1715
       },
       "BROAD": {
         "spend_30d": 9957814.0,
@@ -2092,7 +2093,7 @@
   },
   "placement_insights": {
     "summary": {
-      "total_unique_placements": 6664,
+      "total_unique_placements": 6675,
       "total_spend_30d": 5950883.0
     },
     "network_breakdown": {
@@ -2117,9 +2118,9 @@
       "WEBSITE": {
         "spend_30d": 5950883.0,
         "clicks_30d": 3034,
-        "impressions_30d": 175534,
+        "impressions_30d": 175642,
         "ctr_30d": 0.0173,
-        "placement_count": 6664
+        "placement_count": 6675
       }
     },
     "top_waste_placements": [],
