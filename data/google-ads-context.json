@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-02 13:54",
+  "generated_at": "2026-11-02 23:39",
   "source_data_date_range": {
     "start_7d": "2026-10-26",
     "end": "2026-11-01",
@@ -60,12 +60,12 @@
     "orders_30d": 97,
     "by_status": {
       "delivered": {
-        "revenue": 137749000.0,
-        "orders": 76
+        "revenue": 140749000.0,
+        "orders": 77
       },
       "returning": {
-        "revenue": 4115000.0,
-        "orders": 2
+        "revenue": 5430000.0,
+        "orders": 3
       },
       "returned": {
         "revenue": 13198000.0,
@@ -76,8 +76,8 @@
         "orders": 5
       },
       "other": {
-        "revenue": 14263000.0,
-        "orders": 8
+        "revenue": 9948000.0,
+        "orders": 6
       }
     },
     "by_source": {
@@ -1518,30 +1518,31 @@
         ]
       },
       {
-        "search_term": "cam năng lượng mặt trời",
-        "spend_30d": 26911.0,
-        "clicks_30d": 8,
+        "search_term": "mua máy ghi âm",
+        "spend_30d": 125124.0,
+        "clicks_30d": 16,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.0964,
+        "ctr_30d": 0.2286,
         "match_types": [
-          "BROAD",
-          "PHRASE"
+          "EXACT"
         ],
         "statuses": [
-          "NONE"
+          "ADDED"
         ]
       },
       {
-        "search_term": "camera",
-        "spend_30d": 1227519.0,
-        "clicks_30d": 104,
+        "search_term": "máy ghi âm kết nối điện thoại từ xa",
+        "spend_30d": 89980.0,
+        "clicks_30d": 17,
         "conversions_30d": 1.0,
-        "ctr_30d": 0.035,
+        "ctr_30d": 0.191,
         "match_types": [
-          "BROAD"
+          "EXACT",
+          "PHRASE"
         ],
         "statuses": [
-          "EXCLUDED"
+          "ADDED",
+          "NONE"
         ]
       }
     ],
@@ -2054,6 +2055,18 @@
       }
     ],
     "match_type_breakdown": {
+      "EXACT": {
+        "spend_30d": 4780817.0,
+        "clicks_30d": 566,
+        "conversions_30d": 10.5,
+        "term_count": 54
+      },
+      "PHRASE": {
+        "spend_30d": 11713956.0,
+        "clicks_30d": 1341,
+        "conversions_30d": 27.17,
+        "term_count": 689
+      },
       "NEAR_PHRASE": {
         "spend_30d": 13398340.0,
         "clicks_30d": 1335,
@@ -2065,18 +2078,6 @@
         "clicks_30d": 1402,
         "conversions_30d": 25.0,
         "term_count": 2500
-      },
-      "PHRASE": {
-        "spend_30d": 11713956.0,
-        "clicks_30d": 1341,
-        "conversions_30d": 27.17,
-        "term_count": 689
-      },
-      "EXACT": {
-        "spend_30d": 4780817.0,
-        "clicks_30d": 566,
-        "conversions_30d": 10.5,
-        "term_count": 54
       },
       "NEAR_EXACT": {
         "spend_30d": 139311.0,
