@@ -65,6 +65,33 @@ export function parseBidAmount(v) {
 
 // ───────────────────────── helpers ─────────────────────────
 
+// ─────────────────── đích "Trang web và cuộc gọi" (09/11/2026) ───────────────────
+// Một quảng cáo có CẢ link landing LẪN nút gọi. Cần ĐỦ hai nơi, thiếu một là hỏng:
+//   - ad set:   destination_type = WEBSITE_AND_PHONE_CALL
+//   - creative: asset_feed_spec.call_ads_configuration (giữ nguyên object_story_spec,
+//               nút CTA vẫn là nút mua hàng trỏ về landing). Thiếu cái này thì Ads Manager
+//               báo đỏ "Hãy cung cấp số điện thoại hợp lệ" ở ô Gọi ngay.
+// Đã thử thật trên Meta 09/11/2026 với creative video. Mẫu lấy từ các camp đang chạy.
+export const WEB_CALL_DEST = "WEBSITE_AND_PHONE_CALL";
+
+// Số gọi về đúng dạng Meta lưu: "0986 878 597" -> "tel:+84986878597". Sai thì null.
+export function telCuaHotline(v) {
+  const so = String(v == null ? "" : v).replace(/\D/g, "");
+  const quocNoi = so.startsWith("84") && so.length >= 11 ? so.slice(2) : so.replace(/^0/, "");
+  return quocNoi.length >= 8 && quocNoi.length <= 11 ? `tel:+84${quocNoi}` : null;
+}
+
+// Đích thật gửi lên ad set. Meta từ chối VALUE + cuộc gọi (lỗi 2490408, đo 09/11/2026),
+// nên tối đa hoá giá trị thì về Trang web, chạy còn hơn hỏng cả lượt tạo.
+export function dichCuaAdset(cfg) {
+  const dich = cfg.destination_type || "WEBSITE";
+  return dich === WEB_CALL_DEST && cfg.optimization_goal === "VALUE" ? "WEBSITE" : dich;
+}
+
+export function cauHinhCuocGoi(tel) {
+  return { call_ads_configuration: { call_destination_type: "WEBSITE_AND_CALL", phone_number: tel } };
+}
+
 // JSON response helper — trước đây thiếu, gây ReferenceError khi catch block
 // chạy → user thấy "ad không tạo được" thay vì error thật từ FB.
 function json(obj, status = 200) {
@@ -273,7 +300,7 @@ export function buildAdsetBase(cfg, campaignId, isCBO, launchStatus) {
     optimization_goal: cfg.optimization_goal,
     billing_event: cfg.billing_event,
     status: launchStatus,
-    destination_type: cfg.destination_type || "WEBSITE",
+    destination_type: dichCuaAdset(cfg),
     targeting: buildTargeting(cfg),
   };
   const startIso = toMetaDatetime(cfg.start_time);
@@ -470,12 +497,39 @@ export async function onRequestPost(context) {
        thì nhánh dùng lại hộp không có chỗ ghi cảnh báo. Xem ghi chú TDZ ngay trên. */
     const warnings = [];
 
+    // Đích quyết định creative có kèm số gọi không. Dùng lại ad set thì đọc đích THẬT của
+    // nó bên dưới: creative phải khớp ad set, không phải khớp lựa chọn trên form.
+    let dichCreative = dichCuaAdset(cfg);
+    const telGoi = telCuaHotline(cfg.call_phone);
+    if (cfg.destination_type === WEB_CALL_DEST && dichCreative !== WEB_CALL_DEST && !cfg.existing_adset_id) {
+      warnings.push('Meta không cho "Tối đa hoá giá trị" đi với đích Trang web và cuộc gọi — nhóm QC này chạy đích Trang web, không có nút gọi.');
+    }
+    const canSoGoi = () => {
+      if (dichCreative === WEB_CALL_DEST && !telGoi) {
+        throw new Error(`Đích Trang web và cuộc gọi cần số điện thoại hợp lệ (đang nhận: "${cfg.call_phone || ""}")`);
+      }
+    };
+
     if (cfg.existing_adset_id) {
       const adsetId = String(cfg.existing_adset_id);
       partial.campaign_id = cfg.existing_campaign_id || null;
       partial.adset_id = adsetId;
       partial.adsets = [adsetId];
       partial.ads = [];
+
+      /* KHÔNG đổi đích của nhóm đang chạy (reset máy học, cùng lý do với giá thầu dưới
+         đây). Creative đi theo đích sẵn có của nhóm, lệch thì nói ra. */
+      try {
+        const adsetHienCo = await fbGet(`/${adsetId}`, { fields: "destination_type" }, token);
+        const dichMuon = cfg.destination_type;
+        dichCreative = adsetHienCo.destination_type || dichCreative;
+        if (dichMuon === WEB_CALL_DEST && dichCreative !== WEB_CALL_DEST) {
+          warnings.push(`Nhóm QC có sẵn đang đặt đích ${dichCreative} nên creative mới KHÔNG có nút gọi. Muốn có nút gọi thì tạo nhóm QC mới.`);
+        }
+      } catch (e) {
+        warnings.push(`Không đọc được đích của nhóm QC có sẵn (${e.message || e}) — creative tạo theo lựa chọn trên form, nhớ kiểm tra ô Cuộc gọi trong Ads Manager.`);
+      }
+      canSoGoi();
 
       /* GIÁ THẦU TRÊN HỘP ĐANG CHẠY — mặc định KHÔNG ĐỤNG VÀO.
          Sửa bid_strategy/bid_amount của một ad set đang sống làm Meta chạy lại giai đoạn
@@ -525,6 +579,7 @@ export async function onRequestPost(context) {
        toàn. Không có cách nào thêm một ad set thứ hai vào đúng campaign đang chạy, nên
        người chạy phải vào Trình quản lý QC làm tay (đó là gốc của mấy ad set "BID",
        "BID - tăng tốc" nằm lẫn trong campaign hộp mà luồng tự động không hiểu). */
+    canSoGoi(); // Chặn TRƯỚC khi tạo campaign, khỏi để lại campaign rỗng.
     if (cfg.existing_campaign_id) {
       partial.campaign_id = String(cfg.existing_campaign_id);
       partial.reused_campaign = true;
@@ -596,6 +651,7 @@ export async function onRequestPost(context) {
         name: ad.ad_name || `Ad ${i + 1}`,
         object_story_spec: storySpec,
       };
+      if (dichCreative === WEB_CALL_DEST) creativeBody.asset_feed_spec = cauHinhCuocGoi(telGoi);
       if (ad.url_tags && typeof ad.url_tags === "string" && ad.url_tags.trim()) {
         creativeBody.url_tags = ad.url_tags.trim();
       }
@@ -630,9 +686,8 @@ export async function onRequestPost(context) {
         if (!isLifecycleUnsupported(e.message)) throw e;
         const retry = { ...body };
         delete retry.existing_customer_budget_percentage;
-        if (!warnings.length) {
-          warnings.push("Tài khoản chưa dùng được 'Chiến lược vòng đời khách hàng' — ad set đã tạo với đối tượng mặc định (tất cả đối tượng).");
-        }
+        const canhBaoVongDoi = "Tài khoản chưa dùng được 'Chiến lược vòng đời khách hàng' — ad set đã tạo với đối tượng mặc định (tất cả đối tượng).";
+        if (!warnings.includes(canhBaoVongDoi)) warnings.push(canhBaoVongDoi);
         return await fbPost(`/act_${accountIdRaw}/adsets`, retry, token);
       }
     }

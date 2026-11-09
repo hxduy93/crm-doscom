@@ -210,12 +210,12 @@ function AdsCreatorPanel() {
   const [autoCta, setAutoCta] = useState("ORDER_NOW")
   const [autoAgeMin, setAutoAgeMin] = useState(30)
   const [autoAgeMax, setAutoAgeMax] = useState(60)
-  // Hotline chèn vào bài + dùng cho nút gọi. Nhớ máy để khỏi gõ lại mỗi lần.
+  // Hotline chèn vào NỘI DUNG bài. Nhớ máy để khỏi gõ lại mỗi lần.
   const [phone, setPhone] = useState(() => { try { return localStorage.getItem("doscom_ad_phone") || "" } catch { return "" } })
-  // Nút gọi: Meta chỉ cho MỘT nút CTA/quảng cáo (xem ghi chú ở buildStorySpec phía
-  // server) → bật cái này là ĐỔI nút "Mua ngay/Đặt hàng" thành "Gọi ngay". Mặc định
-  // tắt: bài vẫn nút mua hàng, số hotline nằm trong nội dung bài.
-  const [phoneAsCta, setPhoneAsCta] = useState(false)
+  // Đích "Trang web và cuộc gọi" — MẶC ĐỊNH BẬT (chốt 09/11/2026). Quảng cáo giữ nút mua
+  // hàng về landing, thêm nút gọi tới số dưới đây (ô "Gọi ngay" trong Ads Manager).
+  const [autoWebCall, setAutoWebCall] = useState(true)
+  const [callPhone, setCallPhone] = useState("0986878597")
   // Mục tiêu hiệu quả (Meta gọi "performance goal") của ad set Doanh số:
   //   conversions = tối đa hoá SỐ LƯỢT chuyển đổi (OFFSITE_CONVERSIONS) — mặc định
   //   value       = tối đa hoá GIÁ TRỊ chuyển đổi (VALUE) — cần pixel gửi kèm value
@@ -453,7 +453,7 @@ function AdsCreatorPanel() {
     ],
     "OUTCOME_LEADS": [
       { goal: "LEAD_GENERATION",      dest: "ON_AD",     cta: "SIGN_UP" },
-      { goal: "OFFSITE_CONVERSIONS",  dest: "WEBSITE",   cta: "SIGN_UP" },
+      { goal: "OFFSITE_CONVERSIONS",  dest: "WEBSITE_AND_PHONE_CALL", cta: "SIGN_UP" },
       { goal: "QUALITY_CALL",         dest: "PHONE_CALL",cta: "CALL_NOW" },
       { goal: "CONVERSATIONS",        dest: "MESSENGER", cta: "SEND_MESSAGE" },
       { goal: "LINK_CLICKS",          dest: "WEBSITE",   cta: "LEARN_MORE" },
@@ -464,7 +464,7 @@ function AdsCreatorPanel() {
       { goal: "VALUE",                dest: "APP", cta: "USE_APP" },
     ],
     "OUTCOME_SALES": [
-      { goal: "OFFSITE_CONVERSIONS", dest: "WEBSITE",   cta: "SHOP_NOW" },
+      { goal: "OFFSITE_CONVERSIONS", dest: "WEBSITE_AND_PHONE_CALL", cta: "SHOP_NOW" },
       { goal: "VALUE",               dest: "WEBSITE",   cta: "SHOP_NOW" },
       { goal: "CONVERSATIONS",       dest: "MESSENGER", cta: "SEND_MESSAGE" },
       { goal: "LINK_CLICKS",         dest: "WEBSITE",   cta: "SHOP_NOW" },
@@ -495,6 +495,7 @@ function AdsCreatorPanel() {
 
   const DESTINATION_LABELS = {
     "WEBSITE":            "Trang web",
+    "WEBSITE_AND_PHONE_CALL": "Trang web và cuộc gọi",
     "APP":                "Ứng dụng",
     "MESSENGER":          "Messenger",
     "WHATSAPP":           "WhatsApp",
@@ -733,12 +734,9 @@ function AdsCreatorPanel() {
   }
 
   // ── Hotline trong bài quảng cáo ────────────────────────────────────────────
-  // Meta chỉ cho MỘT nút CTA trên mỗi quảng cáo, nên "nút Mua ngay + nút gọi"
-  // cùng lúc là không đặt được qua Marketing API. Cách chắc chắn: giữ nút mua
-  // hàng và đưa số hotline vào NỘI DUNG bài (khách bấm số trên điện thoại là gọi).
+  // Số trong NỘI DUNG bài, tách biệt với nút gọi (đích "Trang web và cuộc gọi", ô callPhone).
   // Đã có số trong bài rồi thì không chèn thêm lần nữa.
   const digitsOf = (s) => String(s || "").replace(/[^\d+]/g, "")
-  const telLink = (s) => "tel:" + digitsOf(s)
   const withHotline = (text, ph) => {
     const t = String(text || "")
     const d = digitsOf(ph)
@@ -781,6 +779,7 @@ function AdsCreatorPanel() {
       optimization_goal: optGoal,
       optimization_goal_label: GOAL_LABELS[optGoal] || optGoal,
       destination_type: destType,
+      call_phone: callPhone,
       billing_event: billingEvent,
       // Conversion event (chỉ apply khi optimization_goal = OFFSITE_CONVERSIONS)
       promoted_event: conversionEvent === "OTHER" ? (customEventName.trim() || null) : conversionEvent,
@@ -1222,6 +1221,10 @@ function AdsCreatorPanel() {
       setAutoLog([`✗ Chưa nhập giá thầu cho "${AUTO_BID_LABEL[autoBidMode]}" — nhập số tiền (VND) rồi chạy lại.`])
       return
     }
+    if (autoWebCall && String(callPhone).replace(/\D/g, "").length < 9) {
+      setAutoLog(["✗ Đích Trang web và cuộc gọi cần số gọi hợp lệ — nhập số ở ô \"Nút gọi\" hoặc tắt đích này rồi chạy lại."])
+      return
+    }
     // Mỗi sản phẩm có video mới phải được chọn RÕ campaign cũ hay campaign mới.
     const chuaChon = autoGroups
       .filter(g => g.files.some(isNewFile) && dichCua(g.product).loai === "chua_chon")
@@ -1358,8 +1361,8 @@ function AdsCreatorPanel() {
                 ad_name: adNames[i],
                 headline: fillUrl(headline, autoLink),
                 ad_copy: withHotline(fillUrl(adCopy, autoLink), phone),
-                cta: phoneAsCta && phone ? "CALL_NOW" : autoCta,
-                link: phoneAsCta && phone ? telLink(phone) : autoLink,
+                cta: autoCta,
+                link: autoLink,
                 url_tags: utmStr, video_id: ud.video_id, thumbnail_url: ud.thumbnail_url,
                 filename: file.name, // để ghi sổ uploaded_videos sau khi tạo ad
               })
@@ -1438,7 +1441,8 @@ function AdsCreatorPanel() {
             // Giữ lại vì vô hại (100 = không giới hạn, đúng mặc định) và nhiều khả năng đây
             // chính là field Meta dùng khi mở control đó ra API.
             existing_customer_budget_percentage: autoLifecycle === "new" ? 0 : 100,
-            destination_type: "WEBSITE",
+            destination_type: autoWebCall ? "WEBSITE_AND_PHONE_CALL" : "WEBSITE",
+            call_phone: callPhone,
             billing_event: "IMPRESSIONS",
             promoted_event: "COMPLETE_REGISTRATION",
             pacing_type: "standard",
@@ -2088,12 +2092,26 @@ function AdsCreatorPanel() {
                 <label className={labelClass}>Số điện thoại (hotline trong bài)</label>
                 <input className={inputClass} value={phone} placeholder="vd: 1900638597"
                   onChange={e => { setPhone(e.target.value); try { localStorage.setItem("doscom_ad_phone", e.target.value) } catch (err) {} }} />
-                <label className="flex items-start gap-2 mt-2 text-[12px] text-gray-600">
-                  <input type="checkbox" className="mt-0.5" checked={phoneAsCta} onChange={e => setPhoneAsCta(e.target.checked)} disabled={!phone} />
-                  <span>Đổi nút CTA thành <b>Gọi ngay</b> (thay cho nút mua hàng).
-                    Meta chỉ cho <b>một</b> nút trên mỗi quảng cáo — để trống ô này thì bài giữ nút mua hàng
-                    và số hotline nằm cuối nội dung bài.</span>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="flex items-start gap-2 text-[12px] text-gray-600">
+                  <input type="checkbox" className="mt-0.5" checked={autoWebCall} onChange={e => setAutoWebCall(e.target.checked)} />
+                  <span>Đích <b>Trang web và cuộc gọi</b>: giữ nút mua hàng về landing, thêm nút gọi.
+                    Cột Kết quả của Meta sẽ cộng cả cuộc gọi từ 20 giây, nên có thể cao hơn số đơn Pancake.</span>
                 </label>
+                {autoWebCall && (
+                  <>
+                    <label className={`${labelClass} mt-2`}>Nút gọi (số điện thoại)</label>
+                    <input className={inputClass} value={callPhone} placeholder="vd: 0986878597"
+                      onChange={e => setCallPhone(e.target.value)} />
+                    {autoPerfGoal === "value" && (
+                      <p className="text-[11px] text-amber-600 mt-1">
+                        ⚠ Meta không cho "Tối đa hoá giá trị" đi với đích này — nhóm QC mới sẽ chạy đích Trang web, không có nút gọi.
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
 
               <div>
@@ -2755,6 +2773,13 @@ function AdsCreatorPanel() {
                     <option key={v} value={v}>{l}</option>
                   ))}
                 </select>
+                {destType === "WEBSITE_AND_PHONE_CALL" && (
+                  <>
+                    <label className={`${labelClass} mt-2`}>Nút gọi (số điện thoại)</label>
+                    <input className={inputClass} value={callPhone} placeholder="vd: 0986878597"
+                      onChange={e => setCallPhone(e.target.value)} />
+                  </>
+                )}
               </div>
 
               {/* CONVERSION EVENT — chỉ hiện khi optimization = OFFSITE_CONVERSIONS */}
@@ -3359,7 +3384,7 @@ function AdsCreatorPanel() {
                 ["Loại hình mua", (BUYING_TYPES.find(b => b.value === buyingType) || {}).label],
                 ["Nhóm QC", adsetName || `${ngayThangVn()} - ${spNgan(product) || product} - ${ads.length} creative`],
                 ["Tối ưu hóa", GOAL_LABELS[optGoal] || optGoal],
-                ["Điểm đến", DESTINATION_LABELS[destType] || destType],
+                ["Điểm đến", (DESTINATION_LABELS[destType] || destType) + (destType === "WEBSITE_AND_PHONE_CALL" ? ` · ${callPhone}` : "")],
                 ["Tính phí", (BILLING_EVENTS.find(b => b.value === billingEvent) || {}).label],
                 ["Tài khoản", ACCOUNTS[account]],
                 ["Page", (PAGES[page] || "").split(" (")[0]],

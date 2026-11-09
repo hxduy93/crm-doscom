@@ -74,8 +74,6 @@ test("username TikTok được chuẩn hoá (bỏ @, bỏ khoảng trắng)", ()
 const hotlineSrc = grab(/const digitsOf = [\s\S]*?const withHotline = \(text, ph\) => \{[\s\S]*?\n  \}/, "withHotline");
 const hotline = new Function("text", "ph", `${hotlineSrc};
  return withHotline(text, ph);`);
-const tel = new Function("s", `${hotlineSrc};
- return telLink(s);`);
 
 test("chèn hotline xuống cuối bài", () => {
   assert.equal(hotline("Mua ngay đi bạn", "1900638597"), "Mua ngay đi bạn\n📞 Hotline: 1900638597");
@@ -91,8 +89,21 @@ test("không nhập số thì giữ nguyên bài", () => {
   assert.equal(hotline("Nội dung", null), "Nội dung");
 });
 
-test("nút gọi dùng link tel: chỉ gồm chữ số", () => {
-  assert.equal(tel("1900 638 597"), "tel:1900638597");
+test("nút gọi KHÔNG thay link landing bằng tel: (đi qua đích Trang web và cuộc gọi)", () => {
+  assert.doesNotMatch(html, /telLink|phoneAsCta/);
+  assert.match(html, /link: autoLink,/);
+});
+
+test("chế độ tự động mặc định bật Trang web và cuộc gọi, số 0986878597", () => {
+  assert.match(html, /const \[autoWebCall, setAutoWebCall\] = useState\(true\)/);
+  assert.match(html, /const \[callPhone, setCallPhone\] = useState\("0986878597"\)/);
+  assert.match(html, /destination_type: autoWebCall \? "WEBSITE_AND_PHONE_CALL" : "WEBSITE",\s+call_phone: callPhone,/);
+});
+
+test("chế độ thủ công: chuyển đổi trên web mặc định có cuộc gọi, tối đa giá trị thì không", () => {
+  assert.match(html, /goal: "OFFSITE_CONVERSIONS", dest: "WEBSITE_AND_PHONE_CALL"/);
+  assert.match(html, /goal: "VALUE",\s+dest: "WEBSITE",/);
+  assert.match(html, /destination_type: destType,\s+call_phone: callPhone,/);
 });
 
 test("bài viết ở CẢ hai chế độ đều đi qua withHotline", () => {
