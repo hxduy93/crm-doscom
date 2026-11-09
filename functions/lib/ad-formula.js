@@ -222,6 +222,44 @@ export const CONG_THUC_SAN_PHAM = {
       { re: "da lộn|rách", msg: "không dùng cho da lộn, không phục hồi da đã rách" },
     ],
   },
+  // 955 + 620 (09/11/2026): CHƯA qua vòng duyệt nào, câu mở bài theo khuôn đã duyệt.
+  "Noma 955": {
+    dongMoBai: [
+      "Thân xe có vết trầy, vệt quẹt – Dùng ngay dung dịch xoá vết trầy sơn xe Noma 955",
+      "Dung dịch xoá vết trầy sơn xe Noma 955 – chà tay 20-40 giây mỗi vết, bề mặt đều màu và bóng lại, tự làm tại nhà",
+    ],
+    trongTam: [
+      "Vấn đề chỉ cần nói: thân xe có vệt trầy, vệt quẹt trông xấu, rửa xe không hết",
+      "Phân biệt 1 câu: vết nằm trên bề mặt thì xử lý được, vết đã ăn vào sơn thì chỉ làm mờ được phần nào",
+    ],
+    tranh: [
+      "Không dựng tình huống bãi đỗ, chung cư, bán xe cũ; đi thẳng vào công năng",
+      "Không lẫn với NOMA 880: 955 là KEM MÀI xoá vết trầy, 880 là PHỦ TINH THỂ bảo vệ sơn",
+      "Không nhắc tỉ lệ thành phần, không viết 'không silicone' (sản phẩm có silicone oil)",
+    ],
+    batBuoc: [
+      { re: "xước sâu|ăn vào|ăn sâu", msg: "không xử lý được vết xước đã ăn vào lớp sơn" },
+    ],
+  },
+  "Noma 620": {
+    dongMoBai: [
+      "Đèn pha ố vàng, mờ đục – Dùng ngay bộ phục hồi đèn pha Noma 620",
+      "Bộ phục hồi đèn pha Noma 620 – xoá ố vàng, phủ bảo vệ chống tia UV trong 2 bước, tự làm tại nhà",
+    ],
+    trongTam: [
+      "Điểm khác biệt: có CẢ bước phủ bảo vệ UV, không chỉ đánh cho trong",
+      "Chỉ xử lý lớp ố ở MẶT NGOÀI đèn; nói gọn trong 1 câu",
+    ],
+    tranh: [
+      "Không dựng tình huống bán xe, lên đời xe; đi thẳng vào công năng",
+      "Không viết 'không axit', 'không ăn mòn', 'an toàn' — chai phục hồi là chất ăn mòn",
+      "Không nhắc tên hoạt chất (sodium hydroxide, Etidronic acid) trong bài",
+    ],
+    batBuoc: [
+      { re: "găng tay", msg: "đeo găng tay, tránh tiếp xúc da và mắt" },
+      { re: "mặt ngoài|bên trong", msg: "chỉ xử lý ố ở mặt ngoài, không xử lý ố bên trong cụm đèn" },
+    ],
+  },
 };
 
 /** Khung bài (skeleton) dạng chữ, dùng cho dạng usp_bullet trong ad-formats.js. */

@@ -597,6 +597,117 @@ export const PRODUCTS = {
       "dưỡng giúp HẠN CHẾ nứt nẻ. Con số 1-3 tháng phải kèm 'tuỳ điều kiện sử dụng'. Không dùng cho da lộn, da nhung, vải nỉ. Không chèn tên tiếng Anh của loại da.",
   },
 
+  // ── NOMA 955 + 620 (thêm 09/11/2026) ───────────────────────────────────────
+  // NGUỒN: công dụng + HDSD từ noma-sku-specs.js; giá + quà từ PRICING trong
+  // noma955-landing / noma620-landing (functions/api/order.js); giới hạn + cảnh báo từ
+  // landing đang chạy (n955d, n620d). Ảnh hãng của cả hai có claim sai, xem avoidWords.
+
+  "Noma 955": {
+    name: "Noma 955",
+    brand: "NOMA",
+    fullName: "Dung dịch xoá vết trầy sơn xe Noma 955 — kem mài mịn chai 120ml, đầu bóp nhọn",
+    priceRange: "200.000đ / chai 120ml (1 chai không kèm quà) — 2 chai 400.000đ, NOMA 955 + NOMA 911 419.000đ, NOMA 955 + NOMA 686 490.000đ, NOMA 955 + NOMA 880 590.000đ, các gói này tặng 1 chai NOMA 230 làm mới nhựa xe",
+    category: "Chăm sóc ô tô — sơn xe (xoá vết trầy)",
+    source: "noma-sku-specs.js mã 955 + PRICING + nội dung landing noma955 n955d (đối chiếu 2026-11-09)",
+    guarantee: null,
+    usps: [
+      "Kem mài mịn xử lý lớp vật chất bám trên sơn: vệt sơn xe khác quẹt sang, vệt cọ tường, cọ cột",
+      "Chà xong bề mặt đều màu và bóng lại, chỗ vừa xử lý không còn loang so với phần sơn xung quanh",
+      "Chà tay 20-40 giây mỗi vết, không cần máy đánh bóng; vết dày thì chà thêm lượt",
+      "Xử lý thêm nhựa cây, keo dán, phân chim khô, hắc ín mà rửa xe thường không trôi",
+      "Để lại lớp bảo vệ khoảng 2-4 tuần, tuỳ điều kiện sử dụng",
+      "Dạng kem sệt, bám đúng chỗ bóp lên, không chảy dọc thân xe; mỗi vết chỉ tốn một chút",
+    ],
+    painPoints: [
+      "Thân xe có vệt trầy, vệt quẹt nhìn rõ, xe mất thẩm mỹ",
+      "Vệt sơn lạ, vệt tường bám trên sơn, rửa xe không trôi",
+      "Nhựa cây, keo, phân chim bám cứng, cạy ra thì sợ xước thêm",
+      "Vết nhỏ mà mang ra gara thì mất công hẹn lịch, gửi xe",
+    ],
+    usage: [
+      "Rửa hoặc lau sạch vùng có vết trầy rồi lau khô (cát bụi còn sót mà chà cùng kem sẽ tạo thêm vết mới)",
+      "Mở nắp, lắc kỹ chai",
+      "Bóp lượng vừa đủ trực tiếp lên vết",
+      "Dùng mút chà theo chuyển động tròn 20-40 giây tuỳ độ dày của vết",
+      "Lau sạch bằng khăn microfiber, nhìn nghiêng dưới ánh sáng; vết còn thì lặp lại",
+    ],
+    effectDuration: "Vết mỏng thường thấy khác sau 1-2 lượt chà; lớp bảo vệ khoảng 2-4 tuần, tuỳ điều kiện sử dụng",
+    limits: [
+      "Xử lý vết trầy NẰM TRÊN bề mặt. Vết xước đã ăn vào lớp sơn chỉ làm mờ được phần nào, không thay được sơn sửa chuyên nghiệp",
+      "KHÔNG xử lý được vết lộ lớp lót, lộ kim loại, sơn bong tróc, phồng rộp",
+      "KHÔNG dùng trên kính, nhựa nhám, cao su, da, nỉ",
+      "KHÔNG chà khi bề mặt sơn đang nóng hoặc dưới nắng; làm chỗ râm",
+      "Vết dày thì chà thêm lượt, không chà thật mạnh",
+      "Sơn có lớp phủ đặc biệt (PPF, ceramic, sơn mờ): thử trước ở một vùng nhỏ",
+    ],
+    targetAudience: "Chủ ô tô có vết trầy, vệt quẹt nhẹ trên thân xe, muốn tự xử lý tại nhà",
+    tonePreferred: "Đi thẳng vào vết trầy, vệt quẹt trên thân xe rồi giới thiệu ngay NOMA 955. Trung thực về giới hạn: vết đã ăn vào sơn chỉ làm mờ được phần nào",
+    avoidWords: [
+      "rẻ", "siêu rẻ", "số 1", "tốt nhất", "đỉnh", "vượt trội", "đột phá",
+      "100%", "tuyệt đối", "hoàn toàn", "xoá sạch mọi vết xước", "như mới", "không silicone",
+      "Made in USA", "chính hãng Mỹ", "công nghệ Mỹ", "sản xuất tại Mỹ", "nhập khẩu từ Mỹ",
+    ],
+    fbPolicyNotes:
+      "Không hứa xoá mọi vết xước: nói rõ vết đã ăn vào lớp sơn chỉ làm mờ được phần nào. Con số 2-4 tuần phải kèm 'tuỳ điều kiện sử dụng'. " +
+      "Ảnh hãng ghi 'an toàn tuyệt đối', 'không silicone', '200.000 khách hàng': đều không được dùng (sản phẩm có silicone oil, số khách chưa kiểm chứng). " +
+      "NOMA 955 là kem mài xoá vết trầy, NOMA 880 là phủ tinh thể bảo vệ sơn — đừng lẫn.",
+  },
+
+  "Noma 620": {
+    name: "Noma 620",
+    brand: "NOMA",
+    fullName: "Bộ phục hồi đèn pha ô tô Noma 620 — chai phục hồi 120ml + chai bảo vệ UV 10ml, kèm mút và khăn microfiber",
+    priceRange: "179.000đ / bộ (1 bộ không kèm quà) — 2 bộ 358.000đ hoặc NOMA 620 + NOMA 911 tẩy ố kính 398.000đ, cả hai tặng 1 chai NOMA 110 chống rỉ, bôi trơn đa năng",
+    category: "Chăm sóc ô tô — đèn pha (phục hồi độ trong)",
+    source: "noma-sku-specs.js mã 620 + PRICING + nội dung landing noma620 n620d (đối chiếu 2026-11-09)",
+    guarantee: null,
+    usps: [
+      "Bộ 2 bước: chai lớn xoá ố vàng, mờ đục; chai nhỏ phủ lớp bảo vệ chống tia UV giúp đèn lâu ố lại",
+      "Làm sạch lớp oxy hoá trên mặt nhựa đèn, khôi phục độ trong",
+      "Mặt đèn trong thì ánh sáng truyền qua tốt hơn, hỗ trợ quan sát khi đi đêm hoặc trời xấu",
+      "Hiệu quả 3-6 tháng, tuỳ điều kiện sử dụng",
+      "Tự làm tại nhà, không cần máy; có sẵn mút và khăn microfiber trong bộ",
+      "Một bộ làm được đôi đèn",
+    ],
+    painPoints: [
+      "Đèn pha ố vàng, mờ đục làm đầu xe trông cũ kỹ",
+      "Đi đêm thấy đèn yếu vì lớp ố chặn bớt ánh sáng",
+      "Rửa xe không hết ố vì đó là mặt nhựa đã oxy hoá",
+      "Đèn chỉ ố bên ngoài mà thay cả cụm thì tốn kém",
+      "Mang xe đi đánh đèn phải hẹn lịch, chờ đợi",
+    ],
+    usage: [
+      "Đeo găng tay kháng hoá chất, kính bảo hộ; dán băng dính giấy che sơn quanh đèn, lau khô mặt đèn",
+      "Lắc chai lớn, xịt lên mặt đèn cách 15-20cm, tránh xịt ra sơn xe",
+      "Chà đều bằng mút đen theo chuyển động tròn",
+      "Rửa lại bằng nước sạch, lau khô",
+      "Nhỏ vài giọt chai bảo vệ 10ml lên mặt đèn đã khô, lau bằng mút xanh theo một chiều",
+      "Để khô tự nhiên 5-10 phút, tránh nước trong thời gian này",
+    ],
+    effectDuration: "Hiệu quả 3-6 tháng, tuỳ điều kiện sử dụng",
+    // AN TOÀN, không phải chi tiết phụ: chai phục hồi ăn mòn da cấp 1A (H314), ảnh hãng lại
+    // in "Không axit · Không ăn mòn" và "An toàn cho người sử dụng" — cả hai đều sai.
+    limits: [
+      "Chai phục hồi là chất ĂN MÒN (H314): BẮT BUỘC đeo găng tay kháng hoá chất và kính bảo hộ, tránh tiếp xúc da và mắt",
+      "Trẻ em và phụ nữ mang thai KHÔNG sử dụng",
+      "Chỉ xử lý lớp ố ở MẶT NGOÀI đèn; KHÔNG xử lý được ố, hơi nước bên trong cụm đèn",
+      "KHÔNG dùng cho đèn nứt, vỡ, hư hỏng",
+      "KHÔNG làm khi đèn đang nóng hoặc đứng dưới nắng; làm nơi thoáng",
+      "Che sơn quanh đèn, không để dung dịch dính lên sơn xe",
+    ],
+    targetAudience: "Chủ ô tô có đèn pha nhựa bị ố vàng, mờ đục ở mặt ngoài, muốn tự xử lý tại nhà",
+    tonePreferred: "Đi thẳng vào đèn pha ố vàng, mờ đục rồi giới thiệu ngay bộ 2 bước làm trong + phủ bảo vệ UV. Nói rõ cần đeo găng tay",
+    avoidWords: [
+      "rẻ", "siêu rẻ", "số 1", "tốt nhất", "đỉnh", "vượt trội", "đột phá",
+      "100%", "tuyệt đối", "hoàn toàn", "như mới", "không axit", "không ăn mòn", "an toàn cho người sử dụng",
+      "Made in USA", "chính hãng Mỹ", "công nghệ Mỹ", "sản xuất tại Mỹ", "nhập khẩu từ Mỹ",
+    ],
+    fbPolicyNotes:
+      "BẮT BUỘC nhắc đeo găng tay, tránh tiếp xúc da và mắt vì chai phục hồi là chất ăn mòn. Mọi mô tả thao tác phải có găng tay. " +
+      "Con số 3-6 tháng phải kèm 'tuỳ điều kiện sử dụng'. Chỉ xử lý ố mặt ngoài, không hứa với đèn ố bên trong hay đèn nứt. " +
+      "Ảnh hãng ghi 'Không axit, không ăn mòn', 'An toàn cho người sử dụng', '86.000 khách', 'tặng NOMA 250': đều không được dùng; quà hiện hành là NOMA 110.",
+  },
+
   "DA8.1": {
     name: "Camera DA8.1",
     brand: "DOSCOM",
