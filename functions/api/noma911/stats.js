@@ -44,7 +44,8 @@ export async function onRequestGet(context) {
     const byStaffLabeled = (byStaff.results || []).map(r => ({ ...r, staff_label: STAFF_LABEL[r.staff] || r.staff }));
     // noma110/noma955: luật quà mới 24/09/2026; các mã còn lại là quà cũ, giữ cho đơn cũ trong D1.
     const GIFT_LABEL = {
-      noma230: "NOMA 230 làm mới nhựa xe",   // luật quà 11/11/2026: mọi gói từ 2 chai
+      noma680: "NOMA 680 bọt tuyết đa năng", // luật quà 11/11/2026: gói từ 400K (cả 3 combo 911)
+      noma230: "NOMA 230 làm mới nhựa xe",   // luật quà 11/11/2026: gói từ 2 chai dưới 400K
       noma110: "NOMA 110 chống rỉ và bôi trơn đa năng",
       noma955: "NOMA 955 xoá vết trầy sơn xe",
       noma250: "NOMA 250", noma120: "NOMA 120", noma692: "NOMA 692",
