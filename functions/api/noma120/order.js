@@ -9,8 +9,8 @@
 // thứ hai (lớp đầu ở Function của landing); cố ý, để kênh khác gọi thẳng vẫn đúng tiền.
 
 // Quà tặng bật 14/08/2026 (NOMA 250). Từ 24/09/2026 theo luật quà mới cho mọi landing NOMA:
-// gói 1 chai dưới 400k không quà · gói ≥2 chai dưới 400k tặng NOMA 110 · gói từ 400k chỉ
-// tặng NOMA 955. Cả ba gói đôi của 120 đều dưới 400k → tặng NOMA 110 (khớp PRICING landing).
+// LUẬT QUÀ 11/11/2026 (thay luật 110/955 ngày 24/09/2026): gói 1 chai không quà · MỌI gói
+// từ 2 chai tặng 1 chai NOMA 230. Cả ba gói đôi của 120 → noma230 (khớp PRICING landing).
 // Mã quà chốt Ở ĐÂY, KHÔNG lấy `b.gift` client gửi lên — cùng lý do với `amount`:
 // đây là lớp chốt thứ hai, kênh nào gọi thẳng endpoint này cũng phải ra đúng quà.
 // (Khác noma230/order.js — bản đó còn tin `b.gift` của client. Đừng chép ngược lại.)
@@ -21,9 +21,9 @@
 // Ba bảng phải khớp: bảng này, PRICING của landing, và `pricing` trong index.html landing.
 const COMBO_META = {
   "le-120":        { label: "1 chai NOMA 120 vệ sinh kim phun",      amount: 189000, gift: "" },
-  "combo-2x120":   { label: "2 chai NOMA 120 vệ sinh kim phun",      amount: 378000, gift: "noma110" },
-  "combo-120-350": { label: "NOMA 120 + NOMA 350 vệ sinh phanh đĩa", amount: 348000, gift: "noma110" },
-  "combo-120-130": { label: "NOMA 120 + NOMA 130 dưỡng ron cao su",  amount: 368000, gift: "noma110" },
+  "combo-2x120":   { label: "2 chai NOMA 120 vệ sinh kim phun",      amount: 378000, gift: "noma230" },
+  "combo-120-350": { label: "NOMA 120 + NOMA 350 vệ sinh phanh đĩa", amount: 348000, gift: "noma230" },
+  "combo-120-130": { label: "NOMA 120 + NOMA 130 dưỡng ron cao su",  amount: 368000, gift: "noma230" },
 };
 
 function json(obj, status = 200) {
