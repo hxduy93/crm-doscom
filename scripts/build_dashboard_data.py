@@ -347,6 +347,10 @@ LANDING_TO_PRODUCT = {
     # PHẢI khai theo path; bản xem thử noma922-lp.pages.dev khai ở bảng host bên dưới.
     "noma.io.vn/n922d":             "Noma 922",
     "noma.io.vn/n922tpn":           "Noma 922",
+    # NOMA 620 phục hồi đèn pha (11/11/2026) — nằm TRONG project noma230-landing (chép sang
+    # bằng export-230.sh của noma620-landing), gốc noma620.click vẫn là 230 nên PHẢI khai path.
+    "noma620.click/n620d":          "Noma 620",
+    "noma620.click/n620tpn":        "Noma 620",
 }
 
 # Domain chỉ bán MỘT sản phẩm → mọi path trên domain đó (kể cả biến thể theo nhân
@@ -368,6 +372,7 @@ LANDING_HOST_TO_PRODUCT = {
     # NOMA 880 CHƯA có tên miền riêng — chỉ chạy trên *.pages.dev (xem README landing).
     "noma880-lp.pages.dev":       "Noma 880",   # NOMA 880 phủ tinh thể bảo vệ sơn
     "noma922-lp.pages.dev":       "Noma 922",   # NOMA 922 phủ nano kính (bản xem thử)
+    "noma620-lp.pages.dev":       "Noma 620",   # NOMA 620 phục hồi đèn pha (bản xem thử)
     # Bản *.pages.dev của các landing ở trên (ad thường dán link pages.dev lúc test)
     "noma-landings.pages.dev":       "Noma 911",
     "noma911.pages.dev":             "Noma 911",
