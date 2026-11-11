@@ -703,14 +703,15 @@ def fetch_orders_by_group(start_dt, end_dt):
 # thành phần qua PRODUCT_MAPPING), không suy từ giá: 911+922 và 2×922 cùng 438K.
 #   combos — {(số chai main, số chai partner): (mã gói landing, nhãn)}; khớp bảng
 #            PRICING của landing (noma922-landing/functions/api/order.js).
-#   gifts  — chai tặng theo luật quà 24/09/2026, bỏ ra khi xét gói.
+#   gifts  — chai tặng, bỏ ra khi xét gói. Luật 11/11/2026: mọi gói từ 2 chai tặng 1 chai
+#            NOMA 230 (trước đó 110/955 theo luật 24/09/2026 — giữ để đơn cũ vẫn xếp đúng).
 # Đơn có thêm sản phẩm khác (sale bán kèm) → gói "khac", vẫn tính đơn + doanh thu.
 LANDING_POS = {
     "noma922": {
         "source_re": r"noma\s*922",
         "main": "Noma 922",
         "partner": "Noma 911",
-        "gifts": ["Noma 955", "Noma 110"],
+        "gifts": ["Noma 230", "Noma 955", "Noma 110"],
         "combos": {
             (1, 0): ("le-922",        "1 chai NOMA 922 phủ nano kính"),
             (2, 0): ("combo-2x922",   "2 chai NOMA 922 phủ nano kính"),
@@ -725,7 +726,7 @@ LANDING_POS = {
         "source_re": r"noma\s*880",
         "main": "Noma 880",
         "partner": None,
-        "gifts": ["Noma 955", "Noma 110", "Noma 250", "Noma 692", "Noma 120"],
+        "gifts": ["Noma 230", "Noma 955", "Noma 110", "Noma 250", "Noma 692", "Noma 120"],
         "combos": {
             (1, 0): ("le-880",      "1 hộp NOMA 880 phủ tinh thể bảo vệ sơn xe"),
             (2, 0): ("combo-2x880", "2 hộp NOMA 880 phủ tinh thể bảo vệ sơn xe"),
