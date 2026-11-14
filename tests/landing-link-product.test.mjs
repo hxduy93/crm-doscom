@@ -44,6 +44,7 @@ test("mọi landing đang chạy đều suy ra đúng sản phẩm từ link", {
   const cases = [
     ["https://www.noma.io.vn/nm911d#dat-hang", "Noma 911"],
     ["https://noma.io.vn/911tpn?utm_source=fb", "Noma 911"],
+    ["https://www.noma.io.vn/noma911lad?fbclid=x#dat-hang", "Noma 911"],
     ["https://www.doscom.click/d1cb", "D1"],
     ["https://www.doscom.click/d1tpn?fbclid=abc", "D1"],
     ["https://www.senso.io.vn/dr1lad", "DR1"],
