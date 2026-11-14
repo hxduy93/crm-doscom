@@ -51,7 +51,7 @@ test("trang tạo ads khai pixel riêng + link của 955 và 620, có tên pixel
   assert.deepEqual([P["Noma 955"].pixel, P["Noma 955"].link, P["Noma 955"].linkPn],
     ["2137725140314106", "https://noma880.io.vn/n955d", "https://noma880.io.vn/n955tpn"]);
   assert.deepEqual([P["Noma 620"].pixel, P["Noma 620"].link, P["Noma 620"].linkPn],
-    ["1543671373419026", "https://noma620-lp.pages.dev/n620d", "https://noma620-lp.pages.dev/n620tpn"]);
+    ["1543671373419026", "https://noma620.click/n620d", "https://noma620.click/n620tpn"]);
   assert.equal(X["2137725140314106"], "NOMA 955");
   assert.equal(X["1543671373419026"], "NOMA 620");
 });
