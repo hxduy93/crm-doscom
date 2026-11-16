@@ -753,6 +753,59 @@ export const PRODUCTS = {
     ],
   },
 
+  // Thêm 16/11/2026. Số liệu lấy NGUYÊN từ landing da1pro-landing (đã đối chiếu thông số
+  // hãng): KHÔNG chống nước, đêm đen trắng, pin chờ 15 ngày nhưng quay liên tục ~10 giờ.
+  "DA1 Pro": {
+    name: "Camera 4G DA1 Pro",
+    brand: "DOSCOM",
+    fullName: "Camera mini 4G DA1 Pro Doscom — chạy sim 4G + pin sạc, không cần Wifi, không cần điện",
+    priceRange: "1.590.000đ (giá niêm yết 2.100.000đ), tặng kèm sim 4G, chưa gồm thẻ nhớ",
+    category: "Camera an ninh mini dùng sim 4G",
+    source: "https://www.doscomholding.click/da1prolad (landing, đối chiếu 2026-11-16)",
+    specs: [
+      "Kết nối bằng sim 4G, KHÔNG có Wifi",
+      "Pin sạc 3000mAh: chờ tới 15 ngày, quay khi có chuyển động ~3 ngày, quay liên tục ~10 giờ",
+      "Sạc 5V-2A cổng Type-C, vừa sạc vừa chạy",
+      "Độ phân giải 3MP Full HD, góc nhìn 140°",
+      "Quay đêm hồng ngoại đen trắng 5 – 10m, đèn không phát ánh đỏ",
+      "Đàm thoại 2 chiều",
+      "Cảnh báo chuyển động, con người, âm thanh bất thường về điện thoại",
+      "Lưu thẻ MicroSD tối đa 256GB hoặc lưu đám mây",
+      "App O-KAM Pro tiếng Việt, 6 điện thoại xem cùng lúc",
+      "Kích thước 56 × 43 × 44 mm, nặng 240g; có chân đế xoay",
+      "Trong hộp: camera, chân đế, dây sạc Type-C, ốc vít + 1 sim 4G tặng kèm",
+    ],
+    usps: [
+      "Không cần Wifi, không cần kéo điện – lắp sim 4G là xem được qua điện thoại",
+      "Pin 3000mAh chờ tới 15 ngày, cần quay cả ngày thì cắm sạc Type-C",
+      "Hình 3MP Full HD, góc rộng 140°, ban đêm hồng ngoại 5-10m",
+      "Có chuyển động, người hay âm thanh lạ là báo về điện thoại; nói chuyện 2 chiều qua camera",
+      "Nhỏ gọn trong lòng bàn tay, treo trần, treo tường hay để bàn đều được",
+      "Tặng kèm sim 4G (quà mặc định của DA1 Pro)",
+    ],
+    painPoints: [
+      "Nhà mới, nhà đang sửa chưa kéo mạng Wifi nên không lắp được camera thường",
+      "Kho, ki-ốt, quầy hàng đóng cửa về không trông được hàng",
+      "Nhà vườn, công trường không có ổ điện, không có Wifi",
+      "Đi làm muốn xem ông bà, con nhỏ ở nhà mà nhà không có Wifi",
+    ],
+    limits: [
+      "Chỉ chạy sim 4G, chỗ lắp cần có sóng 4G ổn định",
+      "KHÔNG chống nước — lắp ngoài trời phải có mái che",
+      "Ban đêm quay hình đen trắng",
+      "Giá chưa gồm thẻ nhớ (thẻ nhớ là tuỳ chọn trả thêm)",
+    ],
+    targetAudience: "Chủ nhà mới/nhà đang sửa, chủ kho, ki-ốt, quầy hàng, nhà vườn, công trường; gia đình có ông bà, con nhỏ ở nhà mà không có Wifi",
+    tonePreferred: "Đi thẳng vào điểm khác biệt: không cần Wifi, không cần điện, lắp sim là xem. Trung thực về pin và quay đêm",
+    avoidWords: [
+      "ẩn thân", "không bị phát hiện", "quay lén", "giám sát lén", "theo dõi bí mật", "rình",
+      "chống nước", "quay đêm có màu", "pin 15 ngày quay liên tục",
+    ],
+    fbPolicyNotes:
+      "Camera dùng để trông nhà, trông tài sản của mình. KHÔNG ám chỉ quay lén, giấu camera, theo dõi người khác. " +
+      "Con số pin 15 ngày là thời gian CHỜ, không được viết như thời gian quay. Không hứa chống nước, không hứa quay đêm có màu.",
+  },
+
   // DA8.1 Pro đã NGỪNG BÁN (chủ dự án xác nhận 2026-07-22) → gỡ khỏi catalog để
   // không sinh được content quảng cáo mới. Pixel "DA8.1 Pro" và dữ liệu doanh thu
   // lịch sử vẫn giữ nguyên ở ads-creator.html và index.html — campaign cũ còn tham

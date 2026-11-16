@@ -116,6 +116,23 @@ export const CONG_THUC_SAN_PHAM = {
     ],
     tranh: ["Không viết 'video call' — viết 'gọi điện, liên lạc với con cháu'"],
   },
+  "DA1 Pro": {
+    dongMoBai: [
+      "Camera 4G DA1 Pro Doscom – Không cần Wifi, không cần điện, lắp sim là xem được qua điện thoại",
+      "Chỗ không có Wifi vẫn trông được nhà – Dùng ngay camera mini 4G DA1 Pro Doscom",
+    ],
+    trongTam: [
+      "Điểm khác biệt là chạy sim 4G + pin sạc: nơi chưa có Wifi, chưa có ổ điện vẫn lắp được",
+      "Pin: chờ tới 15 ngày, quay liên tục ~10 giờ, cần quay cả ngày thì cắm sạc — nói đúng như vậy",
+    ],
+    tranh: [
+      "Không ám chỉ quay lén, giấu camera, ẩn thân; camera để trông nhà, trông tài sản",
+      "Không viết 'chống nước', không viết quay đêm có màu",
+    ],
+    batBuoc: [
+      { re: "sóng 4G|sim 4G", msg: "chạy bằng sim 4G (chỗ lắp cần có sóng 4G)" },
+    ],
+  },
   "Noma 911": {
     dongMoBai: [
       "Rửa xe xong mà kính lái vẫn còn ố trắng – Sử dụng ngay dung dịch tẩy ố kính Noma 911",

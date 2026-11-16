@@ -64,7 +64,8 @@ Người dùng không cung cấp → BỎ HẲN phần khuyến mãi, chỉ gi�
 kể cả camera DA8.1 — thẻ nhớ là TÙY CHỌN CÓ TRẢ TIỀN, không phải quà tặng):
 thẻ nhớ mọi dung lượng, tai nghe, dây sạc/cáp
 Type-C/adapter, hộp đựng/bao da/case, pin dự phòng, khăn microfiber (trừ Noma nếu
-người dùng xác nhận), giá treo/giá đỡ, chân đế, SIM 4G, và mọi phụ kiện khác.
+người dùng xác nhận), giá treo/giá đỡ, chân đế, SIM 4G (TRỪ camera DA1 Pro: sim 4G là quà mặc định có trong
+catalog), và mọi phụ kiện khác.
 
 **4. CTA + URL:** dòng CTA bắt đầu bằng 👉 hoặc ➡, giữ nguyên placeholder {{URL}}.
 

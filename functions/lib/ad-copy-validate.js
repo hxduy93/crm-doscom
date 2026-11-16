@@ -29,7 +29,10 @@ const CUM_CAM_NOMA = [
 
 /** Tên ngắn nhận diện SP trong bài: "Noma 911" → "911", "DA8.1" → "DA8.1". */
 function tenNgan(productKey) {
-  return String(productKey).split(/\s+/).pop();
+  const parts = String(productKey).split(/\s+/);
+  // "DA1 Pro" → "DA1": chữ "Pro" đứng một mình không nhận diện được sản phẩm.
+  if (parts.length > 1 && /^pro$/i.test(parts[parts.length - 1])) return parts[parts.length - 2];
+  return parts.pop();
 }
 
 /** Cắt footer (từ dòng "━" đầu tiên) — footer do server gắn, không để model tự chép. */
