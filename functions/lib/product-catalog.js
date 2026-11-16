@@ -759,7 +759,7 @@ export const PRODUCTS = {
     name: "Camera 4G DA1 Pro",
     brand: "DOSCOM",
     fullName: "Camera mini 4G DA1 Pro Doscom — chạy sim 4G + pin sạc, không cần Wifi, không cần điện",
-    priceRange: "1.100.000đ (giá niêm yết 2.100.000đ), KHÔNG kèm sim 4G, chưa gồm thẻ nhớ",
+    priceRange: "1.100.000đ (giảm 50% từ giá gốc 2.200.000đ), KHÔNG kèm sim 4G, chưa gồm thẻ nhớ",
     category: "Camera an ninh mini dùng sim 4G",
     source: "https://www.doscomholding.click/da1prolad (landing, đối chiếu 2026-11-16)",
     specs: [
