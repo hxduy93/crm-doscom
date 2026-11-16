@@ -10,7 +10,11 @@ import { kiemTraBai } from "../functions/lib/ad-copy-validate.js";
 test("catalog DA1 Pro: giá landing, trung thực pin/chống nước/quay đêm", () => {
   const p = PRODUCTS["DA1 Pro"];
   assert.equal(p.brand, "DOSCOM");
-  assert.ok(p.priceRange.includes("1.590.000đ"));
+  assert.ok(p.priceRange.includes("1.100.000đ"));
+  // 16/11/2026: bỏ quà sim 4G — không câu nào được hứa tặng sim.
+  assert.ok(p.priceRange.includes("KHÔNG kèm sim"));
+  assert.ok(!p.usps.some((u) => /tặng/i.test(u)));
+  assert.ok(p.avoidWords.includes("tặng sim"));
   assert.ok(p.limits.some((l) => /KHÔNG chống nước/.test(l)));
   assert.ok(p.limits.some((l) => /đen trắng/.test(l)));
   assert.ok(p.specs.some((l) => /chờ tới 15 ngày/.test(l) && /liên tục ~10 giờ/.test(l)));

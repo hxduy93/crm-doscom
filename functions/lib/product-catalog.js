@@ -759,7 +759,7 @@ export const PRODUCTS = {
     name: "Camera 4G DA1 Pro",
     brand: "DOSCOM",
     fullName: "Camera mini 4G DA1 Pro Doscom — chạy sim 4G + pin sạc, không cần Wifi, không cần điện",
-    priceRange: "1.590.000đ (giá niêm yết 2.100.000đ), tặng kèm sim 4G, chưa gồm thẻ nhớ",
+    priceRange: "1.100.000đ (giá niêm yết 2.100.000đ), KHÔNG kèm sim 4G, chưa gồm thẻ nhớ",
     category: "Camera an ninh mini dùng sim 4G",
     source: "https://www.doscomholding.click/da1prolad (landing, đối chiếu 2026-11-16)",
     specs: [
@@ -773,7 +773,7 @@ export const PRODUCTS = {
       "Lưu thẻ MicroSD tối đa 256GB hoặc lưu đám mây",
       "App O-KAM Pro tiếng Việt, 6 điện thoại xem cùng lúc",
       "Kích thước 56 × 43 × 44 mm, nặng 240g; có chân đế xoay",
-      "Trong hộp: camera, chân đế, dây sạc Type-C, ốc vít + 1 sim 4G tặng kèm",
+      "Trong hộp: camera, chân đế, dây sạc Type-C, ốc vít (KHÔNG kèm sim 4G)",
     ],
     usps: [
       "Không cần Wifi, không cần kéo điện – lắp sim 4G là xem được qua điện thoại",
@@ -781,7 +781,6 @@ export const PRODUCTS = {
       "Hình 3MP Full HD, góc rộng 140°, ban đêm hồng ngoại 5-10m",
       "Có chuyển động, người hay âm thanh lạ là báo về điện thoại; nói chuyện 2 chiều qua camera",
       "Nhỏ gọn trong lòng bàn tay, treo trần, treo tường hay để bàn đều được",
-      "Tặng kèm sim 4G (quà mặc định của DA1 Pro)",
     ],
     painPoints: [
       "Nhà mới, nhà đang sửa chưa kéo mạng Wifi nên không lắp được camera thường",
@@ -794,12 +793,13 @@ export const PRODUCTS = {
       "KHÔNG chống nước — lắp ngoài trời phải có mái che",
       "Ban đêm quay hình đen trắng",
       "Giá chưa gồm thẻ nhớ (thẻ nhớ là tuỳ chọn trả thêm)",
+      "KHÔNG tặng kèm sim 4G — khách tự lắp sim 4G của mình",
     ],
     targetAudience: "Chủ nhà mới/nhà đang sửa, chủ kho, ki-ốt, quầy hàng, nhà vườn, công trường; gia đình có ông bà, con nhỏ ở nhà mà không có Wifi",
     tonePreferred: "Đi thẳng vào điểm khác biệt: không cần Wifi, không cần điện, lắp sim là xem. Trung thực về pin và quay đêm",
     avoidWords: [
       "ẩn thân", "không bị phát hiện", "quay lén", "giám sát lén", "theo dõi bí mật", "rình",
-      "chống nước", "quay đêm có màu", "pin 15 ngày quay liên tục",
+      "chống nước", "quay đêm có màu", "pin 15 ngày quay liên tục", "tặng sim", "tặng kèm sim",
     ],
     fbPolicyNotes:
       "Camera dùng để trông nhà, trông tài sản của mình. KHÔNG ám chỉ quay lén, giấu camera, theo dõi người khác. " +
