@@ -10,7 +10,9 @@
     //   02:00 UTC = 09:00 VN   ·   08:00 UTC = 15:00 VN
     // Mốc này chạy SAU các workflow kéo dữ liệu (07:00–08:00 và 13:00–14:00 VN)
     // nên dashboard luôn dựng từ dữ liệu vừa kéo về.
-    "crons": ["0 2 * * 1-6", "0 8 * * 1-6"]
+    // 20/11/2026: thêm 2 mốc KÉO DỮ LIỆU (GitHub schedule trễ 4–9 tiếng):
+    //   "0 0,6" = 07:00 + 13:00 VN → fetch-pancake · "0 1,7" = 08:00 + 14:00 VN → fetch-fb-ads
+    "crons": ["0 2 * * MON-SAT", "0 8 * * MON-SAT", "0 0,6 * * MON-SAT", "0 1,7 * * MON-SAT"]
   },
   // Bù đơn Thái chưa lên Sheet (mốc 9h) cần đọc/ghi bảng landing_leads.
   "d1_databases": [

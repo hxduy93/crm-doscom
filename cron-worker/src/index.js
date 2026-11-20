@@ -10,6 +10,16 @@ import { buDonThai } from "./don-thai.js";
 
 const CRM = { repo: "hxduy93/crm-doscom", ref: "master", workflow: "refresh-data.yml" };
 
+/* KÉO DỮ LIỆU cũng do Worker hẹn giờ (20/11/2026). Trước đó fetch-pancake chạy bằng
+   GitHub schedule "07:00/13:00" nhưng thực tế chạy 11:27 và 21:44 (trễ 4–9 tiếng) →
+   mốc dựng dashboard 9h dùng đơn của tối hôm trước, 15h dùng đơn của 11h27; chủ dự án
+   so với POS thấy "sai doanh số" ở mọi nguồn (đúng bằng các đơn tạo sau lần kéo).
+   Tiền tố chuỗi cron → workflow cần dispatch; mốc dựng dashboard (02:00/08:00 UTC) giữ nguyên. */
+const FETCH_JOBS = {
+  "0 0,6 ": { repo: CRM.repo, ref: CRM.ref, workflow: "fetch-pancake.yml" },  // 07:00 + 13:00 VN
+  "0 1,7 ": { repo: CRM.repo, ref: CRM.ref, workflow: "fetch-fb-ads.yml" },   // 08:00 + 14:00 VN
+};
+
 async function dispatch(env, job) {
   const url = `https://api.github.com/repos/${job.repo}/actions/workflows/${job.workflow}/dispatches`;
   try {
@@ -32,7 +42,15 @@ async function dispatch(env, job) {
 }
 
 async function runPlan(env, cron) {
-  // Mọi mốc giờ (9h/13h/17h VN) đều: kéo dữ liệu mới + deploy dashboard.
+  // Mốc kéo dữ liệu: chỉ dispatch workflow fetch tương ứng, KHÔNG dựng dashboard.
+  for (const [prefix, job] of Object.entries(FETCH_JOBS)) {
+    if (cron.startsWith(prefix)) {
+      const out = { cron, results: [await dispatch(env, job)] };
+      console.log("doscom-cron", cron, JSON.stringify(out));
+      return out;
+    }
+  }
+  // Mốc dựng dashboard (9h/15h VN): kéo dữ liệu mới + deploy dashboard.
   const r = await dispatch(env, CRM);
   const out = { cron, results: [r] };
 
