@@ -1562,6 +1562,9 @@
     if(/(^|\s)d1(\s|$)/.test(n)) return 'D1';
     if(/(^|\s)d2( ?pro)?(\s|$)/.test(n)) return 'D2';   // D2 Pro: CPQC cũng gán về "D2"
     if(/(^|\s)da8\.?1(\s|$)/.test(n)) return 'DA8.1';
+    // 20/11/2026: khớp nhãn CPQC "DA1 Pro"/"DA3 Pro" của build_dashboard_data.py.
+    if(/(^|\s)da1 ?pro(\s|$)/.test(n)) return 'DA1 Pro';
+    if(/(^|\s)da3 ?pro(\s|$)/.test(n)) return 'DA3 Pro';
     return null;
   }
 
@@ -1946,9 +1949,9 @@
   // Map account_id → nhân sự (mirror dashboard cũ)
   var REPORT_ACCOUNT_STAFF={
     "act_927390616363424":"DUY","act_1655506672244826":"DUY","act_1449385949897024":"DUY",
-    "act_1254151326914021":"DUY",
+    "act_1254151326914021":"DUY","act_2418926725300433":"DUY",
     "act_764394829882083":"PHUONG_NAM","act_906015559004892":"PHUONG_NAM",
-    "act_1416634670476226":"PHUONG_NAM"
+    "act_1416634670476226":"PHUONG_NAM","act_1178415743938574":"PHUONG_NAM"
   };
   // Google category khớp 14 PROFIT_PRODUCTS → tính vào profit attribution WEBSITE
   var GOOGLE_CATS_MATCH=new Set(["MAYDO","DINHVI","GHIAM","CAMCALL","OTHER_CAM","OTHER_DI","OTHER_RAZOR","OTHER_SIM","CHONG_GHI_AM"]);

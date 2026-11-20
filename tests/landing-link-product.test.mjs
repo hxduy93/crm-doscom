@@ -240,3 +240,41 @@ test("thị trường đọc từ LINK: landing Thái → th, landing Việt →
   const got = call("_market_from_link", cases.map((c) => c[0]));
   cases.forEach(([u, want], i) => assert.equal(got[i], want, u));
 });
+
+test("đối chiếu 20/11/2026: landing đã LIVE mà thiếu trong bảng map", { skip }, () => {
+  /* Tuần 09–15/11/2026: campaign 24,97tr Noma 880 của Phương Nam trỏ noma880.io.vn/n880tpn,
+     hai campaign Noma 955 của Duy trỏ noma880.io.vn/n955d — cả hai đường không có trong
+     bảng nên chỉ còn trông vào tên campaign. noma880.io.vn chứa CẢ 880 lẫn 955 → phải
+     khai theo PATH, không được map cả tên miền. */
+  const cases = [
+    ["https://noma880.io.vn/n880tpn", "Noma 880"],
+    ["https://www.noma880.io.vn/n880d?fbclid=x", "Noma 880"],
+    ["https://noma880.io.vn/n955d", "Noma 955"],
+    ["https://noma880.io.vn/n955tpn", "Noma 955"],
+    ["https://noma880.io.vn/", null],
+    ["https://www.noma.io.vn/n250d", "Noma 250"],
+    ["https://noma110.cloud/n686d", "Noma 686"],
+    ["https://www.doscom.store/da8.1d", "DA8.1"],
+    ["https://www.doscomholding.click/da1prolad", "DA1 Pro"],
+    ["https://doscomholding.click/da1protpn", "DA1 Pro"],
+    ["https://doscom-da3pro-lp.pages.dev/da3prod", "DA3 Pro"],
+    ["https://noma955-lp.pages.dev/n955d", "Noma 955"],
+  ];
+  const got = call("_product_from_link", cases.map((c) => c[0]));
+  cases.forEach(([url, want], i) => assert.equal(got[i], want, url));
+  assert.deepEqual(call("detect_profit_product", ["15/11 - Da1 Pro - Vid N.a", "DA3 Pro test"]),
+    ["DA1 Pro", "DA3 Pro"]);
+});
+
+test("tkqc đang chi tiêu đều được khai, và có cảnh báo tkqc chưa khai", { skip }, () => {
+  /* 20/11/2026: Nomaautovn (2418926725300433, Noma 955 của Duy) + Doscom010 - Nam
+     (1178415743938574) tiêu 4.268.588đ tuần 09–15/11 mà dashboard không thấy. */
+  const src = readFileSync(SCRIPT, "utf8");
+  for (const id of ["2418926725300433", "1178415743938574"]) {
+    assert.match(src, new RegExp(`"id": "${id}"`), `thiếu tkqc ${id} trong ACCOUNTS`);
+    assert.ok(readFileSync("data/fb-config.json", "utf8").includes(`"${id}"`), `fb-config.json thiếu ${id}`);
+    assert.ok(readFileSync("functions/lib/access.js", "utf8").includes(`"${id}"`), `access.js thiếu ${id}`);
+    assert.ok(readFileSync("index.html", "utf8").includes(`"act_${id}"`), `REPORT_ACCOUNT_STAFF thiếu ${id}`);
+  }
+  assert.match(src, /\n    warn_unlisted_accounts\(\)/, "mất bước cảnh báo tkqc có chi tiêu mà chưa khai");
+});

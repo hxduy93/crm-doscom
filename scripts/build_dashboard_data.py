@@ -58,6 +58,16 @@ ACCOUNTS = [
     {"id": "906015559004892",  "staff": "PHUONG_NAM", "short": "Doscom Mart",                                                   "name": "Doscom Mart"},
     {"id": "1416634670476226", "staff": "PHUONG_NAM", "short": "CÔNG TY TNHH DOSCOM HOLDINGS - Doscom Mart",                    "name": "CÔNG TY TNHH DOSCOM HOLDINGS - Doscom Mart"},
     {"id": "1254151326914021", "staff": "DUY",        "short": "CÔNG TY CP DOSCOM",                                             "name": "CÔNG TY CP DOSCOM"},
+    # 20/11/2026 — hai tkqc ĐANG CHI TIỀN mà chưa khai ở đây nên chi phí của chúng KHÔNG vào
+    # dashboard (tuần 09–15/11/2026 hụt 4.268.588đ so với Ads Manager):
+    #   · Nomaautovn: campaign "11/11 - Noma955 - 3 creative"… đặt tên đúng kiểu của Duy, và
+    #     nguồn Pancake "DUY - NOMA 955" có đơn mà Duy không có đồng CPQC 955 nào ở tk khác.
+    #   · Doscom010 - Nam (BM "Công ty TNHH Doscom Holldings"): chỉ chạy campaign tương tác,
+    #     không gán được SP nên vào ad_spend_excluded. Nhân sự suy từ tên tk.
+    # Tk có chi tiêu mà chưa khai → warn_unlisted_accounts() in cảnh báo trong log refresh.
+    # Nhớ khai đồng bộ: data/fb-config.json · functions/lib/access.js · REPORT_ACCOUNT_STAFF (index.html).
+    {"id": "2418926725300433", "staff": "DUY",        "short": "CÔNG TY TNHH DOSCOM HOLDINGS - Nomaautovn",                     "name": "CÔNG TY TNHH DOSCOM HOLDINGS - Nomaautovn"},
+    {"id": "1178415743938574", "staff": "PHUONG_NAM", "short": "Doscom010 - Nam",                                               "name": "Doscom010 - Nam"},
 ]
 
 # 14 SP gốc + extended SKUs từ data/cost-source/skus-extended.json
@@ -208,6 +218,12 @@ def detect_profit_product(name: str):
         return "DA8.1 Pro"
     if "da8.1" in n or "da 8.1" in n or "da8 1" in n:
         return "DA8.1"
+    # 20/11/2026: camera DA1 Pro (landing 16/11) + DA3 Pro. Trước đó campaign
+    # "15/11 - Da1 Pro - Vid N.a" không gán được SP → bị loại khỏi chi phí.
+    if "da1 pro" in n or "da1pro" in n:
+        return "DA1 Pro"
+    if "da3 pro" in n or "da3pro" in n:
+        return "DA3 Pro"
 
     # Noma — model cụ thể trước, fallback NomaVietNam → Noma 911.
     # 19/08/2026: bổ sung 120/130/230/310/350/680. Trước đó chỉ nhận 911/922/250 nên
@@ -352,6 +368,27 @@ LANDING_TO_PRODUCT = {
     # bằng export-230.sh của noma620-landing), gốc noma620.click vẫn là 230 nên PHẢI khai path.
     "noma620.click/n620d":          "Noma 620",
     "noma620.click/n620tpn":        "Noma 620",
+    # ── Bổ sung 20/11/2026 sau đối chiếu tuần 09–15/11 (landing đã LIVE mà chưa khai) ──
+    # noma880.io.vn chứa HAI sản phẩm (880 + 955 chép sang bằng export-880.sh) → PHẢI theo path.
+    # Thiếu dòng 880: campaign 24,97tr của Phương Nam chỉ còn được gán nhờ tên campaign.
+    "noma880.io.vn/n880d":           "Noma 880",
+    "noma880.io.vn/n880tpn":         "Noma 880",
+    "noma880.io.vn/n955d":           "Noma 955",
+    "noma880.io.vn/n955tpn":         "Noma 955",
+    # NOMA 250 nằm trong project noma-landings (chung 911 + 922).
+    "noma.io.vn/n250d":              "Noma 250",
+    "noma.io.vn/n250tpn":            "Noma 250",
+    # NOMA 686 — noma110.cloud.
+    "noma110.cloud/n686d":           "Noma 686",
+    "noma110.cloud/n686tpn":         "Noma 686",
+    # DR1 bản cũ trên senso.io.vn.
+    "senso.io.vn/dr1cb":             "DR1",
+    # Camera DA8.1 — đường của Duy (bản PN /da8.1tpn đã khai ở trên).
+    "doscom.store/da8.1d":           "DA8.1",
+    # Camera mini 4G DA1 Pro (16/11/2026) — doscomholding.click.
+    "doscomholding.click/da1prolad": "DA1 Pro",
+    "doscomholding.click/da1prod":   "DA1 Pro",
+    "doscomholding.click/da1protpn": "DA1 Pro",
 }
 
 # Domain chỉ bán MỘT sản phẩm → mọi path trên domain đó (kể cả biến thể theo nhân
@@ -374,6 +411,12 @@ LANDING_HOST_TO_PRODUCT = {
     "noma880-lp.pages.dev":       "Noma 880",   # NOMA 880 phủ tinh thể bảo vệ sơn
     "noma922-lp.pages.dev":       "Noma 922",   # NOMA 922 phủ nano kính (bản xem thử)
     "noma620-lp.pages.dev":       "Noma 620",   # NOMA 620 phục hồi đèn pha (bản xem thử)
+    "noma955-lp.pages.dev":       "Noma 955",   # NOMA 955 xoá xước (bản xem thử)
+    "noma686-lp.pages.dev":       "Noma 686",   # NOMA 686 vệ sinh ghế da (bản xem thử)
+    "noma250-lp.pages.dev":       "Noma 250",   # NOMA 250 phục hồi nhựa nhám (bản xem thử)
+    "doscom-da81-lp.pages.dev":   "DA8.1",
+    "doscom-da1pro-lp.pages.dev": "DA1 Pro",
+    "doscom-da3pro-lp.pages.dev": "DA3 Pro",
     # Bản *.pages.dev của các landing ở trên (ad thường dán link pages.dev lúc test)
     "noma-landings.pages.dev":       "Noma 911",
     "noma911.pages.dev":             "Noma 911",
@@ -489,6 +532,58 @@ def _links_of_creative(cr):
     return out
 
 
+# {host/path: số ad} — link đích đọc được nhưng KHÔNG có trong bảng map (in cảnh báo).
+UNMAPPED_LINKS = {}
+
+# Link không phải landing bán hàng: Messenger, Facebook, Zalo, web chính… — không cảnh báo.
+_NON_LANDING_HOSTS = ("fb.com", "facebook.com", "m.me", "messenger.com", "zalo.me",
+                      "instagram.com", "doscom.vn", "noma.vn", "nomaauto.us", "wa.me")
+
+
+def _is_landing_like(url):
+    host = _norm_url(url).split("/", 1)[0]
+    if not host:
+        return False
+    return not any(host == h or host.endswith("." + h) for h in _NON_LANDING_HOSTS)
+
+
+def warn_unlisted_accounts(days=7):
+    """In cảnh báo khi token thấy một tkqc CÓ CHI TIÊU trong `days` ngày gần nhất mà
+    chưa khai ở ACCOUNTS. Lỗi 20/11/2026: Nomaautovn (Noma 955 của Duy) + Doscom010 - Nam
+    tiêu 4,27tr tuần 09–15/11 nhưng không vào dashboard vì không ai khai. Không bao giờ
+    làm hỏng bước build — lỗi API chỉ in ra rồi bỏ qua."""
+    try:
+        known = {a["id"] for a in ACCOUNTS}
+        url = f"https://graph.facebook.com/{FB_API_VERSION}/me/adaccounts"
+        params = {"access_token": FB_TOKEN, "fields": "account_id,name", "limit": 200}
+        accs = []
+        while url:
+            d = fb_get(url, params=params)
+            accs += d.get("data", [])
+            url = (d.get("paging") or {}).get("next"); params = None
+        now = datetime.now(timezone(timedelta(hours=7)))
+        tr = json.dumps({"since": (now - timedelta(days=days)).strftime("%Y-%m-%d"),
+                         "until": now.strftime("%Y-%m-%d")})
+        missing = []
+        for a in accs:
+            aid = str(a.get("account_id") or "")
+            if not aid or aid in known:
+                continue
+            d = fb_get(f"https://graph.facebook.com/{FB_API_VERSION}/act_{aid}/insights",
+                       params={"access_token": FB_TOKEN, "level": "account",
+                               "time_range": tr, "fields": "spend"})
+            sp = sum(num(r.get("spend")) for r in d.get("data", []))
+            if sp > 0:
+                missing.append((sp, aid, a.get("name", "")))
+        if missing:
+            print(f"   ⚠ {len(missing)} tkqc CÓ CHI TIÊU {days} ngày qua nhưng CHƯA khai ở ACCOUNTS "
+                  f"(chi phí KHÔNG vào dashboard):")
+            for sp, aid, nm in sorted(missing, reverse=True):
+                print(f"       act_{aid}  {sp:,.0f}đ  {nm}")
+    except Exception as e:
+        print(f"   ⚠ không kiểm được tkqc chưa khai ({type(e).__name__}: {e})", file=sys.stderr)
+
+
 def fetch_campaign_products_from_links(account_id: str):
     """{campaign_id: product} suy từ link landing của các ad trong campaign.
 
@@ -537,6 +632,9 @@ def fetch_campaign_products_from_links(account_id: str):
                 prod = _product_from_link(link)
                 if prod:
                     found.setdefault(cid, set()).add(prod)
+                elif _is_landing_like(link):
+                    k = _norm_url(link)
+                    UNMAPPED_LINKS[k] = UNMAPPED_LINKS.get(k, 0) + 1
                 mk = _market_from_link(link)
                 if mk:
                     LINK_MARKETS.setdefault(cid, set()).add(mk)
@@ -781,6 +879,13 @@ def build_data():
     for a in ACCOUNTS:
         link_products.update(fetch_campaign_products_from_links(a["id"]))
     print(f"   ✓ đọc link landing: {len(link_products)} campaign suy được SP từ link")
+    if UNMAPPED_LINKS:
+        # Landing mới mà chưa khai LANDING_TO_PRODUCT/LANDING_HOST_TO_PRODUCT → chi phí chỉ còn
+        # trông vào tên campaign (tên không ghi SP là bị loại). In ra để khai ngay.
+        print(f"   ⚠ {len(UNMAPPED_LINKS)} link landing CHƯA có trong bảng map (thêm vào LANDING_TO_PRODUCT):")
+        for k, c in sorted(UNMAPPED_LINKS.items(), key=lambda kv: -kv[1])[:15]:
+            print(f"       {c:4d} ad  ←  {k}")
+    warn_unlisted_accounts()
 
     # Thị trường theo LINK: mọi link landing đọc được của campaign đều là landing Thái
     # → rổ Thái, dù tên không ghi "Thái Lan". Link lẫn Việt + Thái thì giữ theo tên.
