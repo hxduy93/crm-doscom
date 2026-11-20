@@ -58,6 +58,10 @@ context: |
   ## LUẬT TÍNH DỮ LIỆU (đã từng sai — bắt buộc tuân thủ)
   - Chi phí quảng cáo = `accounts.daily.spend` (FB) + `google_ads.by_category` (Google).
   - Lợi nhuận = Doanh thu − VAT 10% − chi phí QC − giá vốn (units × gia_nhap_vnd).
+  - DOANH SỐ 1 ĐƠN = COD + TIỀN TRẢ TRƯỚC (`prepaid`) (QUYẾT 2026-11-20, bổ sung luật "chỉ COD" 2026-07-15):
+    đơn khách chuyển khoản trước có cod=0 nên chỉ lấy cod là mất tiền (Hotline #198228 trả trước 8tr
+    bị tính 0đ). KHÔNG cộng `transfer_money` (cùng khoản với prepaid), KHÔNG fallback total_price.
+    Hàm gốc: order_revenue() trong scripts/fetch_pancake_revenue.py; test tests/doanh-so-tra-truoc.test.mjs.
   - Doanh thu & giá vốn theo nhân sự/nguồn = GỘP mọi trạng thái (gồm returning/returned/canceled) để khớp "doanh số" Pancake POS; đồng bộ với KPI Doanh thu tổng (pkRevenue vốn đã gộp). Cột ĐƠN cũng đếm mọi trạng thái → hai cột cùng gốc. (QUYẾT 2026-07-15, đảo lại quy tắc afterReturns cũ theo yêu cầu chủ dự án.)
   - HAI MỨC LỢI NHUẬN, CỐ Ý KHÁC NHAU (QUYẾT 2026-07-31) — ĐỪNG "sửa" cho bằng nhau:
     · Bảng THEO NHÂN SỰ: LN = Doanh thu − Chi phí QC − Giá vốn. CÔNG THỨC ĐƠN THUẦN, KHÔNG trừ

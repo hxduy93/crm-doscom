@@ -848,11 +848,20 @@ def order_revenue(order):
     KHÔNG fallback sang total_price/after_sub (fallback sẽ thổi các đơn cod=0 lên,
     làm Website lệch +497k so Pancake). Trả về float (giữ số lẻ).
     """
+    # 20/11/2026 — CỘNG THÊM TIỀN TRẢ TRƯỚC (`prepaid`). Đơn khách chuyển khoản trước có
+    # cod=0 (hoặc cod = phần còn lại sau khi cọc) nên chỉ lấy cod là MẤT phần đã trả: đơn
+    # Hotline #198228 trả trước 8.000.000đ bị tính 0đ, đơn Page #193013 trả trước 416.000đ
+    # cũng 0đ. POS hiện riêng "COD" và "Trả trước" ở chân danh sách; doanh số = tổng hai số.
+    # Chỉ dùng `prepaid` — `transfer_money` là CÙNG khoản đó (đo: hai trường luôn bằng nhau),
+    # cộng cả hai là đếm đôi. Vẫn KHÔNG fallback sang total_price: đơn cod=0 và không trả
+    # trước (đơn 0đ/quà) vẫn là 0đ — giữ nguyên bài học +497k Website.
+    cod = 0.0
     for key in ("cod", "cod_amount", "total_cod"):
         v = order.get(key)
         if v is not None:
-            return _num(v)
-    return 0.0
+            cod = _num(v)
+            break
+    return cod + _num(order.get("prepaid"), 0)
 
 
 def extract_items(order):
