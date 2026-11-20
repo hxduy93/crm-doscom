@@ -320,11 +320,14 @@ LANDING_TO_PRODUCT = {
     "noma.io.vn/911tpn":     "Noma 911",
     "noma.io.vn/noma911":    "Noma 911",
     "noma.io.vn/noma911lad": "Noma 911",   # link QC của Duy (15/11/2026), bản sao nm911d
+    "noma.io.vn/noma911n":   "Noma 911",   # path cũ — 20/11/2026 log báo 4 ad chưa map
     "noma.io.vn/250tpn":     "Noma 250",
     # Máy dò D1 — doscom.click (project doscom-d1-lp)
     "doscom.click/d1cb":     "D1",
     "doscom.click/d1tpn":    "D1",
     "doscom.click/dr1tpn":   "DR1",     # path DR1 cũ nằm nhờ trên domain D1
+    "doscom.click/d1":       "D1",      # path D1 cũ (Duy) — 20/11/2026 log báo 9 ad chưa map
+    "doscom.click/d1pn":     "D1",      # path D1 cũ (Phương Nam) — 6 ad chưa map
     # Máy ghi âm DR1 — senso.io.vn (project dr1-lp)
     "senso.io.vn/dr1lad":    "DR1",
     "senso.io.vn/dr1tpn":    "DR1",
@@ -536,7 +539,7 @@ def _links_of_creative(cr):
 UNMAPPED_LINKS = {}
 
 # Link không phải landing bán hàng: Messenger, Facebook, Zalo, web chính… — không cảnh báo.
-_NON_LANDING_HOSTS = ("fb.com", "facebook.com", "m.me", "messenger.com", "zalo.me",
+_NON_LANDING_HOSTS = ("fb.com", "fb.me", "facebook.com", "m.me", "github.com", "messenger.com", "zalo.me",
                       "instagram.com", "doscom.vn", "noma.vn", "nomaauto.us", "wa.me")
 
 
@@ -581,7 +584,15 @@ def warn_unlisted_accounts(days=7):
             for sp, aid, nm in sorted(missing, reverse=True):
                 print(f"       act_{aid}  {sp:,.0f}đ  {nm}")
     except Exception as e:
-        print(f"   ⚠ không kiểm được tkqc chưa khai ({type(e).__name__}: {e})", file=sys.stderr)
+        body = ""
+        resp = getattr(e, "response", None)
+        if resp is not None:
+            try:
+                body = ((resp.json() or {}).get("error") or {}).get("message", "")
+            except Exception:
+                body = (resp.text or "")[:200]
+        print(f"   ⚠ không kiểm được tkqc chưa khai ({type(e).__name__}"
+              f"{': ' + body if body else ''}) — kiểm tay bằng /me/adaccounts", file=sys.stderr)
 
 
 def fetch_campaign_products_from_links(account_id: str):
@@ -776,6 +787,10 @@ def build_data():
         "ads": [],
     }
 
+    # Kiểm tkqc chưa khai NGAY ĐẦU build: chạy sau các lệnh insights nặng thì dễ dính
+    # giới hạn tần suất của FB (mã 80004 trả HTTP 400 — đúng lỗi lượt refresh 20/11/2026).
+    warn_unlisted_accounts()
+
     skipped_accounts = []
     for acc in ACCOUNTS:
         print(f"→ account {acc['short']} ({acc['id']})")
@@ -885,7 +900,6 @@ def build_data():
         print(f"   ⚠ {len(UNMAPPED_LINKS)} link landing CHƯA có trong bảng map (thêm vào LANDING_TO_PRODUCT):")
         for k, c in sorted(UNMAPPED_LINKS.items(), key=lambda kv: -kv[1])[:15]:
             print(f"       {c:4d} ad  ←  {k}")
-    warn_unlisted_accounts()
 
     # Thị trường theo LINK: mọi link landing đọc được của campaign đều là landing Thái
     # → rổ Thái, dù tên không ghi "Thái Lan". Link lẫn Việt + Thái thì giữ theo tên.
