@@ -321,6 +321,7 @@ LANDING_TO_PRODUCT = {
     "noma.io.vn/noma911":    "Noma 911",
     "noma.io.vn/noma911lad": "Noma 911",   # link QC của Duy (15/11/2026), bản sao nm911d
     "noma.io.vn/noma911n":   "Noma 911",   # path cũ — 20/11/2026 log báo 4 ad chưa map
+    "noma.io.vn/911noma":    "Noma 911",   # path cũ — 20/11/2026 log báo 12 ad chưa map
     "noma.io.vn/250tpn":     "Noma 250",
     # Máy dò D1 — doscom.click (project doscom-d1-lp)
     "doscom.click/d1cb":     "D1",

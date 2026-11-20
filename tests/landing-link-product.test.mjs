@@ -262,6 +262,7 @@ test("đối chiếu 20/11/2026: landing đã LIVE mà thiếu trong bảng map"
     ["https://www.doscom.click/d1", "D1"],
     ["https://www.doscom.click/d1pn", "D1"],
     ["https://www.noma.io.vn/noma911n", "Noma 911"],
+    ["https://www.noma.io.vn/911noma", "Noma 911"],
   ];
   const got = call("_product_from_link", cases.map((c) => c[0]));
   cases.forEach(([url, want], i) => assert.equal(got[i], want, url));
