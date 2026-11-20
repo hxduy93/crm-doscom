@@ -26,6 +26,8 @@ test("nhận đủ các nguồn đang có đơn thật", () => {
     "DUY - D2 PRO": "D2",
     "PHƯƠNG NAM - D2 PRO": "D2",
     "PHƯƠNG NAM - DA8.1": "DA8.1",
+    "DUY - DA1 PRO": "DA1 Pro",        // nguồn mở 17/11/2026, khớp nhãn CPQC "DA1 Pro"
+    "PHƯƠNG NAM - DA1 PRO": "DA1 Pro",
   };
   for (const [src, want] of Object.entries(cases)) assert.equal(productFromSource(src), want, src);
 });
