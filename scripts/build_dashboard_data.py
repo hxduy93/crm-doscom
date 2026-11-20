@@ -62,13 +62,17 @@ ACCOUNTS = [
     # dashboard (tuần 09–15/11/2026 hụt 4.268.588đ so với Ads Manager):
     #   · Nomaautovn: campaign "11/11 - Noma955 - 3 creative"… đặt tên đúng kiểu của Duy, và
     #     nguồn Pancake "DUY - NOMA 955" có đơn mà Duy không có đồng CPQC 955 nào ở tk khác.
-    #   · Doscom010 - Nam (BM "Công ty TNHH Doscom Holldings"): chỉ chạy campaign tương tác,
-    #     không gán được SP nên vào ad_spend_excluded. Nhân sự suy từ tên tk.
+    #   · Doscom010 - Nam: KHÔNG khai — phòng ban khác chạy (chủ dự án chốt 20/11/2026),
+    #     nằm ở IGNORED_ACCOUNTS bên dưới.
     # Tk có chi tiêu mà chưa khai → warn_unlisted_accounts() in cảnh báo trong log refresh.
     # Nhớ khai đồng bộ: data/fb-config.json · functions/lib/access.js · REPORT_ACCOUNT_STAFF (index.html).
     {"id": "2418926725300433", "staff": "DUY",        "short": "CÔNG TY TNHH DOSCOM HOLDINGS - Nomaautovn",                     "name": "CÔNG TY TNHH DOSCOM HOLDINGS - Nomaautovn"},
-    {"id": "1178415743938574", "staff": "PHUONG_NAM", "short": "Doscom010 - Nam",                                               "name": "Doscom010 - Nam"},
 ]
+
+# tkqc CỐ Ý không tính (phòng ban khác chạy) — warn_unlisted_accounts() bỏ qua, không cảnh báo.
+IGNORED_ACCOUNTS = {
+    "1178415743938574": "Doscom010 - Nam — phòng ban khác chạy (chủ dự án chốt 20/11/2026)",
+}
 
 # 14 SP gốc + extended SKUs từ data/cost-source/skus-extended.json
 # (user 2026-05-27 cung cấp 33 SKU mới + combos để cover OTHER_CAM/OTHER_DI/OTHER_RAZOR/OTHER_SIM)
@@ -557,7 +561,7 @@ def warn_unlisted_accounts(days=7):
     tiêu 4,27tr tuần 09–15/11 nhưng không vào dashboard vì không ai khai. Không bao giờ
     làm hỏng bước build — lỗi API chỉ in ra rồi bỏ qua."""
     try:
-        known = {a["id"] for a in ACCOUNTS}
+        known = {a["id"] for a in ACCOUNTS} | set(IGNORED_ACCOUNTS)
         url = f"https://graph.facebook.com/{FB_API_VERSION}/me/adaccounts"
         params = {"access_token": FB_TOKEN, "fields": "account_id,name", "limit": 200}
         accs = []

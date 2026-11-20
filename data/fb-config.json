@@ -66,13 +66,6 @@
       "groups": ["NOMA"],
       "active": true,
       "products_note": "Noma 955 (+911) — khai 20/11/2026, trước đó chi tiêu không vào dashboard"
-    },
-    "1178415743938574": {
-      "name": "Doscom010 - Nam",
-      "staff": "PHUONG_NAM",
-      "groups": [],
-      "active": true,
-      "products_note": "BM Công ty TNHH Doscom Holldings — chỉ chạy campaign tương tác (khai 20/11/2026)"
     }
   },
   "_note_906": "Account 906015559004892 (DoscomMart) — spend trước 2026-05-29 tính cho PHUONG_NAM (lịch sử giữ nguyên); từ 2026-05-29 trở đi spend tính cho AI_AGENT (xem fb-ads-auto-agent/). Logic backend phải check loaned_from_date: spend.date < loaned_from_date → staff = staff cũ; spend.date >= loaned_from_date → staff = loaned_to_staff. Khôi phục: xóa 2 field loaned_to_staff + loaned_from_date, sửa products_note về 'D1 (máy dò)'.",

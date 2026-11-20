@@ -274,11 +274,21 @@ test("tkqc đang chi tiêu đều được khai, và có cảnh báo tkqc chưa 
   /* 20/11/2026: Nomaautovn (2418926725300433, Noma 955 của Duy) + Doscom010 - Nam
      (1178415743938574) tiêu 4.268.588đ tuần 09–15/11 mà dashboard không thấy. */
   const src = readFileSync(SCRIPT, "utf8");
-  for (const id of ["2418926725300433", "1178415743938574"]) {
+  for (const id of ["2418926725300433"]) {
     assert.match(src, new RegExp(`"id": "${id}"`), `thiếu tkqc ${id} trong ACCOUNTS`);
     assert.ok(readFileSync("data/fb-config.json", "utf8").includes(`"${id}"`), `fb-config.json thiếu ${id}`);
     assert.ok(readFileSync("functions/lib/access.js", "utf8").includes(`"${id}"`), `access.js thiếu ${id}`);
     assert.ok(readFileSync("index.html", "utf8").includes(`"act_${id}"`), `REPORT_ACCOUNT_STAFF thiếu ${id}`);
   }
+  // Doscom010 - Nam: phòng ban khác chạy (chủ dự án chốt 20/11/2026) → KHÔNG tính chi phí,
+  // chỉ nằm ở IGNORED_ACCOUNTS để bước cảnh báo không báo nhầm.
+  const NAM = "1178415743938574";
+  assert.doesNotMatch(src, new RegExp(`"id": "${NAM}"`), "Doscom010 - Nam không được tính vào chi phí");
+  assert.match(src, new RegExp(`IGNORED_ACCOUNTS = \\{\\s*"${NAM}"`), "thiếu Doscom010 - Nam trong danh sách bỏ qua");
+  for (const f of ["data/fb-config.json", "functions/lib/access.js", "index.html"]) {
+    assert.ok(!readFileSync(f, "utf8").includes(NAM), `${f} không được khai Doscom010 - Nam`);
+  }
+  assert.match(src, /known = \{a\["id"\] for a in ACCOUNTS\} \| set\(IGNORED_ACCOUNTS\)/,
+    "bước cảnh báo phải bỏ qua tkqc trong IGNORED_ACCOUNTS");
   assert.match(src, /\n    warn_unlisted_accounts\(\)/, "mất bước cảnh báo tkqc có chi tiêu mà chưa khai");
 });

@@ -52,7 +52,6 @@ _FALLBACK_ACCOUNTS = [
     {"id": "1416634670476226", "name": "CÔNG TY TNHH DOSCOM HOLDINGS - Doscom Mart"},
     {"id": "1254151326914021", "name": "CÔNG TY CP DOSCOM"},
     {"id": "2418926725300433", "name": "CÔNG TY TNHH DOSCOM HOLDINGS - Nomaautovn"},
-    {"id": "1178415743938574", "name": "Doscom010 - Nam"},
 ]
 
 
