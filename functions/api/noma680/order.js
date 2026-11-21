@@ -18,7 +18,7 @@ const COMBO_META = {
   "combo-680-686": { label: "NOMA 680 + NOMA 686 bộ vệ sinh dưỡng ghế da", amount: 498000 },
   "combo-680-310": { label: "NOMA 680 + NOMA 310 chống hấp hơi kính", amount: 298000 },
   "combo-680-911": { label: "NOMA 680 + NOMA 911 tẩy ố kính",         amount: 318000 },
-  "combo-680-922": { label: "NOMA 680 + NOMA 922 phủ nano kính",      amount: 338000 }, // 922 lên 239K từ 21/11/2026
+  "combo-680-922": { label: "NOMA 680 + NOMA 922 phủ nano kính",      amount: 318000 },
 };
 
 function json(obj, status = 200) {

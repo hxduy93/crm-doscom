@@ -12,8 +12,8 @@ const COMBO_META = {
   "le-911":        { label: "1 chai NOMA 911",      amount: 219000 },
   "combo-2x911":   { label: "2 chai NOMA 911",      amount: 438000 },
   "combo-911-310": { label: "Combo NOMA 911 + 310", amount: 418000 },
-  "combo-911-922": { label: "Combo NOMA 911 + 922", amount: 458000 }, // 922 lên 239K từ 21/11/2026
-  "le-922":        { label: "1 chai NOMA 922",      amount: 239000 },
+  "combo-911-922": { label: "Combo NOMA 911 + 922", amount: 438000 },
+  "le-922":        { label: "1 chai NOMA 922",      amount: 219000 },
 };
 
 function json(obj, status = 200) {
