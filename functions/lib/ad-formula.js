@@ -277,6 +277,25 @@ export const CONG_THUC_SAN_PHAM = {
       { re: "mặt ngoài|bên trong", msg: "chỉ xử lý ố ở mặt ngoài, không xử lý ố bên trong cụm đèn" },
     ],
   },
+  // 250 (25/11/2026): CHƯA qua vòng duyệt nào, câu mở bài theo khuôn đã duyệt.
+  "Noma 250": {
+    dongMoBai: [
+      "Taplo, ốp cửa, cản xe bạc trắng – Dùng ngay dung dịch phục hồi nhựa nhám Noma 250",
+      "Dung dịch phục hồi nhựa nhám Noma 250 – trả lại màu đen nhám tự nhiên, không bóng dầu, tự làm tại nhà vài phút",
+    ],
+    trongTam: [
+      "Điểm khác biệt: đen NHÁM tự nhiên, khô ráo, không phải lớp bóng dầu nhờn rít như xịt đa năng",
+      "Có lớp phủ mỏng chống UV; hiệu quả khoảng 90 ngày tuỳ môi trường",
+    ],
+    tranh: [
+      "Không dựng tình huống mua xe cũ, bán xe, chở khách; đi thẳng vào công năng",
+      "Không lẫn với NOMA 230: 250 nhỏ giọt cho chi tiết nhựa nhám, 230 là xịt làm mới nhựa 450ml",
+      "Không viết bóng loáng, không hứa vĩnh viễn, không viết 'chỉ 1 lần'",
+    ],
+    batBuoc: [
+      { re: "nhựa nhám", msg: "chỉ dùng cho nhựa nhám, không dùng cho nhựa bóng, sơn, kính" },
+    ],
+  },
 };
 
 /** Khung bài (skeleton) dạng chữ, dùng cho dạng usp_bullet trong ad-formats.js. */

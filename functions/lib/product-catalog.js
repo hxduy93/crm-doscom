@@ -755,6 +755,57 @@ export const PRODUCTS = {
 
   // Thêm 16/11/2026. Số liệu lấy NGUYÊN từ landing da1pro-landing (đã đối chiếu thông số
   // hãng): KHÔNG chống nước, đêm đen trắng, pin chờ 15 ngày nhưng quay liên tục ~10 giờ.
+  // NOMA 250 (25/11/2026): giá + quà lấy từ PRICING landing noma250 (n250d), cách dùng và
+  // giới hạn lấy nguyên từ landing đang chạy. Ảnh hãng có claim sai, xem avoidWords.
+  "Noma 250": {
+    name: "Noma 250",
+    brand: "NOMA",
+    fullName: "Dung dịch phục hồi nhựa nhám Noma 250 — chai 30ml dạng nhỏ giọt, kèm 1 mút chà",
+    priceRange: "99.000đ / chai (giá niêm yết 140.000đ; 1 chai không kèm quà) — 2 chai 198.000đ hoặc 3 chai 297.000đ, cả hai tặng 1 chai NOMA 230 làm mới nhựa xe",
+    category: "Chăm sóc ô tô — nhựa nhám (taplo, ốp cửa, cản, viền đen)",
+    source: "noma-sku-specs.js mã 250 (CAR-005) + PRICING + nội dung landing noma250 n250d (đối chiếu 2026-11-25)",
+    guarantee: null,
+    usps: [
+      "Phục hồi nhựa nhám bạc màu, trả lại màu đen tự nhiên",
+      "Đen nhám (lì), KHÔNG tạo bóng dầu, bề mặt khô ráo, không nhờn rít",
+      "Để lại lớp màng mỏng chống tia UV, chống oxy hoá, giúp nhựa giữ màu lâu hơn",
+      "Hiệu quả khoảng 90 ngày, tuỳ môi trường sử dụng",
+      "Dạng nhỏ giọt, kiểm soát lượng dùng, thoa đều từng chi tiết; có sẵn mút chà",
+      "Tự làm tại nhà vài phút mỗi chi tiết, để khô 5-10 phút",
+    ],
+    painPoints: [
+      "Taplo, ốp cửa, cản xe, viền đen bạc trắng làm xe trông cũ hơn tuổi thật",
+      "Dùng xịt đa năng thì bóng giả, sờ nhờn rít, vài hôm bám bụi",
+      "Rửa xe không làm nhựa đen lại vì nhựa đã khô và oxy hoá",
+      "Taplo bạc dưới nắng là chỗ người ngồi ghế trước nhìn thấy đầu tiên",
+    ],
+    usage: [
+      "Làm sạch bụi bẩn trên nhựa, lau thật khô",
+      "Lắc kỹ chai, bóc seal, nhỏ lượng vừa đủ lên mặt đen của mút chà",
+      "Chà theo một đường thẳng, cùng một hướng (không chà qua lại) để màu lên đều",
+      "Để khô tự nhiên 5-10 phút, tránh nước trong 2-4 giờ đầu; đóng kín nắp sau khi dùng",
+    ],
+    effectDuration: "Hiệu quả khoảng 90 ngày, tuỳ môi trường sử dụng",
+    limits: [
+      "CHỈ dùng cho nhựa NHÁM (nhựa sần, không sơn); KHÔNG dùng cho nhựa bóng, mặt sơn, kính",
+      "KHÔNG phục hồi nhựa nứt, gãy, hư hỏng",
+      "Hiệu quả có thời hạn (khoảng 90 ngày tuỳ môi trường), sau đó làm lại; nhựa bạc nặng có thể cần hai lượt",
+      "Phải làm sạch và lau khô bề mặt trước, nhựa còn bẩn hoặc ướt thì màu không đều",
+      "Có thể gây kích ứng da nhẹ (H315): nên đeo găng tay, tránh dính vào mắt; không đổ phần thừa ra cống, ao hồ (H412)",
+    ],
+    targetAudience: "Chủ ô tô (và xe máy) có taplo, ốp cửa, cản, viền nhựa nhám bị bạc màu, muốn tự làm đen lại tại nhà",
+    tonePreferred: "Đi thẳng vào nhựa nhám bạc màu rồi giới thiệu ngay Noma 250 trả lại màu đen nhám tự nhiên, không bóng dầu, có lớp chống UV",
+    avoidWords: [
+      "rẻ", "siêu rẻ", "số 1", "tốt nhất", "đỉnh", "vượt trội", "đột phá",
+      "100%", "tuyệt đối", "hoàn toàn", "như mới", "vĩnh viễn", "an toàn tuyệt đối", "chỉ 01 lần", "chỉ 1 lần",
+      "an toàn cho người dùng", "bóng loáng", "dọc ngang",
+      "Made in USA", "chính hãng Mỹ", "công nghệ Mỹ", "sản xuất tại Mỹ", "nhập khẩu từ Mỹ",
+    ],
+    fbPolicyNotes:
+      "Con số 90 ngày phải kèm 'tuỳ môi trường sử dụng'. Chỉ nói nhựa NHÁM, không hứa với nhựa bóng, sơn, kính hay nhựa nứt gãy. " +
+      "Kết quả là đen NHÁM tự nhiên, không viết bóng loáng/bóng dầu. Cách chà là MỘT CHIỀU (ảnh hãng ghi 'lau dọc – ngang' là sai). " +
+      "Ảnh hãng ghi 'an toàn tuyệt đối', 'chỉ 01 lần', '100K+ khách', 'an toàn cho người dùng', bảng so '3-5 ngày': đều không được dùng.",
+  },
   "DA1 Pro": {
     name: "Camera 4G DA1 Pro",
     brand: "DOSCOM",
